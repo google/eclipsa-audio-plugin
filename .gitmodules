@@ -1,7 +1,3 @@
-[submodule "code/third_party/JUCE"]
-	path = third_party/JUCE
-	url = https://github.com/WithACX/JUCE
-	
 [submodule "third_party/protobuf"]
 	path = third_party/protobuf
 	url = https://github.com/protocolbuffers/protobuf.git
