@@ -14,20 +14,24 @@
 
 #include "RoomSetup.h"
 
-RoomSetup::RoomSetup() : RepositoryItemBase({}) {}
+RoomSetup::RoomSetup() : RepositoryItemBase({}), dawWarningDismissed_(false) {}
 
 RoomSetup::RoomSetup(RoomLayout layout)
-    : RepositoryItemBase({}), speakerLayout_(layout) {}
+    : RepositoryItemBase({}),
+      speakerLayout_(layout),
+      dawWarningDismissed_(false) {}
 
 RoomSetup::RoomSetup(const RoomLayout layout, const bool drawSpeakers,
                      const bool drawSpeakerLabels, const bool drawTracks,
-                     const juce::String& currRoomView)
+                     const juce::String& currRoomView,
+                     const bool dawWarningDismissed)
     : RepositoryItemBase({}),
       speakerLayout_(layout),
       drawSpeakers_(drawSpeakers),
       drawSpeakerLabels_(drawSpeakerLabels),
       drawTracks_(drawTracks),
-      currentRoomView_(currRoomView) {}
+      currentRoomView_(currRoomView),
+      dawWarningDismissed_(dawWarningDismissed) {}
 
 juce::ValueTree RoomSetup::toValueTree() const {
   return {{kTreeType},
@@ -37,12 +41,14 @@ juce::ValueTree RoomSetup::toValueTree() const {
               {kDrawSpeakerLabels, drawSpeakerLabels_},
               {kDrawTracks, drawTracks_},
               {kCurrRoomView, currentRoomView_},
+              {kDawWarningDismissed, dawWarningDismissed_},
           }};
 }
 
 RoomSetup RoomSetup::fromTree(const juce::ValueTree tree) {
   jassert(tree.hasProperty(kSpeakerLayout));
+  bool dawWarningDismissed = tree.getProperty(kDawWarningDismissed, false);
   return RoomSetup(fetchLayoutFromDescription(tree[kSpeakerLayout]),
                    tree[kDrawSpeakers], tree[kDrawSpeakerLabels],
-                   tree[kDrawTracks], tree[kCurrRoomView]);
+                   tree[kDrawTracks], tree[kCurrRoomView], dawWarningDismissed);
 }

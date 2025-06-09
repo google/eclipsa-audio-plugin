@@ -76,7 +76,7 @@ TEST(test_surround_panner, pan_to_ambi) {
     }
 
     // Construct a panner for the given layout.
-    AmbisonicPanner ambisonicPanner(kMono, outputLayout, kNumSamples, 48000);
+    AmbisonicPanner ambisonicPanner(outputLayout, kNumSamples, 48000);
 
     // Set source position.
     ambisonicPanner.setPosition(1.f, 2.f, 3.f);
@@ -110,8 +110,8 @@ TEST(test_surround_panner, pan_to_bed) {
     }
 
     // Construct a panner for the given layout.
-    MonoToSpeakerPanner monoToSpeakerPanner(kMono, outputLayout.layout,
-                                            kNumSamples, 48000);
+    MonoToSpeakerPanner monoToSpeakerPanner(outputLayout.layout, kNumSamples,
+                                            48000);
 
     // Set source position all the way to the right
     monoToSpeakerPanner.setPosition(0.5, 0.5, 0.5);
@@ -129,8 +129,8 @@ TEST(test_surround_panner, pan_to_bed) {
       }
     }
 
-    MonoToSpeakerPanner monoToSpeakerPanner2(kMono, outputLayout.layout,
-                                             kNumSamples, 48000);
+    MonoToSpeakerPanner monoToSpeakerPanner2(outputLayout.layout, kNumSamples,
+                                             48000);
 
     // Move the source position all the way to the right
     monoToSpeakerPanner2.setPosition(45.0f, 0.0f, 0.0f);
@@ -162,7 +162,7 @@ TEST(test_surround_panner, pan_to_binaural) {
   }
 
   // Construct a panner for the given layout.
-  BinauralPanner binPanner(kMono, kNumSamples, 48000);
+  BinauralPanner binPanner(kNumSamples, 48000);
 
   // Set source position.
   binPanner.setPosition(1.f, 2.f, 3.f);

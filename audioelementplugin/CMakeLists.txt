@@ -47,9 +47,6 @@ target_link_options(AudioElementPlugin
         "-Wl"
         "-ld_classic")
 
-target_compile_definitions(AudioElementPlugin
-    PUBLIC LOG_FILE_PATH="${LOG_FILE_PATH}")
-
 
 target_link_libraries(AudioElementPlugin
     PRIVATE
@@ -66,11 +63,20 @@ target_link_libraries(AudioElementPlugin
 if(CI_TEST OR INTERNAL_TEST)
     add_subdirectory(test)
 endif()
+
+# Copy resources for each plugin format
 if(BUILD_AAX)
     message(STATUS "AAX build. Setting up AudioElementplugin path and copying resources.")
-    include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
     set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AAX/Eclipsa Audio Element Plugin.aaxplugin")
     copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
-else()
-    message(STATUS "Non-AAX build detected. Skipping resource setup and resource copy for AudioElementPlugin.")
+endif()
+
+if(BUILD_VST3)
+    message(STATUS "VST3 build. Setting up AudioElementplugin path and copying resources.")
+    set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/VST3/Eclipsa Audio Element Plugin.vst3")
+    copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
+endif()
+
+if(NOT BUILD_AAX AND NOT BUILD_VST3)
+    message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for AudioElementPlugin.")
 endif()

@@ -48,8 +48,7 @@ target_compile_definitions(RendererPlugin
         JUCE_SILENCE_XCODE_15_LINKER_WARNING
         JUCE_ENABLE_LIVE_CONSTANT_EDITOR=1
         JucePlugin_IsSynth=1
-        JucePlugin_Category="Synth"
-        LOG_FILE_PATH="${LOG_FILE_PATH}")
+        JucePlugin_Category="Synth")
 
 target_link_options(RendererPlugin
     PUBLIC
@@ -76,15 +75,23 @@ target_link_libraries(RendererPlugin
 if(CI_TEST OR INTERNAL_TEST)
     target_link_libraries(RendererPlugin
         PRIVATE        
-            juce::juce_cryptography    
-            GTest::gtest
-            GTest::gtest_main)
+            juce::juce_cryptography)
     add_subdirectory(test)
 endif()
+
+# Copy resources for each plugin format
 if(BUILD_AAX)
     message(STATUS "AAX build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AAX/Eclipsa Audio Renderer.aaxplugin")
     copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
-else()
-    message(STATUS "Non-AAX build detected. Skipping resource setup and resource copy for Renderer Plugin.")
+endif()
+
+if(BUILD_VST3)
+    message(STATUS "VST3 build detected. Setting up renderer plugin path and copying resources.")
+    set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/VST3/Eclipsa Audio Renderer.vst3")
+    copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
+endif()
+
+if(NOT BUILD_AAX AND NOT BUILD_VST3)
+    message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for Renderer Plugin.")
 endif()

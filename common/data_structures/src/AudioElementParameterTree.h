@@ -41,30 +41,6 @@ class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
     return getParameterAsValue(AutoParamMetaData::zPosition).getValue();
   }
 
-  int getRotation() {
-    return getParameterAsValue(AutoParamMetaData::rotation).getValue();
-  }
-
-  int getSize() {
-    return getParameterAsValue(AutoParamMetaData::size).getValue();
-  }
-
-  float getWidth() {
-    return getParameterAsValue(AutoParamMetaData::width).getValue();
-  }
-
-  float getHeight() {
-    return getParameterAsValue(AutoParamMetaData::height).getValue();
-  }
-
-  float getDepth() {
-    return getParameterAsValue(AutoParamMetaData::depth).getValue();
-  }
-
-  int getLFE() {
-    return getParameterAsValue(AutoParamMetaData::lfeName).getValue();
-  }
-
   float getVolume() {
     return getParameterAsValue(AutoParamMetaData::volumeId).getValue();
   }
@@ -83,30 +59,6 @@ class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
 
   void setZPosition(int value) {
     getParameterAsValue(AutoParamMetaData::zPosition).setValue(value);
-  }
-
-  void setRotation(int value) {
-    getParameterAsValue(AutoParamMetaData::rotation).setValue(value);
-  }
-
-  void setSize(int value) {
-    getParameterAsValue(AutoParamMetaData::size).setValue(value);
-  }
-
-  void setWidth(float value) {
-    getParameterAsValue(AutoParamMetaData::width).setValue(value);
-  }
-
-  void setHeight(float value) {
-    getParameterAsValue(AutoParamMetaData::height).setValue(value);
-  }
-
-  void setDepth(float value) {
-    getParameterAsValue(AutoParamMetaData::depth).setValue(value);
-  }
-
-  void setLFE(int value) {
-    getParameterAsValue(AutoParamMetaData::lfeName).setValue(value);
   }
 
   void setVolume(float value) {
@@ -132,34 +84,6 @@ class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
     addParameterListener(AutoParamMetaData::zPosition, listener);
   }
 
-  void addRotationListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    addParameterListener(AutoParamMetaData::rotation, listener);
-  }
-
-  void addSizeListener(juce::AudioProcessorValueTreeState::Listener* listener) {
-    addParameterListener(AutoParamMetaData::size, listener);
-  }
-
-  void addWidthListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    addParameterListener(AutoParamMetaData::width, listener);
-  }
-
-  void addHeightListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    addParameterListener(AutoParamMetaData::height, listener);
-  }
-
-  void addDepthListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    addParameterListener(AutoParamMetaData::depth, listener);
-  }
-
-  void addLFELIstener(juce::AudioProcessorValueTreeState::Listener* listener) {
-    addParameterListener(AutoParamMetaData::lfeName, listener);
-  }
-
   void addVolumeListener(
       juce::AudioProcessorValueTreeState::Listener* listener) {
     addParameterListener(AutoParamMetaData::volumeId, listener);
@@ -183,36 +107,6 @@ class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
   void removeZPositionListener(
       juce::AudioProcessorValueTreeState::Listener* listener) {
     removeParameterListener(AutoParamMetaData::zPosition, listener);
-  }
-
-  void removeRotationListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    removeParameterListener(AutoParamMetaData::rotation, listener);
-  }
-
-  void removeSizeListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    removeParameterListener(AutoParamMetaData::size, listener);
-  }
-
-  void removeWidthListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    removeParameterListener(AutoParamMetaData::width, listener);
-  }
-
-  void removeHeightListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    removeParameterListener(AutoParamMetaData::height, listener);
-  }
-
-  void removeDepthListener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    removeParameterListener(AutoParamMetaData::depth, listener);
-  }
-
-  void removeLFELIstener(
-      juce::AudioProcessorValueTreeState::Listener* listener) {
-    removeParameterListener(AutoParamMetaData::lfeName, listener);
   }
 
   void removeVolumeListener(

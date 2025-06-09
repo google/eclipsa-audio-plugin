@@ -19,6 +19,7 @@
 #include <components/components.h>
 
 #include "RendererProcessor.h"
+#include "components/src/DAWWarningBanner.h"
 #include "screens/MonitorScreen.h"
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4 {
@@ -48,6 +49,7 @@ class RendererEditor final : public MainEditor {
   CustomLookAndFeel customLookAndFeel_;
 
   juce::Label titleLabel_;
+  DAWWarningBanner dawWarningBanner_;
   juce::Component* currentScreen_;
 
   MonitorScreen monitorScreen_;

@@ -66,7 +66,8 @@ class RoomSetup final : public RepositoryItemBase {
   RoomSetup(RoomLayout layout);
   RoomSetup(const RoomLayout layout, const bool drawSpeakers,
             const bool drawSpeakerLabels, const bool drawTracks,
-            const juce::String& currRoomView);
+            const juce::String& currRoomView,
+            const bool dawWarningDismissed = false);
 
   virtual juce::ValueTree toValueTree() const override;
   static RoomSetup fromTree(const juce::ValueTree tree);
@@ -92,15 +93,23 @@ class RoomSetup final : public RepositoryItemBase {
     currentRoomView_ = currRoomView;
   }
 
+  bool getDawWarningDismissed() const { return dawWarningDismissed_; }
+  void setDawWarningDismissed(const bool dismissed) {
+    dawWarningDismissed_ = dismissed;
+  }
+
   inline static const juce::Identifier kTreeType{"room_setup"};
   inline static const juce::Identifier kSpeakerLayout{"speaker_layout"};
   inline static const juce::Identifier kDrawSpeakers{"draw_speakers"};
   inline static const juce::Identifier kDrawSpeakerLabels{"draw_spkr_labels"};
   inline static const juce::Identifier kDrawTracks{"draw_tracks"};
   inline static const juce::Identifier kCurrRoomView{"current_view"};
+  inline static const juce::Identifier kDawWarningDismissed{
+      "daw_warning_dismissed"};
 
  private:
   RoomLayout speakerLayout_ = speakerLayoutConfigurationOptions[0];
   bool drawSpeakers_ = false, drawSpeakerLabels_ = false, drawTracks_ = false;
+  bool dawWarningDismissed_ = false;
   juce::String currentRoomView_ = "Iso";
 };

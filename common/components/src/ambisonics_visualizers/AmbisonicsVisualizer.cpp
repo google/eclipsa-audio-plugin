@@ -133,8 +133,8 @@ void AmbisonicsVisualizer::drawCarat(juce::Graphics& g) {
                     circleBounds_.getY()};
       break;
     case VisualizerView::kBottom:
-      caratPoint = {circleBounds_.getCentreX() - widthOffset,
-                    circleBounds_.getY()};
+      caratPoint = {circleBounds_.getCentreX() + widthOffset,
+                    circleBounds_.getBottom()};
       break;
   }
 
@@ -161,7 +161,7 @@ float AmbisonicsVisualizer::getCaratRotation(const VisualizerView& view) {
       rotation = -1.f * juce::MathConstants<float>::halfPi;
       break;
     case VisualizerView::kBottom:
-      rotation = -1.f * juce::MathConstants<float>::halfPi;
+      rotation = juce::MathConstants<float>::halfPi;
       break;
   }
   return rotation;
@@ -446,8 +446,8 @@ float AmbisonicsVisualizer::CartesianPoint3D::calculateSurfacePosition(
       assert(!std::isnan(z));
       break;
     case VisualizerView::kBottom:
-      x = point.second;
-      y = point.first;
+      x = -1.f * point.second;
+      y = -1.f * point.first;
       z = -1.f * unitSphere(x, y);
       assert(!std::isnan(z));
       break;

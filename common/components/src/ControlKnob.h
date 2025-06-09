@@ -79,7 +79,6 @@ class ControlKnob : public juce::Slider {
   const double max_;
   const double min_;
   const double defaultNormalizedValue_;
-  const juce::String suffix_;
 
   ControlKnobLookAndFeel lookAndFeel_;
   DimmedControlKnobLookAndFeel dimmedLookAndFeel_;

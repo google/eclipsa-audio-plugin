@@ -41,4 +41,5 @@ juce_add_binary_data(binary_data
         Carat.png
         Edit.png
         settings.png
-        Line.png)
+        Line.png
+        close.png)

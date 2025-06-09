@@ -86,8 +86,6 @@ class FileExportScreen : public juce::Component,
   juce::Label exportAudioElementsLabel_;
   juce::Label muxVidoeLabel_;
   SliderButton muxVideoToggle_;
-  juce::Label overwriteVideoAudioLabel_;
-  SliderButton overwriteVideoAudioToggle_;
   TitledTextBox exportVideoFolder_;
   juce::ImageButton browseVideoButton_;
   TitledTextBox videoSource_;

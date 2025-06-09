@@ -14,6 +14,7 @@
 
 #include "RendererEditor.h"
 
+#include "components/src/DAWWarningBanner.h"
 #include "components/src/EclipsaColours.h"
 #include "screens/MonitorScreen.h"
 
@@ -61,6 +62,7 @@ void CustomLookAndFeel::drawButtonBackground(
 
 RendererEditor::RendererEditor(RendererProcessor& p)
     : MainEditor(p),
+      dawWarningBanner_(&p.getRoomSetupRepository()),
       currentScreen_(&monitorScreen_),
       monitorScreen_(p.getRepositories(), p.getSpeakerMonitorData(), *this,
                      p.getChannelMonitorProcessor()) {
@@ -69,6 +71,10 @@ RendererEditor::RendererEditor(RendererProcessor& p)
 
   // Set up the look and feel information here
   setLookAndFeel(&customLookAndFeel_);
+
+  // Add the DAW warning banner and let it determine its own visibility.
+  addChildComponent(dawWarningBanner_);
+  dawWarningBanner_.refreshVisibility();
 }
 
 RendererEditor::~RendererEditor() { setLookAndFeel(nullptr); }
@@ -90,31 +96,63 @@ void RendererEditor::paint(juce::Graphics& g) {
   titleLabel_.setFont(juce::Font("Audiowide", 30.0f, juce::Font::plain));
   titleLabel_.setBounds(bounds.removeFromTop(40));
 
-  // Add the title seperator line
+  // Add some spacing between title and warning banner (if shown)
+  bounds.removeFromTop(5);
+
+  // Position the DAW warning banner above the separator line
+  // It's already added as a child in the constructor and its visibility set.
+  if (dawWarningBanner_.isVisible()) {
+    dawWarningBanner_.updatePosition(titleLabel_.getBottom() + 5, getWidth());
+    bounds.removeFromTop(35);
+  }
+
+  // Add some spacing before the separator line
+  bounds.removeFromTop(5);
+
+  // Add the title separator line
+  auto separatorBounds = bounds.removeFromTop(2);
   juce::Colour gradientWhite =
       getLookAndFeel().findColour(juce::Label::textColourId);
   juce::Colour gradientBrown(140, 78, 41);
-  g.setGradientFill(juce::ColourGradient(
-      gradientWhite, bounds.getX(), bounds.getY(), gradientBrown,
-      bounds.getWidth(), bounds.getY(), false));
-  g.drawRect(bounds.removeFromTop(2));
-  bounds.removeFromTop(20);  // Add padding under the seperator
+  g.setGradientFill(juce::ColourGradient(gradientWhite, separatorBounds.getX(),
+                                         separatorBounds.getY(), gradientBrown,
+                                         separatorBounds.getWidth(),
+                                         separatorBounds.getY(), false));
+  g.fillRect(separatorBounds);
+
+  bounds.removeFromTop(20);  // Add padding under the banner/separator
 
   // Now draw in the current screen
   addAndMakeVisible(currentScreen_);
   currentScreen_->setBounds(bounds);
 }
 
-void RendererEditor::resized() {}
+void RendererEditor::resized() {
+  // Simply trigger repaint to handle layout
+  repaint();
+}
 
 void RendererEditor::setScreen(juce::Component& screen) {
-  removeAllChildren();  // Clear all child components, like buttons
+  removeAllChildren();
+  addAndMakeVisible(titleLabel_);
+  addChildComponent(dawWarningBanner_);
+
+  dawWarningBanner_.refreshVisibility();
+
   currentScreen_ = &screen;
+  addAndMakeVisible(currentScreen_);
   repaint();
 }
 
 void RendererEditor::resetScreen() {
-  removeAllChildren();  // Clear all child components, like buttons
+  removeAllChildren();
+  addAndMakeVisible(titleLabel_);
+  addChildComponent(dawWarningBanner_);
+
+  // Refresh visibility to ensure the banner state is correct
+  dawWarningBanner_.refreshVisibility();
+
   currentScreen_ = &monitorScreen_;
+  addAndMakeVisible(currentScreen_);
   repaint();
 }

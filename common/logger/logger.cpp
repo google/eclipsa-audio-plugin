@@ -14,18 +14,18 @@
 
 #include "logger.h"
 
+#include <juce_core/juce_core.h>
+
 #include <boost/filesystem.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sinks.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/file.hpp>
-#include <fstream>
 #include <iostream>
 #include <regex>
 
-void Logger::init(const std::string& pluginName, const std::string& logFilePath,
-                  size_t maxFileSizeMB,
+void Logger::init(const std::string& pluginName, size_t maxFileSizeMB,
                   boost::log::trivial::severity_level minSeverity) {
   std::lock_guard<std::mutex> lock(
       initMutex);           // Ensure thread-safe initialization
@@ -33,19 +33,30 @@ void Logger::init(const std::string& pluginName, const std::string& logFilePath,
   initialized = true;
 
   try {
-    // Extract the directory from the logFilePath
-    boost::filesystem::path logPath(logFilePath);
-    std::string logDir = logPath.parent_path().string();
+    // Create the full path: ~/Library/Application
+    // Support/Eclipsa/Logs/{pluginName}/
+    juce::File logDir =
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("Eclipsa")
+            .getChildFile("Logs")
+            .getChildFile(pluginName);
 
-    // Ensure the log directory exists
-    if (!boost::filesystem::exists(logDir)) {
-      if (!boost::filesystem::create_directories(logDir)) {
-        throw std::runtime_error("Failed to create log directory: " + logDir);
+    std::string logDirPath = logDir.getFullPathName().toStdString();
+
+    // JUCE's createDirectory() creates all parent directories recursively
+    if (!logDir.exists()) {
+      if (!logDir.createDirectory()) {
+        std::cerr << "Error: Failed to create log directory: " << logDirPath
+                  << std::endl;
+        throw std::runtime_error("Failed to create log directory: " +
+                                 logDirPath);
       }
     }
 
     // Set up the file sink with rotation
-    std::string filePattern = logDir + "/" + pluginName + "_%N.log";
+    boost::filesystem::path logDirPathBoost(logDirPath);
+    std::string filePattern =
+        (logDirPathBoost / (pluginName + "_%N.log")).string();
     auto fileSink = boost::log::add_file_log(
         boost::log::keywords::open_mode = std::ios::out,
         boost::log::keywords::file_name = filePattern,
@@ -60,7 +71,7 @@ void Logger::init(const std::string& pluginName, const std::string& logFilePath,
     fileSink->locked_backend()->set_file_collector(
         boost::log::sinks::file::make_collector(
             boost::log::keywords::target =
-                logDir,  // Use the same directory as the log file
+                logDirPath,  // Use the same directory as the log file
             boost::log::keywords::max_size =
                 50 * 1024 * 1024,  // Total size for all logs
             boost::log::keywords::min_free_space =

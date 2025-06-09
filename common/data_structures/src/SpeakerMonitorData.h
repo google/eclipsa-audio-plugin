@@ -20,6 +20,10 @@
 #include "RealtimeDataType.h"
 
 struct SpeakerMonitorData {
+  void reinitializeLoudnesses(int numChannels) {
+    playbackLoudness.update(std::vector<float>(numChannels, -300.f));
+    binauralLoudness.update({-300.f, -300.f});
+  }
   std::atomic_bool resetStats;
   RealtimeDataType<MeasureEBU128::LoudnessStats> loudnessEBU128;
   RealtimeDataType<std::vector<float>> playbackLoudness;

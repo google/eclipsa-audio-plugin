@@ -46,6 +46,7 @@ PresentationEditorTab::PresentationEditorTab(
           [this]() { changeMixPresentationNameCallback(); }),
 
       deleteMixPresentationButton_(IconStore::getInstance().getDeleteIcon()) {
+  deleteMixPresentationButton_.setGreyLookAndFeel();
   setLookAndFeel(&lookAndFeel_);
   MixPresentation mixPres = mixPresentationRepository_->get(mixPresentationId_)
                                 .value_or(MixPresentation());
@@ -536,23 +537,15 @@ void PresentationEditorTab::deleteMixPresentation() {
   MixPresentation mixPres = mixPresentationRepository_->get(mixPresentationId_)
                                 .value_or(MixPresentation());
 
-  if (mixPres.getId() == activeMix.getActiveMixId()) {
-    mixPresentationRepository_->remove(mixPres);
+  mixPresentationRepository_->remove(mixPres);
 
+  if (mixPres.getId() == activeMix.getActiveMixId()) {
     // Attempt to set the active mix to the first valid mix presentation in the
     // repository.
-    int numMixes = mixPresentationRepository_->getItemCount();
-    if (numMixes > 0) {
-      activeMix.updateActiveMixId(
-          mixPresentationRepository_->getFirst()->getId());
-    }
-    // Otherwise indicate no valid mixes to present.
-    else {
-      activeMix.updateActiveMixId(juce::Uuid::null());
-    }
+    activeMix.updateActiveMixId(
+        mixPresentationRepository_->getFirst()->getId());
+
     activeMixPresentationRepository_->update(activeMix);
-  } else {
-    mixPresentationRepository_->remove(mixPres);
   }
 }
 
@@ -573,6 +566,9 @@ void PresentationEditorTab::changeMixPresentationNameCallback() {
   // change the name of the mix presentation
   mixPres.setName(presentationName_.getText());
   mixPresentationRepository_->update(mixPres);
+
+  deleteMixPresentationButton_.setButtonText(
+      "Delete \"" + presentationName_.getText() + "\"");
 }
 
 void PresentationEditorTab::setupTitleTextBox(
@@ -622,7 +618,10 @@ void PresentationEditorTab::updateDeleteMixPresButton() {
   mixPresentationRepository_->getAll(mixPresArray);
   if (mixPresArray.size() == 1) {
     deleteMixPresentationButton_.setEnabled(false);
+    deleteMixPresentationButton_.dimButton();
   } else {
     deleteMixPresentationButton_.setEnabled(true);
+    deleteMixPresentationButton_.resetButton();
   }
+  deleteMixPresentationButton_.repaint();
 }

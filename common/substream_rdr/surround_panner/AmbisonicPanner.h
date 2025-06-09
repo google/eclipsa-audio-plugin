@@ -23,8 +23,7 @@
 
 class AmbisonicPanner : public AudioPanner {
  public:
-  AmbisonicPanner(const Speakers::AudioElementSpeakerLayout inputLayout,
-                  const Speakers::AudioElementSpeakerLayout pannedLayout,
+  AmbisonicPanner(const Speakers::AudioElementSpeakerLayout pannedLayout,
                   const int samplesPerBlock, const int sampleRate);
 
   ~AmbisonicPanner();
@@ -46,7 +45,6 @@ class AmbisonicPanner : public AudioPanner {
   void positionUpdated() override;
 
  private:
-  const int kNumChIn_;
   obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_;
   std::unique_ptr<obr::AmbisonicEncoder> encoder_;
 };

@@ -14,20 +14,15 @@
 
 #include "BinauralPanner.h"
 
-BinauralPanner::BinauralPanner(
-    const Speakers::AudioElementSpeakerLayout inputLayout,
-    const int samplesPerBlock, const int sampleRate)
-    : kNumChIn_(inputLayout.getNumChannels()),
-      encoder_(nullptr),
-      AudioPanner(inputLayout, Speakers::kBinaural, samplesPerBlock,
-                  sampleRate) {
+BinauralPanner::BinauralPanner(const int samplesPerBlock, const int sampleRate)
+    : encoder_(nullptr),
+      AudioPanner(Speakers::kBinaural, samplesPerBlock, sampleRate) {
   // Create the encoder for encoding to the desired ambisonic order.
   encoder_ = std::make_unique<obr::ObrImpl>(samplesPerBlock, sampleRate);
   encoder_->AddAudioElement(obr::AudioElementType::kObjectMono);
 
   // Resize internal buffers for API calls.
-  inputBufferPlanar_ =
-      obr::AudioBuffer(inputLayout.getNumChannels(), samplesPerBlock);
+  inputBufferPlanar_ = obr::AudioBuffer(1, samplesPerBlock);
   outputBufferPlanar_ =
       obr::AudioBuffer(Speakers::kBinaural.getNumChannels(), samplesPerBlock);
 }
@@ -43,11 +38,10 @@ void BinauralPanner::process(juce::AudioBuffer<float>& inputBuffer,
                              juce::AudioBuffer<float>& outputBuffer) {
   outputBuffer.clear();
 
-  for (int i = 0; i < kNumChIn_; ++i) {
-    const float* rPtr = inputBuffer.getReadPointer(i);
-    for (int j = 0; j < kSamplesPerBlock_; ++j) {
-      inputBufferPlanar_[i][j] = rPtr[j];
-    }
+  // Fetch the first channel, which is the only channel to be panned
+  const float* rPtr = inputBuffer.getReadPointer(0);
+  for (int j = 0; j < kSamplesPerBlock_; ++j) {
+    inputBufferPlanar_[0][j] = rPtr[j];
   }
 
   // Convert input buffer to planar vector and add spatial information.

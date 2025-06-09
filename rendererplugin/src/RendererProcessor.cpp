@@ -17,6 +17,10 @@
 #include <processors/processors.h>
 
 #include "RendererEditor.h"
+#include "data_repository/implementation/ActiveMixPresentationRepository.h"
+#include "data_structures/src/ActiveMixPresentation.h"
+#include "data_structures/src/MixPresentation.h"
+#include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
 #include "processors/processor_base/ProcessorBase.h"
 
@@ -42,7 +46,7 @@ RendererProcessor::RendererProcessor()
       activeMixPresentationRepository_(getTreeWithId(kActiveMixKey)),
       isRealtime_(true) {
   // Initialize Logger
-  Logger::getInstance().init("EclipsaRenderer", LOG_FILE_PATH);
+  Logger::getInstance().init("EclipsaRenderer");
 
   // Log instantiation of RendererProcessor
   LOG_ANALYTICS(instanceId_, "RendererProcessor instantiated.");
@@ -68,6 +72,7 @@ RendererProcessor::RendererProcessor()
   audioProcessors_.push_back(std::make_unique<MSProcessor>(getRepositories()));
   audioProcessors_.push_back(std::make_unique<MixMonitorProcessor>(
       roomSetupRepository_, monitorData_));
+  audioProcessors_.push_back(std::make_unique<RemappingProcessor>(this, true));
   // 28 is the maximum number of channels an IAMF file can contain
   juce::AudioChannelSet outputChannels;
   for (int i = 0; i < 28; i++) {
@@ -76,6 +81,7 @@ RendererProcessor::RendererProcessor()
 
   // Set up listening for the switch to manual offline mode
   fileExportRepository_.registerListener(this);
+  roomSetupRepository_.registerListener(this);
 }
 
 RendererProcessor::~RendererProcessor() {}
@@ -83,25 +89,46 @@ RendererProcessor::~RendererProcessor() {}
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
   // Ensure the input channel set is wide enough for us
-  if (layouts.getMainInputChannelSet() == juce::AudioChannelSet::ambisonic(5)) {
-    // Ensure the output channel set it one of the channel sets we support
-    // rendering to
-    if (layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() ||
-        layouts.getMainOutputChannelSet() ==
-            juce::AudioChannelSet::create5point1() ||
-        layouts.getMainOutputChannelSet() ==
-            juce::AudioChannelSet::create5point1point2() ||
-        layouts.getMainOutputChannelSet() ==
-            juce::AudioChannelSet::create5point1point4() ||
-        layouts.getMainOutputChannelSet() ==
-            juce::AudioChannelSet::create7point1() ||
-        layouts.getMainOutputChannelSet() ==
-            juce::AudioChannelSet::create7point1point4()) {
-      return true;
-    }
+  if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::ambisonic(5)) {
     return false;
   }
-  return false;
+
+  auto hostType = juce::PluginHostType();
+
+  if (hostType.isReaper()) {
+    return layouts.getMainOutputChannelSet() == outputChannelSet_;
+  }
+
+  // Ensure the output channel set it one of the channel sets we support
+  // rendering to
+  if (layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() ||
+      layouts.getMainOutputChannelSet() ==
+          juce::AudioChannelSet::create5point1() ||
+      layouts.getMainOutputChannelSet() ==
+          juce::AudioChannelSet::create5point1point2() ||
+      layouts.getMainOutputChannelSet() ==
+          juce::AudioChannelSet::create5point1point4() ||
+      layouts.getMainOutputChannelSet() ==
+          juce::AudioChannelSet::create7point1() ||
+      layouts.getMainOutputChannelSet() ==
+          juce::AudioChannelSet::create7point1point4()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool RendererProcessor::applyBusLayouts(const BusesLayout& layouts) {
+  bool check = ProcessorBase::applyBusLayouts(layouts);
+  if (check) {
+    std::string applyBusLayoutMessage =
+        "applyBusLayouts returning TRUE with output: " +
+        layouts.getMainOutputChannelSet().getDescription().toStdString() + "\n";
+
+    LOG_ANALYTICS(instanceId_, applyBusLayoutMessage);
+  }
+
+  return check;
 }
 
 //==============================================================================
@@ -111,6 +138,7 @@ const juce::String RendererProcessor::getName() const {
 
 //==============================================================================
 void RendererProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+  LOG_ANALYTICS(instanceId_, "RendererProcessor prepareToPlay \n");
   setRateAndBufferSizeDetails(sampleRate, samplesPerBlock);
   for (const auto& proc : audioProcessors_) {
     proc->prepareToPlay(sampleRate, samplesPerBlock);
@@ -171,15 +199,18 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 bool RendererProcessor::hasEditor() const { return true; }
 
 juce::AudioProcessorEditor* RendererProcessor::createEditor() {
+  LOG_ANALYTICS(instanceId_, "RendererProcessor createEditor \n");
   return new RendererEditor(*this);
 }
 
 //==============================================================================
 void RendererProcessor::getStateInformation(juce::MemoryBlock& destData) {
+  LOG_ANALYTICS(instanceId_, "RendererProcessor getStateInformation \n");
   copyXmlToBinary(*persistentState_.createXml(), destData);
 }
 
 void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
+  LOG_ANALYTICS(instanceId_, "RendererProcessor setStateInformation \n");
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
 
@@ -188,6 +219,8 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
   }
 
   updateRepositories();
+
+  configureOutputBus();
 }
 
 void RendererProcessor::updateRepositories() {
@@ -231,6 +264,8 @@ void RendererProcessor::updateRepositories() {
   if (fileExport.isValid()) {
     fileExportRepository_.setStateTree(fileExport);
   }
+
+  initializeMixPresentations();
 }
 
 juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
@@ -257,6 +292,17 @@ void RendererProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
   checkManualOfflineStartStop();
+
+  if (treeWhosePropertyHasChanged.getType() == RoomSetup::kTreeType &&
+      property == RoomSetup::kSpeakerLayout) {
+    configureOutputBus();
+
+    std::string mainBusInfo = "Main Bus Output Channels: " +
+                              std::to_string(getMainBusNumOutputChannels()) +
+                              "\n";
+
+    LOG_ANALYTICS(instanceId_, mainBusInfo);
+  }
 }
 void RendererProcessor::valueTreeChildAdded(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
@@ -266,4 +312,68 @@ void RendererProcessor::valueTreeChildRemoved(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
     int indexFromWhichChildWasRemoved) {
   checkManualOfflineStartStop();
+}
+
+void RendererProcessor::initializeMixPresentations() {
+  juce::OwnedArray<MixPresentation> mixPresentations;
+  mixPresentationRepository_.getAll(mixPresentations);
+  if (mixPresentations.size() == 0) {
+    MixPresentation mixPres(juce::Uuid(), "My Mix Presentation", 1);
+    mixPresentationRepository_.add(mixPres);
+    activeMixPresentationRepository_.update(mixPres.getId());
+    LOG_ANALYTICS(instanceId_,
+                  "setStateInformation: Created a new mix presentation and set "
+                  "it as active.");
+  }
+
+  ActiveMixPresentation activeMix = activeMixPresentationRepository_.get();
+  juce::Uuid activeMixId = activeMix.getActiveMixId();
+
+  if (activeMix.getActiveMixId() == juce::Uuid::null() ||
+      !mixPresentationRepository_.get(activeMixId).has_value()) {
+    // If no active mix presentation, set the first one as active.
+    activeMix.updateActiveMixId(mixPresentations[0]->getId());
+    activeMixPresentationRepository_.update(activeMix);
+    LOG_ANALYTICS(
+        instanceId_,
+        "setStateInformation: Ensured the first mix presentation is active.");
+  }
+}
+
+void RendererProcessor::configureOutputBus() {
+  // Reaper/VST3 does not support changing the output channel set from Stereo to
+  // other layouts dynamically, so we need to reconfigure the output bus when
+  // the room setup changes.
+  auto hostType = juce::PluginHostType();
+  if (!hostType.isReaper()) {
+    LOG_ANALYTICS(instanceId_,
+                  "PluginHostType is NOT Reaper. Not Configuring output bus.");
+    return;
+  }
+
+  // set the default output bus
+  RoomSetup roomSetup = roomSetupRepository_.get();
+  std::string newChannelSetMsg;
+  if (roomSetup.getSpeakerLayout().getRoomSpeakerLayout()) {
+    outputChannelSet_ =
+        roomSetup.getSpeakerLayout().getRoomSpeakerLayout().getChannelSet();
+    newChannelSetMsg =
+        "roomSetup.getSpeakerLayout() is valid. Setting outputChannelSet_ to " +
+        outputChannelSet_.getDescription().toStdString() + "\n";
+  } else {
+    outputChannelSet_ = juce::AudioChannelSet::stereo();
+    newChannelSetMsg =
+        "roomSetup.getSpeakerLayout() is NOT valid. Setting outputChannelSet_ "
+        "to stereo \n";
+  }
+
+  LOG_ANALYTICS(instanceId_, newChannelSetMsg);
+
+  // Update the bus output layout
+  juce::AudioProcessor::BusesLayout busesLayout = getBusesLayout();
+
+  busesLayout.outputBuses.remove(0);
+  busesLayout.outputBuses.add(outputChannelSet_);
+
+  setBusesLayout(busesLayout);
 }

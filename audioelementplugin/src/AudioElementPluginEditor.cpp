@@ -70,6 +70,7 @@ AudioElementPluginEditor::AudioElementPluginEditor(
       audioElementSpatialLayoutRepository_(
           &p.getRepositories().audioElementSpatialLayoutRepository_),
       syncClient_(&p.getSyncClient()),
+      spkrData_(&p.getRepositories().monitorData_),
       trackNameTextBox_("Track name"),
       outputModeTypeLabel_("Output Mode"),
       audioElementSelectionBox_("Audio Element"),
@@ -89,11 +90,6 @@ AudioElementPluginEditor::AudioElementPluginEditor(
   // Fetch setup information from the AudioElementSpatialLayout repository
   AudioElementSpatialLayout config =
       audioElementSpatialLayoutRepository_->get();
-
-  // Determine if panning is allowed
-  panningAvailable_ =
-      Speakers::AudioElementSpeakerLayout(
-          p.getBusesLayout().getMainInputChannelSet()) == Speakers::kMono;
 
   // Set up the look and feel information here
   setLookAndFeel(&customLookAndFeel_);
@@ -126,12 +122,6 @@ AudioElementPluginEditor::AudioElementPluginEditor(
       Speakers::AudioElementSpeakerLayout(
           p.getBusesLayout().getMainInputChannelSet());
 
-  if (inputLayout == Speakers::kMono) {
-    outputModeTypeLabel_.setText("Panning Mode");
-  } else {
-    outputModeTypeLabel_.setText("Passthrough Mode");
-  }
-
   outputModeTypeLabel_.setEnabled(false);
 
   // Configure the audio element selection box
@@ -150,6 +140,8 @@ AudioElementPluginEditor::AudioElementPluginEditor(
       juce::OwnedArray<AudioElement> elements;
       syncClient_->getAudioElements(elements);
       AudioElement* selectedElement = elements[selected];
+      spkrData_->reinitializeLoudnesses(
+          selectedElement->getChannelConfig().getNumChannels());
       firstChannel = selectedElement->getFirstChannel();
       channelLayout = selectedElement->getChannelConfig();
       audioElementId = selectedElement->getId();
@@ -177,11 +169,16 @@ AudioElementPluginEditor::AudioElementPluginEditor(
     toUpdate.setName(trackNameTextBox_.getText());
     audioElementSpatialLayoutRepository_->update(toUpdate);
   });
+
+  // Update the panning type and listen for any changes
+  setMode();
+  audioElementSpatialLayoutRepository_->registerListener(this);
 }
 
 AudioElementPluginEditor::~AudioElementPluginEditor() {
   setLookAndFeel(nullptr);
   syncClient_->removeListener(this);
+  audioElementSpatialLayoutRepository_->deregisterListener(this);
 }
 
 void AudioElementPluginEditor::audioElementsUpdated() {
@@ -219,12 +216,10 @@ void AudioElementPluginEditor::paint(juce::Graphics& g) {
 
   // Add the slider button for the panning controls
   auto titleBarBounds = bounds.removeFromTop(40);
-  if (panningAvailable_) {
-    addAndMakeVisible(panningControls_);
-    panningControls_.setBounds(titleBarBounds.removeFromRight(55).reduced(5));
-    addAndMakeVisible(panningControlsLabel_);
-    panningControlsLabel_.setBounds(titleBarBounds.removeFromRight(200));
-  }
+  addAndMakeVisible(panningControls_);
+  panningControls_.setBounds(titleBarBounds.removeFromRight(55).reduced(5));
+  addAndMakeVisible(panningControlsLabel_);
+  panningControlsLabel_.setBounds(titleBarBounds.removeFromRight(200));
 
   // Add the title label
   addAndMakeVisible(titleLabel_);
@@ -282,3 +277,11 @@ void AudioElementPluginEditor::paint(juce::Graphics& g) {
 }
 
 void AudioElementPluginEditor::resized() {}
+
+void AudioElementPluginEditor::setMode() {
+  if (audioElementSpatialLayoutRepository_->get().isPanningEnabled()) {
+    outputModeTypeLabel_.setText("Panning Mode");
+  } else {
+    outputModeTypeLabel_.setText("Passthrough Mode");
+  }
+}

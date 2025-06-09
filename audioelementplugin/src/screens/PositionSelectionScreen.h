@@ -47,13 +47,7 @@ class PositionSelectionScreen : public juce::Component,
  private:
   std::unique_ptr<TextEditorControlledDial> createDialWithChevrons(
       const juce::String& title, const int& defaultValue = 0,
-      const int& currValue = 0, const std::pair<int, int>& range = {-50, 50},
-      juce::String appendedText = "");
-
-  std::unique_ptr<TextEditorControlledDial> createDial(
-      const juce::String& title, const int& defaultValue = 0,
-      const int& currValue = 0, const std::pair<int, int>& range = {0, 100},
-      juce::String appendedText = "");
+      const int& currValue = 0, const std::pair<int, int>& range = {-50, 50});
 
   void adjustLabelBounds(juce::Rectangle<int>& labelBounds,
                          const juce::Rectangle<int> positionBounds);
@@ -78,10 +72,6 @@ class PositionSelectionScreen : public juce::Component,
 
   juce::OwnedArray<TextEditorControlledDial> positionDials;
   const int z_dial_index = 2;
-  juce::OwnedArray<TextEditorControlledDial> spreadDials;
-  std::unique_ptr<TextEditorControlledDial> lfeDial;
 
   const std::pair<int, int> positionRange_;
-  const std::pair<int, int> rotationRange_;
-  const std::pair<int, int> spreadRange_;
 };

@@ -1,6 +1,6 @@
-# Eclipsa Audio Renderer License Information
+# Eclipsa Audio Plugins License Information
 
-This product, Eclipsa, is licensed under the Apache License, Version 2.0.
+This product, Eclipsa Audio Plugins, is licensed under the Apache License, Version 2.0.
 See ../LICENSE.txt for details and includes third‐party software 
 dependencies licensed under various open‐source licenses, which are detailed below.
 

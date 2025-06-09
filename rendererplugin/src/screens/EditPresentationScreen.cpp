@@ -229,9 +229,9 @@ void EditPresentationScreen::addMixPresentationCallback() {
   juce::String name;
   // if there are no mix presentations, add the default one
   if (numMixes_ < 1) {
-    name = "My Presentation Mix";
+    name = "My Mix Presentation";
   } else {
-    name = "My Presentation Mix " + juce::String(numMixes_ + 1);
+    name = "My Mix Presentation" + juce::String(numMixes_ + 1);
   }
   // Log the addition of a new mix presentation
   LOG_ANALYTICS(RendererProcessor::instanceId_,

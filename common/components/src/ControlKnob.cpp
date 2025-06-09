@@ -97,12 +97,10 @@ ControlKnob::ControlKnob(const double& min, const double& max,
     : min_(min),
       max_(max),
       defaultNormalizedValue_((defaultValue - min) / (max - min)),
-      suffix_(suffix),
       lookAndFeel_(defaultNormalizedValue_),
       dimmedLookAndFeel_(defaultNormalizedValue_),
       juce::Slider(juce::Slider::Rotary, juce::Slider::NoTextBox) {
   setLookAndFeel(&lookAndFeel_);
-  juce::Slider::setTextValueSuffix(suffix_);
   setRotaryParameters(startAngle_, endAngle_, true);
   juce::Slider::setRange(min_, max_, 1.f);
   juce::Slider::setValue(currValue);

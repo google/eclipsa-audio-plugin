@@ -63,7 +63,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportAudioElementsLabel_.setColour(juce::Label::textColourId, textColour);
   exportAudioLabel_.setColour(juce::Label::textColourId, textColour);
   muxVidoeLabel_.setColour(juce::Label::textColourId, textColour);
-  overwriteVideoAudioLabel_.setColour(juce::Label::textColourId, textColour);
   startTimerErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
                                   EclipsaColours::red);
   endTimerErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
@@ -78,8 +77,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       juce::Font("Roboto", 16.0f, juce::Font::plain));
   exportAudioLabel_.setFont(textFont);
   muxVidoeLabel_.setFont(textFont);
-  overwriteVideoAudioLabel_.setFont(
-      juce::Font("Roboto", 20.0f, juce::Font::plain));
   startTimerErrorLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
   endTimerErrorLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
   startTimerErrorLabel_.setJustificationType(juce::Justification::topLeft);
@@ -214,16 +211,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   muxVideoToggle_.onClick = [this] {
     FileExport config = repository_->get();
     config.setExportVideo(muxVideoToggle_.getToggleState());
-    repository_->update(config);
-  };
-
-  overwriteVideoAudioToggle_.setToggleState(
-      true, juce::NotificationType::dontSendNotification);
-  overwriteVideoAudioLabel_.setText("Overwrite Audio",
-                                    juce::dontSendNotification);
-  overwriteVideoAudioToggle_.onClick = [this] {
-    FileExport config = repository_->get();
-    config.setOverwriteVideoAudio(overwriteVideoAudioToggle_.getToggleState());
     repository_->update(config);
   };
 
@@ -447,11 +434,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
     addAndMakeVisible(muxVideoToggle_);
     muxVideoToggle_.setBounds(row.removeFromLeft(85).reduced(15));
 
-    addAndMakeVisible(overwriteVideoAudioLabel_);
-    addAndMakeVisible(overwriteVideoAudioToggle_);
-    overwriteVideoAudioLabel_.setBounds(row.removeFromLeft(150));
-    overwriteVideoAudioToggle_.setBounds(row.removeFromLeft(85).reduced(15));
-
     row = bounds.removeFromTop(rowHeight);
     addAndMakeVisible(videoSource_);
     videoSource_.setBounds(row.removeFromLeft(componentWidth));
@@ -470,8 +452,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
   else {
     muxVideoToggle_.setToggleState(false, true);
     muxVidoeLabel_.setVisible(false);
-    overwriteVideoAudioLabel_.setVisible(false);
-    overwriteVideoAudioToggle_.setVisible(false);
     muxVideoToggle_.setVisible(false);
     videoSource_.setVisible(false);
     browseVideoSourceButton_.setVisible(false);

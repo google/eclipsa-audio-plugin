@@ -26,6 +26,7 @@
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
+#include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/AudioElementCommunication.h"
 #include "data_structures/src/RepositoryCollection.h"
 #include "processors/processor_base/ProcessorBase.h"
@@ -42,6 +43,8 @@ class RendererProcessor final : public ProcessorBase,
       0;  // Unique identifier for each instance of the plugin
 
   bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+
+  bool applyBusLayouts(const BusesLayout& layouts) override;
 
   //==============================================================================
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -88,6 +91,7 @@ class RendererProcessor final : public ProcessorBase,
             activeMixPresentationRepository_};
   }
 
+  RoomSetupRepository& getRoomSetupRepository() { return roomSetupRepository_; }
   SpeakerMonitorData& getSpeakerMonitorData() { return monitorData_; }
 
   void updateAudioElementPluginInformation(
@@ -106,6 +110,10 @@ class RendererProcessor final : public ProcessorBase,
 
  private:
   void updateRepositories();
+
+  void initializeMixPresentations();
+
+  void configureOutputBus();
 
   juce::ValueTree getTreeWithId(const juce::Identifier& id);
 
@@ -159,6 +167,8 @@ class RendererProcessor final : public ProcessorBase,
   SpeakerMonitorData monitorData_;
 
   ChannelMonitorProcessor* channelMonitorProcessor_;
+
+  juce::AudioChannelSet outputChannelSet_ = juce::AudioChannelSet::stereo();
 
   // Monitors if rendering in realtime mode or offline mode during debug builds
   // only

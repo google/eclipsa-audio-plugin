@@ -15,10 +15,9 @@
 #include "../logger.h"
 
 #include <gtest/gtest.h>
+#include <juce_core/juce_core.h>
 
-#include <filesystem>
 #include <fstream>
-#include <regex>
 #include <string>
 #include <thread>
 
@@ -29,21 +28,10 @@ std::string readLogFile(const std::string& logFilePath) {
                      std::istreambuf_iterator<char>());
 }
 
-// Ensure directory exists for the log file
-void ensureLogDirectoryExists(const std::string& logFilePath) {
-  std::filesystem::path logPath(logFilePath);
-  if (!std::filesystem::exists(logPath.parent_path())) {
-    std::filesystem::create_directories(logPath.parent_path());
-    std::cout << "Created directory: " << logPath.parent_path() << std::endl;
-  }
-}
-
 // Test Logger Initialization
 TEST(LoggerTest, InitializeLogger) {
-  const std::string logFilePath = "/tmp/test_log.log";
-
   // Clean up existing log files before the test
-  Logger::getInstance().init("testlog", logFilePath);
+  Logger::getInstance().init("testlog");  // Use JUCE standard directory
   std::vector<std::string> existingLogFiles =
       Logger::getInstance().getLogFilePaths();
   for (const auto& file : existingLogFiles) {
@@ -51,7 +39,7 @@ TEST(LoggerTest, InitializeLogger) {
   }
 
   // Initialize the logger
-  Logger::getInstance().init("testlog", logFilePath);
+  Logger::getInstance().init("testlog");  // Use JUCE standard directory
 
   // Log a message to ensure the log file is created
   LOG_INFO(1, "Initialization Test Message");
@@ -71,7 +59,7 @@ TEST(LoggerTest, InitializeLogger) {
 
   // Attempt to re-initialize the logger with different parameters
   Logger::getInstance().init(
-      "testlog2", logFilePath);  // Re-initialization should be prevented
+      "testlog2");  // Re-initialization should be prevented
 
   // Log a message to verify that the logger is still functioning
   LOG_INFO(1, "Initialization Test Message");
@@ -101,11 +89,8 @@ TEST(LoggerTest, InitializeLogger) {
 
 // Test Logging Different Severity Levels
 TEST(LoggerTest, LogMessages) {
-  const std::string logFilePath = "/tmp/test_log.log";
-
   // Clean up log files before the test
-  Logger::getInstance().init("testlog", logFilePath, 1,
-                             boost::log::trivial::debug);
+  Logger::getInstance().init("testlog", 1, boost::log::trivial::debug);
   std::vector<std::string> existingLogFiles =
       Logger::getInstance().getLogFilePaths();
   for (const auto& file : existingLogFiles) {
@@ -158,10 +143,8 @@ TEST(LoggerTest, LogMessages) {
 
 // Test Thread Safety by Logging from Multiple Threads
 TEST(LoggerTest, LogFromMultipleThreads) {
-  const std::string logFilePath = "/tmp/test_log.log";
-
   // Clean up log files before the test
-  Logger::getInstance().init("testlog", logFilePath);
+  Logger::getInstance().init("testlog");
   std::vector<std::string> existingLogFiles =
       Logger::getInstance().getLogFilePaths();
   for (const auto& file : existingLogFiles) {
@@ -211,24 +194,40 @@ TEST(LoggerTest, LogFromMultipleThreads) {
 
 // Test if init is called multiple times (ensure it doesn't reinitialize)
 TEST(LoggerTest, LoggerInitMultipleCalls) {
-  const std::string logFilePath = "/tmp/test_log.log";
+  // Initialize logger - the path is now determined automatically by JUCE
+  Logger::getInstance().init("testlog");
 
-  // Clean up log file before the test
-  if (std::filesystem::exists(logFilePath)) {
-    std::filesystem::remove(logFilePath);
+  // Get the actual log files created
+  std::vector<std::string> logFiles = Logger::getInstance().getLogFilePaths();
+
+  // Clean up existing log files before the test
+  for (const auto& file : logFiles) {
+    std::remove(file.c_str());
   }
-  ensureLogDirectoryExists(logFilePath);
 
-  Logger::getInstance().init("testlog", logFilePath);
-  Logger::getInstance().init("testlog2",
-                             logFilePath);  // This should be ignored
+  Logger::getInstance().init("testlog");
+  Logger::getInstance().init("testlog2");  // This should be ignored
 
-  std::string logContent = readLogFile(logFilePath);
+  // Log a message and check that it appears
+  LOG_INFO(1, "Test message after multiple init calls");
+  Logger::getInstance().flush();
+
+  // Get the updated log files
+  logFiles = Logger::getInstance().getLogFilePaths();
+
+  // Read and combine the content of all log files
+  std::string logContent;
+  for (const auto& file : logFiles) {
+    logContent += readLogFile(file);
+  }
 
   // Validate that the content was logged correctly and wasn't reset
-  EXPECT_EQ(logContent.find("Reinitialization"), std::string::npos)
-      << "Logger reinitialized!";
+  EXPECT_NE(logContent.find("Test message after multiple init calls"),
+            std::string::npos)
+      << "Log message not found - logger may have been reinitialized";
 
   // Clean up
-  std::remove(logFilePath.c_str());
+  for (const auto& file : logFiles) {
+    std::remove(file.c_str());
+  }
 }

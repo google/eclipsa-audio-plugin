@@ -1,4 +1,4 @@
-# Eclipsa Audio Plugin
+# Eclipsa Audio Plugins
 
 ## Building the Plugins
 
@@ -52,7 +52,7 @@ After building, unit tests can be run by running the ```ctest``` command in the 
 
 ### Debugging the Plugin Locally
 
-The Eclipsa Audio Plugin is built on top of the JUCE framework making the JUCE Audio Plugin Host an ideal way to perform local debugging.
+The Eclipsa Audio Plugins are built on top of the JUCE framework making the JUCE Audio Plugin Host an ideal way to perform local debugging.
 
 To configure the JUCE Audio Plugin Host:
 - Copy the JUCE repository from /External to a new location
@@ -86,7 +86,7 @@ The project provides an installer for the AAX plugin which can be generated usin
 
 1. Build the Plugins
 
-	Run the build command to generate release .aaxplugin files for both the Eclipsa Audio Renderer and Eclipsa Audio Element Plugins. 
+	Run the build command to generate release .aaxplugin files for both the Eclipsa Audio Renderer Plugin and Eclipsa Audio Element Plugin. 
 	```
 	cmake -B ./build -DBUILD_AAX=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
 	cmake --build ./build

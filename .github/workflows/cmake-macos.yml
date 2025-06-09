@@ -1,0 +1,146 @@
+name: Builds + Unit Tests
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Debug
+  TEST_TYPE: CI_TEST
+  GENERATOR: "Unix Makefiles"
+  CXX_COMPILER: clang++
+  C_COMPILER: clang
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Cache Protobuf Build
+        id: protobuf-cache
+        uses: actions/cache@v3
+        with:
+          path: build/third_party/protobuf
+          key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-protobuf-build-
+
+      - name: Check Protobuf Cache
+        run: |
+          echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
+          if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Protobuf cache missed or expired, cleaning protobuf build directory."
+            if [ -d "build/third_party/protobuf" ]; then rm -rf build/third_party/protobuf; fi
+          fi
+
+      - name: Cache JUCE Build
+        id: juce-cache
+        uses: actions/cache@v3
+        with:
+          path: build/third_party/JUCE
+          key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-build-
+
+      - name: Check JUCE Cache
+        run: |
+          echo "JUCE cache hit: ${{ steps.juce-cache.outputs.cache-hit }}"
+          if [ "${{ steps.juce-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "JUCE cache missed or expired, cleaning JUCE build directory."
+            if [ -d "build/third_party/JUCE" ]; then rm -rf build/third_party/JUCE; fi
+          fi
+
+      - name: Cache IAMF Build
+        id: iamf-cache
+        uses: actions/cache@v3
+        with:
+          path: build/third_party/iamf
+          key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/iamf/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-iamf-build-
+
+      - name: Check IAMF Cache
+        run: |
+          echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
+          if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "IAMF cache missed or expired, cleaning IAMF build directory."
+            if [ -d "build/third_party/iamf" ]; then rm -rf build/third_party/iamf; fi
+          fi
+
+      - name: Cache Libear Build
+        id: libear-cache
+        uses: actions/cache@v3
+        with:
+          path: build/third_party/libear
+          key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-libear-build-
+
+      - name: Check Libear Cache
+        run: |
+          echo "Libear cache hit: ${{ steps.libear-cache.outputs.cache-hit }}"
+          if [ "${{ steps.libear-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Libear cache missed or expired, cleaning Libear build directory."
+            if [ -d "build/third_party/libear" ]; then rm -rf build/third_party/libear; fi
+          fi
+
+      - name: Cache Main Build
+        id: main-build-cache
+        uses: actions/cache@v3
+        with:
+          path: build
+          key: ${{ runner.os }}-main-build-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h') }}
+          restore-keys: |
+            ${{ runner.os }}-main-build-
+
+      - name: Check Main Build Cache
+        run: |
+          echo "Main build cache hit: ${{ steps.main-build-cache.outputs.cache-hit }}"
+          if [ "${{ steps.main-build-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Main build cache missed or expired, will clean the main build directory."
+            if [ -d "build/third_party" ]; then
+              #find build -mindepth 1 -maxdepth 1 -not -name external -exec rm -rf {} +;
+              find build/third_party -mindepth 1 -maxdepth 1 -not -name protobuf -not -name JUCE -not -name iamf -not -name libear -exec rm -rf {} +;
+            fi
+          fi
+
+      - name: Check Formatting
+        run: |
+          brew install clang-format
+          find common -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
+          find rendererplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
+          find audioelementplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "${{ env.GENERATOR }}" \
+            -D${{ env.TEST_TYPE }}=ON \
+            -DCMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
+            -DCMAKE_C_COMPILER=${{ env.C_COMPILER }} \
+            -DBUILD_TESTING=ON \
+            -DZMQ_BUILD_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} -- -j $(sysctl -n hw.logicalcpu)
+
+      - name: Test
+        working-directory: ${{ github.workspace }}/build
+        run: ctest -C ${{ env.BUILD_TYPE }}
+
+      # Dump CTest and Ecplisa logs if the previous step failed.
+      - name: Dump Test Logs
+        if: ${{ failure() }}
+        run: |
+          echo "//// CTest Logs ////" &&
+            cat /Users/runner/work/eclipsa/eclipsa/build/Testing/Temporary/LastTest.log &&
+            echo "//// Eclipsa Logs ////" &&
+            cat /tmp/Eclipsa_Audio_Plugin/log.txt

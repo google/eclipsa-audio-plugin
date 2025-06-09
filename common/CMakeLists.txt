@@ -21,6 +21,7 @@ juce_add_modules(
     processors
     substream_rdr)
 
+
 # Discover test targets if testing enabled
 if(CI_TEST OR INTERNAL_TEST)
     add_subdirectory(processors/tests)
@@ -32,7 +33,6 @@ if(CI_TEST OR INTERNAL_TEST)
 endif()
 
 target_compile_definitions(processors INTERFACE MUXER_PATH="${CMAKE_SOURCE_DIR}/external/FFmpeg/bin/ffmpeg")
-target_compile_definitions(processors INTERFACE LOG_FILE_PATH="${LOG_FILE_PATH}")
 
 add_subdirectory(components/icons)
 target_link_libraries(components INTERFACE binary_data)
@@ -55,4 +55,4 @@ target_link_libraries(substream_rdr INTERFACE libspatialaudio obr libear data_st
 target_link_libraries(processors INTERFACE gpac libear iamftools logger substream_rdr libzmq saf saf_example_ambi_dec lufs_meter)
 target_link_libraries(components INTERFACE binary_data libear substream_rdr processors)
 target_link_libraries(data_structures INTERFACE iamftools substream_rdr Boost::lockfree)
-target_link_libraries(logger INTERFACE Boost::log Boost::log_setup Boost::thread Boost::filesystem) 
+target_link_libraries(logger INTERFACE Boost::log Boost::log_setup Boost::thread Boost::filesystem juce::juce_core) 

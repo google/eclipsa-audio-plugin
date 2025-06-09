@@ -75,4 +75,5 @@ class IconStore {
   LOAD_IMAGE(Carat);
   LOAD_IMAGE(settings);
   LOAD_IMAGE(Line);
+  LOAD_IMAGE(close);
 };

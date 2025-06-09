@@ -50,7 +50,8 @@ class Panner3DProcessor final
   //==============================================================================
   void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
                                 const juce::Identifier& property) override {
-    if (property == AudioElementSpatialLayout::kLayout) {
+    if (property == AudioElementSpatialLayout::kLayout ||
+        property == AudioElementSpatialLayout::kPanningEnabled) {
       initializePanning();
     }
   }

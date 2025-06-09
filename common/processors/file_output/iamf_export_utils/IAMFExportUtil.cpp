@@ -129,7 +129,6 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   const juce::String inputAudioFile = exportData.getExportFile();
   const juce::String inputVideoFile = exportData.getVideoSource();
   const juce::String outputMuxdFile = exportData.getVideoExportFolder();
-  bool overwriteVideoAudio = exportData.getOverwriteVideoAudio();
   const std::basic_string<char> pluginIdentifier("Eclipsa Audio Renderer");
   // Logger::getInstance().init("LOG_FILE_PATH);
 
@@ -183,23 +182,17 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
     return false;
   }
 
-  if (overwriteVideoAudio) {
-    // Filter for removing audio from video
-    GF_Filter* audio_remover =
-        gf_fs_load_filter(session, "mp4dmx:tkid=video", &gf_err);
-    if (gf_err != GF_OK) {
-      LOG_INFO(0, "IAMF Muxing: Failed to load audio remover filter.");
-      gf_fs_del(session);
-      return false;
-    }
-    // Pass the video file through the audio removal filter before muxing
-    gf_filter_set_source(audio_remover, src_video, NULL);
-    gf_filter_set_source(mux_filter, audio_remover, NULL);
-  } else {
-    // Just directly use the source video when muxing, this appends the audio to
-    // the video file
-    gf_filter_set_source(mux_filter, src_video, NULL);
+  // Filter for removing audio from video
+  GF_Filter* audio_remover =
+      gf_fs_load_filter(session, "mp4dmx:tkid=video", &gf_err);
+  if (gf_err != GF_OK) {
+    LOG_INFO(0, "IAMF Muxing: Failed to load audio remover filter.");
+    gf_fs_del(session);
+    return false;
   }
+  // Pass the video file through the audio removal filter before muxing
+  gf_filter_set_source(audio_remover, src_video, NULL);
+  gf_filter_set_source(mux_filter, audio_remover, NULL);
 
   gf_filter_set_source(reframer_filter, src_audio, NULL);
   gf_filter_set_source(mux_filter, reframer_filter, NULL);

@@ -220,19 +220,27 @@ TEST(test_renderer_processor, validate_file_checksum) {
   juce::SHA256 newChecksum(fileData.getData(), fileData.getSize());
   const juce::String newChecksumString = newChecksum.toHexString();
 
-  // declare the variable that will hold the checksum path
-  std::filesystem::path checksumPath;
+  // Choose the appropriate checksum file based on build type
+  std::string checksumFileName;
+#ifdef NDEBUG
+  // Release build
+  checksumFileName = "HashSourceFile.release.iamf.checksum";
+#else
+  // Debug build
+  checksumFileName = "HashSourceFile.debug.iamf.checksum";
+#endif
 
+  // determine the checksum path
+  std::filesystem::path checksumPath;
   // check if 'rendererplugin/test' is in the current path
   // if not, add it
   if (std::filesystem::current_path().string().find("rendererplugin/test") !=
       std::string::npos) {
-    checksumPath = std::filesystem::current_path() /
-                   "testresources/HashSourceFile.iamf.checksum";
-  } else {
     checksumPath =
-        std::filesystem::current_path() /
-        "rendererplugin/test/testresources/HashSourceFile.iamf.checksum";
+        std::filesystem::current_path() / "testresources" / checksumFileName;
+  } else {
+    checksumPath = std::filesystem::current_path() /
+                   "rendererplugin/test/testresources" / checksumFileName;
   }
 
   // remove the 'build' segment from the path
@@ -246,13 +254,12 @@ TEST(test_renderer_processor, validate_file_checksum) {
   checksumPath = correctedChecksumPath;
 
   juce::File existingChecksumFile(checksumPath.string());
-
   assert(existingChecksumFile.existsAsFile());
 
-  juce::String existingChecksum =
+  juce::String expectedChecksum =
       existingChecksumFile.loadFileAsString().trimCharactersAtEnd("\n");
 
-  ASSERT_EQ(existingChecksum, newChecksumString);
+  ASSERT_EQ(expectedChecksum, newChecksumString);
 }
 
 TEST(test_renderer_processor, validate_up_mixing) {

@@ -22,6 +22,7 @@
 #include "components/src/SliderButton.h"
 #include "components/src/TitledTextBox.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
+#include "data_structures/src/SpeakerMonitorData.h"
 #include "screens/PositionSelectionScreen.h"
 #include "screens/RoomViewScreen.h"
 #include "screens/TrackMonitorScreen.h"
@@ -37,7 +38,8 @@ class CustomLookAndFeel : public juce::LookAndFeel_V4 {
 
 //==============================================================================
 class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
-                                       public AudioElementPluginListener {
+                                       public AudioElementPluginListener,
+                                       public juce::ValueTree::Listener {
  public:
   explicit AudioElementPluginEditor(AudioElementPluginProcessor& p);
   ~AudioElementPluginEditor() override;
@@ -50,10 +52,37 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
   void paint(juce::Graphics&) override;
   void resized() override;
 
+  //==============================================================================
+  void setMode();
+
+  void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
+                                const juce::Identifier& property) override {
+    if (property == AudioElementSpatialLayout::kPanningEnabled) {
+      setMode();
+    }
+  }
+  void valueTreeChildAdded(juce::ValueTree& parentTree,
+                           juce::ValueTree& childWhichHasBeenAdded) override {
+    setMode();
+  }
+  void valueTreeChildRemoved(juce::ValueTree& parentTree,
+                             juce::ValueTree& childWhichHasBeenRemoved,
+                             int indexFromWhichChildWasRemoved) override {
+    setMode();
+  }
+  void valueTreeChildOrderChanged(
+      juce::ValueTree& parentTreeWhoseChildrenHaveMoved, int oldIndex,
+      int newIndex) override {
+    setMode();
+  }
+  void valueTreeParentChanged(
+      juce::ValueTree& treeWhoseParentHasChanged) override {
+    setMode();
+  }
+
  private:
   RoomLayout layout_;
   CustomLookAndFeel customLookAndFeel_;
-  bool panningAvailable_;
 
   juce::Label titleLabel_;
   juce::Label panningControlsLabel_;
@@ -62,6 +91,7 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
 
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository_;
   AudioElementPluginSyncClient* syncClient_;
+  SpeakerMonitorData* spkrData_;
 
   PositionSelectionScreen positionSelectionScreen_;
   RoomViewScreen roomViewScreen_;

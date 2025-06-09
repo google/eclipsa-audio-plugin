@@ -19,12 +19,10 @@
 
 #include "AudioPanner.h"
 #include "renderer/obr_impl.h"
-#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 class BinauralPanner : public AudioPanner {
  public:
-  BinauralPanner(const Speakers::AudioElementSpeakerLayout inputLayout,
-                 const int samplesPerBlock, const int sampleRate);
+  BinauralPanner(const int samplesPerBlock, const int sampleRate);
 
   ~BinauralPanner();
 
@@ -45,7 +43,6 @@ class BinauralPanner : public AudioPanner {
   void positionUpdated() override;
 
  private:
-  const int kNumChIn_;
   obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_;
   std::unique_ptr<obr::ObrImpl> encoder_;
 };

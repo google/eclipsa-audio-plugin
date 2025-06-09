@@ -16,6 +16,7 @@
 
 #include "../RendererProcessor.h"
 #include "data_repository/implementation/FileExportRepository.h"
+#include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/MixPresentationSoloMute.h"
 #include "logger/logger.h"
@@ -83,6 +84,7 @@ PresentationMonitorScreen::PresentationMonitorScreen(
   editPresentationButton.setButtonOnClick(
       [this, &editor] { editor.setScreen(editPresentationScreen_); });
   mixPresentationRepository_->registerListener(this);
+  activeMixRepository_->registerListener(this);
 
   // Update mix presentation information
   updateMixPresentations();
@@ -113,6 +115,7 @@ PresentationMonitorScreen::PresentationMonitorScreen(
 PresentationMonitorScreen::~PresentationMonitorScreen() {
   setLookAndFeel(nullptr);
   mixPresentationRepository_->deregisterListener(this);
+  activeMixRepository_->deregisterListener(this);
   presentationTabs_->clearTabs();
 }
 
@@ -313,4 +316,24 @@ void PresentationMonitorScreen::valueTreeChildRemoved(
   }
   // repaint the tabs/presentation screen
   repaint(presentationTabBounds_);
+}
+
+void PresentationMonitorScreen::valueTreePropertyChanged(
+    juce::ValueTree& treeWhosePropertyHasChanged,
+    const juce::Identifier& property) {
+  if (treeWhosePropertyHasChanged.getType() ==
+          ActiveMixPresentation::kTreeType &&
+      property == ActiveMixPresentation::kActiveMixID) {
+    // Update the active mix presentation
+    juce::Uuid activeMixId = juce::Uuid(
+        treeWhosePropertyHasChanged[ActiveMixPresentation::kActiveMixID]);
+    for (int i = 0; i < presentationTabs_->getNumTabs(); ++i) {
+      MixPresentationViewPort* tab = static_cast<MixPresentationViewPort*>(
+          presentationTabs_->getTabContentComponent(i));
+      if (tab->getMixPresID() == activeMixId) {
+        presentationTabs_->setCurrentTabIndex(i);
+        return;
+      }
+    }
+  }
 }

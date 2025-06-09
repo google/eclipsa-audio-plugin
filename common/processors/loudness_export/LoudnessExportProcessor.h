@@ -52,6 +52,13 @@ struct MixPresentationLoudnessExportContainer {
 
   ~MixPresentationLoudnessExportContainer() {}
 
+  // disable copy semantics (copy-ctor & copy-assignment) to prevent
+  // accidental shallow copies and double-free bugs
+  MixPresentationLoudnessExportContainer(
+      const MixPresentationLoudnessExportContainer&) = delete;
+  MixPresentationLoudnessExportContainer& operator=(
+      const MixPresentationLoudnessExportContainer&) = delete;
+
   MixPresentationLoudnessExportContainer(
       MixPresentationLoudnessExportContainer&&) noexcept = default;
   MixPresentationLoudnessExportContainer& operator=(
@@ -124,18 +131,26 @@ struct MixPresentationLoudnessExportContainer {
   createRenderers(const std::vector<AudioElement>& audioElements) {
     std::vector<std::pair<std::unique_ptr<AudioElementRenderer>,
                           std::unique_ptr<AudioElementRenderer>>>
-        rendererPairs(audioElements.size());
+        rendererPairs;
+    rendererPairs.reserve(audioElements.size());
     for (int j = 0; j < audioElements.size(); j++) {
       AudioElement audioElement = audioElements[j];
-      rendererPairs[j].first = std::make_unique<AudioElementRenderer>(
-          audioElement.getChannelConfig(), Speakers::kStereo,
-          audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate);
-      if (largestLayout != Speakers::kStereo) {
-        rendererPairs[j].second = std::make_unique<AudioElementRenderer>(
-            audioElement.getChannelConfig(), largestLayout,
-            audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate);
+
+      if (largestLayout == Speakers::kStereo) {
+        rendererPairs.emplace_back(std::make_pair(
+            std::make_unique<AudioElementRenderer>(
+                audioElement.getChannelConfig(), Speakers::kStereo,
+                audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate),
+            nullptr));
       } else {
-        rendererPairs[j].second = nullptr;
+        rendererPairs.emplace_back(std::make_pair(
+            std::make_unique<AudioElementRenderer>(
+                audioElement.getChannelConfig(), Speakers::kStereo,
+                audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate),
+            std::make_unique<AudioElementRenderer>(
+                audioElement.getChannelConfig(), largestLayout,
+                audioElement.getFirstChannel(), kSamplesPerBlock,
+                kSampleRate)));
       }
     }
     return rendererPairs;

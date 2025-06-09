@@ -753,3 +753,57 @@ const std::vector<ChGainMap> AudioElementSpeakerLayout::getChGainMap() const {
       return {};
   }
 }
+
+// used to preserve the order of the channels in the ITU layout
+// use in place of AudioChannelSet::getChannelTypes() if the order is important
+const juce::Array<ChannelType>
+AudioElementSpeakerLayout::getITUChannelOrdering() const {
+  switch (index_) {
+    case kStereo:
+      return {ChannelType::left, ChannelType::right};
+    case k3Point1Point2:
+      return {ChannelType::left,         ChannelType::right,
+              ChannelType::centre,       ChannelType::LFE,
+              ChannelType::topFrontLeft, ChannelType::topFrontRight};
+    case k5Point1:
+      return {ChannelType::left,         ChannelType::right,
+              ChannelType::centre,       ChannelType::LFE,
+              ChannelType::leftSurround, ChannelType::rightSurround};
+    case k5Point1Point2:
+      return {ChannelType::left,         ChannelType::right,
+              ChannelType::centre,       ChannelType::LFE,
+              ChannelType::leftSurround, ChannelType::rightSurround,
+              ChannelType::topSideLeft,  ChannelType::topSideRight};
+    case k5Point1Point4:
+      return {ChannelType::left,         ChannelType::right,
+              ChannelType::centre,       ChannelType::LFE,
+              ChannelType::leftSurround, ChannelType::rightSurround,
+              ChannelType::topFrontLeft, ChannelType::topFrontRight,
+              ChannelType::topRearLeft,  ChannelType::topRearRight};
+    case k7Point1:
+      return {ChannelType::left,
+              ChannelType::right,
+              ChannelType::centre,
+              ChannelType::LFE,
+              ChannelType::leftSurroundSide,
+              ChannelType::rightSurroundSide,
+              ChannelType::leftSurroundRear,
+              ChannelType::rightSurroundRear};
+    case k7Point1Point4:
+      return {ChannelType::left,
+              ChannelType::right,
+              ChannelType::centre,
+              ChannelType::LFE,
+              ChannelType::leftSurroundSide,
+              ChannelType::rightSurroundSide,
+              ChannelType::leftSurroundRear,
+              ChannelType::rightSurroundRear,
+              ChannelType::topFrontLeft,
+              ChannelType::topFrontRight,
+              ChannelType::topRearLeft,
+              ChannelType::topRearRight};
+    default:
+      return {};
+      break;
+  }
+}

@@ -63,6 +63,8 @@ class AudioElementPluginProcessor final : public ProcessorBase,
 
   bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
+  bool applyBusLayouts(const BusesLayout& layouts) override;
+
   void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
                                 const juce::Identifier& property) override;
 
@@ -87,6 +89,10 @@ class AudioElementPluginProcessor final : public ProcessorBase,
 
   AudioElementParameterTree automationParametersTreeState;
 
+  inline static const ::juce::Identifier
+      kAudioElementSpatialLayoutRepositoryStateKey{
+          "audio_element_spatial_layout_repository_state"};
+
  private:
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
   std::vector<std::unique_ptr<ProcessorBase>> audioProcessors_;
@@ -100,9 +106,6 @@ class AudioElementPluginProcessor final : public ProcessorBase,
       "audio_element_plugin_renderer_state"};
 
   AudioElementSpatialLayoutRepository audioElementSpatialLayoutRepository_;
-  inline static const ::juce::Identifier
-      kAudioElementSpatialLayoutRepositoryStateKey{
-          "audio_element_spatial_layout_repository_state"};
 
   MSPlaybackRepository msRespository_;
   inline static const ::juce::Identifier kMSPlaybackRepositoryStateKey{
@@ -115,6 +118,10 @@ class AudioElementPluginProcessor final : public ProcessorBase,
                            // Subsequent channels are output to in order up
                            // from this first channel
   int outputChannelCount;  // Replace with a real speaker layout later
+
+  juce::AudioChannelSet lastOutputChannelSet_ = juce::AudioChannelSet::mono();
+  bool allowDownSizing_ = false;
+
   AudioElementPluginSyncClient syncClient_;
   SpeakerMonitorData monitorData_;
   AmbisonicsData ambisonicsData_;  // intiialized in SoundFieldProcessor
