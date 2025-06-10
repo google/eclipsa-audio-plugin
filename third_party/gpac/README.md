@@ -1,6 +1,6 @@
-- Compiled from: https://github.com/jwcullen/gpac/tree/iamf_to_mp4
-- Commit: https://github.com/jwcullen/gpac/commit/c7a08b82c6ac8889f8bd5e625f3ceec3e17bbdbe
-- Version: 1.0.0 (iamf_to_mp4 branch - c7a08b8)
+- Compiled from: https://github.com/gpac/gpac/tree/945c0e4b1bbf3b0278e94f8623a14e6bb061ea91
+- Commit: https://github.com/gpac/gpac/commit/945c0e4b1bbf3b0278e94f8623a14e6bb061ea91
+- Version: 1.0.0 (main branch - 945c0e4b1bbf3b0278e94f8623a14e6bb061ea91)
 
 ### Compile notes
 - Compiled for ARM OSX (Sonoma 14.4.1, clang 15.0.0).
