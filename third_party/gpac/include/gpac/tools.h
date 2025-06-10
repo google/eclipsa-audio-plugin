@@ -2,7 +2,7 @@
  *			GPAC - Multimedia Framework C SDK
  *
  *			Authors: Jean Le Feuvre
- *			Copyright (c) Telecom ParisTech 2000-2024
+ *			Copyright (c) Telecom ParisTech 2000-2025
  *					All rights reserved
  *
  *  This file is part of GPAC / common tools sub-project
@@ -72,6 +72,11 @@ Macro formatting a 4-character code (or 4CC) "abcd" as 0xAABBCCDD
 #ifndef GF_4CC
 #define GF_4CC(a,b,c,d) ((((u32)a)<<24)|(((u32)b)<<16)|(((u32)c)<<8)|((u32)d))
 #endif
+
+/*! Macro formatting 4CC from compiler-constant string of 4 characters
+\hideinitializer
+ */
+#define GF_4CC_CSTR(s) GF_4CC(s[0],s[1],s[2],s[3])
 
 /*! minimum buffer size to hold any 4CC in string format*/
 #define GF_4CC_MSIZE	10
@@ -206,7 +211,9 @@ typedef enum
 	/*! filter PID config requires new instance of filter */
 	GF_REQUIRES_NEW_INSTANCE = -56,
 	/*! filter PID config cannot be supported by this filter, no use trying to find an alternate input filter chain*/
-	GF_FILTER_NOT_SUPPORTED = -57
+	GF_FILTER_NOT_SUPPORTED = -57,
+	/*! server does not support range requests: response with status=200 to a request with byte range*/
+	GF_IO_BYTE_RANGE_NOT_SUPPORTED = -58,
 } GF_Err;
 
 /*!
@@ -409,6 +416,98 @@ Validate and parse str into integer
 */
 Bool gf_strict_atoui(const char* str, u32* ans);
 
+/*!
+\brief formats a duration
+
+Formats a duration into a string
+\param dur duration expressed in timescale
+\param timescale number of ticks per second in duration
+\param szDur the buffer to format
+\return the formated input buffer
+*/
+const char *gf_format_duration(u64 dur, u32 timescale, char szDur[100]);
+
+/*!
+\brief timecode type
+ */
+typedef struct
+{
+	Float max_fps;
+	u16 n_frames;
+	u8 hours, minutes, seconds;
+	u8 drop_frame, negative;
+	u8 counting_type;
+} GF_TimeCode;
+
+/*!
+\brief formats a timecode
+
+Formats a timecode into a string
+\param tc timecode to format
+\param szTimecode the buffer to format
+\return the formated input buffer
+*/
+const char* gf_format_timecode(GF_TimeCode *tc, char szTimecode[100]);
+
+/*!
+\brief converts a timecode to timestamp
+
+Converts a timecode to a timestamp in the given timescale
+\param tc timecode to convert
+\param timescale timescale to convert to
+\return the timestamp in the given timescale
+*/
+u64 gf_timecode_to_timestamp(GF_TimeCode *tc, u32 timescale);
+
+/*!
+\brief compare timecodes
+
+Compares two timecodes
+\param value1 value to compare
+\param value2 value to compare
+\return GF_TRUE if value1 is stricly less than value2
+ */
+Bool gf_timecode_less(GF_TimeCode *value1, GF_TimeCode *value2);
+
+/*!
+\brief compare timecodes
+
+Compares two timecodes
+\param value1 value to compare
+\param value2 value to compare
+\return GF_TRUE if value1 is stricly less than or equal to value2
+ */
+Bool gf_timecode_less_or_equal(GF_TimeCode *value1, GF_TimeCode *value2);
+
+/*!
+\brief compare timecodes
+
+Compares two timecodes
+\param value1 value to compare
+\param value2 value to compare
+\return GF_TRUE if value1 is stricly greater than value2
+ */
+Bool gf_timecode_greater(GF_TimeCode *value1, GF_TimeCode *value2);
+
+/*!
+\brief compare timecodes
+
+Compares two timecodes
+\param value1 value to compare
+\param value2 value to compare
+\return GF_TRUE if value1 is stricly greater than or equal to value2
+ */
+Bool gf_timecode_greater_or_equal(GF_TimeCode *value1, GF_TimeCode *value2);
+
+/*!
+\brief compare timecodes
+
+Compares two timecodes
+\param value1 value to compare
+\param value2 value to compare
+\return GF_TRUE if value1 is equal to value2
+ */
+Bool gf_timecode_equal(GF_TimeCode *value1, GF_TimeCode *value2);
 
 /*! @} */
 
@@ -617,6 +716,19 @@ u32 gf_sys_is_quiet();
 \return the list of features.
 */
 const char *gf_sys_features(Bool disabled);
+
+/*! solves path starting with replacement keywords:
+ - $GDOCS: replaced by path to user document , OS-specific
+	 - application document directory for iOS
+	 - EXTERNAL_STORAGE environment variable if present or '/sdcard'  otherwise for Android
+	 - user home directory for other platforms
+ - $GCFG: replaced by path to GPAC config directory for the current profile
+
+\param tpl_path url to translate, must start with $GDOCS or $GCFG
+\param szPath path to store the result
+\return GF_TRUE if success, GF_FALSE otherwise.
+*/
+Bool gf_sys_solve_path(const char *tpl_path, char szPath[GF_MAX_PATH]);
 
 /*! callback function for remotery profiler
  \param udta user data passed by \ref gf_sys_profiler_set_callback
@@ -890,7 +1002,7 @@ Bool gf_log_tool_level_on(GF_LOG_Tool log_tool, GF_LOG_Level log_level);
 
 Gets log  tool name
 \param log_tool tool to check
-\return name, or "unknwon" if not known
+\return name, or "unknown" if not known
 */
 const char *gf_log_tool_name(GF_LOG_Tool log_tool);
 
@@ -1131,6 +1243,8 @@ enum
     GF_BLOB_IN_TRANSFER = 1,
 	/*! blob is corrupted */
     GF_BLOB_CORRUPTED = 1<<1,
+	/*! blob is parsable (valid mux format) but had partial repair only (media holes) */
+    GF_BLOB_PARTIAL_REPAIR = 1<<2
 };
 
 /*!
@@ -1357,6 +1471,38 @@ Gets ID of the process running this gpac instance.
 \return the ID of the main process
 */
 u32 gf_sys_get_process_id();
+
+
+/*! lockfile status*/
+typedef enum {
+	/*! lockfile creation failed*/
+	GF_LOCKFILE_FAILED=0,
+	/*! lockfile creation succeeded, creating a new lock file*/
+	GF_LOCKFILE_NEW,
+	/*! lockfile creation succeeded,  lock file was already present and created by this process*/
+	GF_LOCKFILE_REUSE
+} GF_LockStatus;
+
+/*!
+\brief Creates a lock file
+
+Creates a lock file for the current process. A lockfile contains a single string giving the creator process ID
+If a lock file exists with a process ID no longer running, the lock file will be granted to the caller.
+Lock files are removed using \ref gf_file_delete
+\param lockfile name of the lockfile
+\return return status
+*/
+GF_LockStatus gf_sys_create_lockfile(const char *lockfile);
+
+/*!
+\brief Checks a process is valid
+
+Checks if a process is running by its ID
+\param process_id process ID
+\return GF_TRUE if process is running, GF_FALSE otherwise
+*/
+Bool gf_sys_check_process_id(u32 process_id);
+
 
 /*!\brief run-time system info object
 
@@ -1637,6 +1783,15 @@ Gets the file size given a FILE object. The FILE object position will be reset t
 u64 gf_fsize(FILE *fp);
 
 /*!
+\brief file size helper for a file descriptor
+
+Gets the file size given a file descriptor.
+\param fd file descriptor to check
+\return file size in bytes
+*/
+u64 gf_fd_fsize(int fd);
+
+/*!
 \brief file IO checker
 
 Checks if the given FILE object is a native FILE or a GF_FileIO wrapper.
@@ -1832,6 +1987,16 @@ Checks if file with given name exists, for regular files or File IO wrapper
 \param par_name  name of the parent file
 \return GF_TRUE if file exists */
 Bool gf_file_exists_ex(const char *file_name, const char *par_name);
+
+/*!
+\brief Open file descriptor
+
+Opens a file descriptor - this is simply a wrapper aroun open taking care of UTF8 for windows
+\param file_name path of the file to check
+\param oflags same parameters as open flags for open
+\param pflags same parameters as permission flags for open
+\return file descriptor, -1 if error*/
+s32 gf_fd_open(const char *file_name, u32 oflags, u32 pflags);
 
 /*! File IO wrapper object*/
 typedef struct __gf_file_io GF_FileIO;
@@ -2265,7 +2430,7 @@ void gf_sha256_csum(const void *buf, u64 buflen, u8 digest[GF_SHA256_DIGEST_SIZE
 \param buflen size of input buffer in bytes
 \param digest buffer to store message digest
  */
-void gf_md5_csum(const void *buf, u64 buflen, u8 digest[GF_MD5_DIGEST_SIZE]);
+void gf_md5_csum(const void *buf, u32 buflen, u8 digest[GF_MD5_DIGEST_SIZE]);
 
 /*!
 \addtogroup libsys_grp

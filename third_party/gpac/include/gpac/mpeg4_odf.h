@@ -1711,7 +1711,7 @@ GF_Err gf_odf_opus_cfg_parse_bs(GF_BitStream *bs, GF_OpusConfig *cfg);
 typedef struct
 {
         /* Size of raw_obu_bytes, including the header and payload.
-         * This is different from `obu_size` in the IAMF spec Section 3.2, 
+         * This is different from `obu_size` in the IAMF spec Section 3.2,
          * which includes only the partial header size and the payload.
          */
         u64 obu_length;
@@ -1771,6 +1771,12 @@ GF_IAConfig *gf_odf_ia_cfg_read_bs(GF_BitStream *bs);
  \return the IAMF config
  */
 GF_IAConfig *gf_odf_ia_cfg_read_bs_size(GF_BitStream *bs, u32 size);
+
+/*! Returns the size of the IAMF config
+ \param cfg the IAMF config
+ \return 0 if error, otherwise the IAMF config size
+ */
+u32 gf_odf_ia_cfg_size(GF_IAConfig *cfg);
 
 /*! destroy the descriptors in a list but not the list
 \param descList descriptor list to destroy

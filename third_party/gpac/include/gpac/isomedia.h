@@ -2,7 +2,7 @@
  *			GPAC - Multimedia Framework C SDK
  *
  *			Authors: Jean Le Feuvre
- *			Copyright (c) Telecom ParisTech 2000-2024
+ *			Copyright (c) Telecom ParisTech 2000-2025
  *					All rights reserved
  *
  *  This file is part of GPAC / ISO Media File Format sub-project
@@ -648,6 +648,8 @@ typedef enum
 	Samples may be added to the file in this mode, they will be stored in memory
 	*/
 	GF_ISOM_OPEN_READ_EDIT,
+	/*! same as GF_ISOM_OPEN_READ_DUMP but does not decompress boxes*/
+	GF_ISOM_OPEN_READ_DUMP_NO_COMP
 } GF_ISOOpenMode;
 
 /*! indicates if target file is an IsoMedia file
@@ -1775,6 +1777,30 @@ GF_Err gf_isom_get_current_top_box_offset(GF_ISOFile *isom_file, u64 *current_to
 */
 GF_Err gf_isom_purge_samples(GF_ISOFile *isom_file, u32 trackNumber, u32 nb_samples);
 
+/*! External track flags*/
+enum
+{
+	/*! edit list override*/
+	GF_ISOM_EXTK_EDTS_SKIP=1,
+	/*! location is a URN */
+	GF_ISOM_EXTK_URN=1<<1,
+	/*! ignore source user data */
+	GF_ISOM_EXTK_NO_UDTA=1<<2,
+	/*! ignore source meta */
+	GF_ISOM_EXTK_NO_META=1<<3
+};
+
+/*! checks if a track is an external track
+\param isom_file the target ISO file
+\param trackNumber the desired track to purge
+\param tkid set to external track ID, may be NULL
+\param type set to external track handler type, may be NULL
+\param flags set to ExternalTrackLocation box flags, may be NULL
+\param location set to external file location, may be NULL
+\return GF_TRUE if track is an external track, GF_FALSE otherwise
+*/
+Bool gf_isom_is_external_track(GF_ISOFile *isom_file, u32 trackNumber, GF_ISOTrackID *tkid, u32 *type, u32 *flags, const char **location);
+
 /*! changes source URL, typically used when seeking operation change cache destination
 \param isom_file the target ISO file
 \param url the new url (local file path or gmem:// blob)
@@ -1921,6 +1947,17 @@ u32 gf_isom_new_track(GF_ISOFile *isom_file, GF_ISOTrackID trackID, u32 MediaTyp
 \return the track number or 0 if error*/
 u32 gf_isom_new_track_from_template(GF_ISOFile *isom_file, GF_ISOTrackID trackID, u32 MediaType, u32 TimeScale, u8 *tk_box, u32 tk_box_size, Bool udta_only);
 
+/*! creates a new external track
+\param isom_file the target ISO file
+\param trackID the ID of the track- if 0, the track ID is chosen by the API
+\param refTrakID the ID of the referenced  track (not checked by API)
+\param MediaType the handler type (four character code) of the media
+\param TimeScale the time scale of the media
+\param uri location of external file
+\return the track number or 0 if error
+*/
+u32 gf_isom_new_external_track(GF_ISOFile *movie, GF_ISOTrackID trakID, GF_ISOTrackID refTrakID, u32 MediaType, u32 TimeScale, const char *uri);
+
 /*! removes a track - internal cross dependencies will be updated.
 \warning Any OD streams with references to this track through  ODUpdate, ESDUpdate, ESDRemove commands
 will be rewritten
@@ -1937,6 +1974,14 @@ GF_Err gf_isom_remove_track(GF_ISOFile *isom_file, u32 trackNumber);
 \return error if any
 */
 GF_Err gf_isom_set_track_enabled(GF_ISOFile *isom_file, u32 trackNumber, Bool enableTrack);
+
+/*! forces the track duration - should only be used for external tracks
+\param isom_file the target ISO file
+\param trackNumber the target track
+\param duration track duration in movie timescale
+\return error if any
+*/
+GF_Err gf_isom_force_track_duration(GF_ISOFile *isom_file, u32 trackNumber, u64 duration);
 
 /*! Track header flags operation type*/
 typedef enum
@@ -2242,8 +2287,7 @@ GF_Err gf_isom_set_interleave_time(GF_ISOFile *isom_file, u32 InterleaveTime);
 GF_Err gf_isom_force_64bit_chunk_offset(GF_ISOFile *isom_file, Bool set_on);
 
 /*! compression mode of top-level boxes*/
-typedef enum
-{
+GF_OPT_ENUM (GF_ISOCompressMode,
 	/*! no compression is used*/
 	GF_ISOM_COMP_NONE=0,
 	/*! only moov box is compressed*/
@@ -2256,7 +2300,7 @@ typedef enum
 	GF_ISOM_COMP_MOOF_SSIX,
 	/*! all (moov, moof,  sidx and ssix) boxes are compressed*/
 	GF_ISOM_COMP_ALL,
-} GF_ISOCompressMode;
+);
 
 enum
 {
@@ -2538,7 +2582,7 @@ GF_Err gf_isom_set_track_layout_info(GF_ISOFile *isom_file, u32 trackNumber, u32
 /*! sets track matrix
 \param isom_file the target ISO file
 \param trackNumber the target track number
-\param matrix the transformation matrix of the track on the movie canvas; all coeficients are expressed as 16.16 floating points
+\param matrix the transformation matrix of the track on the movie canvas; all coefficients are expressed as 16.16 floating points
 \return error if any
  */
 GF_Err gf_isom_set_track_matrix(GF_ISOFile *isom_file, u32 trackNumber, s32 matrix[9]);
@@ -2639,7 +2683,7 @@ GF_Err gf_isom_set_visual_color_info(GF_ISOFile *isom_file, u32 trackNumber, u32
 
 
 /*! Audio Sample Description signaling mode*/
-typedef enum {
+GF_OPT_ENUM (GF_AudioSampleEntryImportMode,
 	/*! use ISOBMF sample entry v0*/
 	GF_IMPORT_AUDIO_SAMPLE_ENTRY_NOT_SET = 0,
 	/*! use ISOBMF sample entry v0*/
@@ -2650,7 +2694,7 @@ typedef enum {
 	GF_IMPORT_AUDIO_SAMPLE_ENTRY_v1_MPEG,
 	/*! use QTFF sample entry v1*/
 	GF_IMPORT_AUDIO_SAMPLE_ENTRY_v1_QTFF
-} GF_AudioSampleEntryImportMode;
+);
 
 
 /*! sets audio format  information for a sample description
@@ -6737,6 +6781,24 @@ GF_Err gf_isom_apple_get_tag(GF_ISOFile *isom_file, GF_ISOiTunesTag tag, const u
 GF_Err gf_isom_apple_enum_tag(GF_ISOFile *isom_file, u32 idx, GF_ISOiTunesTag *out_tag, const u8 **data, u32 *data_len, u64 *out_int_val, u32 *out_int_val2, u32 *out_flags);
 
 
+/*! enumerate itunes tags.
+
+\param isom_file the target ISO file
+\param idx 0-based index of the tag to get
+\param out_tag set to the tag code
+\param data set to the tag data pointer - do not modify
+\param data_len set to the size of the tag data. Data is set to NULL and data_size to 1 if the associated tag has no data
+\param out_int_val set to the int/bool/frac numerator type for known tags, in which case data is set to NULL
+\param out_int_val2 set to the frac denominator for known tags, in which case data is set to NULL
+\param out_flags set to the flags value of the data container box
+\param out_mean set to the mean string identifier, if any
+\param out_name set to the name string identifier, if any
+\param out_locale set to the locale data identifier, if any
+\return error if any (GF_URL_ERROR if no more tags)
+*/
+GF_Err gf_isom_apple_enum_tag_ex(GF_ISOFile *isom_file, u32 idx, GF_ISOiTunesTag *out_tag, const u8 **data, u32 *data_len, u64 *out_int_val, u32 *out_int_val2, u32 *out_flags, const char **out_mean, const char **out_name, u32 *out_locale);
+
+
 /*! enumerate WMA tags.
 
 \param isom_file the target ISO file
@@ -6855,6 +6917,21 @@ GF_Err gf_isom_enum_udta_keys(GF_ISOFile *isom_file, u32 idx, GF_QT_UDTAKey *out
 \return error if any
 */
 GF_Err gf_isom_apple_set_tag(GF_ISOFile *isom_file, GF_ISOiTunesTag tag, const u8 *data, u32 data_len, u64 int_val, u32 int_val2);
+
+/*! sets the given tag info.
+
+\param isom_file the target ISO file
+\param for_tag the tag to set
+\param data tag data buffer or string to parse
+\param data_len size of the tag data buffer. If data is NULL and and data_len not  0, removes the given tag
+\param int_val value for integer/boolean tags. If data and data_len are set, parse data as string  to get the value
+\param int_val2 value for fractional  tags. If data and data_len are set, parse data as string to get the value
+\param name domain name of tag, ignores for_tag if not null
+\param mean mean of tag, ignores for_tag if not null
+\param locale locale of tag, ignored if name and mean are null
+\return error if any
+*/
+GF_Err gf_isom_apple_set_tag_ex(GF_ISOFile *isom_file, GF_ISOiTunesTag for_tag, const u8 *data, u32 data_len, u64 int_val, u32 int_val2, const char *name, const char *mean, u32 locale);
 
 
 /*! sets the given WMA tag info (only string tags are supported).
