@@ -57,10 +57,9 @@ inline admrender::OutputLayout AdmTypeFromPannedLayout(
 }
 
 MonoToSpeakerPanner::MonoToSpeakerPanner(
-    const Speakers::AudioElementSpeakerLayout inputLayout,
     const Speakers::AudioElementSpeakerLayout pannedLayout,
     const int samplesPerBlock, const int sampleRate)
-    : AudioPanner(inputLayout, pannedLayout, samplesPerBlock, sampleRate) {
+    : AudioPanner(pannedLayout, samplesPerBlock, sampleRate) {
   // Prepare a buffer to write the output audio to
   // For expanded layouts, we need to render to all channels and then copy out
   // the ones we need

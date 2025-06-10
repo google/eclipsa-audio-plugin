@@ -426,8 +426,8 @@ MeasureEBU128::LoudnessStats getPannedStereoVerificationData(
   jassert(inputBuffer.getNumChannels() == 1);
 
   MeasureEBU128 instrument(sampleRate, Speakers::kStereo.getChannelSet());
-  MonoToSpeakerPanner monoToLayoutPanner(Speakers::kMono, Speakers::kStereo,
-                                         samplesPerFrame, sampleRate);
+  MonoToSpeakerPanner monoToLayoutPanner(Speakers::kStereo, samplesPerFrame,
+                                         sampleRate);
 
   juce::AudioBuffer<float> layoutOutputBuffer(
       Speakers::kStereo.getNumChannels(), samplesPerFrame);
@@ -583,8 +583,7 @@ TEST(test_loudness_proc, verify_metadata) {
   // specify which audio element will be panned
   const AudioElement audioElementToPan = audioElement3;
 
-  MonoToSpeakerPanner monoToStereoPanner(Speakers::kMono,
-                                         audioElementToPan.getChannelConfig(),
+  MonoToSpeakerPanner monoToStereoPanner(audioElementToPan.getChannelConfig(),
                                          kSamplesPerFrame, kSampleRate);
 
   juce::AudioBuffer<float> mixBuffer(audioElementNumChannels, kSamplesPerFrame);

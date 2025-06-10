@@ -17,16 +17,13 @@
 #pragma once
 
 #include "ear/common_types.hpp"
-#include "ear/conversion.hpp"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 class AudioPanner {
  public:
-  AudioPanner(const Speakers::AudioElementSpeakerLayout inputLayout,
-              const Speakers::AudioElementSpeakerLayout pannedLayout,
+  AudioPanner(const Speakers::AudioElementSpeakerLayout pannedLayout,
               int samplesPerBlock, int sampleRate)
-      : kInputLayout_(inputLayout),
-        kPannedLayout_(pannedLayout),
+      : kPannedLayout_(pannedLayout),
         kSamplesPerBlock_(samplesPerBlock),
         kSampleRate_(sampleRate) {}
 
@@ -95,6 +92,6 @@ class AudioPanner {
   virtual void positionUpdated() = 0;
 
   ear::PolarPosition currPos_ = {0.0f, 0.0f, 0.0f};
-  const Speakers::AudioElementSpeakerLayout kInputLayout_, kPannedLayout_;
+  const Speakers::AudioElementSpeakerLayout kPannedLayout_;
   int kSamplesPerBlock_, kSampleRate_;
 };

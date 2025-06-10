@@ -614,7 +614,6 @@ TEST_F(FileOutputProcessorTest, mux_iamf_1ae_cb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -642,7 +641,6 @@ TEST_F(FileOutputProcessorTest, mux_iamf_1ae_sb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -670,7 +668,6 @@ TEST_F(FileOutputProcessorTest, mux_iamf_2ae_cb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::BASE_ENHANCED);
   fileExportRepository.update(ex);
 

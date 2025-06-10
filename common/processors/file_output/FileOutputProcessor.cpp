@@ -23,6 +23,7 @@
 #include "data_structures/src/FileExport.h"
 #include "data_structures/src/MixPresentationLoudness.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
+#include "processors/render/RenderProcessor.h"
 #include "user_metadata.pb.h"
 
 //==============================================================================
@@ -163,11 +164,16 @@ void FileOutputProcessor::prepareToPlay(double sampleRate,
 }
 
 void FileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
+  if (isNonRealtime == performingRender_) {
+    return;
+  }
+
   FileExport config = fileExportRepository_.get();
   // Initialize the writer if we are rendering in offline mode
-  if (isNonRealtime && !performingRender_) {
+  if (!performingRender_) {
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
+      LOG_ANALYTICS(0, "Beginning .iamf file export");
       performingRender_ = true;
       startTime_ = config.getStartTime();
       endTime_ = config.getEndTime();
@@ -177,6 +183,7 @@ void FileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
       juce::OwnedArray<AudioElement> audioElements;
       audioElementRepository_.getAll(audioElements);
       iamfWavFileWriters_.clear();
+      iamfWavFileWriters_.reserve(audioElements.size());
       for (int i = 0; i < audioElements.size(); i++) {
         juce::String wavFilePath = config.getExportFile() + "_audio_element_ " +
                                    juce::String(i) + ".wav";

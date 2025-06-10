@@ -23,32 +23,17 @@
 std::unique_ptr<TextEditorControlledDial>
 PositionSelectionScreen::createDialWithChevrons(
     const juce::String& title, const int& defaultValue, const int& currValue,
-    const std::pair<int, int>& range, juce::String appendedText) {
+    const std::pair<int, int>& range) {
   std::unique_ptr<TextEditorControlledDial> dial =
       std::make_unique<TextEditorControlledDial>(
           title, defaultValue, currValue, range.first, range.second,
-          appendedText, IconStore::getInstance().getLeftChevronIcon(),
+          IconStore::getInstance().getLeftChevronIcon(),
           IconStore::getInstance().getRightChevronIcon());
   dial->setTitle(title);
   addAndMakeVisible(dial.get());
   dial.get()->setValueUpdatedCallback([this, title](int newVal) {
     parameterTree_.getParameterAsValue(title).setValue(newVal);
   });
-  return dial;
-}
-
-std::unique_ptr<TextEditorControlledDial> PositionSelectionScreen::createDial(
-    const juce::String& title, const int& defaultValue, const int& currValue,
-    const std::pair<int, int>& range, juce::String appendedText) {
-  std::unique_ptr<TextEditorControlledDial> dial =
-      std::make_unique<TextEditorControlledDial>(title, defaultValue, currValue,
-                                                 range.first, range.second,
-                                                 appendedText);
-  dial->setTitle(title);
-  dial.get()->setValueUpdatedCallback([this, title](int newVal) {
-    parameterTree_.getParameterAsValue(title).setValue(newVal);
-  });
-  addAndMakeVisible(dial.get());
   return dial;
 }
 
@@ -79,12 +64,6 @@ PositionSelectionScreen::PositionSelectionScreen(
   positionDials.add(createDialWithChevrons(AutoParamMetaData::zPosition, 0,
                                            parameterTree_.getZPosition(),
                                            AutoParamMetaData::positionRange_));
-  positionDials.add(createDial(
-      AutoParamMetaData::rotation, 0, parameterTree_.getRotation(),
-      AutoParamMetaData::rotationRange_, juce::CharPointer_UTF8("°")));
-  positionDials.add(createDial(AutoParamMetaData::size, 0,
-                               parameterTree_.getSize(),
-                               AutoParamMetaData::spreadRange_));
 
   // Disable the Z-position control if elevation is not 'None' or 'Flat'.
   updateDialVisibility(static_cast<Elevation>(
@@ -94,44 +73,6 @@ PositionSelectionScreen::PositionSelectionScreen(
   for (int i = 3; i < positionDials.size(); i++) {
     positionDials[i]->setVisible(false);
   }
-
-  spreadLabel_.setText("Spread", juce::dontSendNotification);
-  spreadLabel_.setColour(juce::Label::textColourId,
-                         EclipsaColours::headingGrey);
-  spreadLabel_.setJustificationType(juce::Justification::centredLeft);
-  addAndMakeVisible(spreadLabel_);
-
-  // temprarily hide the Spread Label
-  spreadLabel_.setVisible(false);
-
-  spreadDials.add(createDial(AutoParamMetaData::width, 0,
-                             parameterTree_.getWidth(),
-                             AutoParamMetaData::spreadRange_));
-  spreadDials.add(createDial(AutoParamMetaData::height,
-                             parameterTree_.getHeight(), 0,
-                             AutoParamMetaData::spreadRange_));
-  spreadDials.add(createDial(AutoParamMetaData::depth, 0,
-                             parameterTree_.getDepth(),
-                             AutoParamMetaData::spreadRange_));
-  // temporariliy hide visibility
-  for (auto& spreadDial : spreadDials) {
-    spreadDial->setVisible(false);
-  }
-
-  lfeLabel_.setText("LFE", juce::dontSendNotification);
-  lfeLabel_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
-  lfeLabel_.setJustificationType(juce::Justification::centredRight);
-  addAndMakeVisible(lfeLabel_);
-
-  // temporarily hide the LFE Label
-  lfeLabel_.setVisible(false);
-
-  // use "LFE Send" for the titled textbox
-  lfeDial = createDial(AutoParamMetaData::lfeName, 0, parameterTree_.getLFE(),
-                       AutoParamMetaData::lfeRange_, "db");
-  addAndMakeVisible(lfeDial.get());
-  // temporarily hide visibility
-  lfeDial->setVisible(false);
 }
 
 PositionSelectionScreen::~PositionSelectionScreen() {
@@ -202,19 +143,6 @@ void PositionSelectionScreen::timerCallback() {
       dial->setValue(newValue);
     }
   }
-  for (auto& dial : spreadDials) {
-    if (dial->isTextBoxFocused()) {
-      continue;
-    } else {
-      float newValue = getValue(dial->getParameterLabel());
-      dial->setValue(newValue);
-    }
-  }
-  if (lfeDial->isTextBoxFocused()) {
-    return;
-  }
-  float newValue = getValue(lfeDial->getParameterLabel());
-  lfeDial->setValue(newValue);
 }
 
 float PositionSelectionScreen::getValue(const std::string& parameterLabel) {
@@ -224,18 +152,6 @@ float PositionSelectionScreen::getValue(const std::string& parameterLabel) {
     return parameterTree_.getYPosition();
   } else if (parameterLabel == AutoParamMetaData::zPosition) {
     return parameterTree_.getZPosition();
-  } else if (parameterLabel == AutoParamMetaData::rotation) {
-    return parameterTree_.getRotation();
-  } else if (parameterLabel == AutoParamMetaData::size) {
-    return parameterTree_.getSize();
-  } else if (parameterLabel == AutoParamMetaData::width) {
-    return parameterTree_.getWidth();
-  } else if (parameterLabel == AutoParamMetaData::height) {
-    return parameterTree_.getHeight();
-  } else if (parameterLabel == AutoParamMetaData::depth) {
-    return parameterTree_.getDepth();
-  } else if (parameterLabel == AutoParamMetaData::lfeName) {
-    return parameterTree_.getLFE();
   } else {
     return 0.f;
   }

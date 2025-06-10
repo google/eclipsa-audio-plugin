@@ -24,6 +24,7 @@
 
 class ImageTextButtonLookAndFeel : public juce::LookAndFeel_V4 {
  public:
+  virtual ~ImageTextButtonLookAndFeel() = default;  // Add a virtual destructor
   ImageTextButtonLookAndFeel(const juce::Image& image) : image_(image) {}
 
   void drawButtonBackground(juce::Graphics& g, juce::Button& button,
@@ -73,12 +74,24 @@ class ImageTextButtonLookAndFeel : public juce::LookAndFeel_V4 {
     }
   }
 
-  virtual void dimButton() {};
+  virtual void dimButton() {
+    for (const auto& colourId : colourIds_) {
+      setColour(colourId, findColour(colourId).withAlpha(alpha_));
+    }
+  };
 
-  virtual void resetButton() {};
+  virtual void resetButton() {
+    for (const auto& colourId : colourIds_) {
+      setColour(colourId, findColour(colourId).withAlpha(1.f));
+    }
+  };
 
  protected:
   juce::Image image_;
+  const std::array<juce::TextButton::ColourIds, 4> colourIds_ = {
+      juce::TextButton::textColourOffId, juce::TextButton::textColourOnId,
+      juce::TextButton::buttonColourId, juce::TextButton::buttonOnColourId};
+  const float alpha_ = 0.4f;  // Alpha value for dimming
 };
 
 class GreyImageTextButtonLookAndFeel : public ImageTextButtonLookAndFeel {
@@ -97,26 +110,6 @@ class CyanImageTextButtonLookAndFeel : public ImageTextButtonLookAndFeel {
  public:
   CyanImageTextButtonLookAndFeel(const juce::Image& image)
       : ImageTextButtonLookAndFeel(image) {
-    setColour(juce::TextButton::textColourOffId,
-              EclipsaColours::backgroundOffBlack);
-    setColour(juce::TextButton::textColourOnId,
-              EclipsaColours::backgroundOffBlack);
-    setColour(juce::TextButton::buttonColourId, EclipsaColours::selectCyan);
-    setColour(juce::TextButton::buttonOnColourId, EclipsaColours::selectCyan);
-  }
-
-  void dimButton() override {
-    setColour(juce::TextButton::textColourOffId,
-              EclipsaColours::backgroundOffBlack.withAlpha(0.4f));
-    setColour(juce::TextButton::textColourOnId,
-              EclipsaColours::backgroundOffBlack.withAlpha(0.4f));
-    setColour(juce::TextButton::buttonColourId,
-              EclipsaColours::selectCyan.withAlpha(0.4f));
-    setColour(juce::TextButton::buttonOnColourId,
-              EclipsaColours::selectCyan.withAlpha(0.4f));
-  }
-
-  void resetButton() override {
     setColour(juce::TextButton::textColourOffId,
               EclipsaColours::backgroundOffBlack);
     setColour(juce::TextButton::textColourOnId,
@@ -266,9 +259,17 @@ class ImageTextButton : public juce::Component {
     textButton.setLookAndFeel(exportLookAndFeel.get());
   }
 
-  void dimButton() { cyanLookAndFeel.dimButton(); }
+  void dimButton() {
+    ImageTextButtonLookAndFeel& lookAndFeel =
+        static_cast<ImageTextButtonLookAndFeel&>(textButton.getLookAndFeel());
+    lookAndFeel.dimButton();
+  }
 
-  void resetButton() { cyanLookAndFeel.resetButton(); }
+  void resetButton() {
+    ImageTextButtonLookAndFeel& lookAndFeel =
+        static_cast<ImageTextButtonLookAndFeel&>(textButton.getLookAndFeel());
+    lookAndFeel.resetButton();
+  }
 
   void setButtonListener(juce::Button::Listener* listener) {
     textButton.addListener(listener);

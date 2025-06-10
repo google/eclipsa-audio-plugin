@@ -59,6 +59,11 @@ void Panner3DProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 
 void Panner3DProcessor::initializePanning() {
   hostProcessor_->suspendProcessing(true);
+
+  // Check if panning is enabled
+  bool isPanningEnabled =
+      audioElementSpatialLayoutData_->get().isPanningEnabled();
+
   // Fetch the current audio element to pan to from the panner repository
   outputLayout_ = audioElementSpatialLayoutData_->get().getChannelLayout();
 
@@ -71,22 +76,23 @@ void Panner3DProcessor::initializePanning() {
   // And also updating the panner value tree / position
   renderLock.enter();
 
-  if ((inputLayout_ != Speakers::kMono) || (outputLayout_ == Speakers::kMono)) {
-    // For non-mono inputs layouts, or mono output, we need to just pass the
-    // audio through
+  // Note that for all speakers we are currently just using mono inputs
+  if (!isPanningEnabled || (outputLayout_ == Speakers::kMono)) {
+    // If panning is disabled, we need to set the panner to NULL
     surroundPanner_.reset();
   } else if (outputLayout_ == Speakers::kBinaural) {
     // For binaural layouts, use the Binaural Panner based on the obr library
-    surroundPanner_ = std::make_unique<BinauralPanner>(
-        inputLayout_, samplesPerBlock_, sampleRate_);
+    surroundPanner_ =
+        std::make_unique<BinauralPanner>(samplesPerBlock_, sampleRate_);
   } else if (outputLayout_.isAmbisonics()) {
-    // For ambisonics layouts, use the Ambisonic Panner based on the obr library
+    // For ambisonics layouts, use the Ambisonic Panner based on the obr
+    // library
     surroundPanner_ = std::make_unique<AmbisonicPanner>(
-        inputLayout_, outputLayout_, samplesPerBlock_, sampleRate_);
+        outputLayout_, samplesPerBlock_, sampleRate_);
   } else {
     // For non-ambisonics layouts, use the 3D Panner based on libspatialaudio
     surroundPanner_ = std::make_unique<MonoToSpeakerPanner>(
-        inputLayout_, outputLayout_, samplesPerBlock_, sampleRate_);
+        outputLayout_, samplesPerBlock_, sampleRate_);
   }
 
   outputBuffer_.setSize(outputLayout_.getNumChannels(), samplesPerBlock_);
@@ -109,8 +115,8 @@ void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Perform the panning operation
     surroundPanner_->process(buffer, outputBuffer_);
 
-    // Manually copy the number of channels of the output layout from the output
-    // buffer to the input buffer to avoid resizing.
+    // Manually copy the number of channels of the output layout from the
+    // output buffer to the input buffer to avoid resizing.
     for (int channel = 0; channel < outputBuffer_.getNumChannels(); ++channel) {
       buffer.copyFrom(channel, 0, outputBuffer_, channel, 0,
                       buffer.getNumSamples());

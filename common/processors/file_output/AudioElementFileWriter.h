@@ -38,6 +38,17 @@ class AudioElementFileWriter {
     if (fileWriter != nullptr) delete fileWriter;
   };
 
+  // disable copy semantics (copy-ctor & copy-assignment) to prevent
+  // accidental shallow copies and double-free bugs
+  AudioElementFileWriter(const AudioElementFileWriter&) = delete;
+  AudioElementFileWriter& operator=(const AudioElementFileWriter&) = delete;
+
+  // enable default move semantics so the object can be relocated
+  // (e.g. by std::vector growth) without copying internal buffers
+  AudioElementFileWriter(AudioElementFileWriter&&) noexcept = default;
+  AudioElementFileWriter& operator=(AudioElementFileWriter&&) noexcept =
+      default;
+
   void write(juce::AudioBuffer<float>& buffer) { fileWriter->write(buffer); }
 
   void close() { fileWriter->close(); }

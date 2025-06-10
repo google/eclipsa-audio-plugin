@@ -619,10 +619,10 @@ class SharedTestFixture : public ::testing::Test {
       std::cerr << "Failed to create/set permissions for log directory: "
                 << e.what() << std::endl;
       Logger::getInstance().init(
-          pluginName, "");  // Log to stderr if directory creation fails
+          pluginName);  // Log using JUCE standard directory
     }
 
-    Logger::getInstance().init(pluginName, logFilePath);
+    Logger::getInstance().init(pluginName);
 
     // Configure basic audio export data.
     ex.setExportAudio(true);

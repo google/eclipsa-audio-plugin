@@ -156,11 +156,17 @@ void RoomMonitoringScreen::paint(juce::Graphics& g) {
 void RoomMonitoringScreen::updateSpeakerSetup() {
   // Update the currently selected speaker layout in the repo.
   int speakerLayoutIdx = speakerSetup_.getSelectedIndex();
-  RoomLayout speakerLayout =
+  RoomLayout newSpeakerLayout =
       speakerLayoutConfigurationOptions[speakerLayoutIdx];
-  repos_.roomSetupRepo_.update(RoomSetup(speakerLayout));
+
+  RoomSetup currentRoomSetup = repos_.roomSetupRepo_.get();
+  currentRoomSetup.setSpeakerLayout(newSpeakerLayout);
+  repos_.roomSetupRepo_.update(currentRoomSetup);
+
+  monitorData_.reinitializeLoudnesses(
+      newSpeakerLayout.getRoomSpeakerLayout().getNumChannels());
   LOG_ANALYTICS(RendererProcessor::instanceId_, " updated speaker setup.");
-  roomView_->setSpeakers(speakerLayout.getRoomSpeakerLayout());
+  roomView_->setSpeakers(newSpeakerLayout.getRoomSpeakerLayout());
   roomView_->repaint();
 }
 

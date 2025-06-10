@@ -69,6 +69,7 @@ class PerspectiveRoomView : public juce::Component {
   };
   // Container to hold transformed track data for convenient drawing.
   struct DrawableTrack {
+    DrawableTrack() : trackLoudness(-300.f) {}
     float trackLoudness;
     float sizeScale;
     juce::String trackLabel;

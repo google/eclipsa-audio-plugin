@@ -29,7 +29,6 @@ FileExport::FileExport()
       exportVideo_(false),
       videoSource_(""),
       videoExportFolder_(""),
-      overwriteVideoAudio_(true),
       manualExport_(false),
       flac_compression_level_(8),
       opus_total_bitrate_(64000),
@@ -42,9 +41,9 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        int bitDepth, int sampleRate, bool exportAudioElements,
                        bool exportAudio, bool exportVideo,
                        juce::String videoSource, juce::String videoExportFolder,
-                       bool overwriteVideoAudio, bool manualExport,
-                       FileProfile profile, int flac_compression_level,
-                       int opus_total_bitrate, int lpcm_sample_size)
+                       bool manualExport, FileProfile profile,
+                       int flac_compression_level, int opus_total_bitrate,
+                       int lpcm_sample_size)
     : RepositoryItemBase(juce::Uuid()),
       startTime_(startTime),
       endTime_(endTime),
@@ -59,7 +58,6 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
       exportVideo_(exportVideo),
       videoSource_(videoSource),
       videoExportFolder_(videoExportFolder),
-      overwriteVideoAudio_(overwriteVideoAudio),
       manualExport_(manualExport),
       profile_(profile),
       flac_compression_level_(flac_compression_level),
@@ -72,10 +70,9 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
       (AudioFileFormat)(int)tree[kAudioFileFormat],
       (AudioCodec)(int)tree[kAudioCodec], tree[kBitDepth], tree[kSampleRate],
       tree[kExportAudioElements], tree[kExportAudio], tree[kExportVideo],
-      tree[kVideoSource], tree[kVideoExportFolder], tree[kOverwriteVideoAudio],
-      tree[kManualExport], (FileProfile)(int)tree[kProfile],
-      tree[kFlacCompressionLevel], tree[kOpusTotalBitrate],
-      tree[kLPCMSampleSize]);
+      tree[kVideoSource], tree[kVideoExportFolder], tree[kManualExport],
+      (FileProfile)(int)tree[kProfile], tree[kFlacCompressionLevel],
+      tree[kOpusTotalBitrate], tree[kLPCMSampleSize]);
 }
 
 juce::ValueTree FileExport::toValueTree() const {
@@ -93,7 +90,6 @@ juce::ValueTree FileExport::toValueTree() const {
            {kExportVideo, exportVideo_},
            {kVideoSource, videoSource_},
            {kVideoExportFolder, videoExportFolder_},
-           {kOverwriteVideoAudio, overwriteVideoAudio_},
            {kManualExport, manualExport_},
            {kProfile, static_cast<int>(profile_)},
            {kFlacCompressionLevel, flac_compression_level_},

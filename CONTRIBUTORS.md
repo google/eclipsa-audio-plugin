@@ -1,6 +1,6 @@
 ## Contributors
 
-The Eclipsa Audio Plugin has been developed as a joint venture between Google and [A-CX](https://www.a-cx.com/).
+The Eclipsa Audio Plugins have been developed as a joint venture between Google and [A-CX](https://www.a-cx.com/).
 
 ### Special thanks to everyone who has helped with this project so far:
 

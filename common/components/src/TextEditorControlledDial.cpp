@@ -16,8 +16,8 @@
 
 TextEditorControlledDial::TextEditorControlledDial(
     const juce::String& title, const int& defaultValue, const int& currValue,
-    const int& min, const int& max, juce::String appendedText,
-    juce::Image leftImage, juce::Image rightImage)
+    const int& min, const int& max, juce::Image leftImage,
+    juce::Image rightImage)
     : textUpdated_([this]() { textEditorChangedCallback(); }),
       parameterLabel_(title.toStdString()),
       value_(currValue),
@@ -25,16 +25,12 @@ TextEditorControlledDial::TextEditorControlledDial(
       max_(max),
       currentText_(juce::String(currValue)),
       textBox_(title),
-      slider_(min, max, defaultValue, currValue, appendedText),
+      slider_(min, max, defaultValue, currValue),
       leftImage_(leftImage),
-      rightImage_(rightImage),
-      appendedText_(appendedText) {
+      rightImage_(rightImage) {
   textBox_.setOnReturnCallback(textUpdated_);
   textBox_.setOnFocusLostCallback(textUpdated_);
   textBox_.setText(currentText_);
-  if (appendedText.isNotEmpty()) {
-    textBox_.setText(textBox_.getText() + " " + appendedText_);
-  }
 
   addAndMakeVisible(slider_);
   addAndMakeVisible(textBox_);
@@ -47,7 +43,7 @@ TextEditorControlledDial::TextEditorControlledDial(
     addAndMakeVisible(leftButton_);
     leftButton_.onClick = [this]() {
       int value = moveToPreviousMultipleOf5();
-      textBox_.setText(juce::String(value) + " " + appendedText_);
+      textBox_.setText(juce::String(value));
       textEditorChangedCallback();
     };
   }
@@ -59,7 +55,7 @@ TextEditorControlledDial::TextEditorControlledDial(
     addAndMakeVisible(rightButton_);
     rightButton_.onClick = [this]() {
       int value = moveToNextMultipleOf5();
-      textBox_.setText(juce::String(value) + " " + appendedText_);
+      textBox_.setText(juce::String(value));
       textEditorChangedCallback();
     };
   }
@@ -146,7 +142,7 @@ void TextEditorControlledDial::resetLookAndFeel() {
 // triggered when automation changes the value
 void TextEditorControlledDial::setValue(const float& value) {
   int newValue = static_cast<int>(value);
-  textBox_.setText(juce::String(newValue) + " " + appendedText_);
+  textBox_.setText(juce::String(newValue));
   // update the dial visual
   slider_.setValue(newValue);
 }
@@ -160,21 +156,10 @@ void TextEditorControlledDial::adjustDialAspectRatio(
   }
 }
 void TextEditorControlledDial::textEditorChangedCallback() {
-  juce::String textToEvaluate;
-  if (textBox_.getText().endsWith(appendedText_) &&
-      appendedText_.isNotEmpty()) {
-    textToEvaluate = textBox_.getText().dropLastCharacters(
-        appendedText_.length());  // we don't need the appended text to
-                                  // evaluate the value
-  } else {
-    textToEvaluate = textBox_.getText();
-  }
-
-  int value = textToEvaluate.getIntValue();
+  int value = textBox_.getText().getIntValue();
 
   if (value == currentText_.getIntValue()) {
-    textBox_.setText(currentText_ + " " +
-                     appendedText_);  // ensure the appended text is displayed
+    return;  // no update needed
   } else {
     // the value will need to be updated
     //  clamp the value if it is out of range
@@ -186,8 +171,7 @@ void TextEditorControlledDial::textEditorChangedCallback() {
     currentText_ = juce::String(value);
     // update the position
     slider_.setValue(value);
-    textBox_.setText(currentText_ + " " +
-                     appendedText_);  // ensure the appended text is displayed
+    textBox_.setText(currentText_);  // ensure the appended text is displayed
     slider_.repaint();
   }
 

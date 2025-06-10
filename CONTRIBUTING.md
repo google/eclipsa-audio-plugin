@@ -6,7 +6,7 @@ We welcome contributions from everyone. Please take a moment to review these gui
 
 ## About the Project
 
-The Eclipsa Audio Plugin is a collaborative effort between [A-CX](https://www.a-cx.com/) and Google.
+The Eclipsa Audio Plugins are a collaborative effort between [A-CX](https://www.a-cx.com/) and Google.
 
 ## How to Contribute
 

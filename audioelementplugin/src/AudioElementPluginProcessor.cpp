@@ -44,6 +44,8 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
       automationParametersTreeState(*this) {
   elevationListener_.setListeners(&automationParametersTreeState,
                                   &audioElementSpatialLayoutRepository_);
+
+  audioProcessors_.push_back(std::make_unique<RemappingProcessor>(this, false));
   audioProcessors_.push_back(std::make_unique<Panner3DProcessor>(
       this, &audioElementSpatialLayoutRepository_,
       &automationParametersTreeState));
@@ -57,7 +59,7 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   audioProcessors_.push_back(std::make_unique<RoutingProcessor>(
       &audioElementSpatialLayoutRepository_, &syncClient_));
 
-  Logger::getInstance().init("EclipsaAudioElementPlugin", LOG_FILE_PATH);
+  Logger::getInstance().init("EclipsaAudioElementPlugin");
 
   ++instanceId_;
 
@@ -87,7 +89,22 @@ bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
   // Support mono/stero input?
   // Always output to ambisonic 5
-  std::vector<juce::AudioChannelSet> supportedInputChannelSets = {
+
+  // prevent REAPER from downsizing the output channel set when
+  // the probing for smaller output channel sets (i.e STEREO)
+  // right after the desired/most complex layout has been assigned to the output
+  // bus
+  if (!allowDownSizing_ &&
+      lastOutputChannelSet_.size() > layouts.getMainInputChannelSet().size()) {
+    return false;
+  }
+
+  if (layouts.getMainOutputChannelSet() !=
+      juce::AudioChannelSet::ambisonic(5)) {
+    return false;
+  }
+
+  const std::vector<juce::AudioChannelSet> supportedInputChannelSets = {
       juce::AudioChannelSet::mono(),
       juce::AudioChannelSet::stereo(),
       juce::AudioChannelSet::create5point1(),
@@ -105,12 +122,30 @@ bool AudioElementPluginProcessor::isBusesLayoutSupported(
                 supportedInputChannelSets.end(),
                 layouts.getMainInputChannelSet()) !=
       supportedInputChannelSets.end()) {
-    if (layouts.getMainOutputChannelSet() ==
-        juce::AudioChannelSet::ambisonic(5)) {
-      return true;
-    }
+    return true;
   }
+
   return false;
+}
+
+bool AudioElementPluginProcessor::applyBusLayouts(const BusesLayout& layouts) {
+  bool check = ProcessorBase::applyBusLayouts(layouts);
+  if (check) {
+    // prevent REAPER from downsizing the output channel set when
+    // the probing for smaller output channel sets (i.e STEREO)
+    // right after the desired/most complex layout has been assigned to the
+    // output bus
+    allowDownSizing_ = false;
+    lastOutputChannelSet_ = layouts.getMainInputChannelSet();
+    std::string applyBusLayoutMessage =
+        "applyBusLayouts returning TRUE with \n input: " +
+        layouts.getMainInputChannelSet().getDescription().toStdString() + "\n" +
+        "output: " +
+        layouts.getMainOutputChannelSet().getDescription().toStdString() + "\n";
+
+    LOG_ANALYTICS(instanceId_, applyBusLayoutMessage);
+  }
+  return check;
 }
 
 void AudioElementPluginProcessor::valueTreePropertyChanged(
@@ -119,8 +154,8 @@ void AudioElementPluginProcessor::valueTreePropertyChanged(
   // An update to the audio element spatial layout repository has occurred
   // Fetch the first channel and output channels and update accordingly
   // Note that updates apply sequentially, so an update that updates first and
-  // total channels will get applied twice, once changing one value and then the
-  // other
+  // total channels will get applied twice, once changing one value and then
+  // the other
   juce::ignoreUnused(treeWhosePropertyHasChanged);
   juce::ignoreUnused(property);
   AudioElementSpatialLayout audioElementSpatialLayout =
@@ -133,6 +168,10 @@ void AudioElementPluginProcessor::valueTreePropertyChanged(
 
 void AudioElementPluginProcessor::prepareToPlay(double sampleRate,
                                                 int samplesPerBlock) {
+  // unrestrict the isBusesLayoutSupported function
+  // once the REAPER has finished  probing for supported output channel sets
+  allowDownSizing_ = true;
+  LOG_ANALYTICS(instanceId_, "Audio Element Plugin Processor prepareToPlay \n");
   for (const auto& proc : audioProcessors_) {
     proc->prepareToPlay(sampleRate, samplesPerBlock);
   }
@@ -156,8 +195,8 @@ void AudioElementPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Apply the volume to each sample in the buffer
     for (int channel = firstOutputChannel;
          channel < firstOutputChannel + outputChannelCount; ++channel) {
-      // current volume is an implicit converion from a RangedAudioParameter to
-      // a float safe to use .applyGain
+      // current volume is an implicit converion from a RangedAudioParameter
+      // to a float safe to use .applyGain
       buffer.applyGain(channel, 0, buffer.getNumSamples(), linearGain);
     }
   }
@@ -174,6 +213,8 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 
 void AudioElementPluginProcessor::getStateInformation(
     juce::MemoryBlock& destData) {
+  LOG_ANALYTICS(instanceId_,
+                "Audio Element Plugin Processor getStateInformation \n");
   // This function is called when the plugin is saved, so save the current
   juce::ValueTree automationTree = automationParametersTreeState.copyState();
 
@@ -185,6 +226,8 @@ void AudioElementPluginProcessor::getStateInformation(
 
 void AudioElementPluginProcessor::setStateInformation(const void* data,
                                                       int sizeInBytes) {
+  LOG_ANALYTICS(instanceId_,
+                "Audio Element Plugin Processor setStateInformation \n");
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
 
@@ -198,8 +241,8 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
   if (audioElementSpatialLayoutTree.isValid()) {
     // Create a temporary repository and load the values from it instead
     // to avoid changing the existing repositories ID, since if it
-    // is already connected to the renderer plugin, this ID is used to identify
-    // it
+    // is already connected to the renderer plugin, this ID is used to
+    // identify it
     AudioElementSpatialLayoutRepository tempRepository;
     tempRepository.setStateTree(audioElementSpatialLayoutTree);
 

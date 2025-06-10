@@ -17,7 +17,7 @@
 LoudnessStats::LoudnessStats(SpeakerMonitorData& data)
     : statsToDisp_("Loudness Standard"), rtData_(data) {
   statsToDisp_.setText("ITU-R BS.1770-4");
-  statsToDisp_.setIsAccessbile(false);
+  statsToDisp_.setReadOnly(true);
   addAndMakeVisible(statsToDisp_);
 
   resetButton_.setImages(false, true, true, kResetImg_, 1.0f,

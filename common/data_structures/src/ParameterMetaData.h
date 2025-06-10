@@ -91,16 +91,6 @@ CreateStaticParameterLayout() {
   layout.add(createIntParameter(xPosition, positionRange_, 0));
   layout.add(createIntParameter(yPosition, positionRange_, 0));
   layout.add(createIntParameter(zPosition, positionRange_, 0));
-  layout.add(createIntParameter(rotation, rotationRange_, 0));
-  layout.add(createIntParameter(size, positionRange_, 50));
-
-  // create spread control parameters
-  layout.add(createFloatParameter(width, spreadRange_, 50));
-  layout.add(createFloatParameter(height, spreadRange_, 0));
-  layout.add(createFloatParameter(depth, spreadRange_, 30));
-
-  // LFE control parameters
-  layout.add(createIntParameter(lfeName, lfeRange_, 50));
 
   return layout;
 }

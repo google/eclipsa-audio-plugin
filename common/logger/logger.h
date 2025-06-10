@@ -33,8 +33,7 @@ class Logger {
     return instance;
   }
 
-  void init(const std::string& pluginName, const std::string& logFilePath,
-            size_t maxFileSizeMB = 5,
+  void init(const std::string& pluginName, size_t maxFileSizeMB = 5,
             boost::log::trivial::severity_level minSeverity =
                 boost::log::trivial::info);
   void flush();

@@ -27,6 +27,7 @@
 #include "mix_monitoring/TrackMonitorProcessor.cpp"
 #include "mix_monitoring/loudness_standards/MeasureEBU128.cpp"
 #include "panner/Panner3DProcessor.cpp"
+#include "remapping/RemappingProcessor.cpp"
 #include "render/RenderProcessor.cpp"
 #include "routing/RoutingProcessor.cpp"
 #include "soundfield/SoundFieldProcessor.cpp"

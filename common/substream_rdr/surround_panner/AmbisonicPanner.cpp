@@ -15,21 +15,17 @@
 #include "AmbisonicPanner.h"
 
 AmbisonicPanner::AmbisonicPanner(
-    const Speakers::AudioElementSpeakerLayout inputLayout,
     const Speakers::AudioElementSpeakerLayout pannedLayout,
     const int samplesPerBlock, const int sampleRate)
-    : kNumChIn_(inputLayout.getNumChannels()),
-      encoder_(nullptr),
-      AudioPanner(inputLayout, pannedLayout, samplesPerBlock, sampleRate) {
+    : encoder_(nullptr),
+      AudioPanner(pannedLayout, samplesPerBlock, sampleRate) {
   // Create the encoder for encoding to the desired ambisonic order.
   encoder_ = std::make_unique<obr::AmbisonicEncoder>(
-      kInputLayout_.getNumChannels(),
-      std::sqrt(pannedLayout.getNumChannels()) - 1);
+      1, std::sqrt(pannedLayout.getNumChannels()) - 1);
   int numSamplesOutPlanar = pannedLayout.getNumChannels() * kSamplesPerBlock_;
 
   // Resize internal buffers for API calls.
-  inputBufferPlanar_ =
-      obr::AudioBuffer(inputLayout.getNumChannels(), kSamplesPerBlock_);
+  inputBufferPlanar_ = obr::AudioBuffer(1, kSamplesPerBlock_);
   outputBufferPlanar_ =
       obr::AudioBuffer(pannedLayout.getNumChannels(), kSamplesPerBlock_);
 }
@@ -37,23 +33,20 @@ AmbisonicPanner::AmbisonicPanner(
 AmbisonicPanner::~AmbisonicPanner() {}
 
 void AmbisonicPanner::positionUpdated() {
-  // NOTE: As the audio source is of arbitrary channel format, we will assume
-  // all channels originate from the same point.
-  for (int i = 0; i < kNumChIn_; ++i) {
-    encoder_->SetSource(i, 1.f, currPos_.azimuth, currPos_.elevation,
-                        currPos_.distance);
-  }
+  // NOTE: As we pan mono only, just set the source of the first input channel.
+  encoder_->SetSource(0, 1.f, currPos_.azimuth, currPos_.elevation,
+                      currPos_.distance);
 }
 
 void AmbisonicPanner::process(juce::AudioBuffer<float>& inputBuffer,
                               juce::AudioBuffer<float>& outputBuffer) {
   outputBuffer.clear();
 
-  for (int i = 0; i < kNumChIn_; ++i) {
-    const float* rPtr = inputBuffer.getReadPointer(i);
-    for (int j = 0; j < kSamplesPerBlock_; ++j) {
-      inputBufferPlanar_[i][j] = rPtr[j];
-    }
+  // Fetch the data for the first channel, since it's the only channel we will
+  // pan
+  const float* rPtr = inputBuffer.getReadPointer(0);
+  for (int j = 0; j < kSamplesPerBlock_; ++j) {
+    inputBufferPlanar_[0][j] = rPtr[j];
   }
 
   // Convert input buffer to planar vector and add spatial information.

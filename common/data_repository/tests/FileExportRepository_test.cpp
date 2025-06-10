@@ -33,7 +33,7 @@ TEST(test_file_export_repository, mod_export) {
   TestFileExportRepository repositoryInstance;
   FileExport testExportData(0, 0, "/test/path/test.wav", "/test/path", IAMF,
                             LPCM, 16, 44100, true, true, true,
-                            "/test/path/test.mp4", "/test/path", true, true,
+                            "/test/path/test.mp4", "/test/path", true,
                             FileProfile::SIMPLE, 8, 64000, 24);
   repositoryInstance.update(testExportData);
   FileExport updatedExportData = repositoryInstance.get();

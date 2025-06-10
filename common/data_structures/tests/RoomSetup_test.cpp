@@ -41,3 +41,22 @@ TEST(test_room_setup, to_value_tree) {
   ASSERT_EQ(tree.getType(), RoomSetup::kTreeType);
   ASSERT_EQ(tree[RoomSetup::kSpeakerLayout], layout.getDescription());
 }
+
+TEST(test_room_setup, daw_warning_dismissal_persistence) {
+  // 1. Create RoomSetup with warning dismissed
+  RoomSetup roomSetup1;
+  ASSERT_FALSE(
+      roomSetup1.getDawWarningDismissed());  // Should be false by default
+
+  roomSetup1.setDawWarningDismissed(true);
+  ASSERT_TRUE(roomSetup1.getDawWarningDismissed());
+
+  // 2. Serialize to ValueTree
+  juce::ValueTree stateTree = roomSetup1.toValueTree();
+
+  // 3. Create new RoomSetup from serialized state
+  RoomSetup roomSetup2 = RoomSetup::fromTree(stateTree);
+
+  // 4. Verify the state was persisted
+  ASSERT_TRUE(roomSetup2.getDawWarningDismissed());
+}

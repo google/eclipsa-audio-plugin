@@ -44,6 +44,7 @@ END_JUCE_MODULE_DECLARATION
 #include "mix_monitoring/TrackMonitorProcessor.h"
 #include "panner/Panner3DProcessor.h"
 #include "processor_base/ProcessorBase.h"
+#include "remapping/RemappingProcessor.h"
 #include "render/RenderProcessor.h"
 #include "routing/RoutingProcessor.h"
 #include "soundfield/SoundFieldProcessor.h"

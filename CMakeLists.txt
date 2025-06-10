@@ -47,7 +47,6 @@ if(APPLE)
   set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
   link_directories(${VENDOR_LIB_PATH})
 endif()
-set(LOG_FILE_PATH /tmp/Eclipsa_Audio_Plugin/)
 
 if(CI_TEST OR INTERNAL_TEST)
     message(STATUS "Unit tests enabled")
@@ -64,6 +63,7 @@ if(CI_TEST OR INTERNAL_TEST)
 endif()
 
 add_subdirectory(third_party)
+include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 
 if(BUILD_AAX)
     set(AAX_SDK_VER "2-7-0" CACHE STRING "Default AAX SDK Version")
@@ -75,9 +75,6 @@ if(BUILD_AAX)
         message(STATUS "AAX SDK found at " ${AAX_SDK_PATH})
         juce_set_aax_sdk_path("${AAX_SDK_PATH}/aax-sdk-${AAX_SDK_VER}")
     endif()
-
-    # Copy shared libs used by the plugin.
-    include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 endif()
 
 if(BUILD_VST3)

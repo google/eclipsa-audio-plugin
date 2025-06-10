@@ -18,16 +18,12 @@
 #include <ADMRenderer.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 
-#include <memory>
-
 #include "AudioPanner.h"
-#include "ear/common_types.hpp"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 class MonoToSpeakerPanner : public AudioPanner {
  public:
-  MonoToSpeakerPanner(const Speakers::AudioElementSpeakerLayout inputLayout,
-                      const Speakers::AudioElementSpeakerLayout pannedLayout,
+  MonoToSpeakerPanner(const Speakers::AudioElementSpeakerLayout pannedLayout,
                       const int samplesPerBlock, const int sampleRate);
 
   ~MonoToSpeakerPanner();

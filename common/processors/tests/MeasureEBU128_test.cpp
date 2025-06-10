@@ -87,8 +87,7 @@ MeasureEBU128::LoudnessStats measureLoudness(
   }
 
   // Create an audio processor block for panning
-  MonoToSpeakerPanner panner(Speakers::kMono, speakerLayout, chunkSize,
-                             reader->sampleRate);
+  MonoToSpeakerPanner panner(speakerLayout, chunkSize, reader->sampleRate);
 
   for (int i = 0; i < (numSamples - chunkSize); i += chunkSize) {
     juce::AudioBuffer<float> chunk = juce::AudioBuffer<float>(

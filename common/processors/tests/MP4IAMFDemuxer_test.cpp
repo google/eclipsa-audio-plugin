@@ -25,7 +25,6 @@ TEST_F(MP4IAMFDemuxerTest, mux_iamf_1ae_cb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -63,7 +62,6 @@ TEST_F(MP4IAMFDemuxerTest, mux_iamf_1ae_sb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -101,7 +99,6 @@ TEST_F(MP4IAMFDemuxerTest, mux_iamf_2ae_cb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::BASE_ENHANCED);
   fileExportRepository.update(ex);
 
@@ -140,7 +137,6 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_1ae_cb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -157,7 +153,7 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_1ae_sb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
+
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -174,7 +170,6 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_2ae_cb) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::BASE_ENHANCED);
   fileExportRepository.update(ex);
 
@@ -217,7 +212,6 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_all_layouts) {
     ex = fileExportRepository.get();
     ex.setExportVideo(true);
     ex.setVideoSource(videoSourcePath.string());
-    ex.setOverwriteVideoAudio(true);
     ex.setProfile(aeLayout == Speakers::kMono ||
                           aeLayout == Speakers::kStereo ||
                           aeLayout == Speakers::kBinaural
@@ -273,7 +267,6 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_codecs) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
 
   // Test different codecs
@@ -334,7 +327,6 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_bit_depths) {
   ex = fileExportRepository.get();
   ex.setExportVideo(true);
   ex.setVideoSource(videoSourcePath.string());
-  ex.setOverwriteVideoAudio(true);
   ex.setProfile(FileProfile::SIMPLE);
   fileExportRepository.update(ex);
 
@@ -389,7 +381,6 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_sample_rates) {
     ex = fileExportRepository.get();
     ex.setExportVideo(true);
     ex.setVideoSource(videoSourcePath.string());
-    ex.setOverwriteVideoAudio(true);
     ex.setProfile(FileProfile::SIMPLE);
     ex.setSampleRate(sampleRate);
     fileExportRepository.update(ex);

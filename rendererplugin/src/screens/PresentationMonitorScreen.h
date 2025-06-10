@@ -66,6 +66,9 @@ class PresentationMonitorScreen : public juce::Component,
                              juce::ValueTree& childWhichHasBeenRemoved,
                              int index) override;
 
+  void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
+                                const juce::Identifier& property) override;
+
   void paint(juce::Graphics& g);
 
  private:

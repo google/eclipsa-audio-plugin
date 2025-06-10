@@ -21,7 +21,6 @@ class TextEditorControlledDial : public juce::Component {
  public:
   TextEditorControlledDial(const juce::String& title, const int& defaultValue,
                            const int& currValue, const int& min, const int& max,
-                           juce::String appendedText = "",
                            juce::Image leftImage = juce::Image(),
                            juce::Image rightImage = juce::Image());
 
@@ -67,6 +66,5 @@ class TextEditorControlledDial : public juce::Component {
   TitledTextBox textBox_;
   ControlKnob slider_;
   juce::String currentText_;
-  juce::String appendedText_;
   std::function<void(int)> valueUpdatedCallback_;
 };

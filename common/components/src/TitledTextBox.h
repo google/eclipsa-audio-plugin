@@ -88,7 +88,7 @@ class PaddedTextEditor : public juce::TextEditor, public juce::Timer {
   }
 
   void timerCallback() override {
-    if (isFocused_) {
+    if (isFocused_ && isAccessible() && !isReadOnly()) {
       caretVisible_ = !caretVisible_;
       repaint();
     }
@@ -208,7 +208,10 @@ class TitledTextBox : public juce::Component {
 
   bool textEditorIsFocused() { return textEditor_.hasKeyboardFocus(true); }
 
-  void setIsAccessbile(const bool isAccessible) {
-    textEditor_.setAccessible(isAccessible);
+  void setReadOnly(const bool isReadOnly) {
+    textEditor_.setAccessible(!isReadOnly);
+    textEditor_.setReadOnly(isReadOnly);
+    textEditor_.setCaretVisible(isReadOnly);
+    textEditor_.stopTimer();
   }
 };

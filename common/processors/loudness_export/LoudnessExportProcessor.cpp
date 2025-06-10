@@ -52,14 +52,20 @@ LoudnessExportProcessor::~LoudnessExportProcessor() {
 }
 
 void LoudnessExportProcessor::setNonRealtime(bool isNonRealtime) noexcept {
+  if (isNonRealtime == performingRender_) {
+    return;
+  }
+
   FileExport config = fileExportRepository_.get();
   // Initialize the writer if we are rendering in offline mode
-  if (isNonRealtime && !performingRender_) {
+  if (!performingRender_) {
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
       performingRender_ = true;
 
-      LOG_INFO(1, "Beginning .iamf file export");
+      LOG_INFO(
+          0,
+          "Beginning loudness metadata calculations for .iamf file export \n");
 
       sampleRate_ = config.getSampleRate();
       sampleTally_ = 0;
@@ -81,7 +87,7 @@ void LoudnessExportProcessor::setNonRealtime(bool isNonRealtime) noexcept {
       copyExportContainerDataToRepo(exportContainer);
     }
     performingRender_ = false;
-    LOG_INFO(1, "Calling loudness export to stop render");
+    LOG_INFO(0, "Copied loudness metadata to repository \n");
   }
 }
 
@@ -263,6 +269,8 @@ void LoudnessExportProcessor::intializeExportContainers() {
   if (mixPresentations.size() == 0) {
     return;
   }
+
+  exportContainers_.reserve(mixPresentations.size());
 
   // for each mix presentation, get all audio elements
   for (int i = 0; i < mixPresentations.size(); i++) {
