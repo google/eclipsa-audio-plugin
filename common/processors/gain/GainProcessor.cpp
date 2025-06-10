@@ -18,11 +18,7 @@
 
 //==============================================================================
 GainProcessor::GainProcessor(MultiChannelRepository* gainRepository)
-    : ProcessorBase(
-          BusesProperties()
-              .withInput("Input", juce::AudioChannelSet::ambisonic(5), true)
-              .withOutput("Output", juce::AudioChannelSet::ambisonic(5), true)),
-      numChannels(28),
+    : numChannels(getHostWideLayout().size()),
       gainrepo_id_(juce::Uuid()),
       channelGains_(gainRepository),  // passing an empty value tree, will
                                       // update in InitializeGainParameters
@@ -60,7 +56,7 @@ void GainProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     setGain(i, gains_[i]->get());
   }
 
-  for (int i = 0; i < numChannels; i++) {
+  for (int i = 0; i < buffer.getNumChannels(); i++) {
     juce::dsp::AudioBlock<float> block(&buffer.getArrayOfWritePointers()[i], 1,
                                        m_samplesPerBlock_);
     juce::dsp::ProcessContextReplacing<float> processContext(block);

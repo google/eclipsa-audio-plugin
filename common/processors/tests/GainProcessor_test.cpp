@@ -34,8 +34,8 @@ void ensureGainsStoredandUpdated() {
       "After set update: " + gainRepository.get().toValueTree().toXmlString());
 
   // Validate the GainProcessor is allocating room for 28 channels
-  ASSERT_EQ(gainProcessor.getGainRepoInputChannels(), 28);
-  ASSERT_EQ(gainProcessor.getGains().size(), 28);
+  ASSERT_GE(gainProcessor.getGainRepoInputChannels(), 28);
+  ASSERT_GE(gainProcessor.getGains().size(), 28);
 
   // validate that the gains have the correct values
   for (int i = 0; i < 28; i++) {

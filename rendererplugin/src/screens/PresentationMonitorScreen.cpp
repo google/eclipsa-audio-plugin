@@ -48,10 +48,10 @@ PresentationMonitorScreen::PresentationMonitorScreen(
     MultiChannelRepository* multiChannelRepository,
     ActiveMixRepository* activeMixRepo,
     ChannelMonitorProcessor* channelMonitorProcessor,
-    FileExportRepository* fileExportRepository)
-    : elementRoutingScreen_(editor, ae_repository,
-                            audioElementSpatialLayout_repository,
-                            fileExportRepository, mixPresentationRepository),
+    FileExportRepository* fileExportRepository, int totalChannelCount)
+    : elementRoutingScreen_(
+          editor, ae_repository, audioElementSpatialLayout_repository,
+          fileExportRepository, mixPresentationRepository, totalChannelCount),
       editPresentationScreen_(editor, ae_repository, mixPresentationRepository,
                               activeMixRepo),
       presentationTabs_(std::make_unique<CustomTabbedComponent>()),

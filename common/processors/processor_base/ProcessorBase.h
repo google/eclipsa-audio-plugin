@@ -91,4 +91,12 @@ class ProcessorBase : public juce::AudioProcessor {
   void changeProgramName(int index, const juce::String& newName) override {
     juce::ignoreUnused(index, newName);
   }
+
+  static juce::AudioChannelSet getHostWideLayout() {
+    if (juce::PluginHostType().isPremiere()) {
+      return juce::AudioChannelSet::ambisonic(3);
+    } else {
+      return juce::AudioChannelSet::ambisonic(5);
+    }
+  }
 };

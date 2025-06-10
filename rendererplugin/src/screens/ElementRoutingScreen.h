@@ -20,7 +20,6 @@
 #include <memory>
 #include <vector>
 
-#include "../RendererPluginSyncServer.h"
 #include "components/src/ColouredLight.h"
 #include "components/src/EclipsaColours.h"
 #include "components/src/HeaderBar.h"
@@ -32,7 +31,6 @@
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
-#include "data_repository/repository_base/RepositoryMultiBase.h"
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
@@ -63,7 +61,8 @@ class ElementRoutingScreen : public juce::Component,
                        MultibaseAudioElementSpatialLayoutRepository*
                            audioElementSpatialLayoutRepository,
                        FileExportRepository* fileExportRepository,
-                       MixPresentationRepository* mixPresentationRepository);
+                       MixPresentationRepository* mixPresentationRepository,
+                       int totalChanneCount);
 
   ~ElementRoutingScreen();
 

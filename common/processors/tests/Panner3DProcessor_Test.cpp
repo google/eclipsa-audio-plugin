@@ -71,7 +71,7 @@ TEST(test_3D_render_Processor, test_simple_pan) {
 
   // Create a routing processor
   RoutingProcessor routing_processor(&audioElementSpatialLayout_repository,
-                                     &sync_client);
+                                     &sync_client, 36);
 
   // Create a parameter tree
   AudioElementParameterTree parameter_tree(routing_processor);

@@ -55,7 +55,7 @@ class PresentationMonitorScreen : public juce::Component,
       MultiChannelRepository* multiChannelRepository,
       ActiveMixRepository* activeMixRepo,
       ChannelMonitorProcessor* channelMonitorProcessor,
-      FileExportRepository* fileExportRepository);
+      FileExportRepository* fileExportRepository, int totalChannelCount);
 
   ~PresentationMonitorScreen();
 

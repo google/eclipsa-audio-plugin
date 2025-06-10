@@ -14,7 +14,6 @@
 
 #include "ElementRoutingScreen.h"
 
-#include <ostream>
 #include <vector>
 
 #include "../RendererProcessor.h"
@@ -25,7 +24,6 @@
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/FileExport.h"
-#include "juce_core/system/juce_PlatformDefs.h"
 #include "logger/logger.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -34,7 +32,7 @@ ElementRoutingScreen::ElementRoutingScreen(
     MultibaseAudioElementSpatialLayoutRepository*
         AudioElementSpatialLayoutRepository,
     FileExportRepository* fileExportRepository,
-    MixPresentationRepository* mixPresentationRepository)
+    MixPresentationRepository* mixPresentationRepository, int totalChanneCount)
     : audioElementRepository_(audioElementRepository),
       audioElementSpatialLayoutRepository_(AudioElementSpatialLayoutRepository),
       fileExportRepository_(fileExportRepository),
@@ -58,8 +56,17 @@ ElementRoutingScreen::ElementRoutingScreen(
   // Set profile selection
   FileExport profileConfig = fileExportRepository_->get();
   profileSelectionBox_.addOption("Simple");
-  profileSelectionBox_.addOption("Base");
-  profileSelectionBox_.addOption("Base Enhanced");
+
+  // Add the base option to the profile config only if 18 channels are
+  // available, as the base profile supports 18 channels
+  if (totalChanneCount >= 18) {
+    profileSelectionBox_.addOption("Base");
+  }
+  // Add the base option to the profile config only if 28 channels are
+  // available, as the base enhanced profile supports 28 channels
+  if (totalChanneCount >= 28) {
+    profileSelectionBox_.addOption("Base Enhanced");
+  }
   profileSelectionBox_.onChange([this]() {
     FileExport profileConfig = fileExportRepository_->get();
     int idx = profileSelectionBox_.getSelectedIndex();
