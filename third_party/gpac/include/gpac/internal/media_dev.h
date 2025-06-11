@@ -2,7 +2,7 @@
  *			GPAC - Multimedia Framework C SDK
  *
  *			Authors: Jean Le Feuvre
- *			Copyright (c) Telecom ParisTech 2000-2023
+ *			Copyright (c) Telecom ParisTech 2000-2025
  *					All rights reserved
  *
  *  This file is part of GPAC / Media Tools sub-project
@@ -230,7 +230,18 @@ typedef struct
 
 typedef struct
 {
+	u8 hours, minutes, seconds;
+	u16 n_frames;
+	Float max_fps;
+	u8 counting_type;
+	Bool cnt_dropped_flag, clock_timestamp_flag;
+} AVCSeiPicTimingTimecode;
+
+typedef struct
+{
 	u8 pic_struct;
+	u8 num_clock_ts;
+	AVCSeiPicTimingTimecode timecodes[3];
 	/*to be eventually completed by other pic_timing members*/
 } AVCSeiPicTiming;
 
@@ -242,20 +253,26 @@ typedef struct
 typedef struct
 {
 	AVCSeiRecoveryPoint recovery_point;
+	//valid if num_clock_ts is set
 	AVCSeiPicTiming pic_timing;
 	AVCSeiItuTT35DolbyVision dovi;
-	/*to be eventually completed by other sei*/
-} AVCSei;
+
+	u8 clli_data[4];
+	u8 mdcv_data[24];
+	u8 clli_valid, mdcv_valid;
+	u8 has_3d_ref_disp_info;
+	u8 alternative_transfer_characteristics;
+} GF_SEIInfo;
 
 typedef struct
 {
 	AVC_SPS sps[32]; /* range allowed in the spec is 0..31 */
-	s8 sps_active_idx, pps_active_idx;	/*currently active sps; must be initalized to -1 in order to discard not yet decodable SEIs*/
+	s8 sps_active_idx, pps_active_idx;	/*currently active sps; must be initialized to -1 in order to discard not yet decodable SEIs*/
 
 	AVC_PPS pps[255];
 
 	AVCSliceInfo s_info;
-	AVCSei sei;
+	GF_SEIInfo sei;
 
 	Bool is_svc;
 	u8 last_nal_type_parsed;
@@ -270,6 +287,13 @@ typedef struct
 	u32 data_offset;
 	u32 data_length;
 } SVC_Extractor;
+
+typedef struct
+{
+	Bool is_whitelist;
+	GF_PropUIntList seis;
+	s32 extra_filter; //- removes the sei, + keeps the sei
+} SEI_Filter;
 
 
 /*return sps ID or -1 if error*/
@@ -289,7 +313,7 @@ Bool gf_avc_slice_is_intra(AVCState *avc);
 s32 gf_avc_parse_nalu(GF_BitStream *bs, AVCState *avc);
 /*remove SEI messages not allowed in MP4*/
 /*nota: 'buffer' remains unmodified but cannot be set const*/
-u32 gf_avc_reformat_sei(u8 *buffer, u32 nal_size, Bool isobmf_rewrite, AVCState *avc);
+u32 gf_avc_reformat_sei(u8 *buffer, u32 nal_size, Bool isobmf_rewrite, AVCState *avc, SEI_Filter *sei_filter);
 
 #ifndef GPAC_DISABLE_AV_PARSERS
 
@@ -311,6 +335,8 @@ typedef struct
 	Bool remove_video_info;
 	//if set timing info is removed
 	Bool remove_vui_timing_info;
+	//if set pic_struct is enabled
+	Bool enable_pic_struct;
 	//new fullrange, -1 to use info from bitstream
 	s32 fullrange;
 	//new vidformat flag, -1 to use info from bitstream
@@ -517,13 +543,6 @@ typedef struct
 
 typedef struct
 {
-	AVCSeiRecoveryPoint recovery_point;
-	AVCSeiPicTiming pic_timing;
-	AVCSeiItuTT35DolbyVision dovi;
-} HEVC_SEI;
-
-typedef struct
-{
 	u8 nal_unit_type;
 	u32 frame_num, poc_lsb, slice_type, header_size_with_emulation;
 	
@@ -566,24 +585,19 @@ typedef struct _hevc_state
 	//all other vars set by parser
 
 	HEVC_SPS sps[16]; /* range allowed in the spec is 0..15 */
-	s8 sps_active_idx;	/*currently active sps; must be initalized to -1 in order to discard not yet decodable SEIs*/
+	s8 sps_active_idx;	/*currently active sps; must be initialized to -1 in order to discard not yet decodable SEIs*/
 
 	HEVC_PPS pps[64];
 
 	HEVC_VPS vps[16];
 
 	HEVCSliceInfo s_info;
-	HEVC_SEI sei;
+	GF_SEIInfo sei;
 
 	//-1 or the value of the vps/sps/pps ID of the nal just parsed
 	s32 last_parsed_vps_id;
 	s32 last_parsed_sps_id;
 	s32 last_parsed_pps_id;
-
-	u8 clli_data[4];
-	u8 mdcv_data[24];
-	u8 clli_valid, mdcv_valid;
-	u8 has_3d_ref_disp_info;
 } HEVCState;
 
 typedef struct hevc_combine{
@@ -617,6 +631,7 @@ GF_Err gf_hevc_get_sps_info_with_state(HEVCState *hevc_state, u8 *sps_data, u32 
 
 /*parses HEVC SEI and fill state accordingly*/
 void gf_hevc_parse_sei(char* buffer, u32 nal_size, HEVCState *hevc);
+u32 gf_hevc_reformat_sei(char* buffer, u32 nal_size, Bool isobmf_rewrite, SEI_Filter *sei_filter);
 
 
 
@@ -832,7 +847,7 @@ typedef struct
 /*TODO once we add HLS parsing (FDIS) */
 typedef struct _vvc_state
 {
-	s8 sps_active_idx;	/*currently active sps; must be initalized to -1 in order to discard not yet decodable SEIs*/
+	s8 sps_active_idx;	/*currently active sps; must be initialized to -1 in order to discard not yet decodable SEIs*/
 
 	//-1 or the value of the vps/sps/pps ID of the nal just parsed
 	s32 last_parsed_vps_id;
@@ -846,19 +861,17 @@ typedef struct _vvc_state
 
 	VVCSliceInfo s_info;
 
+	GF_SEIInfo sei;
+
 	//0: minimal parsing, used by most tools. Slice header and picture header are skipped
 	//1: full parsing, error check: used to retrieve end of slice header
 	//2: full parsing, no error check (used by dumpers)
 	u32 parse_mode;
-
-
-	u8 clli_data[4];
-	u8 mdcv_data[24];
-	u8 clli_valid, mdcv_valid;
 } VVCState;
 
 s32 gf_vvc_parse_nalu_bs(GF_BitStream *bs, VVCState *vvc, u8 *nal_unit_type, u8 *temporal_id, u8 *layer_id);
 void gf_vvc_parse_sei(char* buffer, u32 nal_size, VVCState *vvc);
+u32 gf_vvc_reformat_sei(char *buffer, u32 nal_size, Bool isobmf_rewrite, SEI_Filter *sei_filter);
 Bool gf_vvc_slice_is_ref(VVCState *vvc);
 s32 gf_vvc_parse_nalu(u8 *data, u32 size, VVCState *vvc, u8 *nal_unit_type, u8 *temporal_id, u8 *layer_id);
 
@@ -910,54 +923,7 @@ typedef struct
 	u16 uncompressed_header_bytes;
 } AV1StateFrame;
 
-typedef struct
-{
-	Bool seen_valid_ia_seq_header;
-	Bool seen_first_frame;
-	Bool previous_obu_is_descriptor;
-
-	// Track state while parsing temporal units.
-	Bool found_full_temporal_unit;
-	Bool seen_first_obu_in_temporal_unit;
-	int num_audio_frames_in_temporal_unit;
-	// True when enough samples have been seen to determine the pre-skip.
-	Bool pre_skip_is_finalized;
-	u64 previous_num_samples_to_trim_at_start;
-        u64 num_samples_to_trim_at_end;
-
-	Bool cache_descriptor_obus;
-	GF_List *descriptor_obus, *temporal_unit_obus; /*GF_IamfObu*/
-} IamfStateFrame;
-
-typedef struct
-{
-	// Determined based on Codec Config OBU.
-	int num_samples_per_frame;
-	int sample_size;
-	int sample_rate;
-        s16 audio_roll_distance;
-	// Determined based on Audio Element OBUs.
-	int total_substreams;
-	// Determined based on the first Temporal Unit.
-	// TODO: Init once the first temporal unit is processed.
-	Bool bitstream_has_temporal_delimiters;
-	// Determined based on the initial Temporal Units. Only valid when `pre_skip_is_finalized`.
-	u64 pre_skip;
-
-	/*frame parsing state*/
-	IamfStateFrame frame_state;
-
-	/* The temporal units (audio frame + parameter block OBUs) are written to this bitstream*/
-	GF_BitStream *bs;
-
-	u8 *temporal_unit_obus;
-	u32 temporal_unit_obus_alloc;
-
-	/*IAMF config record - shall not be null when parsing - this is NOT destroyed by gf_iamf_reset_state(state, GF_TRUE) */
-	GF_IAConfig *config;
-} IAMFState;
-
-#define AV1_NUM_REF_FRAMES 8
+#define AV1_NUM_REF_FRAMES	8
 
 typedef struct
 {
@@ -969,9 +935,9 @@ typedef struct
 	/*importing options*/
 	Bool keep_temporal_delim;
 	/*parser config*/
-	// if set only header frames are stored
+	//if set only header frames are stored
 	Bool skip_frames;
-	// if set, frame OBUs are not pushed to the frame_obus OBU list but are written in the below bitstream
+	//if set, frame OBUs are not pushed to the frame_obus OBU list but are written in the below bitstream
 	Bool mem_mode;
 	/*bitstream object for mem mode - this bitstream is NOT destroyed by gf_av1_reset_state(state, GF_TRUE) */
 	GF_BitStream *bs;
@@ -1050,11 +1016,11 @@ typedef struct
 	/*layer sizes for AVIF a1lx*/
 	u32 layer_size[4];
 
-	u8 clli_data[4];
-	u8 mdcv_data[24];
-	u8 clli_valid, mdcv_valid;
+	//if set to ono, only parse OBU_METADATA and skip the rest. If OBU_METADAT is present, the value is set to 2
+	u32 parse_metadata_filter;
+	GF_SEIInfo sei;
 
-	// set to one if a temporal delim is found when calling aom_av1_parse_temporal_unit_from_section5
+	//set to one if a temporal delim is found when calling aom_av1_parse_temporal_unit_from_section5
 	u8 has_temporal_delim;
 	u8 has_frame_data;
 } AV1State;
@@ -1062,7 +1028,6 @@ typedef struct
 GF_Err aom_av1_parse_temporal_unit_from_section5(GF_BitStream *bs, AV1State *state);
 GF_Err aom_av1_parse_temporal_unit_from_annexb(GF_BitStream *bs, AV1State *state);
 GF_Err aom_av1_parse_temporal_unit_from_ivf(GF_BitStream *bs, AV1State *state);
-GF_Err aom_iamf_parse_temporal_unit(GF_BitStream *bs, IAMFState *state);
 
 /*may return GF_BUFFER_TOO_SMALL if not enough bytes*/
 GF_Err gf_media_parse_ivf_frame_header(GF_BitStream *bs, u64 *frame_size, u64 *pts);
@@ -1086,59 +1051,62 @@ Bool av1_is_obu_header(ObuType obu_type);
 */
 void gf_av1_init_state(AV1State *state);
 
-/*! init IAMF frame parsing state
-\param state the frame parser
-*/
-void gf_iamf_init_state(IAMFState *state);
-
 /*! reset av1 frame parsing state - this does not destroy the structure.
 \param state the frame parser
 \param is_destroy if TRUE, destroy internal reference picture lists
 */
 void gf_av1_reset_state(AV1State *state, Bool is_destroy);
 
-/*! reset IAMF frame parsing state - this does not destroy the structure.
-\param state the frame parser
-\param is_destroy if TRUE, destroy internal reference picture lists
-*/
-void gf_iamf_reset_state(IAMFState *state, Bool is_destroy);
-
 u64 gf_av1_leb128_read(GF_BitStream *bs, u8 *opt_Leb128Bytes);
 u32 gf_av1_leb128_size(u64 value);
 u64 gf_av1_leb128_write(GF_BitStream *bs, u64 value);
 GF_Err gf_av1_parse_obu_header(GF_BitStream *bs, ObuType *obu_type, Bool *obu_extension_flag, Bool *obu_has_size_field, u8 *temporal_id, u8 *spatial_id);
 
-/*! OPUS packet header*/
 typedef struct
 {
-	Bool self_delimited;
+	Bool seen_valid_ia_seq_header;
+	Bool seen_first_frame;
+	Bool previous_obu_is_descriptor;
 
-	// parsed header size
-	u8 size;
+	// Track state while parsing temporal units.
+	Bool found_full_temporal_unit;
+	Bool seen_first_obu_in_temporal_unit;
+	int num_audio_frames_in_temporal_unit;
+	// True when enough samples have been seen to determine the pre-skip.
+	Bool pre_skip_is_finalized;
+	u64 previous_num_samples_to_trim_at_start;
+	u64 num_samples_to_trim_at_end;
 
-	u16 self_delimited_length;
-	u8 TOC_config;
-	u8 TOC_stereo;
-	u8 TOC_code;
-	u16 code2_frame_length;
-	u8 code3_vbr;
-	u8 code3_padding;
-	u16 code3_padding_length;
+	Bool cache_descriptor_obus;
+	GF_List *descriptor_obus, *temporal_unit_obus; /*GF_IamfObu*/
+} IamfStateFrame;
 
-	u8 nb_frames;
-	// either explicitly coded (e.g. self_delimited) or computer (e.g. cbr)
-	u16 frame_lengths[255];
+typedef struct
+{
+	// Determined based on Codec Config OBU.
+	int num_samples_per_frame;
+	int sample_size;
+	int sample_rate;
+	s16 audio_roll_distance;
+	// Determined based on Audio Element OBUs.
+	int total_substreams;
+	// Determined based on the first Temporal Unit.
+	Bool bitstream_has_temporal_delimiters;
+	// Determined based on the initial Temporal Units. Only valid when `pre_skip_is_finalized`.
+	u64 pre_skip;
 
-	// computed packet size
-	u32 packet_size;
-} GF_OpusPacketHeader;
+	/*frame parsing state*/
+	IamfStateFrame frame_state;
 
-u8 gf_opus_parse_packet_header(u8 *data, u32 data_length, Bool self_delimited, GF_OpusPacketHeader *header);
+	/* The temporal units (audio frame + parameter block OBUs) are written to this bitstream*/
+	GF_BitStream *bs;
 
-/*checks if the input is an IAMF bitstream
-\param bs bitstream object
-*/
-Bool gf_media_probe_iamf(GF_BitStream *bs);
+	u8 *temporal_unit_obus;
+	u32 temporal_unit_obus_alloc;
+
+	/*IAMF config record - shall not be null when parsing - this is NOT destroyed by gf_iamf_reset_state(state, GF_TRUE) */
+	GF_IAConfig *config;
+} IAMFState;
 
 /*parses one IAMF OBU
 \param bs bitstream object
@@ -1147,6 +1115,52 @@ Bool gf_media_probe_iamf(GF_BitStream *bs);
 \param state State of the frame parser
 */
 GF_Err gf_iamf_parse_obu(GF_BitStream *bs, IamfObuType *obu_type, u64 *obu_size, IAMFState *state);
+
+GF_Err aom_iamf_parse_temporal_unit(GF_BitStream *bs, IAMFState *state);
+
+/*checks if the input is an IAMF bitstream
+\param bs bitstream object
+*/
+Bool gf_media_probe_iamf(GF_BitStream *bs);
+
+/*! init IAMF frame parsing state
+\param state the frame parser
+*/
+void gf_iamf_init_state(IAMFState *state);
+
+/*! reset IAMF frame parsing state - this does not destroy the structure.
+\param state the frame parser
+\param is_destroy if TRUE, destroy the cached descriptor OBUs
+*/
+void gf_iamf_reset_state(IAMFState *state, Bool is_destroy);
+
+
+/*! OPUS packet header*/
+typedef struct
+{
+    Bool self_delimited;
+
+    // parsed header size
+    u8 size;
+
+    u16 self_delimited_length;
+    u8 TOC_config;
+    u8 TOC_stereo;
+    u8 TOC_code;
+    u16 code2_frame_length;
+    u8 code3_vbr;
+    u8 code3_padding;
+    u16 code3_padding_length;
+
+    u8 nb_frames;
+    // either explicitly coded (e.g. self_delimited) or computer (e.g. cbr)
+    u16 frame_lengths[255];
+
+    // computed packet size
+    u32 packet_size;
+} GF_OpusPacketHeader;
+
+u8 gf_opus_parse_packet_header(u8 *data, u32 data_length, Bool self_delimited, GF_OpusPacketHeader *header);
 
 typedef struct
 {
@@ -1210,7 +1224,7 @@ GP_RTPPacketizer *gf_rtp_packetizer_create_and_init_from_file(GF_ISOFile *file,
         u32 InterleaveGroupID,
         u8 InterleaveGroupPriority);
 
-void gf_media_format_ttxt_sdp(GP_RTPPacketizer *builder, char *payload_name, char *sdpLine, u32 w, u32 h, s32 tx, s32 ty, s16 l, u32 max_w, u32 max_h, char *tx3g_base64);
+void gf_media_format_ttxt_sdp(GP_RTPPacketizer *builder, char *payload_name, char **out_sdp_line, u32 w, u32 h, s32 tx, s32 ty, s16 l, u32 max_w, u32 max_h, char *tx3g_base64);
 
 #endif
 
@@ -1270,6 +1284,22 @@ GF_Err gf_webvtt_parser_dump_done(GF_WebVTTParser *parser, u32 duration);
 
 /*build isobmf dec info from sequence header+ephdr (only seq hdr is parsed, only advanced profile is supprted) */
 GF_Err gf_media_vc1_seq_header_to_dsi(const u8 *seq_hdr, u32 seq_hdr_len, u8 **dsi, u32 *dsi_size);
+
+#ifndef GPAC_DISABLE_AV_PARSERS
+typedef struct _gf_sei_loader GF_SEILoader;
+GF_SEILoader *gf_sei_loader_new();
+void gf_sei_loader_del(GF_SEILoader *sei);
+GF_Err gf_sei_init_from_pid(GF_SEILoader *sei, GF_FilterPid *pid);
+GF_Err gf_sei_init_from_avc(GF_SEILoader *sei, AVCState *avc);
+GF_Err gf_sei_init_from_hevc(GF_SEILoader *sei, HEVCState *hevc);
+GF_Err gf_sei_init_from_vvc(GF_SEILoader *sei, VVCState *vvc);
+GF_Err gf_sei_init_from_av1(GF_SEILoader *sei, AV1State *av1);
+
+GF_Err gf_sei_load_from_state(GF_SEILoader *sei, GF_FilterPacket *pck);
+GF_Err gf_sei_load_from_packet(GF_SEILoader *sei, GF_FilterPacket *pck);
+
+void gf_av1_format_mdcv_to_mpeg(u8 mdcv_in[24], u8 mdcv_out[24]);
+#endif
 
 
 #endif		/*_GF_MEDIA_DEV_H_*/

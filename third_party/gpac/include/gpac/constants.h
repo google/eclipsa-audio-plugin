@@ -50,7 +50,7 @@ This section documents some constants used in the GPAC framework which are not r
 
 Supported media stream types for media objects.
 */
-enum
+typedef enum
 {
 	/*!Unknown stream type*/
 	GF_STREAM_UNKNOWN = 0,
@@ -104,7 +104,7 @@ enum
 	GF_STREAM_FILE		= 0xE1,
 
 	//other stream types may be declared using their handler 4CC as defined in ISOBMFF
-};
+} GF_StreamType;
 
 /*! Gets the stream type name based on stream type
 \param streamType stream type GF_STREAM_XXX as defined in constants.h
@@ -183,7 +183,7 @@ typedef enum
 	/*!RGB24 + depth plane (7 lower bits) + shape mask. Component ordering in bytes is R-G-B-(S+D).*/
 	GF_PIXEL_RGBDS		=	GF_4CC('3', 'C', 'D', 'S'),
 
-	/*internal format for OpenGL using pachek RGB 24 bit plus planar depth plane at the end of the image*/
+	/*internal format for OpenGL using packed RGB 24 bit plus planar depth plane at the end of the image*/
 	GF_PIXEL_RGB_DEPTH = GF_4CC('R', 'G', 'B', 'd'),
 
 	/*generic pixel format uncv from ISO/IEC 23001-17*/
@@ -327,6 +327,13 @@ u32 gf_pixel_is_wide_depth(GF_PixelFormat pixfmt);
 \return number of bytes per pixel
 */
 u32 gf_pixel_get_nb_comp(GF_PixelFormat pixfmt);
+
+/*! Gets the downsampling factor for this format
+\param pixfmt  pixel format code
+\param downsample_w set to horizontal downsampling, 1 if none
+\param downsample_h set to vertical downsampling, 1 if none
+*/
+void gf_pixel_get_downsampling(GF_PixelFormat pixfmt, u32 *downsample_w, u32 *downsample_h);
 
 /*! Checks if  pixel format is transparent
 \param pixfmt  pixel format code
@@ -1729,6 +1736,20 @@ enum
 	/*! Mesh projection (not supported yet)*/
 	GF_PROJ360_MESH
 };
+
+/*! Low latency HTTP adaptive streaming mode, set by dasher filter and used by other filter */
+enum
+{
+	/*! no low-latency profile*/
+	GF_LLHAS_NONE = 0,
+	/*! LL-HLS using byte ranges */
+	GF_LLHAS_BYTERANGES = 1,
+	/*! LL-HLS using separate parts  */
+	GF_LLHAS_PARTS = 2,
+	/*! DASH SSR mode (only sub-parts are generated  */
+	GF_LLHAS_SUBSEG = 3
+};
+
 
 /*! user data used by GPAC to store SRD info*/
 #define GF_ISOM_UDTA_GPAC_SRD	GF_4CC('G','S','R','D')
