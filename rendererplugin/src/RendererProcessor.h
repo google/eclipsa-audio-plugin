@@ -170,6 +170,9 @@ class RendererProcessor final : public ProcessorBase,
 
   juce::AudioChannelSet outputChannelSet_ = juce::AudioChannelSet::stereo();
 
+  // Used by the debug build to prevent processing while changing
+  // to non-realtime mode
+  juce::SpinLock realtimeLock_;
   // Monitors if rendering in realtime mode or offline mode during debug builds
   // only
   bool isRealtime_;
