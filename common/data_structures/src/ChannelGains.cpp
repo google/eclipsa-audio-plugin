@@ -124,10 +124,10 @@ void ChannelGains::setChannelGain(const int& channel, const float& gain) {
 }
 
 void ChannelGains::setGains(std::vector<float> gains) {
-  if (gains.size() != totalChannels_) {
-    return;
+  size_t n = std::min(gains.size(), gains_.size());
+  for (int i = 0; i < n; ++i) {
+    gains_[i] = gains[i];
   }
-  gains_ = gains;
 }
 
 std::vector<std::string> ChannelGains::splitStringBySpace(

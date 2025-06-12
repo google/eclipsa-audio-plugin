@@ -60,7 +60,7 @@ TEST(test_routing_processor, test_no_shift) {
 
   // Create an instance of the routing processor
   RoutingProcessor routing_processor(&audioElementSpatialLayout_repository,
-                                     &sync_client);
+                                     &sync_client, 36);
 
   // Create an instance of the audio buffer with 10 channels, filling the first
   // two with 1's and the rest with 0's
@@ -118,7 +118,7 @@ TEST(test_routing_processor, test_partial_shift) {
 
   // Create an instance of the routing processor
   RoutingProcessor routing_processor(&audioElementSpatialLayout_repository,
-                                     &sync_client);
+                                     &sync_client, 36);
 
   // Create an instance of the audio buffer with 10 channels, filling the first
   // two with 1's and 2's and the rest with 0's
@@ -178,7 +178,7 @@ TEST(test_routing_processor, test_full_shift) {
 
   // Create an instance of the routing processor
   RoutingProcessor routing_processor(&audioElementSpatialLayout_repository,
-                                     &sync_client);
+                                     &sync_client, 36);
 
   // Create an instance of the audio buffer with 10 channels, filling the first
   // two with 1's and the rest with 0's

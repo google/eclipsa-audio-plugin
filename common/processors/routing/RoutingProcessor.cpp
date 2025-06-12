@@ -20,11 +20,12 @@
 
 RoutingProcessor::RoutingProcessor(
     AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository,
-    AudioElementPluginSyncClient* syncClient)
+    AudioElementPluginSyncClient* syncClient, int totalChannelCount)
     : audioElementSpatialLayoutData_(audioElementSpatialLayoutRepository),
       syncClient_(syncClient),
       firstChannel_(0),
-      totalChannels_(0) {
+      totalChannels_(0),
+      totalChannelCount_(totalChannelCount) {
   // Register ourselves to listen for updates to the AudioElementSpatialLayout
   // and/or audio element data
   audioElementSpatialLayoutData_->registerListener(this);
@@ -40,7 +41,7 @@ RoutingProcessor::~RoutingProcessor() {
 
 void RoutingProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
   juce::ignoreUnused(sampleRate);
-  copyBuffer_.setSize(getTotalNumOutputChannels(), samplesPerBlock);
+  copyBuffer_.setSize(totalChannelCount_, samplesPerBlock);
 }
 
 void RoutingProcessor::initializeRouting() {

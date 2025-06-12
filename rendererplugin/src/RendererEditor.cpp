@@ -65,7 +65,8 @@ RendererEditor::RendererEditor(RendererProcessor& p)
       dawWarningBanner_(&p.getRoomSetupRepository()),
       currentScreen_(&monitorScreen_),
       monitorScreen_(p.getRepositories(), p.getSpeakerMonitorData(), *this,
-                     p.getChannelMonitorProcessor()) {
+                     p.getChannelMonitorProcessor(),
+                     p.getMainBusNumInputChannels()) {
   setResizable(true, true);
   setSize(1600, 752);
 

@@ -30,7 +30,7 @@ class RoutingProcessor final : public ProcessorBase,
   //==============================================================================
   RoutingProcessor(
       AudioElementSpatialLayoutRepository* AudioElementSpatialLayoutRepository,
-      AudioElementPluginSyncClient* syncClient);
+      AudioElementPluginSyncClient* syncClient, int totalChannelCount);
   ~RoutingProcessor() override;
 
   //==============================================================================
@@ -79,6 +79,7 @@ class RoutingProcessor final : public ProcessorBase,
   // Playback information required for shifting the audio channels
   std::atomic_int firstChannel_;
   std::atomic_int totalChannels_;
+  const int totalChannelCount_;
   juce::AudioBuffer<float> copyBuffer_;
 
   //==============================================================================

@@ -30,8 +30,7 @@
 int AudioElementPluginProcessor::instanceId_ = 0;
 
 AudioElementPluginProcessor::AudioElementPluginProcessor()
-    : ProcessorBase(juce::AudioChannelSet::mono(),
-                    juce::AudioChannelSet::ambisonic(5)),
+    : ProcessorBase(juce::AudioChannelSet::mono(), getHostWideLayout()),
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
           persistentState_.getOrCreateChildWithName(
@@ -57,7 +56,8 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   audioProcessors_.push_back(std::make_unique<SoundFieldProcessor>(
       &audioElementSpatialLayoutRepository_, &syncClient_, &ambisonicsData_));
   audioProcessors_.push_back(std::make_unique<RoutingProcessor>(
-      &audioElementSpatialLayoutRepository_, &syncClient_));
+      &audioElementSpatialLayoutRepository_, &syncClient_,
+      getBusesLayout().getMainOutputChannelSet().size()));
 
   Logger::getInstance().init("EclipsaAudioElementPlugin");
 
@@ -99,8 +99,7 @@ bool AudioElementPluginProcessor::isBusesLayoutSupported(
     return false;
   }
 
-  if (layouts.getMainOutputChannelSet() !=
-      juce::AudioChannelSet::ambisonic(5)) {
+  if (layouts.getMainOutputChannelSet() != getHostWideLayout()) {
     return false;
   }
 

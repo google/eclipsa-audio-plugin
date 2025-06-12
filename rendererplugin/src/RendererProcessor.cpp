@@ -26,8 +26,7 @@
 
 //==============================================================================
 RendererProcessor::RendererProcessor()
-    : ProcessorBase(juce::AudioChannelSet::ambisonic(5),
-                    juce::AudioChannelSet::stereo()),
+    : ProcessorBase(getHostWideLayout(), juce::AudioChannelSet::stereo()),
       // Load persistent state. Initialize repositories from persistent state.
       persistentState_(kRendererStateKey),
       roomSetupRepository_(getTreeWithId(kRoomSetupKey)),
@@ -89,7 +88,7 @@ RendererProcessor::~RendererProcessor() {}
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
   // Ensure the input channel set is wide enough for us
-  if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::ambisonic(5)) {
+  if (layouts.getMainInputChannelSet() != getHostWideLayout()) {
     return false;
   }
 

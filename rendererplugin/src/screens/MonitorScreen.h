@@ -17,16 +17,9 @@
 #pragma once
 #include <components/components.h>
 
-#include "../RendererProcessor.h"
 #include "MixMonitoringScreen.h"
 #include "PresentationMonitorScreen.h"
 #include "RoomMonitoringScreen.h"
-#include "data_repository/implementation/AudioElementRepository.h"
-#include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
-#include "data_repository/implementation/FileExportRepository.h"
-#include "data_repository/implementation/MixPresentationRepository.h"
-#include "data_repository/implementation/RoomSetupRepository.h"
-#include "data_structures/src/AudioElement.h"
 
 class MonitorScreen : public juce::Component {
   PresentationMonitorScreen presentationMonitorScreen_;
@@ -36,11 +29,13 @@ class MonitorScreen : public juce::Component {
  public:
   MonitorScreen(RepositoryCollection repos, SpeakerMonitorData& data,
                 MainEditor& editor,
-                ChannelMonitorProcessor* channelMonitorProcessor)
+                ChannelMonitorProcessor* channelMonitorProcessor,
+                int totalChannelCount)
       : presentationMonitorScreen_(
             editor, &repos.aeRepo_, &repos.audioElementSpatialLayoutRepo_,
             &repos.mpRepo_, &repos.mpSMRepo_, &repos.chGainRepo_,
-            &repos.activeMPRepo_, channelMonitorProcessor, &repos.fioRepo_),
+            &repos.activeMPRepo_, channelMonitorProcessor, &repos.fioRepo_,
+            totalChannelCount),
         roomMonitoringScreen_(repos, data, editor),
         mixMonitoringScreen_(repos, data) {}
 

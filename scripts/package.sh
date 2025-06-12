@@ -100,7 +100,7 @@ COMPANY_NAME="${ECLIPSA_COMPANY_NAME:-Eclipsa Project}"
 COPYRIGHT_YEAR="${ECLIPSA_COPYRIGHT_YEAR:-2025}"
 BUNDLE_IDENTIFIER="${ECLIPSA_BUNDLE_IDENTIFIER:-com.eclipsaproject.plugins}"
 VERSION="${ECLIPSA_VERSION:-1.0.0}"
-DOCS_URL="${ECLIPSA_DOCS_URL:-https://github.com/eclipsaproject/docs}"
+DOCS_URL="${ECLIPSA_DOCS_URL:-https://docs.eclipsaapp.com}"
 
 # DMG appearance
 DMG_TITLE="${ECLIPSA_DMG_TITLE:-Eclipsa Plugins Installer}"
@@ -158,6 +158,15 @@ WRAP_TOOL_HELPER="./wraptool_helper.sh"
 
 # Define output filenames
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+if [ "$BRANCH_NAME" = "HEAD" ]; then
+    # If we're in a detached HEAD state, or have checked out a tag, fetch the tag
+    BRANCH_NAME=$(git describe --tags --exact-match 2>/dev/null)
+
+    # If no tag is found, fallback to commit info
+    if [ -z "$BRANCH_NAME" ]; then
+        BRANCH_NAME=$(git rev-parse --short HEAD)
+    fi
+fi
 
 INSTALLER_NAME="Eclipsa_${FORMAT_SUFFIX}_${BRANCH_NAME}.pkg"
 FINAL_DMG_NAME="Eclipsa_Plugins_${FORMAT_SUFFIX}_${BRANCH_NAME}.dmg"
