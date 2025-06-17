@@ -4,7 +4,7 @@
 
 ### Dependencies
 
-- MacOS 14.7.1 or newer
+- MacOS 14.7.1
 
 - Compiler with C++20 support.
 
@@ -17,6 +17,7 @@
 
 Please note: The AAX SDK is required to build the plug-in in AAX format and the development version of ProTools is required to load locally built, unsigned AAX plugins. 
 Avid developer tools require an Avid account, and in the case of the ProTools development DAW, a developer license to use. Licenses can be acquired by emailing devauth@avid.com, which also provides details on configuring the license through iLok. The AAX SDK and ProToolsDev are available at [Avid Developer Tools](https://my.avid.com/products/cppsdk?toolkit=AAX).
+
 
 ### Building Plugins Locally with CMake
 
@@ -78,7 +79,7 @@ Please note: For AAX plugins, the plugin will not be available in non developer 
 
 ### Diagnosing Pro Tools Crashes
 
-Should a crash occur with the plugin during Pro Tools runtime, collecting crash data can aid in identifying the issue. The most useful data in diagnosing the cause of a crash is in the Pro Tools core dump. This can be located at `~/Library/Application\ Support/Avid/Pro\ Tools/Crashpad/completed`, and the most recent .dmp file collected. In addition to the core dump data, recent logs can be collected from `/tmp/Eclipsa_Audio_Plugin`. Logs and core dump files can then be attached and sent to [feedback@iamf-renderer.com](mailto:feedback@iamf-renderer.com).
+Should a crash occur with the plugin during Pro Tools runtime, collecting crash data can aid in identifying the issue. The most useful data in diagnosing the cause of a crash is in the Pro Tools core dump. This can be located at `~/Library/Application\ Support/Avid/Pro\ Tools/Crashpad/completed`, and the most recent .dmp file collected. In addition to the core dump data, recent logs can be collected from `/tmp/Eclipsa_Audio_Plugin`. Logs and core dump files can then be attached to issues opened in Github.
 
 ### Running scripts to get installer:
 
