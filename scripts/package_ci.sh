@@ -23,8 +23,8 @@ BRANCH_NAME="${BRANCH_NAME_RAW//\//_}"
 
 SKIP_PACE_WRAPPING="${SKIP_PACE_WRAPPING:-false}"
 
-# Plugin format selection (similar to package.sh)
-PLUGIN_FORMAT="${PLUGIN_FORMAT:-aax}" # Default to AAX, options: aax, vst3, both
+# Plugin format selection (AAX or VST3 only)
+PLUGIN_FORMAT="${PLUGIN_FORMAT:-aax}" # Default to AAX, options: aax, vst3
 
 # Set format suffix based on plugin format
 case "$PLUGIN_FORMAT" in
@@ -34,8 +34,13 @@ case "$PLUGIN_FORMAT" in
     vst3)
         FORMAT_SUFFIX="VST3"
         ;;
-    both|*)
-        FORMAT_SUFFIX="AAX_VST3"
+    both)
+        echo "Error: 'both' format option is no longer supported. Use separate builds for aax and vst3"
+        exit 1
+        ;;
+    *)
+        echo "Error: Invalid plugin format. Use PLUGIN_FORMAT=aax or PLUGIN_FORMAT=vst3"
+        exit 1
         ;;
 esac
 
@@ -50,10 +55,19 @@ KEYCHAIN_PASSWORD="${KEYCHAIN_PASSWORD}"
 
 # Extract the signing identities - handle different formats
 # The input might be in the format:   1) 41BB6575983E1E97CC536403262FC40B38CDBC54 "Developer ID Application: A-CX, LLC (***)"
-# We need to use the fingerprint (hash) directly
+# For regular codesigning, we use the fingerprint (hash) directly
+# For PACE wraptool, we need the full certificate name
+
+# Store the original full identity for PACE wraptool
+DEV_APP_SIGNING_IDENTITY_FULL="$DEV_APP_SIGNING_IDENTITY"
 
 if [[ "$DEV_APP_SIGNING_IDENTITY" == *")"* ]]; then
-    # Extract the fingerprint/hash part (the 40-character hex string)
+    # Extract the full certificate name for PACE wraptool (between quotes)
+    # Input format: 1) 41BB6575983E1E97CC536403262FC40B38CDBC54 "Developer ID Application: A-CX, LLC (***)"
+    DEV_APP_SIGNING_IDENTITY_FULL=$(echo "$DEV_APP_SIGNING_IDENTITY" | sed -E 's/.*[0-9A-F]{40} "(.*)"/\1/')
+    echo "Full signing identity for PACE: $DEV_APP_SIGNING_IDENTITY_FULL"
+    
+    # Extract the fingerprint/hash part (the 40-character hex string) for regular codesigning
     DEV_APP_SIGNING_IDENTITY=$(echo "$DEV_APP_SIGNING_IDENTITY" | grep -o -E '[0-9A-F]{40}')
     echo "Extracted signing identity hash: $DEV_APP_SIGNING_IDENTITY"
 fi
@@ -66,6 +80,7 @@ fi
 
 # PACE Configuration
 PACE_ACCOUNT="${PACE_ACCOUNT:-}"
+PACE_ACCOUNT_PWD="${PACE_ACCOUNT_PWD:-}"
 PACE_RENDERER_WCGUID="${PACE_RENDERER_WCGUID:-}"
 
 # Check for both old and new variable names
@@ -83,12 +98,14 @@ echo "DEV_INSTALLER_IDENTITY: $DEV_INSTALLER_IDENTITY"
 echo "APPLE_TEAM_ID: $APPLE_TEAM_ID"
 echo "APPLE_ACCOUNT_EMAIL: $APPLE_ACCOUNT_EMAIL"
 echo "KEYCHAIN_PATH: $KEYCHAIN_PATH"
-if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]] && [ "$SKIP_PACE_WRAPPING" != "true" ]; then
+if [[ "$PLUGIN_FORMAT" == "aax" ]] && [ "$SKIP_PACE_WRAPPING" != "true" ]; then
     echo "PACE_ACCOUNT: $PACE_ACCOUNT"
+    echo "PACE_ACCOUNT_PWD: [REDACTED]"
     echo "PACE_RENDERER_WCGUID: $PACE_RENDERER_WCGUID"
     echo "PACE_AUDIOELEMENT_WCGUID: $PACE_AUDIOELEMENT_WCGUID"
     [ -x "$WRAP_TOOL" ] || { echo >&2 "Error: PACE wraptool not found or not executable at $WRAP_TOOL."; exit 1; }
     [ -n "$PACE_ACCOUNT" ] || { echo >&2 "Error: PACE_ACCOUNT env var not set."; exit 1; }
+    [ -n "$PACE_ACCOUNT_PWD" ] || { echo >&2 "Error: PACE_ACCOUNT_PWD env var not set."; exit 1; }
     [ -n "$PACE_RENDERER_WCGUID" ] || { echo >&2 "Error: PACE_RENDERER_WCGUID env var not set."; exit 1; }
     [ -n "$PACE_AUDIOELEMENT_WCGUID" ] || { echo >&2 "Error: PACE_AUDIOELEMENT_WCGUID env var not set."; exit 1; }
 fi
@@ -146,17 +163,28 @@ fi
 INSTALLER_OUTPUT_DIR="build/installers"
 INSTALLER_NAME="Eclipsa_${FORMAT_SUFFIX}_${BRANCH_NAME}.pkg"
 FINAL_INSTALLER_PATH="$INSTALLER_OUTPUT_DIR/$INSTALLER_NAME"
-# Check for distribution.xml in various locations
-if [ -f "./distribution.xml" ]; then
-    DISTRIBUTION_XML="./distribution.xml"
-elif [ -f "./scripts/distribution.xml" ]; then
-    DISTRIBUTION_XML="./scripts/distribution.xml"
-else
-    echo "Error: Distribution XML not found. Looked for ./distribution.xml and ./scripts/distribution.xml"
-    exit 1
+# Check for distribution.xml in various locations based on plugin format
+if [ "$PLUGIN_FORMAT" = "aax" ]; then
+    if [ -f "./distribution_aax.xml" ]; then
+        DISTRIBUTION_XML="./distribution_aax.xml"
+    elif [ -f "./scripts/distribution_aax.xml" ]; then
+        DISTRIBUTION_XML="./scripts/distribution_aax.xml"
+    else
+        echo "Error: AAX Distribution XML not found. Looked for ./distribution_aax.xml and ./scripts/distribution_aax.xml"
+        exit 1
+    fi
+elif [ "$PLUGIN_FORMAT" = "vst3" ]; then
+    if [ -f "./distribution_vst3.xml" ]; then
+        DISTRIBUTION_XML="./distribution_vst3.xml"
+    elif [ -f "./scripts/distribution_vst3.xml" ]; then
+        DISTRIBUTION_XML="./scripts/distribution_vst3.xml"
+    else
+        echo "Error: VST3 Distribution XML not found. Looked for ./distribution_vst3.xml and ./scripts/distribution_vst3.xml"
+        exit 1
+    fi
 fi
 COMPONENT_PKG_DIR="build/component_pkgs"
-COMPONENT_PKG_PATH="$COMPONENT_PKG_DIR/EclipsaPluginsComponent.pkg"
+COMPONENT_PKG_PATH="$COMPONENT_PKG_DIR/EclipsaPlugins.pkg"
 
 # DMG Creation
 FINAL_DMG_NAME="Eclipsa_Plugins_${FORMAT_SUFFIX}_${BRANCH_NAME}.dmg"
@@ -243,12 +271,12 @@ if [ ! -f "$LICENSE_FILE" ]; then echo "Error: License file not found at $LICENS
 if [ ! -f "$DISTRIBUTION_XML" ]; then echo "Error: Distribution XML not found at $DISTRIBUTION_XML"; exit 1; fi
 
 # Check plugin paths based on format
-if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]]; then
+if [[ "$PLUGIN_FORMAT" == "aax" ]]; then
     if [ ! -d "$AAX_RENDERER_PLUGIN_SRC" ]; then echo "Error: AAX Renderer plugin source not found at $AAX_RENDERER_PLUGIN_SRC"; exit 1; fi
     if [ ! -d "$AAX_AUDIOELEMENT_PLUGIN_SRC" ]; then echo "Error: AAX AudioElement plugin source not found at $AAX_AUDIOELEMENT_PLUGIN_SRC"; exit 1; fi
 fi
 
-if [[ "$PLUGIN_FORMAT" == "vst3" || "$PLUGIN_FORMAT" == "both" ]]; then
+if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     if [ ! -d "$VST3_RENDERER_PLUGIN_SRC" ]; then echo "Error: VST3 Renderer plugin source not found at $VST3_RENDERER_PLUGIN_SRC"; exit 1; fi
     if [ ! -d "$VST3_AUDIOELEMENT_PLUGIN_SRC" ]; then echo "Error: VST3 AudioElement plugin source not found at $VST3_AUDIOELEMENT_PLUGIN_SRC"; exit 1; fi
 fi
@@ -272,7 +300,7 @@ unlock_keychain
 # 2. Adjust RPATH and sign dylibs based on selected plugin format
 echo "Adjusting RPATH and signing dylibs for selected plugin formats..."
 
-if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]]; then
+if [[ "$PLUGIN_FORMAT" == "aax" ]]; then
     # Adjust RPATH for AAX plugins
     echo "Processing AAX plugins..."
     adjust_rpath "$AAX_RENDERER_PLUGIN_BINARY"
@@ -284,7 +312,7 @@ if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]]; then
     find "$AAX_AUDIOELEMENT_PLUGIN_RESOURCES" -name '*.dylib' -print0 | while IFS= read -r -d $'\0' dylib; do sign_file_dev_app "$dylib"; done
 fi
 
-if [[ "$PLUGIN_FORMAT" == "vst3" || "$PLUGIN_FORMAT" == "both" ]]; then
+if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     # Adjust RPATH for VST3 plugins
     echo "Processing VST3 plugins..."
     adjust_rpath "$VST3_RENDERER_PLUGIN_BINARY"
@@ -309,21 +337,21 @@ mkdir -p "$VST3_RENDERER_PLUGIN_SIGNING_DIR"
 mkdir -p "$VST3_AUDIOELEMENT_PLUGIN_SIGNING_DIR"
 
 # Process AAX Plugins
-if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]]; then
+if [[ "$PLUGIN_FORMAT" == "aax" ]]; then
     echo "Processing AAX plugins with PACE wrapping: $SKIP_PACE_WRAPPING"
     
     if [ "$SKIP_PACE_WRAPPING" != "true" ]; then
         # Use PACE wraptool for AAX plugins
         echo "Running PACE wraptool for AAX plugins..."
-        "$WRAP_TOOL" sign --verbose --account "$PACE_ACCOUNT" --wcguid "$PACE_RENDERER_WCGUID" \
+        "$WRAP_TOOL" sign --verbose --account "$PACE_ACCOUNT" --password "$PACE_ACCOUNT_PWD" --wcguid "$PACE_RENDERER_WCGUID" \
                          --in "$AAX_RENDERER_PLUGIN_SRC" --out "$AAX_RENDERER_PLUGIN_SIGNED" \
-                         --signid "$DEV_APP_SIGNING_IDENTITY" --keychain "$KEYCHAIN_PATH" \
-                         --dsigharden --autoinstallon || { echo "Failed to wrap AAX Renderer plugin"; exit 1; }
+                         --signid "$DEV_APP_SIGNING_IDENTITY_FULL" \
+                         --dsigharden --autoinstall on || { echo "Failed to wrap AAX Renderer plugin"; exit 1; }
                          
-        "$WRAP_TOOL" sign --verbose --account "$PACE_ACCOUNT" --wcguid "$PACE_AUDIOELEMENT_WCGUID" \
+        "$WRAP_TOOL" sign --verbose --account "$PACE_ACCOUNT" --password "$PACE_ACCOUNT_PWD" --wcguid "$PACE_AUDIOELEMENT_WCGUID" \
                          --in "$AAX_AUDIOELEMENT_PLUGIN_SRC" --out "$AAX_AUDIOELEMENT_PLUGIN_SIGNED" \
-                         --signid "$DEV_APP_SIGNING_IDENTITY" --keychain "$KEYCHAIN_PATH" \
-                         --dsigharden --autoinstallon || { echo "Failed to wrap AAX AudioElement plugin"; exit 1; }
+                         --signid "$DEV_APP_SIGNING_IDENTITY_FULL" \
+                         --dsigharden --autoinstall on || { echo "Failed to wrap AAX AudioElement plugin"; exit 1; }
         echo "PACE wrapping for AAX plugins completed."
     else
         # Standard Apple signing for AAX plugins
@@ -343,7 +371,7 @@ if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]]; then
 fi
 
 # Process VST3 Plugins
-if [[ "$PLUGIN_FORMAT" == "vst3" || "$PLUGIN_FORMAT" == "both" ]]; then
+if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     echo "Processing VST3 plugins..."
     
     # Copy to output directories first
@@ -444,68 +472,97 @@ fi
 # 4. Prepare staging directory for PKG installer
 echo "Preparing files for packaging..."
 rm -rf "$PACKAGING_STAGING_DIR"
-mkdir -p "$PACKAGING_STAGING_DIR/Library/Application Support/Eclipsa Audio Plugins"
 
-# Copy different plugins based on format
-if [[ "$PLUGIN_FORMAT" == "aax" || "$PLUGIN_FORMAT" == "both" ]]; then
-    echo "Adding AAX plugins to package..."
+# Create different staging structures based on plugin format
+if [[ "$PLUGIN_FORMAT" == "aax" ]]; then
+    # AAX plugins must be installed system-wide
+    mkdir -p "$PACKAGING_STAGING_DIR/Library/Application Support/Eclipsa Audio Plugins"
     mkdir -p "$PACKAGING_STAGING_DIR/Library/Application Support/Avid/Audio/Plug-Ins"
+    echo "Adding AAX plugins to package..."
     cp -R "$AAX_RENDERER_PLUGIN_SIGNED" "$AAX_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/Library/Application Support/Avid/Audio/Plug-Ins/" || { echo "Failed to copy AAX plugins"; exit 1; }
-fi
-
-if [[ "$PLUGIN_FORMAT" == "vst3" || "$PLUGIN_FORMAT" == "both" ]]; then
-    echo "Adding VST3 plugins to package..."
+elif [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
+    # VST3 plugins structure - create relocatable package with dual locations for maximum compatibility
+    mkdir -p "$PACKAGING_STAGING_DIR/Library/Application Support/Eclipsa Audio Plugins"
+    mkdir -p "$PACKAGING_STAGING_DIR/tmp/EclipsaVST3"
     mkdir -p "$PACKAGING_STAGING_DIR/Library/Audio/Plug-Ins/VST3"
-    cp -R "$VST3_RENDERER_PLUGIN_SIGNED" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/Library/Audio/Plug-Ins/VST3/" || { echo "Failed to copy VST3 plugins"; exit 1; }
+    echo "Adding VST3 plugins to package (dual locations for compatibility)..."
+    # Copy to both locations to ensure postinstall script can find them
+    cp -R "$VST3_RENDERER_PLUGIN_SIGNED" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/tmp/EclipsaVST3/" || { echo "Failed to copy VST3 plugins to temp location"; exit 1; }
+    cp -R "$VST3_RENDERER_PLUGIN_SIGNED" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/Library/Audio/Plug-Ins/VST3/" || { echo "Failed to copy VST3 plugins to system location"; exit 1; }
 fi
 
 # Copy license for all formats
 cp "$LICENSE_FILE" "$PACKAGING_STAGING_DIR/Library/Application Support/Eclipsa Audio Plugins/" || { echo "Failed to copy license"; exit 1; }
-echo "Packaging staging directory prepared."
 
-# 6. Build component package with proper signing
+echo "Preparing ownership and permissions for staging directory: $PACKAGING_STAGING_DIR"
+CURRENT_USER_CI=$(whoami)
+CURRENT_GROUP_CI=$(id -g -n "$CURRENT_USER_CI")
+echo "Changing ownership of $PACKAGING_STAGING_DIR to $CURRENT_USER_CI:$CURRENT_GROUP_CI"
+sudo chown -R "$CURRENT_USER_CI:$CURRENT_GROUP_CI" "$PACKAGING_STAGING_DIR"
+echo "Setting permissions for $PACKAGING_STAGING_DIR to 755"
+sudo chmod -R 755 "$PACKAGING_STAGING_DIR"
+
+# 6. Build component package
 echo "Building component package..."
 rm -rf "$COMPONENT_PKG_DIR"
 mkdir -p "$COMPONENT_PKG_DIR"
 
-# Create a scripts directory for the component package
-SCRIPTS_DIR="$COMPONENT_PKG_DIR/scripts"
-mkdir -p "$SCRIPTS_DIR"
+# Build the component package with appropriate scripts based on plugin format
+if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
+    # For VST3, create scripts directory with preinstall and postinstall scripts
+    SCRIPTS_DIR="./vst3_scripts_ci"
+    mkdir -p "$SCRIPTS_DIR"
+    
+    # Find the VST3 preinstall script
+    if [ -f "./preinstall_vst3" ]; then
+        VST3_PREINSTALL="./preinstall_vst3"
+    elif [ -f "./scripts/preinstall_vst3" ]; then
+        VST3_PREINSTALL="./scripts/preinstall_vst3"
+    else
+        echo "Error: VST3 preinstall script not found. Looked for ./preinstall_vst3 and ./scripts/preinstall_vst3"
+        exit 1
+    fi
 
-# Create a simple postinstall script that ensures proper permissions
-cat > "$SCRIPTS_DIR/postinstall" << 'EOF'
-#!/bin/bash
-# Set appropriate permissions for plugins
-if [ -d "/Library/Audio/Plug-Ins/VST3" ]; then
-    chmod -R 755 "/Library/Audio/Plug-Ins/VST3"
-    chown -R root:admin "/Library/Audio/Plug-Ins/VST3"
+    # Find the VST3 postinstall script
+    if [ -f "./postinstall_vst3" ]; then
+        VST3_POSTINSTALL="./postinstall_vst3"
+    elif [ -f "./scripts/postinstall_vst3" ]; then
+        VST3_POSTINSTALL="./scripts/postinstall_vst3"
+    else
+        echo "Error: VST3 postinstall script not found. Looked for ./postinstall_vst3 and ./scripts/postinstall_vst3"
+        exit 1
+    fi
+    
+    # Copy VST3 preinstall and postinstall scripts
+    cp "$VST3_PREINSTALL" "$SCRIPTS_DIR/preinstall"
+    chmod +x "$SCRIPTS_DIR/preinstall"
+    cp "$VST3_POSTINSTALL" "$SCRIPTS_DIR/postinstall"
+    chmod +x "$SCRIPTS_DIR/postinstall"
+    
+    echo "Building VST3 component package with preinstall and postinstall scripts..."
+    pkgbuild --root "$PACKAGING_STAGING_DIR" \
+        --identifier "com.eclipsaproject.plugins" \
+        --install-location "/" \
+        --scripts "$SCRIPTS_DIR" \
+        --version "1.0.0" \
+        --sign "$DEV_INSTALLER_IDENTITY" \
+        --preserve-xattr \
+        "$COMPONENT_PKG_PATH" || { echo "pkgbuild failed"; exit 1; }
+    
+    # Clean up temporary scripts directory
+    rm -rf "$SCRIPTS_DIR"
+else
+    # For AAX, no postinstall script needed (direct installation)
+    echo "Building AAX component package (no postinstall script)..."
+    pkgbuild --root "$PACKAGING_STAGING_DIR" \
+        --identifier "com.eclipsaproject.plugins" \
+        --install-location "/" \
+        --version "1.0.0" \
+        --sign "$DEV_INSTALLER_IDENTITY" \
+        --preserve-xattr \
+        "$COMPONENT_PKG_PATH" || { echo "pkgbuild failed"; exit 1; }
 fi
-if [ -d "/Library/Application Support/Avid/Audio/Plug-Ins" ]; then
-    chmod -R 755 "/Library/Application Support/Avid/Audio/Plug-Ins"
-    chown -R root:admin "/Library/Application Support/Avid/Audio/Plug-Ins"
-fi
-exit 0
-EOF
 
-# Make the script executable
-chmod +x "$SCRIPTS_DIR/postinstall"
-
-# Sign the postinstall script
-codesign --keychain "$KEYCHAIN_PATH" \
-         --sign "$DEV_APP_SIGNING_IDENTITY" \
-         --timestamp \
-         --force \
-         "$SCRIPTS_DIR/postinstall" || { echo "Failed to sign postinstall script"; exit 1; }
-
-# Build the component package with the scripts
-pkgbuild --root "$PACKAGING_STAGING_DIR" \
-    --identifier "com.eclipsaproject.plugins" \
-    --install-location "/" \
-    --version "1.0.0" \
-    --scripts "$SCRIPTS_DIR" \
-    --sign "$DEV_INSTALLER_IDENTITY" \
-    --preserve-xattr \
-    "$COMPONENT_PKG_PATH" || { echo "pkgbuild failed"; exit 1; }
 echo "Component package built."
 
 # 7. Build and sign distribution package
@@ -758,15 +815,6 @@ This package contains VST3 plugins compatible with VST3-supporting DAWs.
 • VST3 plugins: /Library/Audio/Plug-Ins/VST3
 EOF
         ;;
-    both)
-        cat >> "$DMG_STAGING_DIR/Documentation/Documentation.txt" << EOF
-This package contains both AAX and VST3 plugins.
-
-## Installation Locations
-• AAX plugins: /Library/Application Support/Avid/Audio/Plug-Ins
-• VST3 plugins: /Library/Audio/Plug-Ins/VST3
-EOF
-        ;;
 esac
 
 # Process background image if available - with optimal sizing for the DMG window
@@ -902,9 +950,11 @@ tell application "Finder"
         set position of item "Licenses" of container window to {450, 370} # Matched package.sh
         
         -- Hide utility folders/files for cleaner appearance
-        if exists item ".background" of container window then
-            set visible of item ".background" of container window to false
-        end if
+        -- Dot-folders like .background are typically hidden by Finder by default.
+        -- Explicitly setting visible to false was causing an error (-10006).
+        -- if exists item ".background" of container window then
+        --    set visible of item ".background" of container window to false
+        -- end if
         
         -- Hide .DS_Store file if it exists
         if exists item ".DS_Store" of container window then
@@ -916,7 +966,7 @@ tell application "Finder"
         -- Close and reopen to ensure settings are applied
         close
         open
-        delay 2
+        delay 5
     end tell
 end tell
 EOF
@@ -928,7 +978,7 @@ EOF
     # Detach the DMG
     echo "Detaching DMG..."
     hdiutil detach "$MOUNT_POINT" -force || echo "Warning: detach failed but continuing"
-    sleep 2
+    sleep 5
 else
     echo "Warning: Failed to access mount point at $MOUNT_POINT - appearance customization skipped"
 fi

@@ -1,0 +1,399 @@
+name: Build, Test, and Sign macOS Audio Plugins (VST3/AAX)
+
+on:
+  workflow_dispatch:
+    inputs:
+      plugin_format:
+        description: 'Plugin format to build (aax, vst3, both)'
+        required: true
+        default: 'vst3'
+        type: choice
+        options:
+        - aax
+        - vst3
+        - both
+      skip_pace_wrapping:
+        description: 'Skip PACE wrapping for AAX plugins'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  BUILD_TYPE: Release
+  TEST_TYPE: CI_TEST
+  GENERATOR: "Unix Makefiles"
+  CXX_COMPILER: clang++
+  C_COMPILER: clang
+  KEYCHAIN_PASSWORD: "temporary-keychain-password" # Consider making this a secret
+  PLUGIN_FORMAT: ${{ github.event.inputs.plugin_format || 'vst3' }} # Default to VST3 if not specified
+  AAX_SDK_VERSION: "2-7-0"
+  AAX_SDK_URL: "https://learn-cdn.avid.com/cpp_toolkits/aax-sdk-2-7-0.zip?_gl=1*2muuuu*_ga*NTQzOTA4NzIyLjE3MTIwOTc5NjY.*_ga_8LKGSD8C8D*MTcxNDUxNjg1Mi41LjAuMTcxNDUxNjg1Mi4wLjAuMA..*_ga_58HRBJX565*MTcxNDUxNjg1Mi41LjAuMTcxNDUxNjg1Mi4wLjAuMjAwNTM0MDUyMA.."
+
+jobs:
+  build-sign-macos:
+    runs-on: macos-14
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      # --- Caching Steps ---
+      - name: Cache Protobuf Build
+        id: protobuf-cache
+        uses: actions/cache@v4
+        with:
+          path: build/third_party/protobuf
+          key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-protobuf-build-
+
+      - name: Check Protobuf Cache
+        run: |
+          echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
+          if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Protobuf cache missed or expired, cleaning protobuf build directory."
+            if [ -d "build/third_party/protobuf" ]; then rm -rf build/third_party/protobuf; fi
+          fi
+
+      - name: Cache JUCE Build
+        id: juce-cache
+        uses: actions/cache@v4
+        with:
+          path: build/third_party/JUCE
+          key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-build-
+
+      - name: Check JUCE Cache
+        run: |
+          echo "JUCE cache hit: ${{ steps.juce-cache.outputs.cache-hit }}"
+          if [ "${{ steps.juce-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "JUCE cache missed or expired, cleaning JUCE build directory."
+            if [ -d "build/third_party/JUCE" ]; then rm -rf build/third_party/JUCE; fi
+          fi
+
+      - name: Cache IAMF Build
+        id: iamf-cache
+        uses: actions/cache@v4
+        with:
+          path: build/third_party/iamf
+          key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/iamf/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-iamf-build-
+
+      - name: Check IAMF Cache
+        run: |
+          echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
+          if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "IAMF cache missed or expired, cleaning IAMF build directory."
+            if [ -d "build/third_party/iamf" ]; then rm -rf build/third_party/iamf; fi
+          fi
+
+      - name: Cache Libear Build
+        id: libear-cache
+        uses: actions/cache@v4
+        with:
+          path: build/third_party/libear
+          key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-libear-build-
+
+      - name: Check Libear Cache
+        run: |
+          echo "Libear cache hit: ${{ steps.libear-cache.outputs.cache-hit }}"
+          if [ "${{ steps.libear-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Libear cache missed or expired, cleaning Libear build directory."
+            if [ -d "build/third_party/libear" ]; then rm -rf build/third_party/libear; fi
+          fi
+
+      - name: Cache Main Build
+        id: main-build-cache
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: ${{ runner.os }}-main-build-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h', 'common/**', 'rendererplugin/**', 'pannerplugin/**') }}
+          restore-keys: |
+            ${{ runner.os }}-main-build-
+
+      - name: Check Main Build Cache
+        run: |
+          echo "Main build cache hit: ${{ steps.main-build-cache.outputs.cache-hit }}"
+          if [ "${{ steps.main-build-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Main build cache missed or expired, will clean the main build directory."
+            if [ -d "build/third_party" ]; then
+              find build/third_party -mindepth 1 -maxdepth 1 -not -name protobuf -not -name JUCE -not -name iamf -not -name libear -exec rm -rf {} +;
+            fi
+          fi
+
+      - name: Check Formatting
+        run: |
+          brew install clang-format
+          find common -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
+          find rendererplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
+          find pannerplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
+
+      - name: Cache AAX SDK
+        id: aax-sdk-cache
+        uses: actions/cache@v4
+        with: { path: '/opt/aax-sdk-${{ env.AAX_SDK_VERSION }}', key: '${{ runner.os }}-aax-sdk-${{ env.AAX_SDK_VERSION }}' }
+
+      - name: Download and Install AAX SDK
+        if: steps.aax-sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Downloading AAX SDK version ${{ env.AAX_SDK_VERSION }}..."
+          mkdir -p /tmp/aax_download
+          curl -L "${{ env.AAX_SDK_URL }}" -o /tmp/aax_download/aax-sdk.zip
+          sudo mkdir -p /opt
+          sudo unzip -q /tmp/aax_download/aax-sdk.zip -d /opt/
+          if [ -d "/opt/AAX_SDK" ] && [ ! -d "/opt/aax-sdk-${{ env.AAX_SDK_VERSION }}" ]; then sudo mv /opt/AAX_SDK /opt/aax-sdk-${{ env.AAX_SDK_VERSION }}; fi
+          sudo chmod -R 755 /opt/aax-sdk-${{ env.AAX_SDK_VERSION }}
+          rm -rf /tmp/aax_download
+          echo "AAX SDK installation:"
+          ls -la /opt/aax-sdk-${{ env.AAX_SDK_VERSION }}
+
+      - name: Create plugin installation directories
+        run: |
+          # Create output directories based on plugin format
+          if [[ "${{ env.PLUGIN_FORMAT }}" == "aax" || "${{ env.PLUGIN_FORMAT }}" == "both" ]]; then
+            mkdir -p $GITHUB_WORKSPACE/plugins_output/AAX
+            sudo mkdir -p "/Library/Application Support/Avid/Audio"
+            sudo rm -rf "/Library/Application Support/Avid/Audio/Plug-Ins"
+            sudo ln -sf "$GITHUB_WORKSPACE/plugins_output/AAX" "/Library/Application Support/Avid/Audio/Plug-Ins"
+            ls -la "/Library/Application Support/Avid/Audio/"
+            echo "AAX plugins will be installed to: $GITHUB_WORKSPACE/plugins_output/AAX"
+          fi
+          
+          if [[ "${{ env.PLUGIN_FORMAT }}" == "vst3" || "${{ env.PLUGIN_FORMAT }}" == "both" ]]; then
+            mkdir -p $GITHUB_WORKSPACE/plugins_output/VST3
+            sudo mkdir -p "/Library/Audio/Plug-Ins"
+            sudo rm -rf "/Library/Audio/Plug-Ins/VST3"
+            sudo ln -sf "$GITHUB_WORKSPACE/plugins_output/VST3" "/Library/Audio/Plug-Ins/VST3"
+            ls -la "/Library/Audio/Plug-Ins/"
+            echo "VST3 plugins will be installed to: $GITHUB_WORKSPACE/plugins_output/VST3"
+          fi
+
+      # --- Setup Keychain for both certificates ---
+      - name: Setup Keychain and Import Certificates
+        id: setup-keychain
+        env:
+          APP_CERT_BASE64: ${{ secrets.DEV_APP_APRIL_2025 }}
+          APP_CERT_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          INSTALLER_CERT_BASE64: ${{ secrets.APPLE_INSTALLER_CERT_P12_BASE64 }} 
+          INSTALLER_CERT_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERT_PASSWORD }} 
+          SKIP_PACE_WRAPPING: ${{ github.event.inputs.skip_pace_wrapping || 'false' }} 
+        run: |
+          echo "Setting up temporary keychain..."
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+          # Check secrets
+          if [ -z "$APP_CERT_BASE64" ]; then echo "Error: DEV_APP_APRIL_2025 secret missing."; exit 1; fi
+          if [ -z "$APP_CERT_PASSWORD" ]; then echo "Error: P12_PASSWORD secret missing."; exit 1; fi
+          if [ -z "$INSTALLER_CERT_BASE64" ]; then echo "Error: APPLE_INSTALLER_CERT_P12_BASE64 secret missing."; exit 1; fi
+          if [ -z "$INSTALLER_CERT_PASSWORD" ]; then echo "Error: APPLE_INSTALLER_CERT_PASSWORD secret missing."; exit 1; fi
+
+          # Decode certificates
+          echo "$APP_CERT_BASE64" | base64 --decode > $RUNNER_TEMP/app_certificate.p12
+          echo "$INSTALLER_CERT_BASE64" | base64 --decode > $RUNNER_TEMP/installer_certificate.p12
+
+          # Create keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -t 3600 -u "$KEYCHAIN_PATH"
+          security list-keychains -d user -s login.keychain "$KEYCHAIN_PATH"
+
+          # Import certificates (Grant access to signing tools)
+          WRAP_TOOL_PATH="/Applications/PACEAntiPiracy/Eden/Fusion/Versions/5/bin/wraptool" # Path needed if PACE used
+          
+          # Verify certificate files exist
+          if [ ! -f "$RUNNER_TEMP/app_certificate.p12" ]; then echo "Error: App certificate file not found"; exit 1; fi
+          if [ ! -f "$RUNNER_TEMP/installer_certificate.p12" ]; then echo "Error: Installer certificate file not found"; exit 1; fi
+          
+          # Import certificates with explicit access rights
+          echo "Importing Application certificate..."
+          security import "$RUNNER_TEMP/app_certificate.p12" -k "$KEYCHAIN_PATH" -P "$APP_CERT_PASSWORD" -A -t cert -f pkcs12 -T /usr/bin/codesign -T /usr/bin/productbuild || { echo "Failed to import application certificate"; exit 1; }
+          
+          echo "Importing Installer certificate..."
+          security import "$RUNNER_TEMP/installer_certificate.p12" -k "$KEYCHAIN_PATH" -P "$INSTALLER_CERT_PASSWORD" -A -t cert -f pkcs12 -T /usr/bin/codesign -T /usr/bin/productbuild || { echo "Failed to import installer certificate"; exit 1; }
+          
+          # Add PACE tool access if needed
+          if [ "$SKIP_PACE_WRAPPING" != "true" ]; then
+            for cert in "$RUNNER_TEMP/app_certificate.p12" "$RUNNER_TEMP/installer_certificate.p12"; do
+              security add-trusted-cert -k "$KEYCHAIN_PATH" -p codesigning "$cert" || echo "Warning: Could not add trusted cert"
+              security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" || echo "Warning: Failed to set partition list"
+            done
+          fi
+          
+          # Display all available identities for debugging
+          echo "All available identities in keychain:"
+          security find-identity -v "$KEYCHAIN_PATH"
+          
+          # Extract signing identities with more robust pattern matching
+          echo "Extracting signing identities..."
+          APP_SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -i "Developer ID Application:" | head -1 | sed -E 's/.*\) "(.*)"/\1/')
+          INSTALLER_SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep -i "Developer ID Installer:" | head -1 | sed -E 's/.*\) "(.*)"/\1/')
+          
+          # If installer identity not found, try a more general approach
+          if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then
+            echo "Trying alternative method to find Installer identity..."
+            INSTALLER_SIGNING_IDENTITY=$(security find-identity -v "$KEYCHAIN_PATH" | grep -i "installer" | head -1 | sed -E 's/.*\) "(.*)"/\1/')
+          fi
+
+          if [ -z "$APP_SIGNING_IDENTITY" ]; then 
+            echo "Error: Failed to find Developer ID Application identity."
+            security find-identity -v "$KEYCHAIN_PATH"
+            exit 1
+          fi
+          
+          if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then 
+            echo "Error: Failed to find Developer ID Installer identity."
+            echo "Will use App Signing Identity as fallback for installer signing..."
+            INSTALLER_SIGNING_IDENTITY="$APP_SIGNING_IDENTITY"
+          fi
+
+          echo "Found App Signing Identity: $APP_SIGNING_IDENTITY"
+          echo "Found Installer Signing Identity: $INSTALLER_SIGNING_IDENTITY"
+          echo "APPLE_SIGNING_IDENTITY=$APP_SIGNING_IDENTITY" >> $GITHUB_ENV
+          echo "APPLE_INSTALLER_IDENTITY=$INSTALLER_SIGNING_IDENTITY" >> $GITHUB_ENV
+
+          # Make sure keychain remains accessible throughout the build
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          echo "Keychain setup complete."
+          rm -f $RUNNER_TEMP/*.p12
+
+      - name: Configure CMake for Plugin Build with Tests
+        run: |
+          # Set BUILD_AAX and BUILD_VST3 based on PLUGIN_FORMAT
+          BUILD_AAX_FLAG="OFF"
+          BUILD_VST3_FLAG="OFF"
+          if [[ "${{ env.PLUGIN_FORMAT }}" == "aax" || "${{ env.PLUGIN_FORMAT }}" == "both" ]]; then
+            BUILD_AAX_FLAG="ON"
+          fi
+          if [[ "${{ env.PLUGIN_FORMAT }}" == "vst3" || "${{ env.PLUGIN_FORMAT }}" == "both" ]]; then
+            BUILD_VST3_FLAG="ON"
+          fi
+          
+          echo "Building with AAX=${BUILD_AAX_FLAG}, VST3=${BUILD_VST3_FLAG}, Format=${{ env.PLUGIN_FORMAT }}"
+          
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "${{ env.GENERATOR }}" \
+            -DBUILD_AAX=${BUILD_AAX_FLAG} \
+            -DBUILD_VST3=${BUILD_VST3_FLAG} \
+            -D${{ env.TEST_TYPE }}=ON \
+            -DBUILD_TESTING=ON \
+            -DZMQ_BUILD_TESTS=OFF \
+            -DCMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
+            -DCMAKE_C_COMPILER=${{ env.C_COMPILER }} \
+            -DAAX_SDK_VER="${{ env.AAX_SDK_VERSION }}" \
+            -DAAX_PLUGIN_DESTINATION="$GITHUB_WORKSPACE/plugins_output/AAX" \
+            -DVST3_PLUGIN_DESTINATION="$GITHUB_WORKSPACE/plugins_output/VST3"
+
+      - name: Build Plugins only (skipping tests)
+        run: |
+          echo "Building plugins for format: ${{ env.PLUGIN_FORMAT }}"
+          cmake --build build --config ${{ env.BUILD_TYPE }} -- -j $(sysctl -n hw.logicalcpu)
+
+      - name: Run Tests Sequentially
+        working-directory: ${{ github.workspace }}/build
+        run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure -j 1
+
+      - name: Dump Test Logs on Failure
+        if: ${{ failure() }}
+        run: |
+          echo "//// CTest Logs ////" &&
+            cat ${{ github.workspace }}/build/Testing/Temporary/LastTest.log &&
+            echo "//// Eclipsa Logs ////" &&
+            cat /tmp/Eclipsa_Audio_Plugin/log.txt 2>/dev/null || echo "No Eclipsa logs found"
+            
+      - name: Make CI packaging script executable
+        run: chmod +x scripts/package_ci.sh
+        
+      - name: Install icon handling tools
+        run: |
+          # Install fileicon utility directly with multiple fallback methods
+          echo "Installing fileicon directly from GitHub source..."
+          
+          # Method 1: Direct download from GitHub release (most reliable)
+          mkdir -p /tmp/fileicon
+          curl -L https://raw.githubusercontent.com/mklement0/fileicon/master/bin/fileicon -o /tmp/fileicon/fileicon
+          
+          if [ -f "/tmp/fileicon/fileicon" ]; then
+            chmod +x /tmp/fileicon/fileicon
+            sudo cp /tmp/fileicon/fileicon /usr/local/bin/
+            echo "fileicon installed successfully from GitHub source"
+          else
+            # Method 2: Try npm install as fallback
+            echo "Direct download failed, trying npm install..."
+            npm install -g fileicon
+            
+            # Method 3: Clone from GitHub if npm fails
+            if ! command -v fileicon &> /dev/null; then
+              echo "npm install failed, cloning from GitHub..."
+              git clone https://github.com/mklement0/fileicon.git /tmp/fileicon_repo || echo "GitHub clone failed"
+              
+              if [ -d "/tmp/fileicon_repo" ] && [ -f "/tmp/fileicon_repo/bin/fileicon" ]; then
+                chmod +x /tmp/fileicon_repo/bin/fileicon
+                sudo cp /tmp/fileicon_repo/bin/fileicon /usr/local/bin/
+                echo "fileicon installed from cloned repo"
+              else
+                echo "Warning: All fileicon installation methods failed, but script will continue with alternative icon methods"
+              fi
+            fi
+          fi
+          
+          # Check if Xcode developer tools are installed properly (for SetFile and Rez commands)
+          xcode-select -p
+          
+          # Make sure developer tools like SetFile are available
+          whereis SetFile || echo "SetFile not found, but will try fallback methods"
+          
+          # Install additional tools that help with icon handling
+          echo "Installing GraphicsMagick and ImageMagick..."
+          brew install graphicsmagick
+          brew install imagemagick
+
+      # --- Run script with more env vars ---
+      - name: Run Packaging, Signing, and Notarization Script
+        env:
+          # --- Format Selection and Control Flags ---
+          PLUGIN_FORMAT: ${{ env.PLUGIN_FORMAT }}
+          SKIP_PACE_WRAPPING: ${{ github.event.inputs.skip_pace_wrapping || 'false' }}
+          # --- Apple Credentials ---
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ACCOUNT_EMAIL: ${{ secrets.APPLE_ACCOUNT_EMAIL }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ env.KEYCHAIN_PASSWORD }}
+          # --- PACE Credentials (using existing repository secrets) ---
+          PACE_ACCOUNT: ${{ secrets.PACE_ACCOUNT }}
+          PACE_RENDERER_WCGUID: ${{ secrets.PACE_RENDERER_WCGUID }}
+          PACE_PANNER_WCGUID: ${{ secrets.PACE_PANNER_WCGUID }}  # Pass existing secret to be mapped to PACE_AUDIOELEMENT_WCGUID in script
+          # --- Build Info ---
+          BUILD_CONFIG: ${{ env.BUILD_TYPE }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          # Execute the script from the project root
+          echo "Running package_ci.sh with PLUGIN_FORMAT=$PLUGIN_FORMAT"
+          ./scripts/package_ci.sh
+
+      # --- Upload the final installers ---
+      - name: Upload Notarized Installer Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Notarized-Installers-${{ github.run_number }}
+          path: |
+            build/installers/*.pkg
+            build/installers/*.dmg
+
+      - name: Clean up Keychain
+        if: always()
+        run: |
+          echo "Cleaning up temporary keychain..."
+          security delete-keychain "$KEYCHAIN_PATH" || echo "Failed to delete keychain (might not exist)."
+          # rm -f "$KEYCHAIN_PATH" # Optional: remove the db file itself if needed
