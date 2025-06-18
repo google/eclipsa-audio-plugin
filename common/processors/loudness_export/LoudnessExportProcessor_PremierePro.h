@@ -291,7 +291,7 @@ class PremiereProLoudnessExportProcessor : public ProcessorBase,
   void intializeExportContainers();
 
   bool performingRender_;
-
+  bool exportCompleted_ = false;
   FileExportRepository& fileExportRepository_;
   MixPresentationRepository& mixPresentationRepository_;
   MixPresentationLoudnessRepository& loudnessRepo_;

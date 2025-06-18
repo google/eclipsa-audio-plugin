@@ -182,7 +182,7 @@ void PremiereProFileOutputProcessor::setNonRealtime(
   LOG_ANALYTICS(0, std::string("File Output Premiere Pro Set Non-Realtime ") +
                        (isNonRealtime ? "true" : "false"));
   // Initialize the writer if we are rendering in offline mode
-  if (isNonRealtime && !performingRender_) {
+  if (isNonRealtime && !performingRender_ && !exportCompleted_) {
     FileExport config = fileExportRepository_.get();
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
@@ -208,6 +208,46 @@ void PremiereProFileOutputProcessor::setNonRealtime(
       }
       sampleTally_ = 0;
     }
+    return;
+  }
+
+  // Stop rendering if we are switching back to online mode
+  if (performingRender_ && !isNonRealtime && exportCompleted_) {
+    LOG_ANALYTICS(0, "closing writers and exporting IAMF file");
+    FileExport config = fileExportRepository_.get();
+    // close the output file, since rendering is completed
+    for (auto& writer : iamfWavFileWriters_) {
+      writer->close();
+    }
+    juce::File outputFile = juce::File(config.getExportFile());
+    outputFile.deleteFile();
+
+    bool exportIAMFSuccess =
+        exportIamfFile(config.getExportFolder(), config.getExportFolder());
+
+    // If muxing is enabled and audio export was successful, mux the audio and
+    // video files.
+    if (exportIAMFSuccess && fileExportRepository_.get().getExportVideo()) {
+      bool muxIAMFSuccess = IAMFExportHelper::muxIAMF(
+          audioElementRepository_, mixPresentationRepository_,
+          fileExportRepository_.get());
+
+      if (!muxIAMFSuccess) {
+        LOG_INFO(0,
+                 "IAMF Muxing: Failed to mux IAMF file with provided video.");
+      }
+    }
+
+    if (!config.getExportAudioElements()) {
+      // Delete the extraneuos audio element files
+      for (auto& writer : iamfWavFileWriters_) {
+        juce::File audioElementFile(writer->getFilePath());
+        audioElementFile.deleteFile();
+      }
+    }
+    iamfWavFileWriters_.clear();
+    performingRender_ = false;
+    exportCompleted_ = false;
   }
 }
 
@@ -302,46 +342,7 @@ void PremiereProFileOutputProcessor::processBlock(
       writer->write(buffer);
     }
   } else {
-    // Stop rendering if we are switching back to online mode
-    // copy loudness values from the map to the repository
-    LOG_ANALYTICS(
-        0, "FileOutput PremierePro Setting performRendering_ to false \n");
-    suspendProcessing(true);
-    performingRender_ = false;
-
-    FileExport config = fileExportRepository_.get();
-
-    // close the output file, since rendering is completed
-    for (auto& writer : iamfWavFileWriters_) {
-      writer->close();
-    }
-    juce::File outputFile = juce::File(config.getExportFile());
-    outputFile.deleteFile();
-
-    bool exportIAMFSuccess =
-        exportIamfFile(config.getExportFolder(), config.getExportFolder());
-
-    // If muxing is enabled and audio export was successful, mux the audio and
-    // video files.
-    if (exportIAMFSuccess && fileExportRepository_.get().getExportVideo()) {
-      bool muxIAMFSuccess = IAMFExportHelper::muxIAMF(
-          audioElementRepository_, mixPresentationRepository_,
-          fileExportRepository_.get());
-
-      if (!muxIAMFSuccess) {
-        LOG_INFO(0,
-                 "IAMF Muxing: Failed to mux IAMF file with provided video.");
-      }
-    }
-
-    if (!config.getExportAudioElements()) {
-      // Delete the extraneuos audio element files
-      for (auto& writer : iamfWavFileWriters_) {
-        juce::File audioElementFile(writer->getFilePath());
-        audioElementFile.deleteFile();
-      }
-    }
-    iamfWavFileWriters_.clear();
+    exportCompleted_ = true;
   }
 }
 

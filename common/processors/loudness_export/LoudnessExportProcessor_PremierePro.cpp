@@ -56,15 +56,20 @@ PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
 
 void PremiereProLoudnessExportProcessor::setNonRealtime(
     bool isNonRealtime) noexcept {
-  LOG_ANALYTICS(0,
-                std::string("LoudnessExport Premiere Pro Set Non-Realtime ") +
-                    (isNonRealtime ? "true" : "false"));
+  if (isNonRealtime == performingRender_) {
+    return;
+  }
+
+  FileExport config = fileExportRepository_.get();
   // Initialize the writer if we are rendering in offline mode
-  if (isNonRealtime && !performingRender_) {
-    FileExport config = fileExportRepository_.get();
+  if (!performingRender_ && isNonRealtime && !exportCompleted_) {
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
       performingRender_ = true;
+
+      LOG_INFO(
+          0,
+          "Beginning loudness metadata calculations for .iamf file export \n");
 
       sampleRate_ = config.getSampleRate();
       sampleTally_ = 0;
@@ -73,11 +78,21 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
 
       // Get all mix presentation loudnesses from the repository
       loudnessRepo_.getAll(mixPresentationLoudnesses_);
-      LOG_ANALYTICS(0,
-                    "PremierePro, Initializing Export Containers for loudness "
-                    "metadata calculations\n");
+
       intializeExportContainers();
     }
+    return;
+  }
+
+  // Stop rendering if we are switching back to online mode
+  // copy loudness values from the map to the repository
+  if (performingRender_ && !isNonRealtime && exportCompleted_) {
+    LOG_ANALYTICS(0, "copying loudness metadata to repository");
+    for (auto& exportContainer : exportContainers_) {
+      copyExportContainerDataToRepo(exportContainer);
+    }
+    performingRender_ = false;
+    exportCompleted_ = false;
   }
 }
 
@@ -134,15 +149,7 @@ void PremiereProLoudnessExportProcessor::processBlock(
       exportContainer.process(buffer);
     }
   } else {
-    // Stop rendering if we are switching back to online mode
-    // copy loudness values from the map to the repository
-    LOG_ANALYTICS(0, "Setting performRendering_ to false \n");
-    suspendProcessing(true);
-    performingRender_ = false;
-    for (auto& exportContainer : exportContainers_) {
-      copyExportContainerDataToRepo(exportContainer);
-    }
-    LOG_ANALYTICS(0, "Copied loudness metadata to repository \n");
+    exportCompleted_ = true;
   }
 }
 

@@ -110,6 +110,7 @@ class PremiereProFileOutputProcessor final : public ProcessorBase {
   }
 
   bool performingRender_;  // True if we are rendering in offline mode
+  bool exportCompleted_ = false;
   FileExportRepository& fileExportRepository_;
   AudioElementRepository& audioElementRepository_;
   MixPresentationRepository& mixPresentationRepository_;
