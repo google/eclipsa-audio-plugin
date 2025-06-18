@@ -40,6 +40,7 @@ END_JUCE_MODULE_DECLARATION
 #include "gain/GainProcessor.h"
 #include "gain/MSProcessor.h"
 #include "loudness_export/LoudnessExportProcessor.h"
+#include "loudness_export/LoudnessExportProcessor_PremierePro.h"
 #include "mix_monitoring/MixMonitorProcessor.h"
 #include "mix_monitoring/TrackMonitorProcessor.h"
 #include "panner/Panner3DProcessor.h"

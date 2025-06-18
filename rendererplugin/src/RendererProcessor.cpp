@@ -22,6 +22,7 @@
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
+#include "processors/loudness_export/LoudnessExportProcessor_PremierePro.h"
 #include "processors/processor_base/ProcessorBase.h"
 
 //==============================================================================
@@ -53,9 +54,16 @@ RendererProcessor::RendererProcessor()
   // Construct processor chain.
   audioProcessors_.push_back(
       std::make_unique<GainProcessor>(&multichannelgainRepository_));
-  audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
-      fileExportRepository_, mixPresentationRepository_,
-      mixPresentationLoudnessRepository_, audioElementRepository_));
+  if (juce::PluginHostType().isPremiere()) {
+    audioProcessors_.push_back(
+        std::make_unique<PremiereProLoudnessExportProcessor>(
+            fileExportRepository_, mixPresentationRepository_,
+            mixPresentationLoudnessRepository_, audioElementRepository_));
+  } else {
+    audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
+        fileExportRepository_, mixPresentationRepository_,
+        mixPresentationLoudnessRepository_, audioElementRepository_));
+  }
   audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
       fileExportRepository_, audioElementRepository_,
       mixPresentationRepository_, mixPresentationLoudnessRepository_));
