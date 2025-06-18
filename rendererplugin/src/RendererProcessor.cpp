@@ -22,6 +22,7 @@
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
+#include "processors/file_output/FileOutputProcessor_PremierePro.h"
 #include "processors/loudness_export/LoudnessExportProcessor_PremierePro.h"
 #include "processors/processor_base/ProcessorBase.h"
 
@@ -59,14 +60,17 @@ RendererProcessor::RendererProcessor()
         std::make_unique<PremiereProLoudnessExportProcessor>(
             fileExportRepository_, mixPresentationRepository_,
             mixPresentationLoudnessRepository_, audioElementRepository_));
+    audioProcessors_.push_back(std::make_unique<PremiereProFileOutputProcessor>(
+        fileExportRepository_, audioElementRepository_,
+        mixPresentationRepository_, mixPresentationLoudnessRepository_));
   } else {
     audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
         fileExportRepository_, mixPresentationRepository_,
         mixPresentationLoudnessRepository_, audioElementRepository_));
+    audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
+        fileExportRepository_, audioElementRepository_,
+        mixPresentationRepository_, mixPresentationLoudnessRepository_));
   }
-  audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
-      fileExportRepository_, audioElementRepository_,
-      mixPresentationRepository_, mixPresentationLoudnessRepository_));
   audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>());
   channelMonitorProcessor_ =
       static_cast<ChannelMonitorProcessor*>(audioProcessors_.back().get());

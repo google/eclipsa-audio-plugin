@@ -302,6 +302,8 @@ class PremiereProLoudnessExportProcessor : public ProcessorBase,
   int sampleTally_;
   int startTime_;
   int endTime_;
+  int estimatedSamplesToProcess_;
+  int processedSamples_;
 
   std::vector<PremiereProExportContainer> exportContainers_;
   juce::OwnedArray<MixPresentationLoudness> mixPresentationLoudnesses_;

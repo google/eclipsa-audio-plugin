@@ -43,7 +43,9 @@ PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
       loudnessRepo_(loudnessRepo),
       audioElementRepository_(audioElementRepo),
       currentSamplesPerBlock_(1),
-      sampleTally_(0) {
+      sampleTally_(0),
+      estimatedSamplesToProcess_(0),
+      processedSamples_(0) {
   mixPresentationRepository_.registerListener(this);
   LOG_INFO(0, "PremierePro LoudnessExport Processor Instantiated \n");
 }
@@ -54,20 +56,15 @@ PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
 
 void PremiereProLoudnessExportProcessor::setNonRealtime(
     bool isNonRealtime) noexcept {
-  if (isNonRealtime == performingRender_) {
-    return;
-  }
-
-  FileExport config = fileExportRepository_.get();
+  LOG_ANALYTICS(0,
+                std::string("LoudnessExport Premiere Pro Set Non-Realtime ") +
+                    (isNonRealtime ? "true" : "false"));
   // Initialize the writer if we are rendering in offline mode
-  if (!performingRender_) {
+  if (isNonRealtime && !performingRender_) {
+    FileExport config = fileExportRepository_.get();
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
       performingRender_ = true;
-
-      LOG_INFO(0,
-               "PremierePro Beginning loudness metadata calculations for .iamf "
-               "file export \n");
 
       sampleRate_ = config.getSampleRate();
       sampleTally_ = 0;
@@ -76,57 +73,76 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
 
       // Get all mix presentation loudnesses from the repository
       loudnessRepo_.getAll(mixPresentationLoudnesses_);
-
+      LOG_ANALYTICS(0,
+                    "PremierePro, Initializing Export Containers for loudness "
+                    "metadata calculations\n");
       intializeExportContainers();
     }
-    return;
-  }
-
-  // Stop rendering if we are switching back to online mode
-  // copy loudness values from the map to the repository
-  if (performingRender_) {
-    for (auto& exportContainer : exportContainers_) {
-      copyExportContainerDataToRepo(exportContainer);
-    }
-    performingRender_ = false;
-    LOG_INFO(0, "Copied loudness metadata to repository \n");
   }
 }
 
 void PremiereProLoudnessExportProcessor::prepareToPlay(double sampleRate,
                                                        int samplesPerBlock) {
+  LOG_ANALYTICS(0, "LoudnessExport_PremiereProProcessor prepareToPlay");
   sampleRate_ = sampleRate;
   currentSamplesPerBlock_ = samplesPerBlock;
   sampleTally_ = 0;
   intializeExportContainers();
+
+  FileExport config = fileExportRepository_.get();
+
+  processedSamples_ = 0;
+
+  int totalDuration = config.getEndTime() - config.getStartTime();
+
+  estimatedSamplesToProcess_ = static_cast<int>(totalDuration * sampleRate);
+  LOG_ANALYTICS(0, "LoudnessExport PremierePro, totalDuration: " +
+                       std::to_string(totalDuration) +
+                       ", Estimated samples to process: " +
+                       std::to_string(estimatedSamplesToProcess_) + "\n");
 }
 
 void PremiereProLoudnessExportProcessor::processBlock(
     juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
-  // kick out of process block if there is no nothing to render
+  // If we are not performing a render, return
   if (!performingRender_ || buffer.getNumSamples() < 1) {
     return;
   }
 
-  if (startTime_ != 0 || endTime_ != 0) {
-    // Handle the case where startTime and endTime are set, implying we
-    // are only bouncing a subset of the mix
-    // Calculate the current time with the existing number of samples that have
-    // been processed
-    long currentTime = sampleTally_ / sampleRate_;
-    // update the sample tally
-    sampleTally_ += buffer.getNumSamples();
-    // with the updated sample tally, calculate the next time
-    long nextTime = sampleTally_ / sampleRate_;
+  // calculate the current and next time based on the sample tally
+  double currentTime = static_cast<double>(sampleTally_) / sampleRate_;
+  sampleTally_ += buffer.getNumSamples();
+  double nextTime = static_cast<double>(sampleTally_) / sampleRate_;
 
-    // do not render
-    if (currentTime < startTime_ || nextTime > endTime_) {
-      return;
-    }
+  // do not render
+  if (currentTime < startTime_ || nextTime > endTime_) {
+    return;
   }
 
-  for (auto& exportContainer : exportContainers_) {
-    exportContainer.process(buffer);
+  if (processedSamples_ <= estimatedSamplesToProcess_) {
+    LOG_ANALYTICS(
+        0, std::string(
+               "PremierePro LoudnessExport process block is performRendering"));
+    LOG_ANALYTICS(0, "Processing an additional " +
+                         std::to_string(buffer.getNumSamples()) +
+                         " samples. Already processed " +
+                         std::to_string(processedSamples_) + " of " +
+                         std::to_string(estimatedSamplesToProcess_));
+    processedSamples_ += buffer.getNumSamples();
+
+    for (auto& exportContainer : exportContainers_) {
+      exportContainer.process(buffer);
+    }
+  } else {
+    // Stop rendering if we are switching back to online mode
+    // copy loudness values from the map to the repository
+    LOG_ANALYTICS(0, "Setting performRendering_ to false \n");
+    suspendProcessing(true);
+    performingRender_ = false;
+    for (auto& exportContainer : exportContainers_) {
+      copyExportContainerDataToRepo(exportContainer);
+    }
+    LOG_ANALYTICS(0, "Copied loudness metadata to repository \n");
   }
 }
 

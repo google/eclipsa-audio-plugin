@@ -35,6 +35,7 @@ END_JUCE_MODULE_DECLARATION
 #include "audioelementplugin_publisher/AudioElementPluginDataPublisher.h"
 #include "channel_monitor/ChannelMonitorProcessor.h"
 #include "file_output/FileOutputProcessor.h"
+#include "file_output/FileOutputProcessor_PremierePro.h"
 #include "file_output/WavFileOutputProcessor.h"
 #include "gain/GainEditor.h"
 #include "gain/GainProcessor.h"
