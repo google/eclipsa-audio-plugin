@@ -58,9 +58,7 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   audioProcessors_.push_back(std::make_unique<RoutingProcessor>(
       &audioElementSpatialLayoutRepository_, &syncClient_,
       getBusesLayout().getMainOutputChannelSet().size()));
-
   Logger::getInstance().init("EclipsaAudioElementPlugin");
-
   ++instanceId_;
 
   LOG_ANALYTICS(instanceId_, "AudioElementPluginProcessor instantiated.");
@@ -71,12 +69,6 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   for (int i = 0; i < 28; i++) {
     outputChannels.addChannel((juce::AudioChannelSet::ChannelType)i);
   }
-
-  // For now set a default name, later make this configurable
-  AudioElementSpatialLayout audioElementSpatialLayout =
-      audioElementSpatialLayoutRepository_.get();
-  audioElementSpatialLayout.setName("Audio");
-  audioElementSpatialLayoutRepository_.update(audioElementSpatialLayout);
 
   // Register this instance of the Audio Element plugin with the renderer plugin
   audioElementSpatialLayoutRepository_.registerListener(this);
@@ -147,6 +139,18 @@ bool AudioElementPluginProcessor::applyBusLayouts(const BusesLayout& layouts) {
   return check;
 }
 
+void AudioElementPluginProcessor::updateTrackProperties(
+    const TrackProperties& properties) {
+  if (!properties.name.isEmpty()) {
+    AudioElementSpatialLayout layout =
+        audioElementSpatialLayoutRepository_.get();
+    if (layout.getName() != properties.name) {
+      layout.setName(properties.name);
+      audioElementSpatialLayoutRepository_.update(layout);
+    }
+  }
+}
+
 void AudioElementPluginProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
@@ -156,21 +160,29 @@ void AudioElementPluginProcessor::valueTreePropertyChanged(
   // total channels will get applied twice, once changing one value and then
   // the other
   juce::ignoreUnused(treeWhosePropertyHasChanged);
-  juce::ignoreUnused(property);
+
   AudioElementSpatialLayout audioElementSpatialLayout =
       audioElementSpatialLayoutRepository_.get();
   setOutputChannels(
       audioElementSpatialLayout.getFirstChannel(),
       audioElementSpatialLayout.getChannelLayout().getNumChannels());
+
   syncClient_.sendAudioElementSpatialLayoutRepository();
 }
 
 void AudioElementPluginProcessor::prepareToPlay(double sampleRate,
                                                 int samplesPerBlock) {
   // unrestrict the isBusesLayoutSupported function
-  // once the REAPER has finished  probing for supported output channel sets
+  // once the REAPER has finished probing for supported output channel sets
   allowDownSizing_ = true;
-  LOG_ANALYTICS(instanceId_, "Audio Element Plugin Processor prepareToPlay \n");
+
+  // Set default name if DAW hasn't provided one and repository is empty
+  AudioElementSpatialLayout layout = audioElementSpatialLayoutRepository_.get();
+  if (layout.getName().isEmpty()) {
+    layout.setName("Audio");
+    audioElementSpatialLayoutRepository_.update(layout);
+  }
+
   for (const auto& proc : audioProcessors_) {
     proc->prepareToPlay(sampleRate, samplesPerBlock);
   }
@@ -229,11 +241,9 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
                 "Audio Element Plugin Processor setStateInformation \n");
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
-
   if (xmlState.get() && xmlState->hasTagName(persistentState_.getType())) {
     persistentState_ = juce::ValueTree::fromXml(*xmlState);
   }
-
   juce::ValueTree audioElementSpatialLayoutTree =
       persistentState_.getChildWithName(
           kAudioElementSpatialLayoutRepositoryStateKey);
@@ -244,7 +254,6 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
     // identify it
     AudioElementSpatialLayoutRepository tempRepository;
     tempRepository.setStateTree(audioElementSpatialLayoutTree);
-
     AudioElementSpatialLayout repositoryAudioElementSpatialLayout =
         audioElementSpatialLayoutRepository_.get();
     repositoryAudioElementSpatialLayout.copyValuesFrom(tempRepository.get());

@@ -60,6 +60,24 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
     if (property == AudioElementSpatialLayout::kPanningEnabled) {
       setMode();
     }
+    // Update track name text box when spatial layout name changes
+    if (property == AudioElementSpatialLayout::kName) {
+      AudioElementSpatialLayout layout =
+          audioElementSpatialLayoutRepository_->get();
+      juce::String newName = layout.getName();
+
+      // Temporarily disable callback to avoid feedback loop
+      trackNameTextBox_.onTextChanged(nullptr);
+      trackNameTextBox_.setText(newName);
+
+      // Re-enable callback for manual editing
+      trackNameTextBox_.onTextChanged([this]() {
+        AudioElementSpatialLayout toUpdate =
+            audioElementSpatialLayoutRepository_->get();
+        toUpdate.setName(trackNameTextBox_.getText());
+        audioElementSpatialLayoutRepository_->update(toUpdate);
+      });
+    }
   }
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override {
