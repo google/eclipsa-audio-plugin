@@ -33,7 +33,8 @@ FileExport::FileExport()
       flac_compression_level_(8),
       opus_total_bitrate_(64000),
       lpcm_sample_size_(24),
-      profile_(FileProfile::BASE) {}
+      profile_(FileProfile::BASE),
+      initiatedPremiereProExport_(false) {}
 
 FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        juce::String exportFolder,
@@ -43,7 +44,7 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        juce::String videoSource, juce::String videoExportFolder,
                        bool manualExport, FileProfile profile,
                        int flac_compression_level, int opus_total_bitrate,
-                       int lpcm_sample_size)
+                       int lpcm_sample_size, bool initiatedPremiereProExport)
     : RepositoryItemBase(juce::Uuid()),
       startTime_(startTime),
       endTime_(endTime),
@@ -59,6 +60,7 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
       videoSource_(videoSource),
       videoExportFolder_(videoExportFolder),
       manualExport_(manualExport),
+      initiatedPremiereProExport_(initiatedPremiereProExport),
       profile_(profile),
       flac_compression_level_(flac_compression_level),
       opus_total_bitrate_(opus_total_bitrate),
@@ -72,7 +74,8 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
       tree[kExportAudioElements], tree[kExportAudio], tree[kExportVideo],
       tree[kVideoSource], tree[kVideoExportFolder], tree[kManualExport],
       (FileProfile)(int)tree[kProfile], tree[kFlacCompressionLevel],
-      tree[kOpusTotalBitrate], tree[kLPCMSampleSize]);
+      tree[kOpusTotalBitrate], tree[kLPCMSampleSize],
+      tree[kInitiatedPremiereProExport]);
 }
 
 juce::ValueTree FileExport::toValueTree() const {
@@ -91,6 +94,7 @@ juce::ValueTree FileExport::toValueTree() const {
            {kVideoSource, videoSource_},
            {kVideoExportFolder, videoExportFolder_},
            {kManualExport, manualExport_},
+           {kInitiatedPremiereProExport, initiatedPremiereProExport_},
            {kProfile, static_cast<int>(profile_)},
            {kFlacCompressionLevel, flac_compression_level_},
            {kOpusTotalBitrate, opus_total_bitrate_},

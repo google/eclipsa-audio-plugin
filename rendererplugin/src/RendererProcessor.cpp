@@ -16,9 +16,12 @@
 
 #include <processors/processors.h>
 
+#include <string>
+
 #include "RendererEditor.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
+#include "data_structures/src/FileExport.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
@@ -88,6 +91,18 @@ RendererProcessor::RendererProcessor()
   juce::AudioChannelSet outputChannels;
   for (int i = 0; i < 28; i++) {
     outputChannels.addChannel((juce::AudioChannelSet::ChannelType)i);
+  }
+
+  if (juce::PluginHostType().isPremiere()) {
+    FileExport initialConfig =
+        fileExportRepository_.get();  // Get the initial file export config
+    LOG_ANALYTICS(
+        0,
+        std::string("PremierePro FileExport Initiated: ") +
+            (initialConfig.getInitiatedPremiereProExport() ? "true" : "false"));
+
+    LOG_ANALYTICS(0, std::string("The manual export is: ") +
+                         (initialConfig.getManualExport() ? "true" : "false"));
   }
 
   // Set up listening for the switch to manual offline mode
@@ -232,6 +247,17 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
   updateRepositories();
 
   configureOutputBus();
+
+  if (juce::PluginHostType().isPremiere()) {
+    FileExport initialConfig =
+        fileExportRepository_.get();  // Get the initial file export config
+
+    if (initialConfig.getInitiatedPremiereProExport() &&
+        initialConfig.getManualExport()) {
+      prepareToPlay(initialConfig.getSampleRate(), 32);
+      return;
+    }
+  }
 }
 
 void RendererProcessor::updateRepositories() {
@@ -290,6 +316,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 void RendererProcessor::checkManualOfflineStartStop() {
   // This is utilized by debug builds to perform the manual bounce operation
   FileExport configParams = fileExportRepository_.get();
+
   if (isRealtime_ != configParams.getManualExport()) {
     isRealtime_ = configParams.getManualExport();
     setNonRealtime(isRealtime_);

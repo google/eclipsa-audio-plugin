@@ -41,7 +41,20 @@ PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
       estimatedSamplesToProcess_(0),
       processedSamples_(0) {}
 
-PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {}
+PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {
+  FileExport fileExportConfig = fileExportRepository_.get();
+  if (fileExportConfig.getInitiatedPremiereProExport()) {
+    LOG_ANALYTICS(0,
+                  "FileOutputProcessor_PremierePro destructor called with "
+                  "Export Initiated");
+    // performingRender_ = false;
+    // setNonRealtime(
+    //     false);  // Stop rendering if we are switching back to online mode
+    // exportCompleted_ = false;
+    // fileExportConfig.setInitiatedPremiereProExport(false);
+    // fileExportRepository_.update(fileExportConfig);
+  }
+}
 
 //==============================================================================
 const juce::String PremiereProFileOutputProcessor::getName() const {
@@ -157,24 +170,28 @@ void PremiereProFileOutputProcessor::updateIamfMDFromRepository(
 //==============================================================================
 void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
                                                    int samplesPerBlock) {
-  FileExport configParams = fileExportRepository_.get();
-  configParams.setSampleRate(sampleRate);
-  fileExportRepository_.update(configParams);
+  FileExport config = fileExportRepository_.get();
+  if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
+    performingRender_ = true;
+    exportCompleted_ = false;
+  } else {
+    config.setSampleRate(sampleRate);
+    fileExportRepository_.update(config);
+  }
+
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
   sampleRate_ = sampleRate;
-
-  FileExport config = fileExportRepository_.get();
 
   processedSamples_ = 0;
 
   int totalDuration = config.getEndTime() - config.getStartTime();
 
   estimatedSamplesToProcess_ = static_cast<int>(totalDuration * sampleRate);
-  LOG_ANALYTICS(0, "FileOutput PremierePro, totalDuration: " +
-                       std::to_string(totalDuration) +
-                       ", Estimated samples to process: " +
-                       std::to_string(estimatedSamplesToProcess_) + "\n");
+  // LOG_ANALYTICS(0, "FileOutput PremierePro, totalDuration: " +
+  //                      std::to_string(totalDuration) +
+  //                      ", Estimated samples to process: " +
+  //                      std::to_string(estimatedSamplesToProcess_) + "\n");
 }
 
 void PremiereProFileOutputProcessor::setNonRealtime(
@@ -208,11 +225,23 @@ void PremiereProFileOutputProcessor::setNonRealtime(
       }
       sampleTally_ = 0;
     }
+    FileExport fileExportConfig = fileExportRepository_.get();
+    fileExportConfig.setInitiatedPremiereProExport(true);
+    fileExportRepository_.update(fileExportConfig);
     return;
   }
+  LOG_ANALYTICS(
+      0, std::string(
+             "FileOutput PremierePro Set Non-Realtime, exportCompleted_ = ") +
+             (exportCompleted_ ? "true" : "false"));
+
+  LOG_ANALYTICS(
+      0, std::string(
+             "FileOutput PremierePro Set Non-Realtime, setNonRealtime = ") +
+             (isNonRealtime ? "true" : "false"));
 
   // Stop rendering if we are switching back to online mode
-  if (performingRender_ && !isNonRealtime && exportCompleted_) {
+  if (!isNonRealtime && exportCompleted_) {
     LOG_ANALYTICS(0, "closing writers and exporting IAMF file");
     FileExport config = fileExportRepository_.get();
     // close the output file, since rendering is completed
@@ -246,8 +275,10 @@ void PremiereProFileOutputProcessor::setNonRealtime(
       }
     }
     iamfWavFileWriters_.clear();
-    performingRender_ = false;
     exportCompleted_ = false;
+    FileExport fileExportConfig = fileExportRepository_.get();
+    fileExportConfig.setInitiatedPremiereProExport(false);
+    fileExportRepository_.update(fileExportConfig);
   }
 }
 
@@ -327,22 +358,26 @@ void PremiereProFileOutputProcessor::processBlock(
   }
 
   if (processedSamples_ <= estimatedSamplesToProcess_) {
-    LOG_ANALYTICS(
-        0, std::string(
-               "PremierePro FileOutput process block is performRendering"));
-    LOG_ANALYTICS(0, "Processing an additional " +
-                         std::to_string(buffer.getNumSamples()) +
-                         " samples. Already processed " +
-                         std::to_string(processedSamples_) + " of " +
-                         std::to_string(estimatedSamplesToProcess_));
+    // LOG_ANALYTICS(
+    //     0, std::string(
+    //            "PremierePro FileOutput process block is performRendering"));
+    // LOG_ANALYTICS(0, "Processing an additional " +
+    //                      std::to_string(buffer.getNumSamples()) +
+    //                      " samples. Already processed " +
+    //                      std::to_string(processedSamples_) + " of " +
+    //                      std::to_string(estimatedSamplesToProcess_));
     processedSamples_ += buffer.getNumSamples();
 
     // Write the audio data to the wav file writers
     for (auto& writer : iamfWavFileWriters_) {
       writer->write(buffer);
     }
-  } else {
+  } else if (!exportCompleted_) {
     exportCompleted_ = true;
+    performingRender_ = false;
+    setNonRealtime(false);
+
+    LOG_ANALYTICS(0, "explortCompleted_ = true");
   }
 }
 
