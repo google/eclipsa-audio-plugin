@@ -261,6 +261,8 @@ class PremiereProLoudnessExportProcessor : public ProcessorBase,
   void processBlock(juce::AudioBuffer<float>& buffer,
                     juce::MidiBuffer& midiMessages) override;
 
+  void releaseResources() override;
+
   const std::vector<const PremiereProExportContainer*> getExportContainers()
       const {
     std::vector<const PremiereProExportContainer*> containers(

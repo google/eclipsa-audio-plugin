@@ -42,10 +42,11 @@ PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
       processedSamples_(0) {}
 
 PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {
+  LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro destructor called");
   FileExport fileExportConfig = fileExportRepository_.get();
   if (fileExportConfig.getInitiatedPremiereProExport()) {
     LOG_ANALYTICS(0,
-                  "FileOutputProcessor_PremierePro destructor called with "
+
                   "Export Initiated");
     // performingRender_ = false;
     // setNonRealtime(
@@ -54,6 +55,11 @@ PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {
     // fileExportConfig.setInitiatedPremiereProExport(false);
     // fileExportRepository_.update(fileExportConfig);
   }
+}
+
+void PremiereProFileOutputProcessor::releaseResources() {
+  // Release any resources held by the processor
+  LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro releasing resources");
 }
 
 //==============================================================================

@@ -53,11 +53,10 @@ PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
 }
 
 PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
+  LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro destructor called");
   FileExport fileExportConfig = fileExportRepository_.get();
   if (fileExportConfig.getInitiatedPremiereProExport()) {
-    LOG_ANALYTICS(0,
-                  "PremiereProLoudnessExportProcessor destructor called w/ "
-                  "Export Initiated");
+    LOG_ANALYTICS(0, "Export Initiated");
     // performingRender_ = false;
     // exportCompleted_ = false;
     // fileExportConfig.setInitiatedPremiereProExport(false);
@@ -70,6 +69,11 @@ PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
     // }
   }
   mixPresentationRepository_.deregisterListener(this);
+}
+
+void PremiereProLoudnessExportProcessor::releaseResources() {
+  // Release any resources held by the processor
+  LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro releasing resources");
 }
 
 void PremiereProLoudnessExportProcessor::setNonRealtime(

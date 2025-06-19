@@ -54,6 +54,8 @@ class PremiereProFileOutputProcessor final : public ProcessorBase {
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 
+  void releaseResources() override;
+
   //==============================================================================
   juce::AudioProcessorEditor* createEditor() override;
   bool hasEditor() const override;
