@@ -25,6 +25,7 @@
 #include "gain/MSProcessor.cpp"
 #include "loudness_export/LoudnessExportProcessor.cpp"
 #include "loudness_export/LoudnessExportProcessor_PremierePro.cpp"
+#include "loudness_export/MixPresentationLoudnessExportContainer.cpp"
 #include "mix_monitoring/MixMonitorProcessor.cpp"
 #include "mix_monitoring/TrackMonitorProcessor.cpp"
 #include "mix_monitoring/loudness_standards/MeasureEBU128.cpp"

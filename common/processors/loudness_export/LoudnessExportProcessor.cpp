@@ -14,23 +14,7 @@
 
 #include "LoudnessExportProcessor.h"
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <utility>
-#include <vector>
-
 #include "../rendererplugin/src/RendererProcessor.h"
-#include "data_repository/implementation/FileExportRepository.h"
-#include "data_repository/implementation/MixPresentationRepository.h"
-#include "data_structures/src/AudioElement.h"
-#include "data_structures/src/LoudnessExportData.h"
-#include "data_structures/src/MixPresentation.h"
-#include "data_structures/src/MixPresentationLoudness.h"
-#include "juce_core/system/juce_PlatformDefs.h"
-#include "logger/logger.h"
-#include "processors/mix_monitoring/loudness_standards/MeasureEBU128.h"
-#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 LoudnessExportProcessor::LoudnessExportProcessor(
     FileExportRepository& fileExportRepo,
