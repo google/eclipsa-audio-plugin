@@ -15,6 +15,7 @@
 #include "LoudnessExportProcessor.h"
 
 #include "../rendererplugin/src/RendererProcessor.h"
+#include "data_structures/src/FileExport.h"
 
 LoudnessExportProcessor::LoudnessExportProcessor(
     FileExportRepository& fileExportRepo,
@@ -40,26 +41,12 @@ void LoudnessExportProcessor::setNonRealtime(bool isNonRealtime) noexcept {
     return;
   }
 
-  FileExport config = fileExportRepository_.get();
   // Initialize the writer if we are rendering in offline mode
   if (!performingRender_) {
+    FileExport config = fileExportRepository_.get();
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
-      performingRender_ = true;
-
-      LOG_INFO(
-          0,
-          "Beginning loudness metadata calculations for .iamf file export \n");
-
-      sampleRate_ = config.getSampleRate();
-      sampleTally_ = 0;
-      startTime_ = config.getStartTime();
-      endTime_ = config.getEndTime();
-
-      // Get all mix presentation loudnesses from the repository
-      loudnessRepo_.getAll(mixPresentationLoudnesses_);
-
-      intializeExportContainers();
+      initializeLoudnessExport(config);
     }
     return;
   }
@@ -86,25 +73,8 @@ void LoudnessExportProcessor::prepareToPlay(double sampleRate,
 void LoudnessExportProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                            juce::MidiBuffer& midiMessages) {
   // kick out of process block if there is no nothing to render
-  if (!performingRender_ || buffer.getNumSamples() < 1) {
+  if (!areLoudnessCalcsRequired(buffer)) {
     return;
-  }
-
-  if (startTime_ != 0 || endTime_ != 0) {
-    // Handle the case where startTime and endTime are set, implying we
-    // are only bouncing a subset of the mix
-    // Calculate the current time with the existing number of samples that have
-    // been processed
-    long currentTime = sampleTally_ / sampleRate_;
-    // update the sample tally
-    sampleTally_ += buffer.getNumSamples();
-    // with the updated sample tally, calculate the next time
-    long nextTime = sampleTally_ / sampleRate_;
-
-    // do not render
-    if (currentTime < startTime_ || nextTime > endTime_) {
-      return;
-    }
   }
 
   for (auto& exportContainer : exportContainers_) {
@@ -275,8 +245,7 @@ void LoudnessExportProcessor::intializeExportContainers() {
   }
 }
 
-void LoudnessExportProcessor::initializeLoudnessExport() {
-  FileExport config = fileExportRepository_.get();
+void LoudnessExportProcessor::initializeLoudnessExport(FileExport& config) {
   performingRender_ = true;
 
   LOG_INFO(0,
@@ -288,7 +257,33 @@ void LoudnessExportProcessor::initializeLoudnessExport() {
   endTime_ = config.getEndTime();
 
   // Get all mix presentation loudnesses from the repository
-  loudnessRepo_.getAll(mixPresentationLoudnesses_);
+  // loudnessRepo_.getAll(mixPresentationLoudnesses_);
 
   intializeExportContainers();
+}
+
+bool LoudnessExportProcessor::areLoudnessCalcsRequired(
+    juce::AudioBuffer<float>& buffer) {
+  if (!performingRender_ || buffer.getNumSamples() < 1) {
+    return false;
+  }
+
+  // do not render
+  if (startTime_ != 0 || endTime_ != 0) {
+    // Handle the case where startTime and endTime are set, implying we
+    // are only bouncing a subset of the mix
+    // Calculate the current time with the existing number of samples that have
+    // been processed
+    long currentTime = sampleTally_ / sampleRate_;
+    // update the sample tally
+    sampleTally_ += buffer.getNumSamples();
+    // with the updated sample tally, calculate the next time
+    long nextTime = sampleTally_ / sampleRate_;
+
+    // do not render
+    if (currentTime < startTime_ || nextTime > endTime_) {
+      return false;
+    }
+  }
+  return true;
 }

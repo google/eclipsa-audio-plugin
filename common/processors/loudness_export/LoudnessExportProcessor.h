@@ -29,6 +29,8 @@ class LoudnessExportProcessor : public ProcessorBase,
                           MixPresentationLoudnessRepository& loudnessRepo,
                           AudioElementRepository& audioElementRepo);
 
+  ~LoudnessExportProcessor() override;
+
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 
   void processBlock(juce::AudioBuffer<float>& buffer,
@@ -61,9 +63,11 @@ class LoudnessExportProcessor : public ProcessorBase,
   Speakers::AudioElementSpeakerLayout getLargestLayoutFromTree(
       juce::ValueTree& mixPresentationAudioElementsTree);
 
-  void initializeLoudnessExport();
+  void initializeLoudnessExport(FileExport& config);
 
   void intializeExportContainers();
+
+  bool areLoudnessCalcsRequired(juce::AudioBuffer<float>& buffer);
 
   bool performingRender_;
 
@@ -79,5 +83,4 @@ class LoudnessExportProcessor : public ProcessorBase,
   int endTime_;
 
   std::vector<MixPresentationLoudnessExportContainer> exportContainers_;
-  juce::OwnedArray<MixPresentationLoudness> mixPresentationLoudnesses_;
 };
