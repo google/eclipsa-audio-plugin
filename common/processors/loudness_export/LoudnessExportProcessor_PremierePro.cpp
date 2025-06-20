@@ -15,6 +15,7 @@
 #include "LoudnessExportProcessor_PremierePro.h"
 
 #include "../rendererplugin/src/RendererProcessor.h"
+#include "data_structures/src/FileExport.h"
 #include "processors/loudness_export/LoudnessExportProcessor.h"
 
 PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
@@ -46,13 +47,16 @@ void PremiereProLoudnessExportProcessor::releaseResources() {
 
 void PremiereProLoudnessExportProcessor::setNonRealtime(
     bool isNonRealtime) noexcept {
-  LOG_ANALYTICS(0,
-                std::string("LoudnessExport Premiere Pro Set Non-Realtime ") +
-                    (isNonRealtime ? "true" : "false"));
-  if (isNonRealtime == performingRender_) {
-    return;
-  }
+  LOG_ANALYTICS(0, std::string("LoudnessExport_PremierePro Set Non-Realtime ") +
+                       (isNonRealtime ? "true" : "false"));
+  FileExport config = fileExportRepository_.get();
 
+  if (config.getManualExport() && config.getInitiatedPremiereProExport()) {
+    LOG_ANALYTICS(0,
+                  "LoudnessExport_PremierePro called when manual export "
+                  "and export initiated both true. isNonRealtime: " +
+                      std::to_string(isNonRealtime));
+  }
   // Initialize the writer if we are rendering in offline mode
   if (!performingRender_ && isNonRealtime && !exportCompleted_) {
     FileExport config = fileExportRepository_.get();
@@ -65,17 +69,6 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
     }
     return;
   }
-
-  LOG_ANALYTICS(
-      0,
-      std::string(
-          "LoudnessExport PremierePro Set Non-Realtime, exportCompleted_ = ") +
-          (exportCompleted_ ? "true" : "false"));
-
-  LOG_ANALYTICS(
-      0, std::string(
-             "LoudnessExport PremierePro Set Non-Realtime, setNonRealtime = ") +
-             (isNonRealtime ? "true" : "false"));
 
   // Stop rendering if we are switching back to online mode
   // copy loudness values from the map to the repository
@@ -102,9 +95,12 @@ void PremiereProLoudnessExportProcessor::prepareToPlay(double sampleRate,
   if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
     performingRender_ = true;
     exportCompleted_ = false;
+    LOG_ANALYTICS(0,
+                  "LoudnessExport_PremiereProProcessor prepareToPlay called "
+                  "during export");
+  } else {
+    LOG_ANALYTICS(0, "LoudnessExport_PremiereProProcessor prepareToPlay");
   }
-
-  LOG_ANALYTICS(0, "LoudnessExport_PremiereProProcessor prepareToPlay");
   sampleRate_ = sampleRate;
   currentSamplesPerBlock_ = samplesPerBlock;
   sampleTally_ = 0;
@@ -122,6 +118,11 @@ void PremiereProLoudnessExportProcessor::processBlock(
   // If we are not performing a render, return
   if (!areLoudnessCalcsRequired(buffer)) {
     return;
+  }
+
+  if (logProcessBlock) {
+    LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro processBlock called");
+    logProcessBlock = false;
   }
 
   if (processedSamples_ <= estimatedSamplesToProcess_) {

@@ -16,6 +16,8 @@
 
 #include "FileOutputProcessor_PremierePro.h"
 
+#include "logger/logger.h"
+
 //==============================================================================
 PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
     FileExportRepository& fileExportRepository,
@@ -47,9 +49,16 @@ void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
                                                    int samplesPerBlock) {
   FileExport config = fileExportRepository_.get();
   if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
+    LOG_ANALYTICS(
+        0,
+        "FileOutputProcessor_PremierePro prepareToPlay called during export");
     performingRender_ = true;
     exportCompleted_ = false;
   } else {
+    LOG_ANALYTICS(0,
+                  "FileOutputProcessor_PremierePro prepareToPlay will set "
+                  "sampleRate and samplesPerBlock, which updates the "
+                  "FileExportRepository");
     config.setSampleRate(sampleRate);
     fileExportRepository_.update(config);
   }
@@ -67,7 +76,17 @@ void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
 
 void PremiereProFileOutputProcessor::setNonRealtime(
     bool isNonRealtime) noexcept {
+  LOG_ANALYTICS(0, std::string("File Output Premiere Pro Set Non-Realtime ") +
+                       (isNonRealtime ? "true" : "false"));
   FileExport config = fileExportRepository_.get();
+
+  if (config.getManualExport() && config.getInitiatedPremiereProExport()) {
+    LOG_ANALYTICS(0,
+                  "FileOutputProcessor_PremierePro called when manual export "
+                  "and export initiated both true,. isNonRealtime: " +
+                      std::to_string(isNonRealtime));
+  }
+
   // Initialize the writer if we are rendering in offline mode
   if (isNonRealtime && !performingRender_ && !exportCompleted_) {
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
@@ -95,6 +114,11 @@ void PremiereProFileOutputProcessor::processBlock(
 
   if (!shouldBufferBeWritten(buffer)) {
     return;
+  }
+
+  if (logProcessBlock) {
+    LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro processBlock called");
+    logProcessBlock = false;
   }
 
   if (processedSamples_ <= estimatedSamplesToProcess_) {

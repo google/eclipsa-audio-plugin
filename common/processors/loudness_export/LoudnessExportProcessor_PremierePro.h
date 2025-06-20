@@ -38,6 +38,7 @@ class PremiereProLoudnessExportProcessor : public LoudnessExportProcessor {
   void releaseResources() override;
 
  private:
+  bool logProcessBlock = true;
   bool exportCompleted_;
   int estimatedSamplesToProcess_;
   int processedSamples_;

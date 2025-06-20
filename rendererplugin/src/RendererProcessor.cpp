@@ -93,18 +93,6 @@ RendererProcessor::RendererProcessor()
     outputChannels.addChannel((juce::AudioChannelSet::ChannelType)i);
   }
 
-  if (juce::PluginHostType().isPremiere()) {
-    FileExport initialConfig =
-        fileExportRepository_.get();  // Get the initial file export config
-    LOG_ANALYTICS(
-        0,
-        std::string("PremierePro FileExport Initiated: ") +
-            (initialConfig.getInitiatedPremiereProExport() ? "true" : "false"));
-
-    LOG_ANALYTICS(0, std::string("The manual export is: ") +
-                         (initialConfig.getManualExport() ? "true" : "false"));
-  }
-
   // Set up listening for the switch to manual offline mode
   fileExportRepository_.registerListener(this);
   roomSetupRepository_.registerListener(this);
@@ -254,6 +242,9 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
 
     if (initialConfig.getInitiatedPremiereProExport() &&
         initialConfig.getManualExport()) {
+      LOG_ANALYTICS(instanceId_,
+                    "setStateInformation: Calling prepareToPlay for Premiere
+                    " "Pro w/ Manual Export Initiated");
       prepareToPlay(initialConfig.getSampleRate(), 32);
       return;
     }
