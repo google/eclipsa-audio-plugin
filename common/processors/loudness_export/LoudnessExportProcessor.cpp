@@ -274,3 +274,21 @@ void LoudnessExportProcessor::intializeExportContainers() {
         audioElementsVec);
   }
 }
+
+void LoudnessExportProcessor::initializeLoudnessExport() {
+  FileExport config = fileExportRepository_.get();
+  performingRender_ = true;
+
+  LOG_INFO(0,
+           "Beginning loudness metadata calculations for .iamf file export \n");
+
+  sampleRate_ = config.getSampleRate();
+  sampleTally_ = 0;
+  startTime_ = config.getStartTime();
+  endTime_ = config.getEndTime();
+
+  // Get all mix presentation loudnesses from the repository
+  loudnessRepo_.getAll(mixPresentationLoudnesses_);
+
+  intializeExportContainers();
+}

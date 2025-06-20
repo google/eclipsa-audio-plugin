@@ -15,13 +15,11 @@
  */
 
 #pragma once
-#include "MixPresentationLoudnessExportContainer.h"
 
-class PremiereProLoudnessExportProcessor : public ProcessorBase,
-                                           public juce::ValueTree::Listener {
+#include "processors/loudness_export/LoudnessExportProcessor.h"
+
+class PremiereProLoudnessExportProcessor : public LoudnessExportProcessor {
  public:
-  using EBU128Stats = MeasureEBU128::LoudnessStats;
-
   void setNonRealtime(bool isNonRealtime) noexcept override;
 
   PremiereProLoudnessExportProcessor(
@@ -39,50 +37,8 @@ class PremiereProLoudnessExportProcessor : public ProcessorBase,
 
   void releaseResources() override;
 
-  const std::vector<const MixPresentationLoudnessExportContainer*>
-  getExportContainers() const {
-    std::vector<const MixPresentationLoudnessExportContainer*> containers(
-        exportContainers_.size());
-    for (int i = 0; i < exportContainers_.size(); i++) {
-      containers[i] = &exportContainers_[i];
-    }
-    return containers;
-  }
-
  private:
-  void copyExportContainerDataToRepo(
-      const MixPresentationLoudnessExportContainer& exportContainer);
-
-  void valueTreeChildAdded(juce::ValueTree& parentTree,
-                           juce::ValueTree& childWhichHasBeenAdded) override;
-
-  void valueTreeChildRemoved(juce::ValueTree& parentTree,
-                             juce::ValueTree& childWhichHasBeenRemoved,
-                             int indexFromWhichChildWasRemoved) override;
-
-  void handleNewLayoutAdded(juce::ValueTree& parentTree,
-                            juce::ValueTree& childWhichHasBeenAdded);
-
-  Speakers::AudioElementSpeakerLayout getLargestLayoutFromTree(
-      juce::ValueTree& mixPresentationAudioElementsTree);
-
-  void intializeExportContainers();
-
-  bool performingRender_;
   bool exportCompleted_ = false;
-  FileExportRepository& fileExportRepository_;
-  MixPresentationRepository& mixPresentationRepository_;
-  MixPresentationLoudnessRepository& loudnessRepo_;
-  AudioElementRepository& audioElementRepository_;
-
-  long sampleRate_;
-  int currentSamplesPerBlock_;
-  int sampleTally_;
-  int startTime_;
-  int endTime_;
   int estimatedSamplesToProcess_;
   int processedSamples_;
-
-  std::vector<MixPresentationLoudnessExportContainer> exportContainers_;
-  juce::OwnedArray<MixPresentationLoudness> mixPresentationLoudnesses_;
 };

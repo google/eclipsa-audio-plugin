@@ -29,8 +29,6 @@ class LoudnessExportProcessor : public ProcessorBase,
                           MixPresentationLoudnessRepository& loudnessRepo,
                           AudioElementRepository& audioElementRepo);
 
-  ~LoudnessExportProcessor() override;
-
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 
   void processBlock(juce::AudioBuffer<float>& buffer,
@@ -46,7 +44,7 @@ class LoudnessExportProcessor : public ProcessorBase,
     return containers;
   }
 
- private:
+ protected:
   void copyExportContainerDataToRepo(
       const MixPresentationLoudnessExportContainer& exportContainer);
 
@@ -62,6 +60,8 @@ class LoudnessExportProcessor : public ProcessorBase,
 
   Speakers::AudioElementSpeakerLayout getLargestLayoutFromTree(
       juce::ValueTree& mixPresentationAudioElementsTree);
+
+  void initializeLoudnessExport();
 
   void intializeExportContainers();
 

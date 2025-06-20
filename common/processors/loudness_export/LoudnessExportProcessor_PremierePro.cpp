@@ -15,43 +15,41 @@
 #include "LoudnessExportProcessor_PremierePro.h"
 
 #include "../rendererplugin/src/RendererProcessor.h"
+#include "processors/loudness_export/LoudnessExportProcessor.h"
 
 PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
     FileExportRepository& fileExportRepo,
     MixPresentationRepository& mixPresentationRepo,
     MixPresentationLoudnessRepository& loudnessRepo,
     AudioElementRepository& audioElementRepo)
-    : performingRender_(false),
-      fileExportRepository_(fileExportRepo),
-      mixPresentationRepository_(mixPresentationRepo),
-      loudnessRepo_(loudnessRepo),
-      audioElementRepository_(audioElementRepo),
-      currentSamplesPerBlock_(1),
-      sampleTally_(0),
+    : LoudnessExportProcessor(fileExportRepo, mixPresentationRepo, loudnessRepo,
+                              audioElementRepo),
       estimatedSamplesToProcess_(0),
-      processedSamples_(0) {
-  mixPresentationRepository_.registerListener(this);
+      processedSamples_(0),
+      exportCompleted_(false) {
+  // mixPresentationRepository_.registerListener(this);
   LOG_INFO(0, "PremierePro LoudnessExport Processor Instantiated \n");
 }
 
-PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
-  LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro destructor called");
-  FileExport fileExportConfig = fileExportRepository_.get();
-  if (fileExportConfig.getInitiatedPremiereProExport()) {
-    LOG_ANALYTICS(0, "Export Initiated");
-    // performingRender_ = false;
-    // exportCompleted_ = false;
-    // fileExportConfig.setInitiatedPremiereProExport(false);
-    // fileExportRepository_.update(fileExportConfig);
-    // LOG_INFO(0,
-    //          "PremiereProLoudnessExportProcessor is being destroyed but
-    //          Export " "completed, " "copying loudness data to repository.");
-    // for (auto& exportContainer : exportContainers_) {
-    //   copyExportContainerDataToRepo(exportContainer);
-    // }
-  }
-  mixPresentationRepository_.deregisterListener(this);
-}
+// PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
+//   LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro destructor called");
+//   FileExport fileExportConfig = fileExportRepository_.get();
+//   if (fileExportConfig.getInitiatedPremiereProExport()) {
+//     LOG_ANALYTICS(0, "Export Initiated");
+//     // performingRender_ = false;
+//     // exportCompleted_ = false;
+//     // fileExportConfig.setInitiatedPremiereProExport(false);
+//     // fileExportRepository_.update(fileExportConfig);
+//     // LOG_INFO(0,
+//     //          "PremiereProLoudnessExportProcessor is being destroyed but
+//     //          Export " "completed, " "copying loudness data to
+//     repository.");
+//     // for (auto& exportContainer : exportContainers_) {
+//     //   copyExportContainerDataToRepo(exportContainer);
+//     // }
+//   }
+//   // mixPresentationRepository_.deregisterListener(this);
+// }
 
 void PremiereProLoudnessExportProcessor::releaseResources() {
   // Release any resources held by the processor
@@ -67,26 +65,12 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
     return;
   }
 
-  FileExport config = fileExportRepository_.get();
   // Initialize the writer if we are rendering in offline mode
   if (!performingRender_ && isNonRealtime && !exportCompleted_) {
+    FileExport config = fileExportRepository_.get();
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
-      performingRender_ = true;
-
-      LOG_INFO(
-          0,
-          "Beginning loudness metadata calculations for .iamf file export \n");
-
-      sampleRate_ = config.getSampleRate();
-      sampleTally_ = 0;
-      startTime_ = config.getStartTime();
-      endTime_ = config.getEndTime();
-
-      // Get all mix presentation loudnesses from the repository
-      loudnessRepo_.getAll(mixPresentationLoudnesses_);
-
-      intializeExportContainers();
+      initializeLoudnessExport();
 
       FileExport fileExportConfig = fileExportRepository_.get();
       fileExportConfig.setInitiatedPremiereProExport(true);
@@ -191,169 +175,5 @@ void PremiereProLoudnessExportProcessor::processBlock(
     setNonRealtime(false);
 
     LOG_ANALYTICS(0, "explortCompleted_ = true");
-  }
-}
-
-void PremiereProLoudnessExportProcessor::copyExportContainerDataToRepo(
-    const MixPresentationLoudnessExportContainer& exportContainer) {
-  EBU128Stats stereoLoudnessStats;
-  exportContainer.loudnessExportData->stereoEBU128.read(stereoLoudnessStats);
-  // define a minValue for the loudness values
-  // ensures that .iamf file output does not fail
-  const float minValue = -80.f;
-  std::optional<MixPresentationLoudness> loudnessOpt =
-      loudnessRepo_.get(exportContainer.mixPresentationId);
-  if (!loudnessOpt.has_value()) {
-    LOG_ERROR(RendererProcessor::instanceId_,
-              "PremiereProLoudnessExportProcessor, "
-              "copyExportContainerDataToRepo: Could "
-              "not find "
-              "MixPresentation in Repository w/ Uuid: " +
-                  exportContainer.mixPresentationId.toString().toStdString());
-  }
-
-  MixPresentationLoudness mixPresLoudness = loudnessOpt.value();
-  mixPresLoudness.setLayoutIntegratedLoudness(
-      Speakers::kStereo,
-      std::max(minValue, stereoLoudnessStats.loudnessIntegrated));
-
-  mixPresLoudness.setLayoutTruePeak(
-      Speakers::kStereo,
-      std::max(minValue, stereoLoudnessStats.loudnessTruePeak));
-
-  mixPresLoudness.setLayoutDigitalPeak(
-      Speakers::kStereo,
-      std::max(minValue, stereoLoudnessStats.loudnessDigitalPeak));
-
-  if (mixPresLoudness.getLargestLayout() != Speakers::kStereo) {
-    const Speakers::AudioElementSpeakerLayout layout =
-        mixPresLoudness.getLargestLayout();
-    EBU128Stats layoutLoudnessStats;
-    exportContainer.loudnessExportData->layoutEBU128.read(layoutLoudnessStats);
-    mixPresLoudness.setLayoutIntegratedLoudness(
-        layout, std::max(minValue, layoutLoudnessStats.loudnessIntegrated));
-    mixPresLoudness.setLayoutTruePeak(
-        layout, std::max(minValue, layoutLoudnessStats.loudnessTruePeak));
-    mixPresLoudness.setLayoutDigitalPeak(
-        layout, std::max(minValue, layoutLoudnessStats.loudnessDigitalPeak));
-  }
-  loudnessRepo_.update(mixPresLoudness);
-}
-
-void PremiereProLoudnessExportProcessor::valueTreeChildAdded(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
-  // handle the case of adding a new mix presentation
-  if (childWhichHasBeenAdded.getType() == MixPresentation::kTreeType) {
-    // update the MixPresentationLoudness Repository by adding the new mix
-    loudnessRepo_.add(MixPresentationLoudness(
-        juce::Uuid(childWhichHasBeenAdded[MixPresentation::kId])));
-  } else if (childWhichHasBeenAdded.getType() ==
-                 MixPresentation::kAudioElements &&
-             parentTree.getType() == MixPresentation::kTreeType) {
-    // update the MixPresentationLoudness Repository
-    handleNewLayoutAdded(parentTree, childWhichHasBeenAdded);
-  }
-}
-
-void PremiereProLoudnessExportProcessor::valueTreeChildRemoved(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
-    int indexFromWhichChildWasRemoved) {
-  if (childWhichHasBeenRemoved.getType() == MixPresentation::kTreeType) {
-    // update the MixPresentationLoudness Repository by removing the mix
-    juce::Uuid mixPresID =
-        juce::Uuid(childWhichHasBeenRemoved[MixPresentation::kId]);
-    MixPresentationLoudness mixPresLoudness =
-        loudnessRepo_.get(mixPresID).value();
-    loudnessRepo_.remove(mixPresLoudness);
-  }
-}
-
-void PremiereProLoudnessExportProcessor::handleNewLayoutAdded(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
-  // this function is only for handling a new Audio Element Layout
-  jassert(parentTree.getType() == MixPresentation::kTreeType);
-  jassert(childWhichHasBeenAdded.getType() == MixPresentation::kAudioElements);
-
-  const juce::Uuid mixPresentationId =
-      juce::Uuid(parentTree[MixPresentation::kId]);
-
-  // Retrieve the audio element layout that was added to the mix presentation
-  // it should be the last child in the mix presentation audio elements tree
-  Speakers::AudioElementSpeakerLayout layout =
-      getLargestLayoutFromTree(childWhichHasBeenAdded);
-
-  MixPresentationLoudness mixPresLoudness =
-      loudnessRepo_.get(mixPresentationId).value();
-
-  // update the repository
-  mixPresLoudness.replaceLargestLayout(layout);
-  loudnessRepo_.update(mixPresLoudness);
-}
-
-Speakers::AudioElementSpeakerLayout
-PremiereProLoudnessExportProcessor::getLargestLayoutFromTree(
-    juce::ValueTree& mixPresentationAudioElementsTree) {
-  Speakers::AudioElementSpeakerLayout largestLayout = Speakers::kStereo;
-  for (int i = 0; i < mixPresentationAudioElementsTree.getNumChildren(); i++) {
-    juce::Uuid audioElementId =
-        juce::Uuid(mixPresentationAudioElementsTree.getChild(
-            i)[MixPresentationAudioElement::kId]);
-    AudioElement audioElement =
-        audioElementRepository_.get(audioElementId).value();
-    Speakers::AudioElementSpeakerLayout layout =
-        audioElement.getChannelConfig();
-
-    // If the layout added, is stereo, mono, ambisonics, binaural, or has less
-    // channels than the current highest layout, we do nothing
-    if (layout == Speakers::kStereo || layout == Speakers::kMono ||
-        layout.isAmbisonics() || layout == Speakers::kBinaural ||
-        layout.getNumChannels() < largestLayout.getNumChannels()) {
-      continue;
-    }
-
-    if (layout.getNumChannels() == largestLayout.getNumChannels()) {
-      // convert the layout enum to ints
-      int layoutInt = static_cast<int>(layout);
-      int largestLayoutInt = static_cast<int>(largestLayout);
-      // if the layout added is less than or equal to the current largest
-      // layout, do nothing
-      if (layoutInt <= largestLayoutInt) {
-        continue;
-      }
-    }
-    largestLayout = layout;
-  }
-  return largestLayout;
-}
-
-void PremiereProLoudnessExportProcessor::intializeExportContainers() {
-  // clear the current renderers
-  exportContainers_.clear();
-
-  // get the current mix presentation
-  juce::OwnedArray<MixPresentation> mixPresentations;
-  mixPresentationRepository_.getAll(mixPresentations);
-  if (mixPresentations.size() == 0) {
-    return;
-  }
-
-  exportContainers_.reserve(mixPresentations.size());
-
-  // for each mix presentation, get all audio elements
-  for (int i = 0; i < mixPresentations.size(); i++) {
-    std::vector<MixPresentationAudioElement> mixPresAudioElements =
-        mixPresentations[i]->getAudioElements();
-    std::vector<AudioElement> audioElementsVec(mixPresAudioElements.size());
-    for (int j = 0; j < mixPresAudioElements.size(); j++) {
-      // get the audio element from the repository
-      AudioElement audioElement =
-          audioElementRepository_.get(mixPresAudioElements[j].getId()).value();
-      audioElementsVec[j] = audioElement;
-    }
-    exportContainers_.emplace_back(
-        mixPresentations[i]->getId(), mixPresentations[i]->getDefaultMixGain(),
-        sampleRate_, currentSamplesPerBlock_,
-        loudnessRepo_.get(mixPresentations[i]->getId())->getLargestLayout(),
-        audioElementsVec);
   }
 }
