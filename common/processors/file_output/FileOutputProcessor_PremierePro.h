@@ -23,20 +23,11 @@
  */
 
 #pragma once
-#include <data_repository/data_repository.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_dsp/juce_dsp.h>
 
-#include <memory>
-
-#include "../processor_base/ProcessorBase.h"
-#include "AudioElementFileWriter.h"
-#include "data_repository/implementation/MixPresentationLoudnessRepository.h"
-#include "iamftools/encoder_main_lib.h"
-#include "user_metadata.pb.h"
+#include "processors/file_output/FileOutputProcessor.h"
 
 //==============================================================================
-class PremiereProFileOutputProcessor final : public ProcessorBase {
+class PremiereProFileOutputProcessor final : public FileOutputProcessor {
  public:
   //==============================================================================
   PremiereProFileOutputProcessor(
@@ -56,73 +47,8 @@ class PremiereProFileOutputProcessor final : public ProcessorBase {
 
   void releaseResources() override;
 
-  //==============================================================================
-  juce::AudioProcessorEditor* createEditor() override;
-  bool hasEditor() const override;
-
-  //==============================================================================
-  const juce::String getName() const override;
-
-  // Update the default IAMF metadata from repository sources.
-  void updateIamfMDFromRepositories(iamf_tools_cli_proto::UserMetadata& iamfMD);
-
-  // From the FileExportRepository, updates:
-  // codec_config_metadata.
-  void updateIamfMDFromRepository(FileExportRepository& fileExportRepository,
-                                  iamf_tools_cli_proto::UserMetadata& iamfMD);
-
-  // From the AudioElementRepository, updates:
-  // audio_element_metadata, audio_frame_metadata.
-  void updateIamfMDFromRepository(
-      AudioElementRepository& audioElementRepository,
-      iamf_tools_cli_proto::UserMetadata& iamfMD,
-      std::unordered_map<juce::Uuid, int>& audioElementIDMap);
-
-  // From the MixPresentationRepository, updates:
-  // mix_presentation_metadata.
-  void updateIamfMDFromRepository(
-      MixPresentationRepository& mixPresentationRepository,
-      iamf_tools_cli_proto::UserMetadata& iamfMD,
-      std::unordered_map<juce::Uuid, int>& audioElementIDMap);
-
-  // Export an IAMF file and handle possible errors.
-  bool exportIamfFile(const juce::String input_wav_path,
-                      const juce::String output_iamf_path);
-
-  // Initialize IAMF metadata to reasonable defaults.
-  void initIamfMetadata(iamf_tools_cli_proto::UserMetadata& iamfMD,
-                        juce::String outputFilename) const;
-
  private:
-  void dumpExportLogs(const absl::Status& status) const;
-
-  juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
-    juce::AudioProcessorValueTreeState::ParameterLayout params;
-    return params;
-  }
-
-  juce::AudioParameterFloatAttributes initParameterAttributes(
-      int decimalPlaces, juce::String&& label) const {
-    return juce::AudioParameterFloatAttributes()
-        .withStringFromValueFunction([decimalPlaces](float value, int unused) {
-          juce::ignoreUnused(unused);
-          return juce::String(value, decimalPlaces, false);
-        })
-        .withLabel(label);
-  }
-
-  bool performingRender_;  // True if we are rendering in offline mode
-  bool exportCompleted_ = false;
-  FileExportRepository& fileExportRepository_;
-  AudioElementRepository& audioElementRepository_;
-  MixPresentationRepository& mixPresentationRepository_;
-  MixPresentationLoudnessRepository& mixPresentationLoudnessRepository_;
-  std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
-  int numSamples_;
-  long sampleRate_;
-  int startTime_;
-  int endTime_;
-  long sampleTally_ = 0;
+  bool exportCompleted_;
   int estimatedSamplesToProcess_;
   int processedSamples_;
   //==============================================================================

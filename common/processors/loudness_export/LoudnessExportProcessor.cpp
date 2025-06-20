@@ -263,7 +263,7 @@ void LoudnessExportProcessor::initializeLoudnessExport(FileExport& config) {
 }
 
 bool LoudnessExportProcessor::areLoudnessCalcsRequired(
-    juce::AudioBuffer<float>& buffer) {
+    const juce::AudioBuffer<float>& buffer) {
   if (!performingRender_ || buffer.getNumSamples() < 1) {
     return false;
   }

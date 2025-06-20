@@ -83,7 +83,7 @@ void FileOutputProcessor::updateIamfMDFromRepository(
   switch (fileExportData.getAudioCodec()) {
     case AudioCodec::FLAC:
       IAMFExportHelper::writeFLACConfigMD(
-          numSamples_, samplesProcessed_, fileExportData.getBitDepth(),
+          numSamples_, sampleTally_, fileExportData.getBitDepth(),
           fileExportData.getFlacCompressionLevel(), iamfMD);
       break;
     case AudioCodec::OPUS:
@@ -93,7 +93,7 @@ void FileOutputProcessor::updateIamfMDFromRepository(
     case AudioCodec::LPCM:
     default:
       IAMFExportHelper::writeLPCMConfigMD(
-          numSamples_, samplesProcessed_, sampleRate_,
+          numSamples_, sampleTally_, sampleRate_,
           fileExportData.getLPCMSampleSize(), iamfMD);
       break;
   }
@@ -148,7 +148,7 @@ void FileOutputProcessor::updateIamfMDFromRepository(
         mixPresentationLoudnessRepository_.get(mixPresentationId).value();
     auto mpMDToPopulate = iamfMD.add_mix_presentation_metadata();
     mixPresentations[i]->populateIamfMixPresentationMetadata(
-        i, sampleRate_, samplesProcessed_, mpMDToPopulate, iamfMD,
+        i, sampleRate_, sampleTally_, mpMDToPopulate, iamfMD,
         mixPresentationLoudness, audioElementIDMap);
   }
 }
@@ -159,7 +159,7 @@ void FileOutputProcessor::prepareToPlay(double sampleRate,
   configParams.setSampleRate(sampleRate);
   fileExportRepository_.update(configParams);
   numSamples_ = samplesPerBlock;
-  samplesProcessed_ = 0;
+  sampleTally_ = 0;
   sampleRate_ = sampleRate;
 }
 
@@ -173,64 +173,14 @@ void FileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
   if (!performingRender_) {
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
-      LOG_ANALYTICS(0, "Beginning .iamf file export");
-      performingRender_ = true;
-      startTime_ = config.getStartTime();
-      endTime_ = config.getEndTime();
-
-      // To create the IAMF file, create a list of all the audio element wav
-      // files to be created
-      juce::OwnedArray<AudioElement> audioElements;
-      audioElementRepository_.getAll(audioElements);
-      iamfWavFileWriters_.clear();
-      iamfWavFileWriters_.reserve(audioElements.size());
-      for (int i = 0; i < audioElements.size(); i++) {
-        juce::String wavFilePath = config.getExportFile() + "_audio_element_ " +
-                                   juce::String(i) + ".wav";
-        sampleRate_ = config.getSampleRate();
-
-        iamfWavFileWriters_.emplace_back(new AudioElementFileWriter(
-            wavFilePath, config.getSampleRate(), config.getBitDepth(),
-            config.getAudioCodec(), *audioElements[i]));
-      }
-      samplesProcessed_ = 0;
+      initializeFileExport(config);
     }
     return;
   }
 
   // Stop rendering if we are switching back to online mode
   if (performingRender_) {
-    // close the output file, since rendering is completed
-    for (auto& writer : iamfWavFileWriters_) {
-      writer->close();
-    }
-    juce::File outputFile = juce::File(config.getExportFile());
-    outputFile.deleteFile();
-
-    bool exportIAMFSuccess =
-        exportIamfFile(config.getExportFolder(), config.getExportFolder());
-
-    // If muxing is enabled and audio export was successful, mux the audio and
-    // video files.
-    if (exportIAMFSuccess && fileExportRepository_.get().getExportVideo()) {
-      bool muxIAMFSuccess = IAMFExportHelper::muxIAMF(
-          audioElementRepository_, mixPresentationRepository_,
-          fileExportRepository_.get());
-
-      if (!muxIAMFSuccess) {
-        LOG_INFO(0,
-                 "IAMF Muxing: Failed to mux IAMF file with provided video.");
-      }
-    }
-
-    if (!config.getExportAudioElements()) {
-      // Delete the extraneuos audio element files
-      for (auto& writer : iamfWavFileWriters_) {
-        juce::File audioElementFile(writer->getFilePath());
-        audioElementFile.deleteFile();
-      }
-    }
-    iamfWavFileWriters_.clear();
+    closeFileExport(config);
     performingRender_ = false;
   }
 }
@@ -297,18 +247,13 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                        juce::MidiBuffer& midiMessages) {
   juce::ignoreUnused(midiMessages);
 
-  if (performingRender_ && buffer.getNumSamples() > 0) {
-    long currentTime = samplesProcessed_ / sampleRate_;
-    long nextTime = (samplesProcessed_ + buffer.getNumSamples()) / sampleRate_;
+  if (!(shouldBufferBeWritten(buffer))) {
+    // If we are not performing a render or the buffer is empty, do not write
+    return;
+  }
 
-    if ((endTime_ == 0) ||
-        (currentTime >= startTime_ && nextTime <= endTime_)) {
-      // Always output the sub wav files if no end/start times are set
-      for (auto& writer : iamfWavFileWriters_) {
-        writer->write(buffer);
-      }
-    }
-    samplesProcessed_ += buffer.getNumSamples();
+  for (auto& writer : iamfWavFileWriters_) {
+    writer->write(buffer);
   }
 }
 
@@ -317,4 +262,88 @@ bool FileOutputProcessor::hasEditor() const { return false; }
 
 juce::AudioProcessorEditor* FileOutputProcessor::createEditor() {
   return nullptr;
+}
+
+void FileOutputProcessor::initializeFileExport(FileExport& config) {
+  LOG_ANALYTICS(0, "Beginning .iamf file export");
+  performingRender_ = true;
+  startTime_ = config.getStartTime();
+  endTime_ = config.getEndTime();
+
+  // To create the IAMF file, create a list of all the audio element wav
+  // files to be created
+  juce::OwnedArray<AudioElement> audioElements;
+  audioElementRepository_.getAll(audioElements);
+  iamfWavFileWriters_.clear();
+  iamfWavFileWriters_.reserve(audioElements.size());
+  for (int i = 0; i < audioElements.size(); i++) {
+    juce::String wavFilePath =
+        config.getExportFile() + "_audio_element_ " + juce::String(i) + ".wav";
+    sampleRate_ = config.getSampleRate();
+
+    iamfWavFileWriters_.emplace_back(new AudioElementFileWriter(
+        wavFilePath, config.getSampleRate(), config.getBitDepth(),
+        config.getAudioCodec(), *audioElements[i]));
+  }
+  sampleTally_ = 0;
+}
+
+void FileOutputProcessor::closeFileExport(FileExport& config) {
+  LOG_ANALYTICS(0, "closing writers and exporting IAMF file");
+  // close the output file, since rendering is completed
+  for (auto& writer : iamfWavFileWriters_) {
+    writer->close();
+  }
+  juce::File outputFile = juce::File(config.getExportFile());
+  outputFile.deleteFile();
+
+  bool exportIAMFSuccess =
+      exportIamfFile(config.getExportFolder(), config.getExportFolder());
+
+  // If muxing is enabled and audio export was successful, mux the audio and
+  // video files.
+  if (exportIAMFSuccess && fileExportRepository_.get().getExportVideo()) {
+    bool muxIAMFSuccess = IAMFExportHelper::muxIAMF(
+        audioElementRepository_, mixPresentationRepository_,
+        fileExportRepository_.get());
+
+    if (!muxIAMFSuccess) {
+      LOG_INFO(0, "IAMF Muxing: Failed to mux IAMF file with provided video.");
+    }
+  }
+
+  if (!config.getExportAudioElements()) {
+    // Delete the extraneuos audio element files
+    for (auto& writer : iamfWavFileWriters_) {
+      juce::File audioElementFile(writer->getFilePath());
+      audioElementFile.deleteFile();
+    }
+  }
+  iamfWavFileWriters_.clear();
+}
+
+bool FileOutputProcessor::shouldBufferBeWritten(
+    const juce::AudioBuffer<float>& buffer) {
+  if (!performingRender_ || buffer.getNumSamples() < 1) {
+    return false;
+  }
+
+  // do not render
+  if (startTime_ != 0 || endTime_ != 0) {
+    // Handle the case where startTime and endTime are set, implying we
+    // are only bouncing a subset of the mix
+    // Calculate the current time with the existing number of samples that have
+    // been processed
+    long currentTime = sampleTally_ / sampleRate_;
+    // update the sample tally
+    sampleTally_ += buffer.getNumSamples();
+    // with the updated sample tally, calculate the next time
+    long nextTime = sampleTally_ / sampleRate_;
+
+    // do not render
+    if (currentTime < startTime_ || nextTime > endTime_) {
+      return false;
+    }
+  }
+  return true;
 }

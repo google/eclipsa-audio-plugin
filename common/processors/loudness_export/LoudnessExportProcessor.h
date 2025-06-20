@@ -67,7 +67,7 @@ class LoudnessExportProcessor : public ProcessorBase,
 
   void intializeExportContainers();
 
-  bool areLoudnessCalcsRequired(juce::AudioBuffer<float>& buffer);
+  bool areLoudnessCalcsRequired(const juce::AudioBuffer<float>& buffer);
 
   bool performingRender_;
 
