@@ -14,6 +14,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# macOS pre-install script for Eclipsa VST3 plugins.
+#
+# PURPOSE:
+# This script runs before the main package installation and prepares the system
+# for VST3 plugin installation by performing necessary validation and cleanup.
+#
+# WHY THIS SCRIPT IS NEEDED:
+# 1. Installation Type Detection:
+#    - Determines if this is a system-wide or user-specific installation
+#    - Validates that the target user and paths are accessible
+#    - Sets up proper logging and error handling
+#
+# 2. Environment Validation:
+#    - Ensures the installation environment is ready
+#    - Validates that required directories can be created
+#    - Checks for any blocking conditions that would prevent installation
+#
+# 3. Preparation for Main Installation:
+#    - The actual plugin files are extracted by the main installer process
+#    - The postinstall script handles the complex moving and permission logic
+#    - This preinstall script ensures the environment is ready for that process
+#
+# INSTALLATION ARCHITECTURE:
+# 1. PREINSTALL (this script): Validates environment and logs installation type
+# 2. MAIN INSTALLER: Extracts plugin files to staging area (/tmp/EclipsaVST3)
+# 3. POSTINSTALL: Moves files to final location with proper permissions
+#
+# WHY THIS ARCHITECTURE IS USED:
+# - macOS installer has limitations with dynamic path selection and permissions
+# - Separating concerns allows for better error handling and logging
+# - Enables support for both system-wide and user-specific installations
+# - Provides flexibility for handling permission conflicts and cleanup
+#
+# PARAMETERS (from macOS installer):
+# $1 = Package path (e.g., "/Volumes/Installer/Package.pkg")
+# $2 = Target location ("/" for system-wide, "/Users/username" for user-specific)
+# $3 = Target volume (usually "/")
+# $4 = User home directory (may be "/" for system installations)
+#
+
 # Standard preinstall script parameters
 # $1 = package path
 # $2 = target location  

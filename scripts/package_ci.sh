@@ -163,25 +163,11 @@ fi
 INSTALLER_OUTPUT_DIR="build/installers"
 INSTALLER_NAME="Eclipsa_${FORMAT_SUFFIX}_${BRANCH_NAME}.pkg"
 FINAL_INSTALLER_PATH="$INSTALLER_OUTPUT_DIR/$INSTALLER_NAME"
-# Check for distribution.xml in various locations based on plugin format
+# Set distribution XML path based on plugin format
 if [ "$PLUGIN_FORMAT" = "aax" ]; then
-    if [ -f "./distribution_aax.xml" ]; then
-        DISTRIBUTION_XML="./distribution_aax.xml"
-    elif [ -f "./scripts/distribution_aax.xml" ]; then
-        DISTRIBUTION_XML="./scripts/distribution_aax.xml"
-    else
-        echo "Error: AAX Distribution XML not found. Looked for ./distribution_aax.xml and ./scripts/distribution_aax.xml"
-        exit 1
-    fi
+    DISTRIBUTION_XML="./scripts/distribution_aax.xml"
 elif [ "$PLUGIN_FORMAT" = "vst3" ]; then
-    if [ -f "./distribution_vst3.xml" ]; then
-        DISTRIBUTION_XML="./distribution_vst3.xml"
-    elif [ -f "./scripts/distribution_vst3.xml" ]; then
-        DISTRIBUTION_XML="./scripts/distribution_vst3.xml"
-    else
-        echo "Error: VST3 Distribution XML not found. Looked for ./distribution_vst3.xml and ./scripts/distribution_vst3.xml"
-        exit 1
-    fi
+    DISTRIBUTION_XML="./scripts/distribution_vst3.xml"
 fi
 COMPONENT_PKG_DIR="build/component_pkgs"
 COMPONENT_PKG_PATH="$COMPONENT_PKG_DIR/EclipsaPlugins.pkg"
@@ -481,14 +467,12 @@ if [[ "$PLUGIN_FORMAT" == "aax" ]]; then
     echo "Adding AAX plugins to package..."
     cp -R "$AAX_RENDERER_PLUGIN_SIGNED" "$AAX_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/Library/Application Support/Avid/Audio/Plug-Ins/" || { echo "Failed to copy AAX plugins"; exit 1; }
 elif [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
-    # VST3 plugins structure - create relocatable package with dual locations for maximum compatibility
+    # VST3 plugins structure - use staging area only, postinstall will handle final placement
     mkdir -p "$PACKAGING_STAGING_DIR/Library/Application Support/Eclipsa Audio Plugins"
     mkdir -p "$PACKAGING_STAGING_DIR/tmp/EclipsaVST3"
-    mkdir -p "$PACKAGING_STAGING_DIR/Library/Audio/Plug-Ins/VST3"
-    echo "Adding VST3 plugins to package (dual locations for compatibility)..."
-    # Copy to both locations to ensure postinstall script can find them
+    echo "Adding VST3 plugins to package (staging area only)..."
+    # Copy ONLY to staging area - postinstall will handle final placement to avoid permission conflicts
     cp -R "$VST3_RENDERER_PLUGIN_SIGNED" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/tmp/EclipsaVST3/" || { echo "Failed to copy VST3 plugins to temp location"; exit 1; }
-    cp -R "$VST3_RENDERER_PLUGIN_SIGNED" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/Library/Audio/Plug-Ins/VST3/" || { echo "Failed to copy VST3 plugins to system location"; exit 1; }
 fi
 
 # Copy license for all formats
@@ -910,69 +894,118 @@ if [ -d "$MOUNT_POINT" ]; then
     
     # Create and run AppleScript to set DMG appearance
     echo "Setting DMG appearance with refined layout..."
+    
+    # For self-hosted runners, we need to ensure AppleScript runs in the correct user context
+    CURRENT_USER=$(whoami)
+    echo "Running AppleScript as user: $CURRENT_USER"
+    
     cat > ./set_dmg_appearance.applescript << EOF
 tell application "Finder"
-    tell disk "$DMG_TITLE"
-        open
-        
-        -- Wait a moment for window to be ready
-        delay 2
-        
-        -- Basic window setup
-        set current view of container window to icon view
-        set toolbar visible of container window to false
-        set statusbar visible of container window to false
-        
-        -- Set window dimensions - using the defined variable to match package.sh
-        set the bounds of container window to $DMG_WINDOW_SIZE
-        
-        -- Configure the icon view options to match package.sh
-        set theViewOptions to the icon view options of container window
-        set arrangement of theViewOptions to not arranged
-        set icon size of theViewOptions to 80 -- Matched package.sh
-        set text size of theViewOptions to 11 -- Matched package.sh
-        set label position of theViewOptions to bottom -- Matched package.sh
-        -- Explicit background color is not set in package.sh, so removed here too.
-        -- shows item info and shows icon preview are not in package.sh, but are generally fine.
-        -- For strict alignment, they could be removed, but they don't cause the visual issue.
-        -- Keeping them for now as they are minor and potentially desirable.
-        set shows item info of theViewOptions to false
-        set shows icon preview of theViewOptions to true
-        
-        -- Set background if available, without specifying placement to match package.sh
-        if exists file ".background:background.png" of container window then
-            set background picture of theViewOptions to file ".background:background.png"
-        end if
-        
-        -- Position elements for optimal visual appearance - using positions from package.sh
-        set position of item "Eclipsa App.pkg" of container window to {350, 220} # Matched package.sh
-        set position of item "Documentation" of container window to {250, 370} # Matched package.sh
-        set position of item "Licenses" of container window to {450, 370} # Matched package.sh
-        
-        -- Hide utility folders/files for cleaner appearance
-        -- Dot-folders like .background are typically hidden by Finder by default.
-        -- Explicitly setting visible to false was causing an error (-10006).
-        -- if exists item ".background" of container window then
-        --    set visible of item ".background" of container window to false
-        -- end if
-        
-        -- Hide .DS_Store file if it exists
-        if exists item ".DS_Store" of container window then
-            set visible of item ".DS_Store" of container window to false
-        end if
-        
-        update without registering applications
-        
-        -- Close and reopen to ensure settings are applied
-        close
-        open
-        delay 5
-    end tell
+    -- Set a timeout to prevent hanging
+    with timeout of 60 seconds
+        try
+            -- Activate Finder to ensure it's running
+            activate
+            delay 1
+            
+            tell disk "$DMG_TITLE"
+                open
+                
+                -- Wait longer for window to be ready in automated environment
+                delay 3
+                
+                -- Basic window setup
+                set current view of container window to icon view
+                set toolbar visible of container window to false
+                set statusbar visible of container window to false
+                
+                -- Set window dimensions
+                set the bounds of container window to $DMG_WINDOW_SIZE
+                
+                -- Configure the icon view options
+                set theViewOptions to the icon view options of container window
+                set arrangement of theViewOptions to not arranged
+                set icon size of theViewOptions to 80
+                set text size of theViewOptions to 11
+                set label position of theViewOptions to bottom
+                set shows item info of theViewOptions to false
+                set shows icon preview of theViewOptions to true
+                
+                -- Set background if available
+                try
+                    if exists file ".background:background.png" of container window then
+                        set background picture of theViewOptions to file ".background:background.png"
+                        delay 1
+                    end if
+                on error
+                    -- Background setting failed, continue anyway
+                end try
+                
+                -- Wait a moment for layout to settle
+                delay 2
+                
+                -- Position elements (check existence first)
+                try
+                    if exists item "Eclipsa App.pkg" of container window then
+                        set position of item "Eclipsa App.pkg" of container window to {350, 220}
+                        delay 0.5
+                    end if
+                on error
+                    log "Could not position Eclipsa App.pkg"
+                end try
+                
+                try
+                    if exists item "Documentation" of container window then
+                        set position of item "Documentation" of container window to {250, 370}
+                        delay 0.5
+                    end if
+                on error
+                    log "Could not position Documentation"
+                end try
+                
+                try
+                    if exists item "Licenses" of container window then
+                        set position of item "Licenses" of container window to {450, 370}
+                        delay 0.5
+                    end if
+                on error
+                    log "Could not position Licenses"
+                end try
+                
+                -- Force update and save settings
+                update without registering applications
+                delay 2
+                
+                -- Close the window to save settings
+                close
+                delay 1
+                
+            end tell
+        on error errMsg number errNum
+            log "AppleScript error " & errNum & ": " & errMsg
+            return errMsg
+        end try
+    end timeout
 end tell
 EOF
+
+    # Ensure we have the correct permissions and run as the logged-in user
+    if [[ "$CURRENT_USER" != "root" ]]; then
+        # Run directly if not root
+        echo "Running AppleScript directly as $CURRENT_USER..."
+        osascript ./set_dmg_appearance.applescript || echo "Warning: AppleScript failed, but continuing with DMG creation..."
+    else
+        # If running as root, try to run as the console user
+        CONSOLE_USER=$(stat -f%Su /dev/console 2>/dev/null || echo "")
+        if [[ -n "$CONSOLE_USER" && "$CONSOLE_USER" != "root" ]]; then
+            echo "Running AppleScript as console user: $CONSOLE_USER..."
+            sudo -u "$CONSOLE_USER" osascript ./set_dmg_appearance.applescript || echo "Warning: AppleScript failed, but continuing with DMG creation..."
+        else
+            echo "Warning: No console user found, trying to run AppleScript as root..."
+            osascript ./set_dmg_appearance.applescript || echo "Warning: AppleScript failed, but continuing with DMG creation..."
+        fi
+    fi
     
-    # Run the AppleScript (ignore errors since AppleScript can be flaky in CI)
-    osascript ./set_dmg_appearance.applescript || echo "Warning: AppleScript failed but continuing..."
     rm -f ./set_dmg_appearance.applescript
     
     # Detach the DMG

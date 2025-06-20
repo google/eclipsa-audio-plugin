@@ -15,6 +15,38 @@
 # limitations under the License.
 
 # macOS post-install script for Eclipsa VST3 plugins.
+#
+# PURPOSE:
+# This script handles the final installation of VST3 audio plugins after the main
+# package extraction is complete. It's required because VST3 plugins need special
+# handling for user-specific vs system-wide installations.
+#
+# WHY THIS SCRIPT IS NEEDED:
+# 1. VST3 plugins can be installed in two locations:
+#    - System-wide: /Library/Audio/Plug-Ins/VST3/ (requires admin privileges)
+#    - User-specific: ~/Library/Audio/Plug-Ins/VST3/ (no admin required)
+#
+# 2. The macOS installer package system has limitations:
+#    - Cannot dynamically choose installation paths based on user choice
+#    - Cannot handle permission conflicts when overwriting existing plugins
+#    - Cannot run complex logic during the file copying phase
+#
+# 3. This script provides:
+#    - Dynamic path resolution based on installation type
+#    - Proper permission handling for existing plugin files
+#    - Cleanup of temporary staging areas
+#    - Robust error handling and logging
+#    - Support for both GUI and automated installations
+#
+# PARAMETERS (from macOS installer):
+# $1 = Package path (e.g., "/Volumes/Installer/Package.pkg")
+# $2 = Target location ("/" for system-wide, "/Users/username" for user-specific)
+# $3 = Target volume (usually "/")
+# $4 = User home directory (may be "/" for system installations)
+#
+# LOG FILES:
+# - /tmp/eclipsa_vst3_install.log: Detailed execution log
+# - Console.app: System installer logs for troubleshooting
 
 LOG_FILE="/tmp/eclipsa_vst3_install.log"
 
