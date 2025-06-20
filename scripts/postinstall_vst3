@@ -1,0 +1,175 @@
+#!/bin/bash -eu
+#
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# macOS post-install script for Eclipsa VST3 plugins.
+#
+# PURPOSE:
+# This script handles the final installation of VST3 audio plugins after the main
+# package extraction is complete. It's required because VST3 plugins need special
+# handling for user-specific vs system-wide installations.
+#
+# WHY THIS SCRIPT IS NEEDED:
+# 1. VST3 plugins can be installed in two locations:
+#    - System-wide: /Library/Audio/Plug-Ins/VST3/ (requires admin privileges)
+#    - User-specific: ~/Library/Audio/Plug-Ins/VST3/ (no admin required)
+#
+# 2. The macOS installer package system has limitations:
+#    - Cannot dynamically choose installation paths based on user choice
+#    - Cannot handle permission conflicts when overwriting existing plugins
+#    - Cannot run complex logic during the file copying phase
+#
+# 3. This script provides:
+#    - Dynamic path resolution based on installation type
+#    - Proper permission handling for existing plugin files
+#    - Cleanup of temporary staging areas
+#    - Robust error handling and logging
+#    - Support for both GUI and automated installations
+#
+# PARAMETERS (from macOS installer):
+# $1 = Package path (e.g., "/Volumes/Installer/Package.pkg")
+# $2 = Target location ("/" for system-wide, "/Users/username" for user-specific)
+# $3 = Target volume (usually "/")
+# $4 = User home directory (may be "/" for system installations)
+#
+# LOG FILES:
+# - /tmp/eclipsa_vst3_install.log: Detailed execution log
+# - Console.app: System installer logs for troubleshooting
+
+LOG_FILE="/tmp/eclipsa_vst3_install.log"
+
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - VST3 Postinstall: $1" >> "$LOG_FILE"
+}
+
+main() {
+    log_message "=== Starting VST3 postinstall script ==="
+    log_message "Installer arguments: P1='$1' P2='$2' P3='$3' P4='$4'"
+
+    # --- Determine installation type and paths ---
+    local install_for_all_users=false
+    if [ "$2" = "/" ]; then
+        install_for_all_users=true
+    fi
+
+    local vst3_destination=""
+    local actual_user=""
+    local actual_user_home=""
+
+    if $install_for_all_users; then
+        log_message "System-wide installation detected."
+        vst3_destination="/Library/Audio/Plug-Ins/VST3"
+        actual_user=$(stat -f%Su /dev/console)
+        actual_user_home=$(dscl . -read "/Users/$actual_user" NFSHomeDirectory | awk '{print $2}')
+        if [ -z "$actual_user_home" ]; then
+            actual_user_home="/Users/$actual_user" # Fallback
+        fi
+    else
+        log_message "User-specific installation detected."
+        if [[ -n "$4" && "$4" != "/" ]]; then
+            actual_user_home="$4"
+        elif [[ -n "$HOME" && "$HOME" != "/" ]]; then
+            actual_user_home="$HOME"
+        else
+            actual_user_home=$(dirname "$2") # Fallback
+        fi
+        actual_user=$(basename "$actual_user_home")
+        vst3_destination="$actual_user_home/Library/Audio/Plug-Ins/VST3"
+    fi
+
+    log_message "Determined User: $actual_user, Home: $actual_user_home"
+    log_message "Destination VST3 Path: $vst3_destination"
+
+    # --- Find VST3 plugin source directory ---
+    local possible_vst3_sources=("/tmp/EclipsaVST3" "$2/tmp/EclipsaVST3" "$3/tmp/EclipsaVST3" "$2/private/tmp/EclipsaVST3" "$3/private/tmp/EclipsaVST3")
+    local vst3_source=""
+    for source_path in "${possible_vst3_sources[@]}"; do
+        if [ -d "$source_path" ] && [ -n "$(ls "$source_path"/Eclipsa*.vst3 2>/dev/null)" ]; then
+            vst3_source="$source_path"
+            log_message "Found VST3 source at: $vst3_source"
+            break
+        fi
+    done
+
+    if [ -z "$vst3_source" ]; then
+        log_message "ERROR: Could not find VST3 source directory. Installation cannot proceed."
+        exit 1
+    fi
+
+    # --- Build the bundled command for atomic execution ---
+    local command_string=""
+    
+    command_string+="mkdir -p \"$vst3_destination\"; "
+
+    for plugin_name in "Eclipsa Audio Renderer.vst3" "Eclipsa Audio Element Plugin.vst3"; do
+        local plugin_path="$vst3_destination/$plugin_name"
+        command_string+="[ -e \"$plugin_path\" ] && rm -rf \"$plugin_path\"; "
+    done
+
+    for plugin_path in "$vst3_source"/Eclipsa*.vst3; do
+        if [ -e "$plugin_path" ]; then
+            local plugin_name=$(basename "$plugin_path")
+            local dest_path="$vst3_destination/$plugin_name"
+            command_string+="ditto \"$plugin_path\" \"$dest_path\"; "
+        fi
+    done
+    
+    if $install_for_all_users; then
+        command_string+="chown -R root:wheel \"$vst3_destination\"; "
+    else
+        command_string+="chown -R \"$actual_user:staff\" \"$vst3_destination\"; "
+    fi
+    command_string+="chmod -R 755 \"$vst3_destination\"; "
+
+    # --- Add cleanup to the command string ---
+    command_string+="rm -rf \"$vst3_source\";"
+
+    # --- Execute the command ---
+    log_message "Executing bundled command."
+    log_message "Bundled command: $command_string"
+
+    if $install_for_all_users; then
+        if ! eval "$command_string"; then
+            log_message "ERROR: System installation command failed."
+            exit 1
+        fi
+    else
+        log_message "Requesting administrator privileges for user installation..."
+        
+        local applescript_command_string="${command_string//\"/\\\"}"
+        local applescript="do shell script \"$applescript_command_string\" with administrator privileges"
+        
+        log_message "Executing AppleScript..."
+        
+        local osascript_output
+        osascript_output=$(osascript -e "$applescript" 2>&1)
+        local osascript_exit_code=$?
+        
+        if [ $osascript_exit_code -ne 0 ]; then
+            log_message "ERROR: User installation command failed via AppleScript. Exit code: $osascript_exit_code"
+            log_message "AppleScript output: $osascript_output"
+            exit 1
+        fi
+        log_message "AppleScript execution successful."
+    fi
+
+    log_message "Successfully executed bundled installation command."
+    log_message "VST3 plugins successfully installed to: $vst3_destination"
+    log_message "=== VST3 postinstall script completed ==="
+    exit 0
+}
+
+main "$@"
+
