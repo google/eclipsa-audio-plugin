@@ -103,13 +103,13 @@ void PremiereProFileOutputProcessor::processBlock(
   }
 
   if (processedSamples_ + buffer.getNumSamples() < estimatedSamplesToProcess_) {
-    processedSamples_ += buffer.getNumSamples();
-
     // Write the audio data to the wav file writers
     for (auto& writer : iamfWavFileWriters_) {
       writer->write(buffer);
     }
   }
+
+  processedSamples_ += buffer.getNumSamples();
 
   if (processedSamples_ >= estimatedSamplesToProcess_ && !exportCompleted_) {
     LOG_ANALYTICS(0, "exportCompleted_ = true");

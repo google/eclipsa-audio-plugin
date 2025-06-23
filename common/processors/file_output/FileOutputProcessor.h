@@ -32,7 +32,6 @@
 #include "../processor_base/ProcessorBase.h"
 #include "AudioElementFileWriter.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
-#include "data_structures/src/FileExport.h"
 #include "iamftools/encoder_main_lib.h"
 #include "user_metadata.pb.h"
 

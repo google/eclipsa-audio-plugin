@@ -98,12 +98,12 @@ void PremiereProLoudnessExportProcessor::processBlock(
   }
 
   if (processedSamples_ + buffer.getNumSamples() < estimatedSamplesToProcess_) {
-    processedSamples_ += buffer.getNumSamples();
-
     for (auto& exportContainer : exportContainers_) {
       exportContainer.process(buffer);
     }
   }
+
+  processedSamples_ += buffer.getNumSamples();
 
   if (processedSamples_ >= estimatedSamplesToProcess_ && !exportCompleted_) {
     LOG_ANALYTICS(0, "exportCompleted_ = true");
