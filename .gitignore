@@ -8,6 +8,7 @@
 /cmake-build-install
 /lib
 /third_party/iamf/include/iamf/commit_hash.h
+/scripts/package_config.sh
 
 # CTest
 /Testing
