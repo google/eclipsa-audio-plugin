@@ -16,17 +16,12 @@
 
 #include <processors/processors.h>
 
-#include <string>
-
 #include "RendererEditor.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
-#include "data_structures/src/FileExport.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
-#include "processors/file_output/FileOutputProcessor_PremierePro.h"
-#include "processors/loudness_export/LoudnessExportProcessor_PremierePro.h"
 #include "processors/processor_base/ProcessorBase.h"
 
 //==============================================================================
