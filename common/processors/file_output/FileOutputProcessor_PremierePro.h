@@ -45,12 +45,6 @@ class PremiereProFileOutputProcessor final : public FileOutputProcessor {
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 
-  void releaseResources() override;
-
  private:
-  bool exportCompleted_;
-  int estimatedSamplesToProcess_;
-  int processedSamples_;
-  //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PremiereProFileOutputProcessor)
 };

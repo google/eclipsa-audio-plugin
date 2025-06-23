@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include "data_structures/src/FileExport.h"
 #include "logger/logger.h"
 
 //==============================================================================
@@ -28,18 +29,15 @@ PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
     MixPresentationLoudnessRepository& mixPresentationLoudnessRepository)
     : FileOutputProcessor(fileExportRepository, audioElementRepository,
                           mixPresentationRepository,
-                          mixPresentationLoudnessRepository),
-      exportCompleted_(false),
-      estimatedSamplesToProcess_(0),
-      processedSamples_(0) {}
+                          mixPresentationLoudnessRepository) {}
 
 PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {
   LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro destructor called");
-}
-
-void PremiereProFileOutputProcessor::releaseResources() {
-  // Release any resources held by the processor
-  LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro releasing resources");
+  if (performingRender_) {
+    FileExport config = fileExportRepository_.get();
+    closeFileExport(config);
+    performingRender_ = false;
+  }
 }
 
 //==============================================================================
@@ -58,18 +56,10 @@ void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
   sampleRate_ = sampleRate;
-
-  processedSamples_ = 0;
-
-  int totalDuration = config.getEndTime() - config.getStartTime();
-
-  estimatedSamplesToProcess_ = static_cast<int>(totalDuration * sampleRate);
 }
 
 void PremiereProFileOutputProcessor::setNonRealtime(
     bool isNonRealtime) noexcept {
-  LOG_ANALYTICS(0, std::string("File Output Premiere Pro Set Non-Realtime ") +
-                       (isNonRealtime ? "true" : "false"));
   FileExport config = fileExportRepository_.get();
 
   if (!config.getManualExport()) {
@@ -85,13 +75,6 @@ void PremiereProFileOutputProcessor::setNonRealtime(
     }
     return;
   }
-
-  // Stop rendering if we are switching back to online mode
-  if (!isNonRealtime && performingRender_ && exportCompleted_) {
-    closeFileExport(config);
-    performingRender_ = false;
-    exportCompleted_ = false;
-  }
 }
 
 void PremiereProFileOutputProcessor::processBlock(
@@ -102,18 +85,8 @@ void PremiereProFileOutputProcessor::processBlock(
     return;
   }
 
-  if (processedSamples_ + buffer.getNumSamples() < estimatedSamplesToProcess_) {
-    // Write the audio data to the wav file writers
-    for (auto& writer : iamfWavFileWriters_) {
-      writer->write(buffer);
-    }
-  }
-
-  processedSamples_ += buffer.getNumSamples();
-
-  if (processedSamples_ >= estimatedSamplesToProcess_ && !exportCompleted_) {
-    LOG_ANALYTICS(0, "exportCompleted_ = true");
-    exportCompleted_ = true;
-    setNonRealtime(false);
+  //  Write the audio data to the wav file writers
+  for (auto& writer : iamfWavFileWriters_) {
+    writer->write(buffer);
   }
 }

@@ -24,21 +24,20 @@ PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
     MixPresentationLoudnessRepository& loudnessRepo,
     AudioElementRepository& audioElementRepo)
     : LoudnessExportProcessor(fileExportRepo, mixPresentationRepo, loudnessRepo,
-                              audioElementRepo),
-      estimatedSamplesToProcess_(0),
-      processedSamples_(0),
-      exportCompleted_(false) {
-  // mixPresentationRepository_.registerListener(this);
+                              audioElementRepo) {
   LOG_INFO(0, "PremierePro LoudnessExport Processor Instantiated \n");
 }
 
 PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
   LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro destructor called");
-}
 
-void PremiereProLoudnessExportProcessor::releaseResources() {
-  // Release any resources held by the processor
-  LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro releasing resources");
+  if (performingRender_) {
+    LOG_ANALYTICS(0, "copying loudness metadata to repository");
+    for (auto& exportContainer : exportContainers_) {
+      copyExportContainerDataToRepo(exportContainer);
+    }
+    performingRender_ = false;
+  }
 }
 
 void PremiereProLoudnessExportProcessor::setNonRealtime(
@@ -58,36 +57,17 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
       initializeLoudnessExport(config);
-      exportCompleted_ = false;
     }
     return;
-  }
-
-  // Stop rendering if we are switching back to online mode
-  // copy loudness values from the map to the repository
-  if (!isNonRealtime && exportCompleted_ && performingRender_) {
-    performingRender_ = false;
-    exportCompleted_ = false;  // ready for the next export
-    LOG_ANALYTICS(0, "copying loudness metadata to repository");
-    for (auto& exportContainer : exportContainers_) {
-      copyExportContainerDataToRepo(exportContainer);
-    }
   }
 }
 
 void PremiereProLoudnessExportProcessor::prepareToPlay(double sampleRate,
                                                        int samplesPerBlock) {
-  FileExport config = fileExportRepository_.get();
   sampleRate_ = sampleRate;
   currentSamplesPerBlock_ = samplesPerBlock;
   sampleTally_ = 0;
   intializeExportContainers();
-
-  processedSamples_ = 0;
-
-  int totalDuration = config.getEndTime() - config.getStartTime();
-
-  estimatedSamplesToProcess_ = static_cast<int>(totalDuration * sampleRate);
 }
 
 void PremiereProLoudnessExportProcessor::processBlock(
@@ -97,17 +77,7 @@ void PremiereProLoudnessExportProcessor::processBlock(
     return;
   }
 
-  if (processedSamples_ + buffer.getNumSamples() < estimatedSamplesToProcess_) {
-    for (auto& exportContainer : exportContainers_) {
-      exportContainer.process(buffer);
-    }
-  }
-
-  processedSamples_ += buffer.getNumSamples();
-
-  if (processedSamples_ >= estimatedSamplesToProcess_ && !exportCompleted_) {
-    LOG_ANALYTICS(0, "exportCompleted_ = true");
-    exportCompleted_ = true;
-    setNonRealtime(false);
+  for (auto& exportContainer : exportContainers_) {
+    exportContainer.process(buffer);
   }
 }

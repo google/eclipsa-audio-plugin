@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "juce_core/system/juce_PlatformDefs.h"
 #include "processors/loudness_export/LoudnessExportProcessor.h"
 
 class PremiereProLoudnessExportProcessor : public LoudnessExportProcessor {
@@ -35,10 +36,7 @@ class PremiereProLoudnessExportProcessor : public LoudnessExportProcessor {
   void processBlock(juce::AudioBuffer<float>& buffer,
                     juce::MidiBuffer& midiMessages) override;
 
-  void releaseResources() override;
-
  private:
-  bool exportCompleted_;
-  int estimatedSamplesToProcess_;
-  int processedSamples_;
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
+      PremiereProLoudnessExportProcessor)
 };

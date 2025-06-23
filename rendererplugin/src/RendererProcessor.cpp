@@ -93,7 +93,7 @@ RendererProcessor::RendererProcessor()
   roomSetupRepository_.registerListener(this);
 }
 
-RendererProcessor::~RendererProcessor() {}
+RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {

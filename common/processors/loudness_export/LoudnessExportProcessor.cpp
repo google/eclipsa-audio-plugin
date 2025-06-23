@@ -256,9 +256,6 @@ void LoudnessExportProcessor::initializeLoudnessExport(FileExport& config) {
   startTime_ = config.getStartTime();
   endTime_ = config.getEndTime();
 
-  // Get all mix presentation loudnesses from the repository
-  // loudnessRepo_.getAll(mixPresentationLoudnesses_);
-
   intializeExportContainers();
 }
 
@@ -268,17 +265,17 @@ bool LoudnessExportProcessor::areLoudnessCalcsRequired(
     return false;
   }
 
-  // do not render
+  // Calculate the current time with the existing number of samples that have
+  // been processed
+  long currentTime = sampleTally_ / sampleRate_;
+  // update the sample tally
+  sampleTally_ += buffer.getNumSamples();
+  // with the updated sample tally, calculate the next time
+  long nextTime = sampleTally_ / sampleRate_;
+
   if (startTime_ != 0 || endTime_ != 0) {
     // Handle the case where startTime and endTime are set, implying we
     // are only bouncing a subset of the mix
-    // Calculate the current time with the existing number of samples that have
-    // been processed
-    long currentTime = sampleTally_ / sampleRate_;
-    // update the sample tally
-    sampleTally_ += buffer.getNumSamples();
-    // with the updated sample tally, calculate the next time
-    long nextTime = sampleTally_ / sampleRate_;
 
     // do not render
     if (currentTime < startTime_ || nextTime > endTime_) {
