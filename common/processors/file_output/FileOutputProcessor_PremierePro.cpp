@@ -47,8 +47,6 @@ void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
                                                    int samplesPerBlock) {
   FileExport config = fileExportRepository_.get();
 
-  LOG_ANALYTICS(0, "Entered FileOutputProcessor_PremierePro prepareToPlay");
-
   if (sampleRate != config.getSampleRate()) {
     LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro sample rate changed to " +
                          std::to_string(sampleRate));
@@ -104,22 +102,18 @@ void PremiereProFileOutputProcessor::processBlock(
     return;
   }
 
-  if (logProcessBlock) {
-    LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro processBlock called");
-    logProcessBlock = false;
-  }
-
-  if (processedSamples_ <= estimatedSamplesToProcess_) {
+  if (processedSamples_ + buffer.getNumSamples() < estimatedSamplesToProcess_) {
     processedSamples_ += buffer.getNumSamples();
 
     // Write the audio data to the wav file writers
     for (auto& writer : iamfWavFileWriters_) {
       writer->write(buffer);
     }
-  } else if (!exportCompleted_) {
+  }
+
+  if (processedSamples_ >= estimatedSamplesToProcess_ && !exportCompleted_) {
     LOG_ANALYTICS(0, "exportCompleted_ = true");
     exportCompleted_ = true;
     setNonRealtime(false);
-    logProcessBlock = true;
   }
 }

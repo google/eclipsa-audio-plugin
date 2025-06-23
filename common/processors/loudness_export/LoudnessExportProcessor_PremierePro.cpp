@@ -30,7 +30,6 @@ PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
       exportCompleted_(false) {
   // mixPresentationRepository_.registerListener(this);
   LOG_INFO(0, "PremierePro LoudnessExport Processor Instantiated \n");
-  performingRender_ = false;
 }
 
 PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
@@ -79,19 +78,6 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
 void PremiereProLoudnessExportProcessor::prepareToPlay(double sampleRate,
                                                        int samplesPerBlock) {
   FileExport config = fileExportRepository_.get();
-
-  // If the plugin is reinstantiated at the start of export, we need to
-  // reset the state
-
-  // if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
-  //   performingRender_ = true;
-  //   exportCompleted_ = false;
-  //   LOG_ANALYTICS(0,
-  //                 "LoudnessExport_PremiereProProcessor prepareToPlay called "
-  //                 "during export");
-  // } else {
-  //   LOG_ANALYTICS(0, "LoudnessExport_PremiereProProcessor prepareToPlay");
-  // }
   sampleRate_ = sampleRate;
   currentSamplesPerBlock_ = samplesPerBlock;
   sampleTally_ = 0;
@@ -111,22 +97,17 @@ void PremiereProLoudnessExportProcessor::processBlock(
     return;
   }
 
-  if (logProcessBlock) {
-    LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro processBlock called");
-    logProcessBlock = false;
-  }
-
-  if (processedSamples_ <= estimatedSamplesToProcess_) {
+  if (processedSamples_ + buffer.getNumSamples() < estimatedSamplesToProcess_) {
     processedSamples_ += buffer.getNumSamples();
 
     for (auto& exportContainer : exportContainers_) {
       exportContainer.process(buffer);
     }
-  } else if (!exportCompleted_) {
-    LOG_ANALYTICS(0, "explortCompleted_ = true");
-    exportCompleted_ = true;
+  }
 
+  if (processedSamples_ >= estimatedSamplesToProcess_ && !exportCompleted_) {
+    LOG_ANALYTICS(0, "exportCompleted_ = true");
+    exportCompleted_ = true;
     setNonRealtime(false);
-    logProcessBlock = true;  // reset for next process block
   }
 }
