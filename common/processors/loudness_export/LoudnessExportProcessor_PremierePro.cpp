@@ -30,14 +30,11 @@ PremiereProLoudnessExportProcessor::PremiereProLoudnessExportProcessor(
       exportCompleted_(false) {
   // mixPresentationRepository_.registerListener(this);
   LOG_INFO(0, "PremierePro LoudnessExport Processor Instantiated \n");
+  performingRender_ = false;
 }
 
 PremiereProLoudnessExportProcessor::~PremiereProLoudnessExportProcessor() {
   LOG_ANALYTICS(0, "LoudnessExportProcessor_PremierePro destructor called");
-  FileExport fileExportConfig = fileExportRepository_.get();
-  if (fileExportConfig.getInitiatedPremiereProExport()) {
-    LOG_ANALYTICS(0, "Export  was Initiated");
-  }
 }
 
 void PremiereProLoudnessExportProcessor::releaseResources() {
@@ -51,37 +48,31 @@ void PremiereProLoudnessExportProcessor::setNonRealtime(
                        (isNonRealtime ? "true" : "false"));
   FileExport config = fileExportRepository_.get();
 
-  if (config.getManualExport() && config.getInitiatedPremiereProExport()) {
-    LOG_ANALYTICS(0,
-                  "LoudnessExport_PremierePro called when manual export "
-                  "and export initiated both true. isNonRealtime: " +
-                      std::to_string(isNonRealtime));
+  if (!config.getManualExport()) {
+    performingRender_ = false;
+    return;
   }
+
   // Initialize the writer if we are rendering in offline mode
-  if (!performingRender_ && isNonRealtime && !exportCompleted_) {
+  if (!performingRender_ && isNonRealtime) {
     FileExport config = fileExportRepository_.get();
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
       initializeLoudnessExport(config);
-
-      config.setInitiatedPremiereProExport(true);
-      fileExportRepository_.update(config);
+      exportCompleted_ = false;
     }
     return;
   }
 
   // Stop rendering if we are switching back to online mode
   // copy loudness values from the map to the repository
-  if (!isNonRealtime && exportCompleted_) {
+  if (!isNonRealtime && exportCompleted_ && performingRender_) {
+    performingRender_ = false;
+    exportCompleted_ = false;  // ready for the next export
     LOG_ANALYTICS(0, "copying loudness metadata to repository");
     for (auto& exportContainer : exportContainers_) {
       copyExportContainerDataToRepo(exportContainer);
     }
-    performingRender_ = false;
-    exportCompleted_ = false;  // ready for the next export
-    FileExport fileExportConfig = fileExportRepository_.get();
-    fileExportConfig.setInitiatedPremiereProExport(false);
-    fileExportRepository_.update(fileExportConfig);
   }
 }
 
@@ -92,15 +83,15 @@ void PremiereProLoudnessExportProcessor::prepareToPlay(double sampleRate,
   // If the plugin is reinstantiated at the start of export, we need to
   // reset the state
 
-  if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
-    performingRender_ = true;
-    exportCompleted_ = false;
-    LOG_ANALYTICS(0,
-                  "LoudnessExport_PremiereProProcessor prepareToPlay called "
-                  "during export");
-  } else {
-    LOG_ANALYTICS(0, "LoudnessExport_PremiereProProcessor prepareToPlay");
-  }
+  // if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
+  //   performingRender_ = true;
+  //   exportCompleted_ = false;
+  //   LOG_ANALYTICS(0,
+  //                 "LoudnessExport_PremiereProProcessor prepareToPlay called "
+  //                 "during export");
+  // } else {
+  //   LOG_ANALYTICS(0, "LoudnessExport_PremiereProProcessor prepareToPlay");
+  // }
   sampleRate_ = sampleRate;
   currentSamplesPerBlock_ = samplesPerBlock;
   sampleTally_ = 0;
@@ -132,11 +123,10 @@ void PremiereProLoudnessExportProcessor::processBlock(
       exportContainer.process(buffer);
     }
   } else if (!exportCompleted_) {
+    LOG_ANALYTICS(0, "explortCompleted_ = true");
     exportCompleted_ = true;
-    performingRender_ = false;
 
     setNonRealtime(false);
-
-    LOG_ANALYTICS(0, "explortCompleted_ = true");
+    logProcessBlock = true;  // reset for next process block
   }
 }

@@ -16,6 +16,8 @@
 
 #include "FileOutputProcessor_PremierePro.h"
 
+#include <string>
+
 #include "logger/logger.h"
 
 //==============================================================================
@@ -33,10 +35,6 @@ PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
 
 PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {
   LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro destructor called");
-  FileExport fileExportConfig = fileExportRepository_.get();
-  if (fileExportConfig.getInitiatedPremiereProExport()) {
-    LOG_ANALYTICS(0, "Export Initiated");
-  }
 }
 
 void PremiereProFileOutputProcessor::releaseResources() {
@@ -48,18 +46,14 @@ void PremiereProFileOutputProcessor::releaseResources() {
 void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
                                                    int samplesPerBlock) {
   FileExport config = fileExportRepository_.get();
-  if (config.getInitiatedPremiereProExport() && config.getManualExport()) {
-    LOG_ANALYTICS(
-        0,
-        "FileOutputProcessor_PremierePro prepareToPlay called during export");
-    performingRender_ = true;
-    exportCompleted_ = false;
-  } else {
-    LOG_ANALYTICS(0,
-                  "FileOutputProcessor_PremierePro prepareToPlay will set "
-                  "sampleRate and samplesPerBlock, which updates the "
-                  "FileExportRepository");
+
+  LOG_ANALYTICS(0, "Entered FileOutputProcessor_PremierePro prepareToPlay");
+
+  if (sampleRate != config.getSampleRate()) {
+    LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro sample rate changed to " +
+                         std::to_string(sampleRate));
     config.setSampleRate(sampleRate);
+
     fileExportRepository_.update(config);
   }
 
@@ -80,31 +74,25 @@ void PremiereProFileOutputProcessor::setNonRealtime(
                        (isNonRealtime ? "true" : "false"));
   FileExport config = fileExportRepository_.get();
 
-  if (config.getManualExport() && config.getInitiatedPremiereProExport()) {
-    LOG_ANALYTICS(0,
-                  "FileOutputProcessor_PremierePro called when manual export "
-                  "and export initiated both true,. isNonRealtime: " +
-                      std::to_string(isNonRealtime));
+  if (!config.getManualExport()) {
+    performingRender_ = false;
+    return;
   }
 
   // Initialize the writer if we are rendering in offline mode
-  if (isNonRealtime && !performingRender_ && !exportCompleted_) {
+  if (isNonRealtime && !performingRender_) {
     if ((config.getAudioFileFormat() == AudioFileFormat::IAMF) &&
         (config.getExportAudio())) {
       initializeFileExport(config);
     }
-    config.setInitiatedPremiereProExport(true);
-    fileExportRepository_.update(config);
     return;
   }
 
   // Stop rendering if we are switching back to online mode
-  if (!isNonRealtime && exportCompleted_) {
+  if (!isNonRealtime && performingRender_ && exportCompleted_) {
     closeFileExport(config);
+    performingRender_ = false;
     exportCompleted_ = false;
-
-    config.setInitiatedPremiereProExport(false);
-    fileExportRepository_.update(config);
   }
 }
 
@@ -129,10 +117,9 @@ void PremiereProFileOutputProcessor::processBlock(
       writer->write(buffer);
     }
   } else if (!exportCompleted_) {
-    exportCompleted_ = true;
-    performingRender_ = false;
-    setNonRealtime(false);
-
     LOG_ANALYTICS(0, "exportCompleted_ = true");
+    exportCompleted_ = true;
+    setNonRealtime(false);
+    logProcessBlock = true;
   }
 }

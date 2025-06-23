@@ -87,8 +87,7 @@ class FileExport final : public RepositoryItemBase {
              bool exportAudioElements, bool exportAudio, bool exportVideo,
              juce::String videoSource, juce::String videoExportFolder,
              bool manualExport, FileProfile profile, int flac_compression_level,
-             int opus_total_bitrate, int lpcm_sample_size,
-             bool initiatedPremiereProExport = false);
+             int opus_total_bitrate, int lpcm_sample_size);
 
   ~FileExport() = default;
 
@@ -112,7 +111,6 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(juce::String, videoSource, VideoSource);
   EXPORT_VALUE(juce::String, videoExportFolder, VideoExportFolder);
   EXPORT_VALUE(bool, manualExport, ManualExport);
-  EXPORT_VALUE(bool, initiatedPremiereProExport, InitiatedPremiereProExport);
   EXPORT_VALUE(FileProfile, profile, Profile);
   EXPORT_VALUE(int, flac_compression_level, FlacCompressionLevel);
   EXPORT_VALUE(int, opus_total_bitrate, OpusTotalBitrate);

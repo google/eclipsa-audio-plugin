@@ -240,13 +240,11 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
     FileExport initialConfig =
         fileExportRepository_.get();  // Get the initial file export config
 
-    if (initialConfig.getInitiatedPremiereProExport() &&
-        initialConfig.getManualExport()) {
-      LOG_ANALYTICS(instanceId_,
-                    "setStateInformation: Calling prepareToPlay for Premiere
-                    " "Pro w/ Manual Export Initiated");
-      prepareToPlay(initialConfig.getSampleRate(), 32);
-      return;
+    if (initialConfig.getManualExport()) {
+      LOG_ANALYTICS(
+          instanceId_,
+          "setStateInformation: Calling setNonRealTime(true) for Premiere Pro");
+      setNonRealtime(true);
     }
   }
 }

@@ -38,8 +38,11 @@ WavFileOutputProcessor::~WavFileOutputProcessor() {}
 void WavFileOutputProcessor::prepareToPlay(double sampleRate,
                                            int samplesPerBlock) {
   FileExport configParams = fileExportRepository_.get();
-  configParams.setSampleRate(sampleRate);
-  fileExportRepository_.update(configParams);
+  if (sampleRate != configParams.getSampleRate()) {
+    configParams.setSampleRate(sampleRate);
+    fileExportRepository_.update(configParams);
+  }
+
   numSamples_ = samplesPerBlock;
 }
 

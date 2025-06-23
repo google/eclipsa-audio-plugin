@@ -156,8 +156,12 @@ void FileOutputProcessor::updateIamfMDFromRepository(
 void FileOutputProcessor::prepareToPlay(double sampleRate,
                                         int samplesPerBlock) {
   FileExport configParams = fileExportRepository_.get();
-  configParams.setSampleRate(sampleRate);
-  fileExportRepository_.update(configParams);
+  if (configParams.getSampleRate() != sampleRate) {
+    LOG_ANALYTICS(0, "FileOutputProcessor sample rate changed to " +
+                         std::to_string(sampleRate));
+    configParams.setSampleRate(sampleRate);
+    fileExportRepository_.update(configParams);
+  }
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
   sampleRate_ = sampleRate;
