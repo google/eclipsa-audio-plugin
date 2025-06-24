@@ -15,24 +15,24 @@
     limitations under the License.
 -->
 <installer-gui-script minSpecVersion="1">
-    <title>Eclipsa Plugins Installer</title>
+    <title>Eclipsa AAX Plugins Installer</title>
 
     <!-- License agreement the user must accept -->
     <license file="../LICENSE" />
 
-    <!-- Allow user to select installation location -->
-    <options customize="allow" />
+    <!-- Disable customization - force system-wide installation only -->
+    <options customize="never" />
 
-    <!-- Enable both options: system-wide installation and user-specific installation -->
-    <domains enable_localSystem="true" enable_currentUserHome="true" />
+    <!-- Enable only system-wide installation for AAX plugins -->
+    <domains enable_localSystem="true" enable_currentUserHome="false" />
 
     <!-- Choices of what to install (default) -->
     <choices-outline>
         <line choice="default" />
     </choices-outline>
 
-    <!-- Default choice for installing the plugins -->
-    <choice id="default" title="Eclipsa Plugins">
+    <!-- Default choice for installing the AAX plugins -->
+    <choice id="default" title="Eclipsa AAX Plugins">
         <pkg-ref id="com.eclipsaproject.plugins" />
     </choice>
 

@@ -172,6 +172,10 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                      juce::MidiBuffer& midiMessages) {
   juce::ignoreUnused(midiMessages);
 
+#if JUCE_DEBUG
+  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
+#endif
+
   juce::ScopedNoDenormals noDenormals;
   auto totalNumInputChannels = getTotalNumInputChannels();
   auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -298,18 +302,23 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 }
 
 void RendererProcessor::checkManualOfflineStartStop() {
-  // This is utilized by debug builds to perform the manual bounce operation
+// This is utilized by debug builds to perform the manual bounce operation
+#if JUCE_DEBUG
+  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
   FileExport configParams = fileExportRepository_.get();
 
   if (isRealtime_ != configParams.getManualExport()) {
     isRealtime_ = configParams.getManualExport();
     setNonRealtime(isRealtime_);
   }
+#endif
 }
+
 void RendererProcessor::valueTreeRedirected(
     juce::ValueTree& treeWhichHasBeenChanged) {
   checkManualOfflineStartStop();
 }
+
 void RendererProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
