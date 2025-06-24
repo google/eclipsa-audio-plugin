@@ -520,7 +520,11 @@ update_plugin_rpath() {
     log "Updating RPATHs for $plugin_type plugins"
     
     for plugin_path in "${plugin_paths[@]}"; do
-        local binary_path="$plugin_path/Contents/MacOS/$(basename "${plugin_path%.vst3}")"
+        if [[ "$plugin_type" == "VST3" ]]; then
+            local binary_path="$plugin_path/Contents/MacOS/$(basename "${plugin_path%.vst3}")"
+        elif [[ "$plugin_type" == "AU" ]]; then
+            local binary_path="$plugin_path/Contents/MacOS/$(basename "${plugin_path%.component}")"
+        fi
         
         if [ ! -f "$binary_path" ]; then
             log "ERROR: Plugin binary not found at $binary_path"
@@ -821,8 +825,8 @@ if [[ "$PLUGIN_FORMAT" == "au" ]]; then
         run_cmd "sudo cp -R \"./au_fixed/\"* \"./plugins_pkg/Library/Audio/Plug-Ins/Components/\""
         run_cmd "sudo rm -rf \"./au_fixed\""
     else
-        run_cmd "sudo cp -R \"$VST3_RENDERER_PLUGIN_SIGNED\" \"$VST3_AUDIOELEMENT_PLUGIN_SIGNED\" \
-            \"./plugins_pkg/Library/Audio/Plug-Ins/VST3/\""
+        run_cmd "sudo cp -R \"$AU_RENDERER_PLUGIN_SIGNED\" \"$AU_AUDIOELEMENT_PLUGIN_SIGNED\" \
+            \"./plugins_pkg/Library/Audio/Plug-Ins/Components/\""
     fi
 fi
 

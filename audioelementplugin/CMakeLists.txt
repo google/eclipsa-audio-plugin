@@ -83,6 +83,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
 endif()
 
-if(NOT BUILD_AAX AND NOT BUILD_VST3)
+if(NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for AudioElementPlugin.")
 endif()
