@@ -34,9 +34,8 @@ case "$PLUGIN_FORMAT" in
     vst3)
         FORMAT_SUFFIX="VST3"
         ;;
-    both)
-        echo "Error: 'both' format option is no longer supported. Use separate builds for aax and vst3"
-        exit 1
+    au)
+        FORMAT_SUFFIX="AU"
         ;;
     *)
         echo "Error: Invalid plugin format. Use PLUGIN_FORMAT=aax or PLUGIN_FORMAT=vst3"
@@ -137,17 +136,29 @@ VST3_AUDIOELEMENT_PLUGIN_BINARY="$VST3_AUDIOELEMENT_PLUGIN_SRC/Contents/MacOS/Ec
 VST3_RENDERER_PLUGIN_RESOURCES="$VST3_RENDERER_PLUGIN_SRC/Contents/Resources"
 VST3_AUDIOELEMENT_PLUGIN_RESOURCES="$VST3_AUDIOELEMENT_PLUGIN_SRC/Contents/Resources"
 
+# AU Plugin Paths
+AU_RENDERER_PLUGIN_SRC="build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Renderer.component"
+AU_AUDIOELEMENT_PLUGIN_SRC="build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Element Plugin.component"
+AU_RENDERER_PLUGIN_BINARY="$AU_RENDERER_PLUGIN_SRC/Contents/MacOS/Eclipsa Audio Renderer"
+AU_AUDIOELEMENT_PLUGIN_BINARY="$AU_AUDIOELEMENT_PLUGIN_SRC/Contents/MacOS/Eclipsa Audio Element Plugin"
+AU_RENDERER_PLUGIN_RESOURCES="$AU_RENDERER_PLUGIN_SRC/Contents/Resources"
+AU_AUDIOELEMENT_PLUGIN_RESOURCES="$AU_AUDIOELEMENT_PLUGIN_SRC/Contents/Resources"
+
 # Signing Directories
 WRAPPED_OUTPUT_DIR="build/wrapped_plugins"
 AAX_RENDERER_PLUGIN_SIGNING_DIR="$WRAPPED_OUTPUT_DIR/AAX"
 AAX_AUDIOELEMENT_PLUGIN_SIGNING_DIR="$WRAPPED_OUTPUT_DIR/AAX"
 VST3_RENDERER_PLUGIN_SIGNING_DIR="$WRAPPED_OUTPUT_DIR/VST3"
 VST3_AUDIOELEMENT_PLUGIN_SIGNING_DIR="$WRAPPED_OUTPUT_DIR/VST3"
+AU_RENDERER_PLUGIN_SIGNING_DIR="$WRAPPED_OUTPUT_DIR/AU"
+AU_AUDIOELEMENT_PLUGIN_SIGNING_DIR="$WRAPPED_OUTPUT_DIR/AU"
 
 AAX_RENDERER_PLUGIN_SIGNED="$AAX_RENDERER_PLUGIN_SIGNING_DIR/Eclipsa Audio Renderer.aaxplugin"
 AAX_AUDIOELEMENT_PLUGIN_SIGNED="$AAX_AUDIOELEMENT_PLUGIN_SIGNING_DIR/Eclipsa Audio Element Plugin.aaxplugin"
 VST3_RENDERER_PLUGIN_SIGNED="$VST3_RENDERER_PLUGIN_SIGNING_DIR/Eclipsa Audio Renderer.vst3"
 VST3_AUDIOELEMENT_PLUGIN_SIGNED="$VST3_AUDIOELEMENT_PLUGIN_SIGNING_DIR/Eclipsa Audio Element Plugin.vst3"
+AU_RENDERER_PLUGIN_SIGNED="$AU_RENDERER_PLUGIN_SIGNING_DIR/Eclipsa Audio Renderer.component"
+AU_AUDIOELEMENT_PLUGIN_SIGNED="$AU_AUDIOELEMENT_PLUGIN_SIGNING_DIR/Eclipsa Audio Element Plugin.component"
 
 # Packaging
 PACKAGING_STAGING_DIR="./packaging_stage"
@@ -168,6 +179,8 @@ if [ "$PLUGIN_FORMAT" = "aax" ]; then
     DISTRIBUTION_XML="./scripts/distribution_aax.xml"
 elif [ "$PLUGIN_FORMAT" = "vst3" ]; then
     DISTRIBUTION_XML="./scripts/distribution_vst3.xml"
+elif [ "$PLUGIN_FORMAT" = "au" ]; then
+    DISTRIBUTION_XML="./scripts/distribution_au.xml"
 fi
 COMPONENT_PKG_DIR="build/component_pkgs"
 COMPONENT_PKG_PATH="$COMPONENT_PKG_DIR/EclipsaPlugins.pkg"
@@ -265,6 +278,11 @@ fi
 if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     if [ ! -d "$VST3_RENDERER_PLUGIN_SRC" ]; then echo "Error: VST3 Renderer plugin source not found at $VST3_RENDERER_PLUGIN_SRC"; exit 1; fi
     if [ ! -d "$VST3_AUDIOELEMENT_PLUGIN_SRC" ]; then echo "Error: VST3 AudioElement plugin source not found at $VST3_AUDIOELEMENT_PLUGIN_SRC"; exit 1; fi
+fi
+
+if [[ "$PLUGIN_FORMAT" == "au" ]]; then
+    if [ ! -d "$AU_RENDERER_PLUGIN_SRC" ]; then echo "Error: AU Renderer plugin source not found at $AU_RENDERER_PLUGIN_SRC"; exit 1; fi
+    if [ ! -d "$AU_AUDIOELEMENT_PLUGIN_SRC" ]; then echo "Error: AU AudioElement plugin source not found at $AU_AUDIOELEMENT_PLUGIN_SRC"; exit 1; fi
 fi
 
 # Check DMG-related files
