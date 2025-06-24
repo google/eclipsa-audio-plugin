@@ -30,7 +30,7 @@
 # 2. Set environment variables for signing identities
 
 # Parse command line arguments
-PLUGIN_FORMAT="aax"  # Default to AU
+PLUGIN_FORMAT="aax"  # Default to AAX
 
 for arg in "$@"; do
     case $arg in

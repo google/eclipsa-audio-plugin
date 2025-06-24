@@ -23,8 +23,8 @@ BRANCH_NAME="${BRANCH_NAME_RAW//\//_}"
 
 SKIP_PACE_WRAPPING="${SKIP_PACE_WRAPPING:-false}"
 
-# Plugin format selection (AAX or VST3 only)
-PLUGIN_FORMAT="${PLUGIN_FORMAT:-aax}" # Default to AAX, options: aax, vst3
+# Plugin format selection (AAX, VST3 or AU only)
+PLUGIN_FORMAT="${PLUGIN_FORMAT:-aax}" # Default to AAX, options: aax, vst3, au
 
 # Set format suffix based on plugin format
 case "$PLUGIN_FORMAT" in
@@ -38,7 +38,7 @@ case "$PLUGIN_FORMAT" in
         FORMAT_SUFFIX="AU"
         ;;
     *)
-        echo "Error: Invalid plugin format. Use PLUGIN_FORMAT=aax or PLUGIN_FORMAT=vst3"
+        echo "Error: Invalid plugin format. Use PLUGIN_FORMAT=aax , PLUGIN_FORMAT=vst3 or PLUGIN_FORMAT=au."
         exit 1
         ;;
 esac
