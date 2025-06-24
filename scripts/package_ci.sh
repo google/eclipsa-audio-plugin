@@ -328,6 +328,18 @@ if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     find "$VST3_AUDIOELEMENT_PLUGIN_RESOURCES" -name '*.dylib' -print0 | while IFS= read -r -d $'\0' dylib; do sign_file_dev_app "$dylib"; done
 fi
 
+if [[ "$PLUGIN_FORMAT" == "au" ]]; then
+    # Adjust RPATH for AU plugins
+    echo "Processing AU plugins..."
+    adjust_rpath "$AU_RENDERER_PLUGIN_BINARY"
+    adjust_rpath "$AU_AUDIOELEMENT_PLUGIN_BINARY"
+
+    # Sign internal AU dylibs
+    echo "Signing AU internal dylibs..."
+    find "$AU_RENDERER_PLUGIN_RESOURCES" -name '*.dylib' -print0 | while IFS= read -r -d $'\0' dylib; do sign_file_dev_app "$dylib"; done
+    find "$AU_AUDIOELEMENT_PLUGIN_RESOURCES" -name '*.dylib' -print0 | while IFS= read -r -d $'\0' dylib; do sign_file_dev_app "$dylib"; done
+fi
+
 # 3. Sign and process plugins based on format
 echo "Processing and signing plugins..."
 
