@@ -487,6 +487,105 @@ EOF
     echo "VST3 plugin processing completed."
 fi
 
+# Process au Plugins
+if [[ "$PLUGIN_FORMAT" == "au" ]]; then
+    echo "Processing au plugins..."
+    
+    # Copy to output directories first
+    mkdir -p "$(dirname "$AU_RENDERER_PLUGIN_SIGNED")"
+    mkdir -p "$(dirname "$AU_AUDIOELEMENT_PLUGIN_SIGNED")"
+    cp -R "$AU_RENDERER_PLUGIN_SRC" "$AU_RENDERER_PLUGIN_SIGNED" || { echo "Failed to copy AU Renderer plugin"; exit 1; }
+    cp -R "$AU_AUDIOELEMENT_PLUGIN_SRC" "$AU_AUDIOELEMENT_PLUGIN_SIGNED" || { echo "Failed to copy AU AudioElement plugin"; exit 1; }
+    
+    # Create entitlements file for hardened runtime
+    entitlements_file=$(mktemp)
+    cat > "$entitlements_file" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.disable-library-validation</key><true/>
+    <key>com.apple.security.automation.apple-events</key><true/>
+    <key>com.apple.security.device.audio-input</key><true/>
+    <key>com.apple.security.device.microphone</key><true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+    <key>com.apple.security.cs.allow-jit</key><true/>
+</dict>
+</plist>
+EOF
+    
+    # Sign AU components in the right order: dylibs first, then executables, then the bundle itself
+    echo "Signing AU Renderer plugin components..."
+    # Sign all frameworks and dylibs first
+    find "$AU_RENDERER_PLUGIN_SIGNED" -type f -name "*.dylib" | while read -r file; do
+        sign_file_dev_app "$file"
+    done
+    
+    # Sign all executable binaries
+    find "$AU_RENDERER_PLUGIN_SIGNED/Contents/MacOS" -type f | while read -r file; do
+        codesign --keychain "$KEYCHAIN_PATH" \
+                 --sign "$DEV_APP_SIGNING_IDENTITY" \
+                 --timestamp \
+                 --force \
+                 --options runtime \
+                 --entitlements "$entitlements_file" \
+                 "$file" || { echo "Failed to sign binary: $file"; exit 1; }
+        echo "Successfully signed binary: $file"
+    done
+    
+    # Sign the main bundle
+    codesign --keychain "$KEYCHAIN_PATH" \
+             --sign "$DEV_APP_SIGNING_IDENTITY" \
+             --timestamp \
+             --force \
+             --options runtime \
+             --entitlements "$entitlements_file" \
+             --deep \
+             "$AU_RENDERER_PLUGIN_SIGNED" || { echo "Failed to sign AU Renderer bundle"; exit 1; }
+    
+    echo "Signing AU AudioElement plugin components..."
+    # Sign all frameworks and dylibs first
+    find "$AU_AUDIOELEMENT_PLUGIN_SIGNED" -type f -name "*.dylib" | while read -r file; do
+        sign_file_dev_app "$file"
+    done
+    
+    # Sign all executable binaries
+    find "$AU_AUDIOELEMENT_PLUGIN_SIGNED/Contents/MacOS" -type f | while read -r file; do
+        codesign --keychain "$KEYCHAIN_PATH" \
+                 --sign "$DEV_APP_SIGNING_IDENTITY" \
+                 --timestamp \
+                 --force \
+                 --options runtime \
+                 --entitlements "$entitlements_file" \
+                 "$file" || { echo "Failed to sign binary: $file"; exit 1; }
+        echo "Successfully signed binary: $file"
+    done
+    
+    # Sign the main bundle
+    codesign --keychain "$KEYCHAIN_PATH" \
+             --sign "$DEV_APP_SIGNING_IDENTITY" \
+             --timestamp \
+             --force \
+             --options runtime \
+             --entitlements "$entitlements_file" \
+             --deep \
+             "$AU_AUDIOELEMENT_PLUGIN_SIGNED" || { echo "Failed to sign AU AudioElement bundle"; exit 1; }
+    
+    # Clean up
+    rm -f "$entitlements_file"
+    
+    # Verify AU plugins were processed
+    if [ ! -d "$AU_RENDERER_PLUGIN_SIGNED" ]; then echo "Error: AU Renderer plugin not found at $AU_RENDERER_PLUGIN_SIGNED"; exit 1; fi
+    if [ ! -d "$AU_AUDIOELEMENT_PLUGIN_SIGNED" ]; then echo "Error: AU AudioElement plugin not found at $AU_AUDIOELEMENT_PLUGIN_SIGNED"; exit 1; fi
+    
+    # Verify signatures
+    echo "Verifying AU plugin signatures..."
+    codesign --verify --deep --strict --verbose=2 "$AU_RENDERER_PLUGIN_SIGNED" || echo "Warning: AU Renderer signature verification had issues but continuing..."
+    codesign --verify --deep --strict --verbose=2 "$AU_AUDIOELEMENT_PLUGIN_SIGNED" || echo "Warning: AU AudioElement signature verification had issues but continuing..."
+    
+    echo "AU plugin processing completed."
+fi
+
 # 4. Prepare staging directory for PKG installer
 echo "Preparing files for packaging..."
 rm -rf "$PACKAGING_STAGING_DIR"
@@ -505,6 +604,13 @@ elif [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     echo "Adding VST3 plugins to package (staging area only)..."
     # Copy ONLY to staging area - postinstall will handle final placement to avoid permission conflicts
     cp -R "$VST3_RENDERER_PLUGIN_SIGNED" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/tmp/EclipsaVST3/" || { echo "Failed to copy VST3 plugins to temp location"; exit 1; }
+elif [[ "$PLUGIN_FORMAT" == "au" ]]; then
+    # au plugins structure - use staging area only, postinstall will handle final placement
+    mkdir -p "$PACKAGING_STAGING_DIR/Library/Application Support/Eclipsa Audio Plugins"
+    mkdir -p "$PACKAGING_STAGING_DIR/tmp/EclipsaAU"
+    echo "Adding AU plugins to package (staging area only)..."
+    # Copy ONLY to staging area - postinstall will handle final placement to avoid permission conflicts
+    cp -R "$AU_RENDERER_PLUGIN_SIGNED" "$AU_AUDIOELEMENT_PLUGIN_SIGNED" "$PACKAGING_STAGING_DIR/tmp/EclipsaAU/" || { echo "Failed to copy AU plugins to temp location"; exit 1; }
 fi
 
 # Copy license for all formats
@@ -556,6 +662,49 @@ if [[ "$PLUGIN_FORMAT" == "vst3" ]]; then
     chmod +x "$SCRIPTS_DIR/postinstall"
     
     echo "Building VST3 component package with preinstall and postinstall scripts..."
+    pkgbuild --root "$PACKAGING_STAGING_DIR" \
+        --identifier "com.eclipsaproject.plugins" \
+        --install-location "/" \
+        --scripts "$SCRIPTS_DIR" \
+        --version "1.0.0" \
+        --sign "$DEV_INSTALLER_IDENTITY" \
+        --preserve-xattr \
+        "$COMPONENT_PKG_PATH" || { echo "pkgbuild failed"; exit 1; }
+    
+    # Clean up temporary scripts directory
+    rm -rf "$SCRIPTS_DIR"
+elif [[ "$PLUGIN_FORMAT" == "au" ]]; then
+    # For AU, create scripts directory with preinstall and postinstall scripts
+    SCRIPTS_DIR="./au_scripts_ci"
+    mkdir -p "$SCRIPTS_DIR"
+    
+    # Find the AU preinstall script
+    if [ -f "./preinstall_au" ]; then
+        AU_PREINSTALL="./preinstall_au"
+    elif [ -f "./scripts/preinstall_au" ]; then
+        AU_PREINSTALL="./scripts/preinstall_au"
+    else
+        echo "Error: AU preinstall script not found. Looked for ./preinstall_au and ./scripts/preinstall_au"
+        exit 1
+    fi
+
+    # Find the AU postinstall script
+    if [ -f "./postinstall_au" ]; then
+        AU_POSTINSTALL="./postinstall_au"
+    elif [ -f "./scripts/postinstall_au" ]; then
+        AU_POSTINSTALL="./scripts/postinstall_au"
+    else
+        echo "Error: AU postinstall script not found. Looked for ./postinstall_au and ./scripts/postinstall_au"
+        exit 1
+    fi
+    
+    # Copy AU preinstall and postinstall scripts
+    cp "$AU_PREINSTALL" "$SCRIPTS_DIR/preinstall"
+    chmod +x "$SCRIPTS_DIR/preinstall"
+    cp "$AU_POSTINSTALL" "$SCRIPTS_DIR/postinstall"
+    chmod +x "$SCRIPTS_DIR/postinstall"
+    
+    echo "Building AU component package with preinstall and postinstall scripts..."
     pkgbuild --root "$PACKAGING_STAGING_DIR" \
         --identifier "com.eclipsaproject.plugins" \
         --install-location "/" \
@@ -831,6 +980,13 @@ This package contains VST3 plugins compatible with VST3-supporting DAWs.
 • VST3 plugins: /Library/Audio/Plug-Ins/VST3
 EOF
         ;;
+    au)
+    cat >> "$DMG_STAGING_DIR/Documentation/Documentation.txt" << EOF
+This package contains AU plugins compatible with AU-supporting DAWs.
+
+## Installation Locations
+• AU plugins: /Library/Audio/Plug-Ins/Components
+EOF
 esac
 
 # Process background image if available - with optimal sizing for the DMG window
