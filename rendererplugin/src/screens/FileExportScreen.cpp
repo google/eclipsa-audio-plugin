@@ -460,12 +460,19 @@ void FileExportScreen::paint(juce::Graphics& g) {
   }
 
   // Draw in the manual export button
+  if (juce::PluginHostType().isPremiere()) {
+    bounds.removeFromTop(columnPadding);
+    row = bounds.removeFromTop(rowHeight);
+    addAndMakeVisible(exportButton_);
+    exportButton_.setBounds(row.removeFromLeft(200));
+  } else {
 #if JUCE_DEBUG
-  bounds.removeFromTop(columnPadding);
-  row = bounds.removeFromTop(rowHeight);
-  addAndMakeVisible(exportButton_);
-  exportButton_.setBounds(row.removeFromLeft(200));
+    bounds.removeFromTop(columnPadding);
+    row = bounds.removeFromTop(rowHeight);
+    addAndMakeVisible(exportButton_);
+    exportButton_.setBounds(row.removeFromLeft(200));
 #endif
+  }
 };
 
 juce::String FileExportScreen::timeToString(int timeInSeconds) {

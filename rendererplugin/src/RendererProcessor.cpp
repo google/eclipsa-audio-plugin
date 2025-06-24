@@ -53,12 +53,22 @@ RendererProcessor::RendererProcessor()
   // Construct processor chain.
   audioProcessors_.push_back(
       std::make_unique<GainProcessor>(&multichannelgainRepository_));
-  audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
-      fileExportRepository_, mixPresentationRepository_,
-      mixPresentationLoudnessRepository_, audioElementRepository_));
-  audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
-      fileExportRepository_, audioElementRepository_,
-      mixPresentationRepository_, mixPresentationLoudnessRepository_));
+  if (juce::PluginHostType().isPremiere()) {
+    audioProcessors_.push_back(
+        std::make_unique<PremiereProLoudnessExportProcessor>(
+            fileExportRepository_, mixPresentationRepository_,
+            mixPresentationLoudnessRepository_, audioElementRepository_));
+    audioProcessors_.push_back(std::make_unique<PremiereProFileOutputProcessor>(
+        fileExportRepository_, audioElementRepository_,
+        mixPresentationRepository_, mixPresentationLoudnessRepository_));
+  } else {
+    audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
+        fileExportRepository_, mixPresentationRepository_,
+        mixPresentationLoudnessRepository_, audioElementRepository_));
+    audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
+        fileExportRepository_, audioElementRepository_,
+        mixPresentationRepository_, mixPresentationLoudnessRepository_));
+  }
   audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>());
   channelMonitorProcessor_ =
       static_cast<ChannelMonitorProcessor*>(audioProcessors_.back().get());
@@ -83,7 +93,7 @@ RendererProcessor::RendererProcessor()
   roomSetupRepository_.registerListener(this);
 }
 
-RendererProcessor::~RendererProcessor() {}
+RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
@@ -224,6 +234,18 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
   updateRepositories();
 
   configureOutputBus();
+
+  if (juce::PluginHostType().isPremiere()) {
+    FileExport initialConfig =
+        fileExportRepository_.get();  // Get the initial file export config
+
+    if (initialConfig.getManualExport()) {
+      LOG_ANALYTICS(
+          instanceId_,
+          "setStateInformation: Calling setNonRealTime(true) for Premiere Pro");
+      setNonRealtime(true);
+    }
+  }
 }
 
 void RendererProcessor::updateRepositories() {
@@ -284,6 +306,7 @@ void RendererProcessor::checkManualOfflineStartStop() {
 #if JUCE_DEBUG
   juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
   FileExport configParams = fileExportRepository_.get();
+
   if (isRealtime_ != configParams.getManualExport()) {
     isRealtime_ = configParams.getManualExport();
     setNonRealtime(isRealtime_);

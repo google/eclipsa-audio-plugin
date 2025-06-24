@@ -36,7 +36,7 @@
 #include "user_metadata.pb.h"
 
 //==============================================================================
-class FileOutputProcessor final : public ProcessorBase {
+class FileOutputProcessor : public ProcessorBase {
  public:
   //==============================================================================
   FileOutputProcessor(
@@ -91,7 +91,7 @@ class FileOutputProcessor final : public ProcessorBase {
   void initIamfMetadata(iamf_tools_cli_proto::UserMetadata& iamfMD,
                         juce::String outputFilename) const;
 
- private:
+ protected:
   void dumpExportLogs(const absl::Status& status) const;
 
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
@@ -109,6 +109,12 @@ class FileOutputProcessor final : public ProcessorBase {
         .withLabel(label);
   }
 
+  void initializeFileExport(FileExport& config);
+
+  void closeFileExport(FileExport& config);
+
+  bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
+
   bool performingRender_;  // True if we are rendering in offline mode
   FileExportRepository& fileExportRepository_;
   AudioElementRepository& audioElementRepository_;
@@ -119,7 +125,7 @@ class FileOutputProcessor final : public ProcessorBase {
   long sampleRate_;
   int startTime_;
   int endTime_;
-  long samplesProcessed_ = 0;
+  long sampleTally_;
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FileOutputProcessor)
 };
