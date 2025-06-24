@@ -18,9 +18,11 @@
 # This script builds installers for AAX plugins or VST3 plugins separately:
 # --format=aax: AAX plugins only (default) - installs for all users only
 # --format=vst3: VST3 plugins only - allows user to choose installation location
+# -- format=au: AU plugins only - allows user to choose installation location
 #
 # AAX plugins: Uses wraptool if present, otherwise uses ad-hoc signing
 # VST3 plugins: Uses standard Apple code signing
+# AU plugins: Uses standard Apple code signing
 #
 # For official code signing and notarization:
 # 1. Create a keychain profile: 
@@ -45,7 +47,7 @@ case $PLUGIN_FORMAT in
         echo "Building for plugin format(s): $PLUGIN_FORMAT"
         ;;
     *)
-        echo "Error: Invalid format option. Use --format=aax, --format=vst3, or --format=both"
+        echo "Error: Invalid format option. Use --format=aax, --format=vst3, or --format=au"
         exit 1
         ;;
 esac
@@ -125,7 +127,7 @@ LICENSE_FILE="${ECLIPSA_LICENSE_FILE:-../LICENSE}"
 # CORE PATHS - NORMALLY DON'T NEED TO MODIFY
 # ======================================================
 
-# Define paths to the plugins - AAX and VST3
+# Define paths to the plugins - AAX, VST3 and AU
 # AAX Plugin Paths
 AAX_RENDERER_PLUGIN_BINARY="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AAX/Eclipsa Audio Renderer.aaxplugin/Contents/MacOS/Eclipsa Audio Renderer"
 AAX_AUDIOELEMENT_PLUGIN_BINARY="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AAX/Eclipsa Audio Element Plugin.aaxplugin/Contents/MacOS/Eclipsa Audio Element Plugin"
@@ -760,7 +762,6 @@ process_au_plugins() {
 # Process plugins based on selected format
 case "$PLUGIN_FORMAT" in
     aax)
-    aax)
         process_aax_plugins
         ;;
 esac
@@ -856,6 +857,55 @@ case "$PLUGIN_FORMAT" in
         
         # Clean up temporary scripts directory
         run_cmd "rm -rf ./vst3_scripts"
+        ;;
+    au)
+     # AU: Create relocatable package with postinstall script to handle location
+        log "Preparing directory structure for AU packaging (relocatable)"
+
+        # Clean up any existing package directories
+        run_cmd "sudo rm -rf ./plugins_pkg"
+        
+        # Create package structure - ONLY use staging area to avoid file conflicts
+        # The postinstall script will handle moving to the correct final location
+        run_cmd "mkdir -p \"./plugins_pkg/tmp/EclipsaAU\""
+        run_cmd "mkdir -p \"./plugins_pkg/Library/Application Support/Eclipsa Audio Plugins\""
+
+        # Handle AU plugins, fixing nested bundles if needed
+        if [ -d "$AU_RENDERER_PLUGIN_SIGNED/Eclipsa Audio Renderer.component" ]; then
+            log "Warning: Found nested AU bundle structure, fixing..."
+            run_cmd "sudo mkdir -p \"./au_fixed\""
+            run_cmd "sudo cp -R \"$AU_RENDERER_PLUGIN_SIGNED/Eclipsa Audio Renderer.component\" \
+                \"$AU_AUDIOELEMENT_PLUGIN_SIGNED/Eclipsa Audio Element Plugin.component\" \"./au_fixed/\""
+            # Copy ONLY to staging area - postinstall will handle final placement
+            run_cmd "sudo cp -R \"./au_fixed/\"* \"./plugins_pkg/tmp/EclipsaAU/\""
+            run_cmd "sudo rm -rf \"./au_fixed\""
+        else
+            # Copy ONLY to staging area - postinstall will handle final placement
+            run_cmd "sudo cp -R \"$AU_RENDERER_PLUGIN_SIGNED\" \"$AU_AUDIOELEMENT_PLUGIN_SIGNED\" \
+                \"./plugins_pkg/tmp/EclipsaAU/\""
+        fi
+        
+        # Copy license
+        run_cmd "sudo cp \"$LICENSE_FILE\" \"./plugins_pkg/Library/Application Support/Eclipsa Audio Plugins/\""
+        
+        # Set ownership and permissions
+        CURRENT_USER=$(whoami)
+        CURRENT_GROUP=$(id -g -n "$(whoami)")
+        run_cmd "sudo chown -R $CURRENT_USER:$CURRENT_GROUP ./plugins_pkg"
+        run_cmd "sudo chmod -R 755 \"./plugins_pkg\""
+
+        # Create a temporary scripts directory with both preinstall and postinstall scripts for AU
+        run_cmd "mkdir -p ./au_scripts"
+        run_cmd "cp ./preinstall_au ./au_scripts/preinstall"
+        run_cmd "cp ./postinstall_au ./au_scripts/postinstall"
+        run_cmd "chmod +x ./au_scripts/preinstall"
+        run_cmd "chmod +x ./au_scripts/postinstall"
+
+        # Build package with AU-specific preinstall and postinstall scripts
+        run_cmd "pkgbuild --root \"./plugins_pkg\" --identifier \"$BUNDLE_IDENTIFIER\" --install-location \"/\" --scripts \"./au_scripts\" --version \"$VERSION\" \"./$PKG_NAME\""
+
+        # Clean up temporary scripts directory
+        run_cmd "rm -rf ./au_scripts"
         ;;
 esac
 
