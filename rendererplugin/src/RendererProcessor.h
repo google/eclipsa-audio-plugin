@@ -108,8 +108,6 @@ class RendererProcessor final : public ProcessorBase,
     return channelMonitorProcessor_;
   }
 
-  inline static const juce::Identifier kFileExportKey{"file_export"};
-
  private:
   void updateRepositories();
 
@@ -146,6 +144,7 @@ class RendererProcessor final : public ProcessorBase,
   RendererPluginSyncServer syncServer_;
 
   FileExportRepository fileExportRepository_;
+  inline static const juce::Identifier kFileExportKey{"file_export"};
 
   MixPresentationRepository mixPresentationRepository_;
   inline static const juce::Identifier kMixPresentationsKey{

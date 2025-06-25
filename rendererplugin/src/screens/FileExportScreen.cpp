@@ -597,7 +597,7 @@ void FileExportScreen::configureCustomCodecParameter(AudioCodec format) {
 
 void FileExportScreen::valueTreeRedirected(
     juce::ValueTree& treeWhichHasBeenChanged) {
-  if (treeWhichHasBeenChanged.getType() == RendererProcessor::kFileExportKey) {
+  if (treeWhichHasBeenChanged.getType() == repository_->getTree().getType()) {
     refreshFileExportComponents();
   } else {
     refreshComponents();
@@ -608,7 +608,7 @@ void FileExportScreen::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
   if (treeWhosePropertyHasChanged.getType() ==
-      RendererProcessor::kFileExportKey) {
+      repository_->getTree().getType()) {
     refreshFileExportComponents();
   } else {
     refreshComponents();
@@ -617,7 +617,7 @@ void FileExportScreen::valueTreePropertyChanged(
 
 void FileExportScreen::valueTreeChildAdded(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
-  if (childWhichHasBeenAdded.getType() == RendererProcessor::kFileExportKey) {
+  if (childWhichHasBeenAdded.getType() == repository_->getTree().getType()) {
     refreshFileExportComponents();
   } else {
     refreshComponents();
@@ -627,7 +627,7 @@ void FileExportScreen::valueTreeChildAdded(
 void FileExportScreen::valueTreeChildRemoved(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
     int indexFromWhichChildWasRemoved) {
-  if (childWhichHasBeenRemoved.getType() == RendererProcessor::kFileExportKey) {
+  if (childWhichHasBeenRemoved.getType() == repository_->getTree().getType()) {
     refreshFileExportComponents();
   } else {
     refreshComponents();
