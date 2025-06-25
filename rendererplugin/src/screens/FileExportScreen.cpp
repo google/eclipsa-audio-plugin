@@ -14,7 +14,10 @@
 
 #include "FileExportScreen.h"
 
+#include "../RendererProcessor.h"
+#include "components/src/EclipsaColours.h"
 #include "data_structures/src/FileExport.h"
+#include "data_structures/src/MixPresentation.h"
 
 FileExportScreen::FileExportScreen(MainEditor& editor,
                                    RepositoryCollection repos)
@@ -47,13 +50,14 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           "Select a file to output mux video to",
           juce::File::getSpecialLocation(juce::File::userDesktopDirectory),
           "*.mp4;*.mov"),
-      exportButton_("Start manual export"),
+      exportButton_("Start Export"),
       repository_(&repos.fioRepo_),
       aeRepository_(&repos.aeRepo_),
       mpRepository_(&repos.mpRepo_) {
   // Setup listeners to know when to redraw the screen
   aeRepository_->registerListener(this);
   mpRepository_->registerListener(this);
+  repository_->registerListener(this);
 
   // Fetch the current configuration for setting up the screen
   FileExport config = repository_->get();
@@ -255,13 +259,12 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Finally, set up the manual export button
   exportButton_.onClick = [this] {
     FileExport config = repository_->get();
+    if (juce::PluginHostType().isPremiere() && !validFileExportConfig(config)) {
+      return;
+    }
     config.setManualExport(!config.getManualExport());
     repository_->update(config);
     if (config.getManualExport()) {
-      exportButton_.setButtonText("Stop manual export");
-      exportButton_.setColour(juce::TextButton::ColourIds::textColourOffId,
-                              EclipsaColours::red);
-
       startTimer_.setEnabled(false);
       endTimer_.setEnabled(false);
       formatSelector_.setEnabled(false);
@@ -278,10 +281,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       browseVideoSourceButton_.setEnabled(false);
 
     } else {
-      exportButton_.setButtonText("Start manual export");
-      exportButton_.setColour(juce::TextButton::textColourOffId,
-                              EclipsaColours::green);
-
       startTimer_.setEnabled(true);
       endTimer_.setEnabled(true);
       formatSelector_.setEnabled(true);
@@ -303,12 +302,18 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
   // Redraw the non-configurable components
   refreshComponents();
+
+  addAndMakeVisible(warningLabel_);
+  warningLabel_.setColour(juce::Label::ColourIds::textColourId,
+                          EclipsaColours::red);
+  refreshFileExportComponents();
 }
 
 FileExportScreen::~FileExportScreen() {
   setLookAndFeel(nullptr);
   aeRepository_->deregisterListener(this);
   mpRepository_->deregisterListener(this);
+  repository_->deregisterListener(this);
 }
 
 void FileExportScreen::paint(juce::Graphics& g) {
@@ -462,9 +467,13 @@ void FileExportScreen::paint(juce::Graphics& g) {
   // Draw in the manual export button
   if (juce::PluginHostType().isPremiere()) {
     bounds.removeFromTop(columnPadding);
-    row = bounds.removeFromTop(rowHeight);
+    row = bounds.removeFromTop(rowHeight * 0.75f);
+    const auto rowReference = row;
     addAndMakeVisible(exportButton_);
-    exportButton_.setBounds(row.removeFromLeft(200));
+    exportButton_.setBounds(row.removeFromLeft(125));
+    auto labelBounds = rowReference;
+    labelBounds.removeFromLeft(exportButton_.getWidth());
+    warningLabel_.setBounds(labelBounds);
   } else {
 #if JUCE_DEBUG
     bounds.removeFromTop(columnPadding);
@@ -517,11 +526,6 @@ void FileExportScreen::refreshComponents() {
   // Set the mix presentation count
   mixPresentations_.setText(juce::String(mpRepository_->getItemCount()));
 
-  // Set the sample rate information if possible
-  FileExport config = repository_->get();
-  if (config.getSampleRate() > 0) {
-    sampleRate_.setText(juce::String(config.getSampleRate()) + " Hz");
-  }
   repaint();
 }
 
@@ -593,22 +597,87 @@ void FileExportScreen::configureCustomCodecParameter(AudioCodec format) {
 
 void FileExportScreen::valueTreeRedirected(
     juce::ValueTree& treeWhichHasBeenChanged) {
-  refreshComponents();
+  if (treeWhichHasBeenChanged.getType() == repository_->getTree().getType()) {
+    refreshFileExportComponents();
+  } else {
+    refreshComponents();
+  }
 }
 
 void FileExportScreen::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
-  refreshComponents();
+  if (treeWhosePropertyHasChanged.getType() ==
+      repository_->getTree().getType()) {
+    refreshFileExportComponents();
+  } else {
+    refreshComponents();
+  }
 }
 
 void FileExportScreen::valueTreeChildAdded(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
-  refreshComponents();
+  if (childWhichHasBeenAdded.getType() == repository_->getTree().getType()) {
+    refreshFileExportComponents();
+  } else {
+    refreshComponents();
+  }
 }
 
 void FileExportScreen::valueTreeChildRemoved(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
     int indexFromWhichChildWasRemoved) {
-  refreshComponents();
+  if (childWhichHasBeenRemoved.getType() == repository_->getTree().getType()) {
+    refreshFileExportComponents();
+  } else {
+    refreshComponents();
+  }
+}
+
+void FileExportScreen::refreshFileExportComponents() {
+  // Set the sample rate information if possible
+  FileExport config = repository_->get();
+  if (config.getSampleRate() > 0) {
+    sampleRate_.setText(juce::String(config.getSampleRate()) + " Hz");
+  }
+
+  if (config.getManualExport()) {
+    exportButton_.setButtonText("Stop Export");
+    exportButton_.setColour(juce::TextButton::ColourIds::textColourOffId,
+                            EclipsaColours::red);
+  } else {
+    exportButton_.setButtonText("Start Export");
+    exportButton_.setColour(juce::TextButton::textColourOffId,
+                            EclipsaColours::green);
+  }
+
+  repaint();
+}
+
+bool FileExportScreen::validFileExportConfig(const FileExport& config) {
+  // Check if the export file is valid
+  if (config.getExportFile().isEmpty()) {
+    warningLabel_.setVisible(true);
+    warningLabel_.setText("Must Specify a .IAMF File to Export",
+                          juce::NotificationType::dontSendNotification);
+    return false;
+  }
+
+  juce::OwnedArray<MixPresentation> mixPresentations;
+  mpRepository_->getAll(mixPresentations);
+
+  for (const auto mixPres : mixPresentations) {
+    if (mixPres->getAudioElements().size() == 0) {
+      warningLabel_.setVisible(true);
+      juce::Uuid mixId = mixPres->getId();
+      juce::String mixName = mpRepository_->get(mixId).value().getName();
+      warningLabel_.setText("No audio elements in mix presentation: " + mixName,
+                            juce::NotificationType::dontSendNotification);
+      return false;
+    }
+  }
+
+  warningLabel_.setVisible(false);
+
+  return true;
 }

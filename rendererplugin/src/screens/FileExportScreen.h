@@ -25,6 +25,7 @@
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_structures/src/FileExport.h"
 
 class FileExportScreen : public juce::Component,
                          public juce::ValueTree::Listener {
@@ -34,6 +35,8 @@ class FileExportScreen : public juce::Component,
   ~FileExportScreen();
 
   void refreshComponents();
+
+  void refreshFileExportComponents();
 
   void paint(juce::Graphics& g);
 
@@ -50,6 +53,8 @@ class FileExportScreen : public juce::Component,
   void configureCustomCodecParameter(AudioCodec format);
   juce::String timeToString(int timeInMs);
   int stringToTime(juce::String val);
+
+  bool validFileExportConfig(const FileExport& config);
 
   FileExportRepository* repository_;
   AudioElementRepository* aeRepository_;
@@ -98,4 +103,5 @@ class FileExportScreen : public juce::Component,
 
   // Manual export button -- To be removed later
   juce::TextButton exportButton_;
+  juce::Label warningLabel_;
 };
