@@ -92,6 +92,12 @@ if(BUILD_VST3)
     copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
 endif()
 
-if(NOT BUILD_AAX AND NOT BUILD_VST3)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    message(STATUS "Release build detected. Copying Renderer Resources for AU Plugin.")
+    set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer.component")
+    copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
+endif()
+
+if(NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for Renderer Plugin.")
 endif()

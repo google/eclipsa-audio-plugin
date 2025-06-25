@@ -18,9 +18,11 @@
 # This script builds installers for AAX plugins or VST3 plugins separately:
 # --format=aax: AAX plugins only (default) - installs for all users only
 # --format=vst3: VST3 plugins only - allows user to choose installation location
+# -- format=au: AU plugins only - allows user to choose installation location
 #
 # AAX plugins: Uses wraptool if present, otherwise uses ad-hoc signing
 # VST3 plugins: Uses standard Apple code signing
+# AU plugins: Uses standard Apple code signing
 #
 # For official code signing and notarization:
 # 1. Create a keychain profile: 
@@ -41,15 +43,11 @@ done
 
 # Validate plugin format option
 case $PLUGIN_FORMAT in
-    aax|vst3)
-        echo "Building for plugin format: $PLUGIN_FORMAT"
-        ;;
-    both)
-        echo "Error: 'both' format option is no longer supported. Use separate builds for --format=aax and --format=vst3"
-        exit 1
+    aax|vst3|au)
+        echo "Building for plugin format(s): $PLUGIN_FORMAT"
         ;;
     *)
-        echo "Error: Invalid format option. Use --format=aax or --format=vst3"
+        echo "Error: Invalid format option. Use --format=aax, --format=vst3, or --format=au"
         exit 1
         ;;
 esac
@@ -62,6 +60,10 @@ case "$PLUGIN_FORMAT" in
     vst3)
         FORMAT_SUFFIX="VST3"
         DISTRIBUTION_XML="./distribution_vst3.xml"
+        ;;
+    au)
+        FORMAT_SUFFIX="AU"
+        DISTRIBUTION_XML="./distribution_au.xml"
         ;;
 esac
 
@@ -125,7 +127,7 @@ LICENSE_FILE="${ECLIPSA_LICENSE_FILE:-../LICENSE}"
 # CORE PATHS - NORMALLY DON'T NEED TO MODIFY
 # ======================================================
 
-# Define paths to the plugins - AAX and VST3
+# Define paths to the plugins - AAX, VST3 and AU
 # AAX Plugin Paths
 AAX_RENDERER_PLUGIN_BINARY="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AAX/Eclipsa Audio Renderer.aaxplugin/Contents/MacOS/Eclipsa Audio Renderer"
 AAX_AUDIOELEMENT_PLUGIN_BINARY="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AAX/Eclipsa Audio Element Plugin.aaxplugin/Contents/MacOS/Eclipsa Audio Element Plugin"
@@ -142,6 +144,14 @@ VST3_AUDIOELEMENT_PLUGIN_RESOURCES="../build/audioelementplugin/AudioElementPlug
 VST3_RENDERER_PLUGIN="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/VST3/Eclipsa Audio Renderer.vst3"
 VST3_AUDIOELEMENT_PLUGIN="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/VST3/Eclipsa Audio Element Plugin.vst3"
 
+# AU Plugin Paths
+AU_RENDERER_PLUGIN_BINARY="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Renderer.component/Contents/MacOS/Eclipsa Audio Renderer"
+AU_AUDIOELEMENT_PLUGIN_BINARY="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Element Plugin.component/Contents/MacOS/Eclipsa Audio Element Plugin"
+AU_RENDERER_PLUGIN_RESOURCES="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Renderer.component/Contents/Resources"
+AU_AUDIOELEMENT_PLUGIN_RESOURCES="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Element Plugin.component/Contents/Resources"
+AU_RENDERER_PLUGIN="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Renderer.component"
+AU_AUDIOELEMENT_PLUGIN="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AU/Eclipsa Audio Element Plugin.component"
+
 # Define the directories to write the signed files to
 # AAX Signing Directories
 AAX_RENDERER_PLUGIN_SIGNING_DIRECTORY="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AAX/Signed"
@@ -154,6 +164,12 @@ VST3_RENDERER_PLUGIN_SIGNING_DIRECTORY="../build/rendererplugin/RendererPlugin_a
 VST3_AUDIOELEMENT_PLUGIN_SIGNING_DIRECTORY="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/VST3/Signed"
 VST3_RENDERER_PLUGIN_SIGNED="$VST3_RENDERER_PLUGIN_SIGNING_DIRECTORY/Eclipsa Audio Renderer.vst3"
 VST3_AUDIOELEMENT_PLUGIN_SIGNED="$VST3_AUDIOELEMENT_PLUGIN_SIGNING_DIRECTORY/Eclipsa Audio Element Plugin.vst3"
+
+# AU Signing Directories
+AU_RENDERER_PLUGIN_SIGNING_DIRECTORY="../build/rendererplugin/RendererPlugin_artefacts/$BUILD_CONFIG/AU/Signed"
+AU_AUDIOELEMENT_PLUGIN_SIGNING_DIRECTORY="../build/audioelementplugin/AudioElementPlugin_artefacts/$BUILD_CONFIG/AU/Signed"
+AU_RENDERER_PLUGIN_SIGNED="$AU_RENDERER_PLUGIN_SIGNING_DIRECTORY/Eclipsa Audio Renderer.component"
+AU_AUDIOELEMENT_PLUGIN_SIGNED="$AU_AUDIOELEMENT_PLUGIN_SIGNING_DIRECTORY/Eclipsa Audio Element Plugin.component"
 
 # Define the path to the signing tool
 WRAP_TOOL_HELPER="./wraptool_helper.sh"
@@ -508,7 +524,11 @@ update_plugin_rpath() {
     log "Updating RPATHs for $plugin_type plugins"
     
     for plugin_path in "${plugin_paths[@]}"; do
-        local binary_path="$plugin_path/Contents/MacOS/$(basename "${plugin_path%.vst3}")"
+        if [[ "$plugin_type" == "VST3" ]]; then
+            local binary_path="$plugin_path/Contents/MacOS/$(basename "${plugin_path%.vst3}")"
+        elif [[ "$plugin_type" == "AU" ]]; then
+            local binary_path="$plugin_path/Contents/MacOS/$(basename "${plugin_path%.component}")"
+        fi
         
         if [ ! -f "$binary_path" ]; then
             log "ERROR: Plugin binary not found at $binary_path"
@@ -716,13 +736,45 @@ process_vst3_plugins() {
     sign_plugin_bundle "$VST3_AUDIOELEMENT_PLUGIN" "$VST3_AUDIOELEMENT_PLUGIN_SIGNED"
 }
 
+process_au_plugins() {
+    log_section "AU plugin preparation and code signing"
+
+    # Adjust RPATH for each plugin
+    adjust_rpath_and_sign "$AU_RENDERER_PLUGIN_BINARY"
+    adjust_rpath_and_sign "$AU_AUDIOELEMENT_PLUGIN_BINARY"
+
+    # Copy dylibs to plugin resources before signing
+    copy_dylibs_to_plugin_resources "AU" "$AU_RENDERER_PLUGIN" "$AU_AUDIOELEMENT_PLUGIN"
+
+    # Update RPATHs in plugin binaries to point to the bundled dylibs
+    update_plugin_rpath "AU" "$AU_RENDERER_PLUGIN" "$AU_AUDIOELEMENT_PLUGIN"
+
+    # Sign all dylibs
+    sign_plugin_dylibs "$AU_RENDERER_PLUGIN_RESOURCES"
+    sign_plugin_dylibs "$AU_AUDIOELEMENT_PLUGIN_RESOURCES"
+
+    # Sign AU plugins using Apple codesign
+    log "Signing AU plugins using Apple codesign"
+    sign_plugin_bundle "$AU_RENDERER_PLUGIN" "$AU_RENDERER_PLUGIN_SIGNED"
+    sign_plugin_bundle "$AU_AUDIOELEMENT_PLUGIN" "$AU_AUDIOELEMENT_PLUGIN_SIGNED"
+}
+
 # Process plugins based on selected format
 case "$PLUGIN_FORMAT" in
     aax)
         process_aax_plugins
         ;;
+esac
+
+case "$PLUGIN_FORMAT" in
     vst3)
         process_vst3_plugins
+        ;;
+esac
+
+case "$PLUGIN_FORMAT" in
+    au)
+        process_au_plugins
         ;;
 esac
 
@@ -805,6 +857,55 @@ case "$PLUGIN_FORMAT" in
         
         # Clean up temporary scripts directory
         run_cmd "rm -rf ./vst3_scripts"
+        ;;
+    au)
+     # AU: Create relocatable package with postinstall script to handle location
+        log "Preparing directory structure for AU packaging (relocatable)"
+
+        # Clean up any existing package directories
+        run_cmd "sudo rm -rf ./plugins_pkg"
+        
+        # Create package structure - ONLY use staging area to avoid file conflicts
+        # The postinstall script will handle moving to the correct final location
+        run_cmd "mkdir -p \"./plugins_pkg/tmp/EclipsaAU\""
+        run_cmd "mkdir -p \"./plugins_pkg/Library/Application Support/Eclipsa Audio Plugins\""
+
+        # Handle AU plugins, fixing nested bundles if needed
+        if [ -d "$AU_RENDERER_PLUGIN_SIGNED/Eclipsa Audio Renderer.component" ]; then
+            log "Warning: Found nested AU bundle structure, fixing..."
+            run_cmd "sudo mkdir -p \"./au_fixed\""
+            run_cmd "sudo cp -R \"$AU_RENDERER_PLUGIN_SIGNED/Eclipsa Audio Renderer.component\" \
+                \"$AU_AUDIOELEMENT_PLUGIN_SIGNED/Eclipsa Audio Element Plugin.component\" \"./au_fixed/\""
+            # Copy ONLY to staging area - postinstall will handle final placement
+            run_cmd "sudo cp -R \"./au_fixed/\"* \"./plugins_pkg/tmp/EclipsaAU/\""
+            run_cmd "sudo rm -rf \"./au_fixed\""
+        else
+            # Copy ONLY to staging area - postinstall will handle final placement
+            run_cmd "sudo cp -R \"$AU_RENDERER_PLUGIN_SIGNED\" \"$AU_AUDIOELEMENT_PLUGIN_SIGNED\" \
+                \"./plugins_pkg/tmp/EclipsaAU/\""
+        fi
+        
+        # Copy license
+        run_cmd "sudo cp \"$LICENSE_FILE\" \"./plugins_pkg/Library/Application Support/Eclipsa Audio Plugins/\""
+        
+        # Set ownership and permissions
+        CURRENT_USER=$(whoami)
+        CURRENT_GROUP=$(id -g -n "$(whoami)")
+        run_cmd "sudo chown -R $CURRENT_USER:$CURRENT_GROUP ./plugins_pkg"
+        run_cmd "sudo chmod -R 755 \"./plugins_pkg\""
+
+        # Create a temporary scripts directory with both preinstall and postinstall scripts for AU
+        run_cmd "mkdir -p ./au_scripts"
+        run_cmd "cp ./preinstall_au ./au_scripts/preinstall"
+        run_cmd "cp ./postinstall_au ./au_scripts/postinstall"
+        run_cmd "chmod +x ./au_scripts/preinstall"
+        run_cmd "chmod +x ./au_scripts/postinstall"
+
+        # Build package with AU-specific preinstall and postinstall scripts
+        run_cmd "pkgbuild --root \"./plugins_pkg\" --identifier \"$BUNDLE_IDENTIFIER\" --install-location \"/\" --scripts \"./au_scripts\" --version \"$VERSION\" \"./$PKG_NAME\""
+
+        # Clean up temporary scripts directory
+        run_cmd "rm -rf ./au_scripts"
         ;;
 esac
 
@@ -920,6 +1021,16 @@ This package contains VST3 plugins compatible with VST3-supporting DAWs.
 
 ## Installation Locations
 • VST3 plugins: /Library/Audio/Plug-Ins/VST3
+EOF
+            ;;
+        au)
+            cat >> "$output_file" << EOF
+This package contains AU plugins compatible with AU-supporting DAWs.
+
+## Installation Locations
+• AAX plugins: /Library/Application Support/Avid/Audio/Plug-Ins
+• VST3 plugins: /Library/Audio/Plug-Ins/VST3
+• AU plugins: /Library/Audio/Plug-Ins/Components
 EOF
             ;;
     esac

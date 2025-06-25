@@ -77,6 +77,12 @@ if(BUILD_VST3)
     copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
 endif()
 
-if(NOT BUILD_AAX AND NOT BUILD_VST3)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    message(STATUS "Release build detected. Copying Audio Element Resources for AU Plugin.")
+    set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AU/Eclipsa Audio Element Plugin.component")
+    copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
+endif()
+
+if(NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for AudioElementPlugin.")
 endif()

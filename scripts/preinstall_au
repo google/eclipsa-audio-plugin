@@ -1,0 +1,164 @@
+#!/bin/bash -eu
+#
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# macOS pre-install script for Eclipsa VST3 plugins.
+#
+# PURPOSE:
+# This script runs before the main package installation and prepares the system
+# for VST3 plugin installation by performing necessary validation and cleanup.
+#
+# WHY THIS SCRIPT IS NEEDED:
+# 1. Installation Type Detection:
+#    - Determines if this is a system-wide or user-specific installation
+#    - Validates that the target user and paths are accessible
+#    - Sets up proper logging and error handling
+#
+# 2. Environment Validation:
+#    - Ensures the installation environment is ready
+#    - Validates that required directories can be created
+#    - Checks for any blocking conditions that would prevent installation
+#
+# 3. Preparation for Main Installation:
+#    - The actual plugin files are extracted by the main installer process
+#    - The postinstall script handles the complex moving and permission logic
+#    - This preinstall script ensures the environment is ready for that process
+#
+# INSTALLATION ARCHITECTURE:
+# 1. PREINSTALL (this script): Validates environment and logs installation type
+# 2. MAIN INSTALLER: Extracts plugin files to staging area (/tmp/EclipsaVST3)
+# 3. POSTINSTALL: Moves files to final location with proper permissions
+#
+# WHY THIS ARCHITECTURE IS USED:
+# - macOS installer has limitations with dynamic path selection and permissions
+# - Separating concerns allows for better error handling and logging
+# - Enables support for both system-wide and user-specific installations
+# - Provides flexibility for handling permission conflicts and cleanup
+#
+# PARAMETERS (from macOS installer):
+# $1 = Package path (e.g., "/Volumes/Installer/Package.pkg")
+# $2 = Target location ("/" for system-wide, "/Users/username" for user-specific)
+# $3 = Target volume (usually "/")
+# $4 = User home directory (may be "/" for system installations)
+#
+
+# Standard preinstall script parameters
+# $1 = package path
+# $2 = target location  
+# $3 = target volume
+# $4 = user home (may be "/" for user installations on some macOS versions)
+
+# Function to log messages
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - AU Preinstall: $1" >> "/tmp/eclipsa_au_preinstall.log"
+}
+
+log_message "=== Starting AU preinstall script ==="
+log_message "Package path: $1"
+log_message "Target location: $2" 
+log_message "Target volume: $3"
+log_message "User home parameter: $4"
+log_message "Current user: $(whoami)"
+log_message "EUID: $EUID"
+
+# Define paths
+SYSTEM_AU_PATH="/Library/Audio/Plug-Ins/Components"
+
+# Plugin names to remove
+ECLIPSA_PLUGINS=(
+    "Eclipsa Audio Renderer.component"
+    "Eclipsa Audio Element Plugin.component"
+)
+
+# Function to safely remove a plugin
+remove_plugin_safely() {
+    local plugin_path="$1"
+    local location_type="$2"
+    
+    if [ -e "$plugin_path" ]; then
+        log_message "Found existing $location_type plugin: $plugin_path"
+        
+        # Try normal removal first
+        if rm -rf "$plugin_path" 2>/dev/null; then
+            log_message "Successfully removed $location_type plugin: $plugin_path"
+        else
+            # Try sudo for root-owned files
+            log_message "Normal removal failed, trying with sudo for $location_type plugin: $plugin_path"
+            if sudo rm -rf "$plugin_path" 2>/dev/null; then
+                log_message "Successfully removed $location_type plugin with sudo: $plugin_path"
+            else
+                log_message "Could not remove $location_type plugin: $plugin_path (will be handled by postinstall)"
+                # Don't fail the installation - let postinstall handle it
+            fi
+        fi
+    else
+        log_message "No existing $location_type plugin found at: $plugin_path"
+    fi
+    
+    # Always return success - don't fail the installation
+    return 0
+}
+
+# Determine installation type and prepare for installation
+if [[ "$2" == "/" ]]; then
+    # System installation
+    log_message "System installation detected - postinstall will handle file operations"
+    
+else
+    # User installation - just log the detection, postinstall will handle removal
+    ACTUAL_USER_HOME=""
+    ACTUAL_USER=""
+    
+    if [[ "$4" != "/" && "$4" != "" ]]; then
+        # Use the provided user home if it's valid
+        ACTUAL_USER_HOME="$4"
+        ACTUAL_USER="${4##*/}"
+        log_message "Using provided user home: $ACTUAL_USER_HOME"
+    else
+        # Fallback: detect user from environment or running process
+        if [[ -n "$HOME" && "$HOME" != "/" ]]; then
+            ACTUAL_USER_HOME="$HOME"
+            ACTUAL_USER="$(whoami)"
+            log_message "Using HOME environment variable: $ACTUAL_USER_HOME"
+        else
+            # Last resort: use the current user's home directory
+            ACTUAL_USER="$(whoami)"
+            if [[ "$ACTUAL_USER" == "root" ]]; then
+                # If running as root, try to find the console user
+                CONSOLE_USER="$(stat -f%Su /dev/console)"
+                if [[ -n "$CONSOLE_USER" && "$CONSOLE_USER" != "root" ]]; then
+                    ACTUAL_USER="$CONSOLE_USER"
+                    ACTUAL_USER_HOME="/Users/$CONSOLE_USER"
+                else
+                    log_message "ERROR: Cannot determine user for installation"
+                    exit 0  # Don't fail the installation
+                fi
+            else
+                ACTUAL_USER_HOME="/Users/$ACTUAL_USER"
+            fi
+            log_message "Detected user: $ACTUAL_USER, home: $ACTUAL_USER_HOME"
+        fi
+    fi
+
+    USER_AU_PATH="$ACTUAL_USER_HOME/Library/Audio/Plug-Ins/Components"
+    log_message "User installation detected - target: $USER_AU_PATH"
+    log_message "Postinstall script will handle file operations with appropriate privileges"
+fi
+
+log_message "=== AU preinstall script completed ==="
+
+# Always exit with success to prevent installation failure
+# The postinstall script will handle any remaining cleanup
+exit 0
