@@ -34,9 +34,13 @@ void CustomTabbedComponent::currentTabChanged(
     return;
   }
 
-  tab->updateActiveMixPresentation();
-  LOG_ANALYTICS(RendererProcessor::instanceId_,
-                "Tab changed to: " + newCurrentTabName.toStdString());
+  // Only update the active mix presentation if we're not in tab restoration
+  // mode
+  if (!isRestoringTabs_) {
+    tab->updateActiveMixPresentation();
+    LOG_ANALYTICS(RendererProcessor::instanceId_,
+                  "Tab changed to: " + newCurrentTabName.toStdString());
+  }
 }
 
 PresentationMonitorScreen::PresentationMonitorScreen(
@@ -203,6 +207,15 @@ void PresentationMonitorScreen::updateMixPresentations() {
 }
 
 void PresentationMonitorScreen::updatePresentationTabs() {
+  // Set flag to prevent active mix updates during tab restoration
+  presentationTabs_->setTabRestorationMode(true);
+
+  // Use RAII to ensure flag is always cleared, even if exceptions occur
+  struct RestorationGuard {
+    CustomTabbedComponent* tabs;
+    ~RestorationGuard() { tabs->setTabRestorationMode(false); }
+  } guard{presentationTabs_.get()};
+
   presentationTabs_->clearTabs();
 
   // Add tabs for each mix
