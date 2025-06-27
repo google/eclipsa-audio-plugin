@@ -34,7 +34,7 @@ class MeterLookAndFeel : public juce::LookAndFeel_V4 {
   MSPlaybackRepository& msPlaybackRepo_;
 };
 
-class LoudnessMeter : public juce::Component {
+class LoudnessMeter : public juce::Component, juce::ValueTree::Listener {
  public:
   struct MSButton : public juce::TextButton {
     enum ButtonType { kSolo, kMute };
@@ -46,6 +46,9 @@ class LoudnessMeter : public juce::Component {
                 MSPlaybackRepository& msPlaybackRepo);
 
   ~LoudnessMeter();
+
+  void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
+                                const juce::Identifier& property) override;
 
   void paint(juce::Graphics& g) override;
 
