@@ -29,7 +29,9 @@ LoudnessMetersSet::LoudnessMetersSet(
       playbackMSRepo_(audioElementPluginRepo.msRespository_),
       pbLayout_(pbLayout) {
   if (!pbLayout_.isAmbisonics()) {
-    updateMeters();
+    pbLayout_ = audioElementSpatialLayoutRepository_->get().getChannelLayout();
+    std::vector<juce::String> chLabels = pbLayout_.getSpeakerLabels();
+    createLoudnessMeters(chLabels);
   }
 }
 

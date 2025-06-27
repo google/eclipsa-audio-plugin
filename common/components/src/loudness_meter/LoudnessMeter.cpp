@@ -73,6 +73,7 @@ LoudnessMeter::LoudnessMeter(const juce::String chLabel, const int chIdx,
       msPlaybackRepo_(msPlaybackRepo),
       lookAndFeel_(msPlaybackRepo_),
       chLabel_(chLabel, chLabel) {
+  msPlaybackRepo_.registerListener(this);
   setLookAndFeel(&lookAndFeel_);
 
   addAndMakeVisible(loudnessBar_);
@@ -103,7 +104,10 @@ LoudnessMeter::LoudnessMeter(const juce::String chLabel, const int chIdx,
   addAndMakeVisible(muteButton_);
 }
 
-LoudnessMeter::~LoudnessMeter() { setLookAndFeel(nullptr); }
+LoudnessMeter::~LoudnessMeter() {
+  msPlaybackRepo_.deregisterListener(this);
+  setLookAndFeel(nullptr);
+}
 
 // Paint child components of the loudness meter.
 void LoudnessMeter::paint(juce::Graphics& g) {
@@ -177,4 +181,11 @@ juce::Rectangle<int> LoudnessMeter::getSMButtonsBounds() const {
   const auto soloBounds = soloButton_.getBounds();
   const auto muteBounds = muteButton_.getBounds();
   return soloBounds.getUnion(muteBounds);
+}
+
+void LoudnessMeter::valueTreePropertyChanged(
+    juce::ValueTree& treeWhosePropertyHasChanged,
+    const juce::Identifier& property) {
+  soloButton_.repaint();
+  muteButton_.repaint();
 }
