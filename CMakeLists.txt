@@ -14,7 +14,11 @@
 
 cmake_minimum_required(VERSION 3.29.0)
 
-project(Eclipsa LANGUAGES C CXX VERSION 0.0.1)
+if(NOT DEFINED ECLIPSA_VERSION)
+    set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
+endif()
+
+project(Eclipsa LANGUAGES C CXX VERSION ${ECLIPSA_VERSION})
 
 # Make company name configurable via command line with a default value
 if(NOT DEFINED ECLIPSA_COMPANY_NAME)
