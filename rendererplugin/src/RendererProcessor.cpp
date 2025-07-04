@@ -318,6 +318,24 @@ void RendererProcessor::updateRepositories() {
   if (fileExport.isValid()) {
     fileExportRepository_.setStateTree(fileExport);
   }
+
+  juce::ValueTree channelGains =
+      persistentState_.getChildWithName(kMultiChannelGainsKey);
+  if (channelGains.isValid()) {
+    multichannelgainRepository_.setStateTree(channelGains);
+  }
+
+  juce::ValueTree muteSoloPlayback =
+      persistentState_.getChildWithName(kMSPlaybackKey);
+  if (muteSoloPlayback.isValid()) {
+    msPlaybackRepository_.setStateTree(muteSoloPlayback);
+  }
+
+  juce::ValueTree mixPresMuteSolo =
+      persistentState_.getChildWithName(kMixPresentationSoloMuteKey);
+  if (mixPresMuteSolo.isValid()) {
+    mixPresentationSoloMuteRepository_.setStateTree(mixPresMuteSolo);
+  }
 }
 
 juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
