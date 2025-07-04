@@ -239,6 +239,8 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
 
   updateRepositories();
 
+  initializeMixPresentations();
+
   configureOutputBus();
 
   if (juce::PluginHostType().isPremiere()) {
@@ -277,6 +279,13 @@ void RendererProcessor::updateRepositories() {
       persistentState_.getChildWithName(kMixPresentationsKey);
   if (mixPresentations.isValid()) {
     mixPresentationRepository_.setStateTree(mixPresentations);
+    LOG_ANALYTICS(instanceId_,
+                  "setStateInformation: Mix Presentations was successfully "
+                  "loaded from persistent state.");
+  } else {
+    LOG_ANALYTICS(instanceId_,
+                  "setStateInformation: Mix Presentation tree invalid or no "
+                  "Mix Presentations found.");
   }
 
   juce::ValueTree mixPresentationLoudness =
@@ -302,8 +311,6 @@ void RendererProcessor::updateRepositories() {
   if (fileExport.isValid()) {
     fileExportRepository_.setStateTree(fileExport);
   }
-
-  initializeMixPresentations();
 }
 
 juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
@@ -365,9 +372,11 @@ void RendererProcessor::initializeMixPresentations() {
     MixPresentation mixPres(juce::Uuid(), "My Mix Presentation", 1);
     mixPresentationRepository_.add(mixPres);
     activeMixPresentationRepository_.update(mixPres.getId());
-    LOG_ANALYTICS(instanceId_,
-                  "setStateInformation: Created a new mix presentation and set "
-                  "it as active.");
+    LOG_ANALYTICS(
+        instanceId_,
+        "setStateInformation: Created a new mix presentation w/ Uuid " +
+            mixPres.getId().toString().toStdString() +
+            " and set it as active.");
     return;  // Early return since we just set a valid active mix
   }
 
