@@ -277,15 +277,22 @@ void RendererProcessor::updateRepositories() {
 
   juce::ValueTree mixPresentations =
       persistentState_.getChildWithName(kMixPresentationsKey);
+  int mixPresCount = mixPresentations.getNumChildren();
   if (mixPresentations.isValid()) {
     mixPresentationRepository_.setStateTree(mixPresentations);
     LOG_ANALYTICS(instanceId_,
                   "setStateInformation: Mix Presentations was successfully "
                   "loaded from persistent state.");
+    LOG_ANALYTICS(
+        instanceId_,
+        "The Number of Mix Presentations found in the persistent state was: " +
+            std::to_string(mixPresCount));
   } else {
     LOG_ANALYTICS(instanceId_,
                   "setStateInformation: Mix Presentation tree invalid or no "
-                  "Mix Presentations found.");
+                  "Mix Presentations found. There are currently " +
+                      std::to_string(mixPresCount) +
+                      " Mix Presentations in the repository.");
   }
 
   juce::ValueTree mixPresentationLoudness =
@@ -366,17 +373,26 @@ void RendererProcessor::valueTreeChildRemoved(
 }
 
 void RendererProcessor::initializeMixPresentations() {
+  juce::ValueTree mixPresTree =
+      persistentState_.getChildWithName(kMixPresentationsKey);
+  int mixPresCount = mixPresTree.getNumChildren();
+  LOG_ANALYTICS(instanceId_,
+                "Initializing MixPresentations. The Number of Mix "
+                "Presentations found in the persistent state was: " +
+                    std::to_string(mixPresCount));
+
   juce::OwnedArray<MixPresentation> mixPresentations;
   mixPresentationRepository_.getAll(mixPresentations);
+
   if (mixPresentations.size() == 0) {
     MixPresentation mixPres(juce::Uuid(), "My Mix Presentation", 1);
     mixPresentationRepository_.add(mixPres);
     activeMixPresentationRepository_.update(mixPres.getId());
-    LOG_ANALYTICS(
-        instanceId_,
-        "setStateInformation: Created a new mix presentation w/ Uuid " +
-            mixPres.getId().toString().toStdString() +
-            " and set it as active.");
+    LOG_ANALYTICS(instanceId_,
+                  "setStateInformation: MixPresentationRepo was empty. Created "
+                  "a new mix presentation w/ Uuid " +
+                      mixPres.getId().toString().toStdString() +
+                      " and set it as active.");
     return;  // Early return since we just set a valid active mix
   }
 
