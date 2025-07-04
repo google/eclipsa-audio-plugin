@@ -153,6 +153,12 @@ void RendererProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     proc->prepareToPlay(sampleRate, samplesPerBlock);
   }
   processingBuffer_.setSize(getMainBusNumInputChannels(), samplesPerBlock);
+  LOG_ANALYTICS(instanceId_, "activeMixPresentation Uuid: " +
+                                 activeMixPresentationRepository_.get()
+                                     .getActiveMixId()
+                                     .toString()
+                                     .toStdString() +
+                                 "\n");
 }
 
 void RendererProcessor::releaseResources() {
@@ -246,6 +252,13 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
       setNonRealtime(true);
     }
   }
+
+  LOG_ANALYTICS(instanceId_, "activeMixPresentation Uuid: " +
+                                 activeMixPresentationRepository_.get()
+                                     .getActiveMixId()
+                                     .toString()
+                                     .toStdString() +
+                                 "\n");
 }
 
 void RendererProcessor::updateRepositories() {

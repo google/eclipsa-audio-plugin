@@ -232,6 +232,8 @@ void PresentationMonitorScreen::updatePresentationTabs() {
   // Get the ID of the active mix presentation.
   juce::Uuid activeMixID = activeMixRepository_->get().getActiveMixId();
   if (activeMixID != juce::Uuid::null()) {
+    LOG_ANALYTICS(0, "Active mix presentation ID: " +
+                         activeMixID.toString().toStdString());
     // Check there exists a tab with the active mix presentation ID.
     for (int i = 0; i < presentationTabs_->getNumTabs(); ++i) {
       MixPresentationViewPort* tab = static_cast<MixPresentationViewPort*>(
@@ -247,6 +249,11 @@ void PresentationMonitorScreen::updatePresentationTabs() {
   // active mix presentation to the last tab and select it.
   else {
     presentationTabs_->setCurrentTabIndex(presentationTabs_->getNumTabs() - 1);
+    MixPresentationViewPort* tab = static_cast<MixPresentationViewPort*>(
+        presentationTabs_->getCurrentContentComponent());
+    juce::Uuid chosenActiveMixID = tab->getMixPresID();
+    LOG_ANALYTICS(0, "No Active mix presentation ID found, so setting it to: " +
+                         chosenActiveMixID.toString().toStdString());
   }
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "All presentation tabs updated.");

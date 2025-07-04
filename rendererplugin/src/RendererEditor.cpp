@@ -63,10 +63,10 @@ void CustomLookAndFeel::drawButtonBackground(
 RendererEditor::RendererEditor(RendererProcessor& p)
     : MainEditor(p),
       dawWarningBanner_(&p.getRoomSetupRepository()),
-      currentScreen_(&monitorScreen_),
       monitorScreen_(p.getRepositories(), p.getSpeakerMonitorData(), *this,
                      p.getChannelMonitorProcessor(),
-                     p.getMainBusNumInputChannels()) {
+                     p.getMainBusNumInputChannels()),
+      currentScreen_(&monitorScreen_) {
   setResizable(true, true);
   setSize(1600, 752);
 

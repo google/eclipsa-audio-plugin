@@ -50,9 +50,8 @@ class RendererEditor final : public MainEditor {
 
   juce::Label titleLabel_;
   DAWWarningBanner dawWarningBanner_;
-  juce::Component* currentScreen_;
-
   MonitorScreen monitorScreen_;
+  juce::Component* currentScreen_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RendererEditor)
 };
