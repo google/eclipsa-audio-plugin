@@ -24,18 +24,17 @@
 
 #pragma once
 
-#include <data_structures/src/SpeakerMonitorData.h>
+#include <data_structures/src/ChannelMonitorData.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
-#include "../../data_repository/implementation/AudioElementRepository.h"
 #include "../../data_repository/implementation/MixPresentationRepository.h"
 #include "../processor_base/ProcessorBase.h"
 
 //==============================================================================
 class ChannelMonitorProcessor final : public ProcessorBase {
  public:
-  ChannelMonitorProcessor();
+  ChannelMonitorProcessor(ChannelMonitorData& channelMonitorData);
   ~ChannelMonitorProcessor() override;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -49,6 +48,7 @@ class ChannelMonitorProcessor final : public ProcessorBase {
   std::vector<float> getPrerdrLoudness() const { return loudness_; }
 
  private:
+  ChannelMonitorData& channelMonitorData_;
   int numChannels_;
   // replace with thread safe data-struct
   std::vector<float> loudness_;

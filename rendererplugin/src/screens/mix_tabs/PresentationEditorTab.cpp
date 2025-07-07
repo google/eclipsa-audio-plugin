@@ -16,6 +16,7 @@
 
 #include <optional>
 
+#include "../../RendererProcessor.h"
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/MixPresentation.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"

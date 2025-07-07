@@ -19,9 +19,10 @@
 #include "ElementRoutingScreen.h"
 #include "components/src/ImageTextButton.h"  // Include the ImageTextButton header
 #include "data_repository/implementation/AudioElementRepository.h"
-#include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
+#include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/MixPresentation.h"
+#include "data_structures/src/RepositoryCollection.h"
 #include "mix_tabs/MixPresentationViewPort.h"
 
 class CustomTabbedComponent : public juce::TabbedComponent {
@@ -53,16 +54,9 @@ class PresentationMonitorScreen : public juce::Component,
   EditPresentationScreen editPresentationScreen_;
 
  public:
-  PresentationMonitorScreen(
-      MainEditor& editor, AudioElementRepository* ae_repository,
-      MultibaseAudioElementSpatialLayoutRepository*
-          audioElementSpatialLayout_repository,
-      MixPresentationRepository* mixPresentationRepository,
-      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository,
-      MultiChannelRepository* multiChannelRepository,
-      ActiveMixRepository* activeMixRepo,
-      ChannelMonitorProcessor* channelMonitorProcessor,
-      FileExportRepository* fileExportRepository, int totalChannelCount);
+  PresentationMonitorScreen(MainEditor& editor, RepositoryCollection repos,
+                            ChannelMonitorData& channelMonitorData,
+                            int totalChannelCount);
 
   ~PresentationMonitorScreen();
 
@@ -88,14 +82,15 @@ class PresentationMonitorScreen : public juce::Component,
   int initialTabIndex_;
   juce::Rectangle<int> presentationTabBounds_ =
       juce::Rectangle<int>(0, 0, 0, 0);
+  RepositoryCollection repos_;
   MixPresentationRepository* mixPresentationRepository_;
   MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
   AudioElementRepository* audioElementRepository_;
   ActiveMixRepository* activeMixRepository_;
   MultiChannelRepository* multiChannelRepository_;
+  ChannelMonitorData& channelMonitorData_;
 
   juce::OwnedArray<MixPresentation> mixPresentationArray_;
   int numMixes_ = 0;
   std::unique_ptr<CustomTabbedComponent> presentationTabs_;
-  ChannelMonitorProcessor* channelMonitorProcessor_;
 };

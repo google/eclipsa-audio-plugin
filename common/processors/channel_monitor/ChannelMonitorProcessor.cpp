@@ -14,15 +14,13 @@
 
 #include "ChannelMonitorProcessor.h"
 
-#include "processors/gain/MSProcessor.h"
+#include "data_structures/src/ChannelMonitorData.h"
 
-ChannelMonitorProcessor::ChannelMonitorProcessor()
-    : ProcessorBase(
-          BusesProperties()
-              .withInput("Input", juce::AudioChannelSet::ambisonic(5), true)
-              .withOutput("Output", juce::AudioChannelSet::ambisonic(5), true)),
-      numChannels_(juce::AudioChannelSet::ambisonic(5).size()),
-      loudness_(std::vector<float>(numChannels_)) {}
+ChannelMonitorProcessor::ChannelMonitorProcessor(
+    ChannelMonitorData& channelMonitorData)
+    : numChannels_(juce::AudioChannelSet::ambisonic(5).size()),
+      channelMonitorData_(channelMonitorData),
+      loudness_(std::vector<float>(numChannels_, -300.f)) {}
 
 ChannelMonitorProcessor::~ChannelMonitorProcessor() {}
 
@@ -43,9 +41,12 @@ void ChannelMonitorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     loudness_[i] =
         20.0f * std::log10(buffer.getRMSLevel(i, 0, buffer.getNumSamples()));
   }
+
   for (int i = buffer.getNumChannels(); i < numChannels_; i++) {
     loudness_[i] = -120.0f;
   }
+
+  channelMonitorData_.channelLoudnesses.update(loudness_);
 }
 
 bool ChannelMonitorProcessor::hasEditor() const {

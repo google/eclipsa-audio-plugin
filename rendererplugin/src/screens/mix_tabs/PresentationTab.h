@@ -19,21 +19,17 @@
 #include "../../RendererProcessor.h"
 #include "components/src/AEStripComponent.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/MixPresentationSoloMute.h"
+#include "data_structures/src/RepositoryCollection.h"
 #include "logger/logger.h"
-#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 class PresentationTab : public juce::Component,
                         public juce::ValueTree::Listener {
  public:
-  PresentationTab(
-      juce::Uuid mixPresID, AudioElementRepository* aeRepository,
-      MultiChannelRepository* multichannelGainRepo,
-      ActiveMixRepository* activeMixRepo,
-      ChannelMonitorProcessor* channelMonitorProcessor,
-      MixPresentationRepository* mixPresentationRepository,
-      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository);
+  PresentationTab(juce::Uuid mixPresID, RepositoryCollection repos,
+                  ChannelMonitorData& channelMonitorData);
 
   ~PresentationTab() override;
 
@@ -114,6 +110,7 @@ class PresentationTab : public juce::Component,
 
   const juce::Uuid kmixPresID_;
 
+  RepositoryCollection repos_;
   AudioElementRepository* audioElementRepository_;
   ActiveMixRepository* activeMixRepository_;
   MixPresentationRepository* mixPresentationRepository_;
@@ -124,7 +121,7 @@ class PresentationTab : public juce::Component,
   std::vector<MixPresentationAudioElement> mixpresentationAudioElements_;
 
   MultiChannelRepository* multichannelGainRepo_;
-  ChannelMonitorProcessor* channelMonitorProcessor_;
+  ChannelMonitorData& channelMonitorData_;
   juce::OwnedArray<AEStripComponent> aeStrips_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PresentationTab)

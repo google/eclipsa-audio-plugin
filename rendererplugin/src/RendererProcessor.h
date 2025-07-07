@@ -28,6 +28,7 @@
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/AudioElementCommunication.h"
+#include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/RepositoryCollection.h"
 #include "processors/processor_base/ProcessorBase.h"
 
@@ -93,6 +94,7 @@ class RendererProcessor final : public ProcessorBase,
 
   RoomSetupRepository& getRoomSetupRepository() { return roomSetupRepository_; }
   SpeakerMonitorData& getSpeakerMonitorData() { return monitorData_; }
+  ChannelMonitorData& getChannelMonitorData() { return channelMonitorData_; }
 
   void updateAudioElementPluginInformation(
       AudioElementSpatialLayout& audioElementSpatialLayout) override {
@@ -102,10 +104,6 @@ class RendererProcessor final : public ProcessorBase,
   void removeAudioElementPlugin(
       AudioElementSpatialLayout& audioElementSpatialLayout) override {
     audioElementSpatialLayoutRepository_.remove(audioElementSpatialLayout);
-  }
-
-  ChannelMonitorProcessor* getChannelMonitorProcessor() const {
-    return channelMonitorProcessor_;
   }
 
  private:
@@ -166,7 +164,7 @@ class RendererProcessor final : public ProcessorBase,
 
   SpeakerMonitorData monitorData_;
 
-  ChannelMonitorProcessor* channelMonitorProcessor_;
+  ChannelMonitorData channelMonitorData_;
 
   juce::AudioChannelSet outputChannelSet_ = juce::AudioChannelSet::stereo();
 

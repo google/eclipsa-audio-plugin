@@ -19,8 +19,10 @@
 #include "../rendererplugin/src/RendererProcessor.h"
 #include "components/src/EclipsaColours.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/MixPresentationSoloMute.h"
+#include "data_structures/src/RepositoryCollection.h"
 #include "logger/logger.h"
 
 AEStripLookandFeel::AEStripLookandFeel() {
@@ -36,11 +38,8 @@ AEStripLookandFeel::AEStripLookandFeel() {
 
 AEStripComponent::AEStripComponent(
     const int channelCount, const juce::String label, const int startingChannel,
-    MultiChannelRepository* multichannelGainRepo,
-    ChannelMonitorProcessor* channelMonitorProcessor,
-    const juce::Uuid audioelementID, const juce::Uuid mixPresID,
-    MixPresentationRepository* mixPresentationRepository,
-    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository)
+    RepositoryCollection& repos, ChannelMonitorData& channelMonitorData,
+    const juce::Uuid audioelementID, const juce::Uuid mixPresID)
     : soloButtonClicked([this]() { soloButtonClickedCallback(); }),
       muteButtonClicked([this] { muteButtonClickedCallback(); }),
       label_(label),
@@ -48,12 +47,12 @@ AEStripComponent::AEStripComponent(
       channelsSet_(createChannelSet(
           channelCount_,
           startingChannel)),  // can try to remove the multistep functions
-      multichannelGainRepo_(multichannelGainRepo),
-      channelMonitorProcessor_(channelMonitorProcessor),
+      multichannelGainRepo_(&repos.chGainRepo_),
+      channelMonitorData_(channelMonitorData),
       audioelementID_(audioelementID),
       mixPresID_(mixPresID),
-      mixPresentationRepository_(mixPresentationRepository),
-      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository) {
+      mixPresentationRepository_(&repos.mpRepo_),
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_) {
   mixPresentationSoloMuteRepository_->registerListener(this);
   startTimerHz(30);
   setLookAndFeel(&lookAndFeel_);
@@ -225,6 +224,7 @@ juce::Rectangle<int> AEStripComponent::setLightsSpacing(
 
 void AEStripComponent::timerCallback() {
   size_t i = 0;
+  channelMonitorData_.channelLoudnesses.read(channelLoudnessesRead_);
   for (auto channelIndex : channelsSet_) {
     channelIndicators[i]->setColour(determineColourIndex(channelIndex));
     channelIndicators[i]->repaint();
@@ -234,8 +234,7 @@ void AEStripComponent::timerCallback() {
 
 int AEStripComponent::determineColourIndex(const int& channelIndex) {
   // get the linear RMS
-  float loudnessdB =
-      channelMonitorProcessor_->getPrerdrLoudness()[channelIndex];
+  float loudnessdB = channelLoudnessesRead_[channelIndex];
   // convert to dB
   // determine the colour index based on the loudness
   if (loudnessdB < -60.f) {

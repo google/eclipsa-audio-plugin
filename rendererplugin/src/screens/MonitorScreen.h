@@ -20,24 +20,24 @@
 #include "MixMonitoringScreen.h"
 #include "PresentationMonitorScreen.h"
 #include "RoomMonitoringScreen.h"
+#include "data_structures/src/ChannelMonitorData.h"
+#include "data_structures/src/RepositoryCollection.h"
 
 class MonitorScreen : public juce::Component {
+  RepositoryCollection repos_;
   PresentationMonitorScreen presentationMonitorScreen_;
   RoomMonitoringScreen roomMonitoringScreen_;
   MixMonitoringScreen mixMonitoringScreen_;
 
  public:
   MonitorScreen(RepositoryCollection repos, SpeakerMonitorData& data,
-                MainEditor& editor,
-                ChannelMonitorProcessor* channelMonitorProcessor,
+                ChannelMonitorData& channelMonitorData, MainEditor& editor,
                 int totalChannelCount)
-      : presentationMonitorScreen_(
-            editor, &repos.aeRepo_, &repos.audioElementSpatialLayoutRepo_,
-            &repos.mpRepo_, &repos.mpSMRepo_, &repos.chGainRepo_,
-            &repos.activeMPRepo_, channelMonitorProcessor, &repos.fioRepo_,
-            totalChannelCount),
-        roomMonitoringScreen_(repos, data, editor),
-        mixMonitoringScreen_(repos, data) {}
+      : repos_(repos),
+        presentationMonitorScreen_(editor, repos_, channelMonitorData,
+                                   totalChannelCount),
+        roomMonitoringScreen_(repos_, data, editor),
+        mixMonitoringScreen_(repos_, data) {}
 
   void paint(juce::Graphics& g) {
     auto bounds = getLocalBounds();

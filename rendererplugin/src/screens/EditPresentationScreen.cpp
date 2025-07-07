@@ -16,6 +16,7 @@
 
 #include <cstddef>
 
+#include "../RendererProcessor.h"
 #include "MixPresentationTagScreen.h"
 #include "components/src/EclipsaColours.h"
 #include "data_repository/implementation/MixPresentationRepository.h"

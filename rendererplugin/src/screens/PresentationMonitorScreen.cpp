@@ -15,10 +15,10 @@
 #include "PresentationMonitorScreen.h"
 
 #include "../RendererProcessor.h"
-#include "data_repository/implementation/FileExportRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/MixPresentationSoloMute.h"
+#include "data_structures/src/RepositoryCollection.h"
 #include "logger/logger.h"
 
 CustomTabbedComponent::CustomTabbedComponent()
@@ -44,27 +44,21 @@ void CustomTabbedComponent::currentTabChanged(
 }
 
 PresentationMonitorScreen::PresentationMonitorScreen(
-    MainEditor& editor, AudioElementRepository* ae_repository,
-    MultibaseAudioElementSpatialLayoutRepository*
-        audioElementSpatialLayout_repository,
-    MixPresentationRepository* mixPresentationRepository,
-    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository,
-    MultiChannelRepository* multiChannelRepository,
-    ActiveMixRepository* activeMixRepo,
-    ChannelMonitorProcessor* channelMonitorProcessor,
-    FileExportRepository* fileExportRepository, int totalChannelCount)
-    : elementRoutingScreen_(
-          editor, ae_repository, audioElementSpatialLayout_repository,
-          fileExportRepository, mixPresentationRepository, totalChannelCount),
-      editPresentationScreen_(editor, ae_repository, mixPresentationRepository,
-                              activeMixRepo),
+    MainEditor& editor, RepositoryCollection repos,
+    ChannelMonitorData& channelMonitorData, int totalChannelCount)
+    : elementRoutingScreen_(editor, &repos.aeRepo_,
+                            &repos.audioElementSpatialLayoutRepo_,
+                            &repos.fioRepo_, &repos.mpRepo_, totalChannelCount),
+      editPresentationScreen_(editor, &repos.aeRepo_, &repos.mpRepo_,
+                              &repos.activeMPRepo_),
       presentationTabs_(std::make_unique<CustomTabbedComponent>()),
-      channelMonitorProcessor_(channelMonitorProcessor),
-      mixPresentationRepository_(mixPresentationRepository),
-      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository),
-      multiChannelRepository_(multiChannelRepository),
-      audioElementRepository_(ae_repository),
-      activeMixRepository_(activeMixRepo),
+      repos_(repos),
+      mixPresentationRepository_(&repos.mpRepo_),
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_),
+      multiChannelRepository_(&repos.chGainRepo_),
+      audioElementRepository_(&repos.aeRepo_),
+      activeMixRepository_(&repos.activeMPRepo_),
+      channelMonitorData_(channelMonitorData),
       editPresentationButton(
           IconStore::getInstance()
               .getEditIcon()),  // Initialize with specified sizes
@@ -222,10 +216,7 @@ void PresentationMonitorScreen::updatePresentationTabs() {
   for (auto mix : mixPresentationArray_) {
     presentationTabs_->addTab(
         mix->getName(), EclipsaColours::backgroundOffBlack,
-        new MixPresentationViewPort(
-            mix->getId(), audioElementRepository_, multiChannelRepository_,
-            activeMixRepository_, channelMonitorProcessor_,
-            mixPresentationRepository_, mixPresentationSoloMuteRepository_),
+        new MixPresentationViewPort(mix->getId(), repos_, channelMonitorData_),
         true);
   }
 
@@ -269,10 +260,8 @@ void PresentationMonitorScreen::valueTreeChildAdded(
         childWhichHasBeenAdded[MixPresentation::kPresentationName].toString(),
         EclipsaColours::backgroundOffBlack,
         new MixPresentationViewPort(
-            juce::Uuid(childWhichHasBeenAdded[MixPresentation::kId]),
-            audioElementRepository_, multiChannelRepository_,
-            activeMixRepository_, channelMonitorProcessor_,
-            mixPresentationRepository_, mixPresentationSoloMuteRepository_),
+            juce::Uuid(childWhichHasBeenAdded[MixPresentation::kId]), repos_,
+            channelMonitorData_),
         true);
 
     MixPresentationSoloMute mixPresentationSoloMute(
