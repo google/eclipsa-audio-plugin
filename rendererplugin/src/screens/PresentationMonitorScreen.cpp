@@ -185,16 +185,6 @@ void PresentationMonitorScreen::updateMixPresentations() {
 
   numMixes_ = mixPresentationArray_.size();
 
-  // address the case where there is just 1 mix presentation on start up
-  // that is added before this component is added as a listener
-  // manually add the mixPresentationID to MixPresentataionSoloMuteRepository
-  juce::OwnedArray<MixPresentationSoloMute> mixPresSoloMuteArray;
-  mixPresentationSoloMuteRepository_->getAll(mixPresSoloMuteArray);
-  if (numMixes_ == 1 && mixPresSoloMuteArray.isEmpty()) {
-    MixPresentationSoloMute mixPresentationSoloMute(
-        mixPresentationArray_[0]->getId(), mixPresentationArray_[0]->getName());
-    mixPresentationSoloMuteRepository_->add(mixPresentationSoloMute);
-  }
   LOG_ANALYTICS(
       RendererProcessor::instanceId_,
       "Mix presentations updated. Total mixes: " + std::to_string(numMixes_));
@@ -264,12 +254,6 @@ void PresentationMonitorScreen::valueTreeChildAdded(
             channelMonitorData_),
         true);
 
-    MixPresentationSoloMute mixPresentationSoloMute(
-        juce::Uuid(childWhichHasBeenAdded[MixPresentationSoloMute::kId]),
-        childWhichHasBeenAdded[MixPresentationSoloMute::kName]);
-
-    mixPresentationSoloMuteRepository_->updateOrAdd(mixPresentationSoloMute);
-
     // repaint the tabs/presentation screen
     repaint(presentationTabBounds_);
   } else if (parentTree.getType() == MixPresentation::kTreeType) {
@@ -285,13 +269,6 @@ void PresentationMonitorScreen::valueTreeChildAdded(
         break;
       }
     }
-    // update the name in the solo mute repo as well
-    MixPresentationSoloMute mixPresSoloMute =
-        mixPresentationSoloMuteRepository_->get(mixPresId).value_or(
-            MixPresentationSoloMute());
-    mixPresSoloMute.setName(
-        parentTree[MixPresentation::kPresentationName].toString());
-    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
   }
 }
 
@@ -315,13 +292,6 @@ void PresentationMonitorScreen::valueTreeChildRemoved(
 
     // update the tab button bounds
     updateTabButtonBounds(presentationTabBounds_);
-    // if a mix presentation is removed, remove it from the mpSM repository
-    // this includes removing the audio elements
-    MixPresentationSoloMute mixPresentationSoloMute(
-        juce::Uuid(childWhichHasBeenRemoved[MixPresentationSoloMute::kId]),
-        childWhichHasBeenRemoved[MixPresentationSoloMute::kName]);
-
-    mixPresentationSoloMuteRepository_->remove(mixPresentationSoloMute);
   }
   // repaint the tabs/presentation screen
   repaint(presentationTabBounds_);

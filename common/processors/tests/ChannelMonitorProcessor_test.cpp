@@ -24,12 +24,20 @@
 TEST(test_channelmonitor_processor, test_getPrerdrLoudness) {
   ChannelMonitorData channelMonitorData;
 
+  MixPresentationRepository mixPresentationRepository_ =
+      juce::ValueTree("mixPresentation");
+
+  MixPresentationSoloMuteRepository mixPresentationSoloMuteRepository_ =
+      juce::ValueTree("mixPresentationSoloMute");
+
   // temporary hard-code for testing purposes
   juce::Uuid presentationUuid = juce::Uuid();
   MixPresentation presentation(presentationUuid, "English Mix", 1,
                                LanguageData::MixLanguages::English, {});
 
-  ChannelMonitorProcessor channelMonitorProcessor(channelMonitorData);
+  ChannelMonitorProcessor channelMonitorProcessor(
+      channelMonitorData, &mixPresentationRepository_,
+      &mixPresentationSoloMuteRepository_);
 
   // Check if the gains are being applied correctly
   // Create an AudioBuffer to test the processBlock function

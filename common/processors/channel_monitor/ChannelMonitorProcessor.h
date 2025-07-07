@@ -30,11 +30,16 @@
 
 #include "../../data_repository/implementation/MixPresentationRepository.h"
 #include "../processor_base/ProcessorBase.h"
+#include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 
 //==============================================================================
-class ChannelMonitorProcessor final : public ProcessorBase {
+class ChannelMonitorProcessor final : public ProcessorBase,
+                                      juce::ValueTree::Listener {
  public:
-  ChannelMonitorProcessor(ChannelMonitorData& channelMonitorData);
+  ChannelMonitorProcessor(
+      ChannelMonitorData& channelMonitorData,
+      MixPresentationRepository* mixPresentationRepository,
+      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository);
   ~ChannelMonitorProcessor() override;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -45,10 +50,17 @@ class ChannelMonitorProcessor final : public ProcessorBase {
 
   const juce::String getName() const override;
 
-  std::vector<float> getPrerdrLoudness() const { return loudness_; }
-
  private:
+  void valueTreeChildAdded(juce::ValueTree& parentTree,
+                           juce::ValueTree& childWhichHasBeenAdded) override;
+
+  void valueTreeChildRemoved(juce::ValueTree& parentTree,
+                             juce::ValueTree& childWhichHasBeenRemoved,
+                             int indexFromWhichChildWasRemoved) override;
+
   ChannelMonitorData& channelMonitorData_;
+  MixPresentationRepository* mixPresentationRepository_;
+  MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
   int numChannels_;
   // replace with thread safe data-struct
   std::vector<float> loudness_;

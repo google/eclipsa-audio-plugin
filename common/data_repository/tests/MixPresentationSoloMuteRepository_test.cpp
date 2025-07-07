@@ -26,11 +26,9 @@ TEST(test_mix_presentation_solo_mute_repository, update) {
   MixPresentationSoloMuteRepository repositoryInstance(test);
 
   juce::Uuid presentationUuid = juce::Uuid();
-  MixPresentationSoloMute presentation(presentationUuid, "testPresentation",
-                                       false);
+  MixPresentationSoloMute presentation(presentationUuid, false);
   repositoryInstance.add(presentation);
 
-  presentation.setName("updatedName");
   juce::Uuid element = juce::Uuid();
   presentation.addAudioElement(element, 1, "AE1");
 

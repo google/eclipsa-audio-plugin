@@ -29,8 +29,7 @@ PresentationTab::PresentationTab(juce::Uuid mixPresID,
       multichannelGainRepo_(&repos.chGainRepo_),
       activeMixRepository_(&repos.activeMPRepo_),
       channelMonitorData_(channelMonitorData),
-      mixPresentationRepository_(&repos.mpRepo_),
-      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_) {
+      mixPresentationRepository_(&repos.mpRepo_) {
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "PresentationTab created for MixPresentation");
 
@@ -102,20 +101,6 @@ void PresentationTab::valueTreeChildAdded(
   if (parentTree.getType() == MixPresentation::kTreeType &&
       juce::Uuid(parentTree[MixPresentation::kId]) == kmixPresID_) {
     resetTab();
-
-    // add Audio Element to SoloMute Repository
-    MixPresentationSoloMute mixPresSoloMute =
-        mixPresentationSoloMuteRepository_->get(kmixPresID_)
-            .value_or(MixPresentationSoloMute());
-
-    for (auto audioElementNode : childWhichHasBeenAdded) {
-      mixPresSoloMute.addAudioElement(
-          juce::Uuid(audioElementNode[MixPresentationAudioElement::kId]),
-          audioElementNode[MixPresentationAudioElement::kReferenceId],
-          audioElementNode[MixPresentation::kPresentationName]);
-    }
-
-    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
   }
 }
 
@@ -125,18 +110,6 @@ void PresentationTab::valueTreeChildRemoved(
   if (childWhichHasBeenRemoved.getType() == MixPresentation::kAudioElements &&
       juce::Uuid(parentTree[MixPresentation::kId]) == kmixPresID_) {
     resetTab();
-
-    // remove Audio Element from SoloMute Repository
-    MixPresentationSoloMute mixPresSoloMute =
-        mixPresentationSoloMuteRepository_->get(kmixPresID_)
-            .value_or(MixPresentationSoloMute());
-
-    for (auto audioElementNode : childWhichHasBeenRemoved) {
-      mixPresSoloMute.removeAudioElement(
-          juce::Uuid(audioElementNode[MixPresentationAudioElement::kId]));
-    }
-
-    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
   }
 }
 

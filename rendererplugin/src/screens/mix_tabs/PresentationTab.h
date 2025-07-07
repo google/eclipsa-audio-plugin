@@ -114,7 +114,6 @@ class PresentationTab : public juce::Component,
   AudioElementRepository* audioElementRepository_;
   ActiveMixRepository* activeMixRepository_;
   MixPresentationRepository* mixPresentationRepository_;
-  MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
   juce::OwnedArray<AudioElement> allAudioElementsArray_;  // all audio elements
   std::vector<AudioElement>
       audioElements_;  // the audio elements that belong to this mix

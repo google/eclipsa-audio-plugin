@@ -14,15 +14,40 @@
 
 #include "ChannelMonitorProcessor.h"
 
+#include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 #include "data_structures/src/ChannelMonitorData.h"
+#include "data_structures/src/MixPresentation.h"
 
 ChannelMonitorProcessor::ChannelMonitorProcessor(
-    ChannelMonitorData& channelMonitorData)
+    ChannelMonitorData& channelMonitorData,
+    MixPresentationRepository* mixPresentationRepository,
+    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository)
     : numChannels_(juce::AudioChannelSet::ambisonic(5).size()),
       channelMonitorData_(channelMonitorData),
-      loudness_(std::vector<float>(numChannels_, -300.f)) {}
+      loudness_(std::vector<float>(numChannels_, -300.f)),
+      mixPresentationRepository_(mixPresentationRepository),
+      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository) {
+  mixPresentationRepository_->registerListener(this);
 
-ChannelMonitorProcessor::~ChannelMonitorProcessor() {}
+  // address the case where there is just 1 mix presentation on start up
+  // that is added before this component is added as a listener
+  // manually add the mixPresentationID to MixPresentataionSoloMuteRepository
+  juce::OwnedArray<MixPresentationSoloMute> mixPresSoloMuteArray;
+  mixPresentationSoloMuteRepository_->getAll(mixPresSoloMuteArray);
+  juce::OwnedArray<MixPresentation> mixPresentationArray;
+  mixPresentationRepository_->getAll(mixPresentationArray);
+
+  if (mixPresentationArray.size() == 1 && mixPresSoloMuteArray.isEmpty()) {
+    MixPresentationSoloMute mixPresentationSoloMute(
+        mixPresentationArray[0]->getId());
+    mixPresentationSoloMuteRepository_->add(mixPresentationSoloMute);
+  }
+}
+
+ChannelMonitorProcessor::~ChannelMonitorProcessor() {
+  mixPresentationRepository_->deregisterListener(this);
+}
 
 const juce::String ChannelMonitorProcessor::getName() const {
   return {"Channel Monitor"};
@@ -51,4 +76,76 @@ void ChannelMonitorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
 bool ChannelMonitorProcessor::hasEditor() const {
   return false;  // (change this to false if you choose to not supply an editor)
+}
+
+void ChannelMonitorProcessor::valueTreeChildAdded(
+    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
+  // if a mix presentation is added, add it to the mpSM repository
+  if (childWhichHasBeenAdded.getType() == MixPresentation::kTreeType) {
+    const juce::var mixPresentationSoloMuteId =
+        childWhichHasBeenAdded[MixPresentationSoloMute::kId];
+    MixPresentationSoloMute mixPresentationSoloMute(
+        juce::Uuid(static_cast<juce::String>(mixPresentationSoloMuteId)));
+
+    mixPresentationSoloMuteRepository_->updateOrAdd(mixPresentationSoloMute);
+  }
+  // if an audio element is added to a mix presentation, add it to the
+  // mpSM repository
+  else if (parentTree.getType() == MixPresentation::kTreeType &&
+           childWhichHasBeenAdded.getType() ==
+               MixPresentation::kAudioElements) {
+    juce::Logger::outputDebugString(parentTree.toXmlString());
+    juce::Logger::outputDebugString(childWhichHasBeenAdded.toXmlString());
+
+    juce::Uuid mixPresID = juce::Uuid(parentTree[MixPresentation::kId]);
+
+    // add Audio Element to SoloMute Repository
+    MixPresentationSoloMute mixPresSoloMute =
+        mixPresentationSoloMuteRepository_->get(mixPresID).value_or(
+            MixPresentationSoloMute());
+
+    for (auto audioElementNode : childWhichHasBeenAdded) {
+      mixPresSoloMute.addAudioElement(
+          juce::Uuid(audioElementNode[MixPresentationAudioElement::kId]),
+          audioElementNode[MixPresentationAudioElement::kReferenceId],
+          audioElementNode[MixPresentation::kPresentationName]);
+    }
+
+    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
+  }
+}
+
+void ChannelMonitorProcessor::valueTreeChildRemoved(
+    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
+    int indexFromWhichChildWasRemoved) {
+  // if a mix presentation is removed, remove it from the mpSM repository
+  if (childWhichHasBeenRemoved.getType() == MixPresentation::kTreeType) {
+    const juce::var mixPresentationSoloMuteId =
+        childWhichHasBeenRemoved[MixPresentationSoloMute::kId];
+    // if a mix presentation is removed, remove it from the mpSM repository
+    // this includes removing the audio elements
+    MixPresentationSoloMute mixPresentationSoloMute(
+        juce::Uuid(static_cast<juce::String>(mixPresentationSoloMuteId)));
+
+    mixPresentationSoloMuteRepository_->remove(mixPresentationSoloMute);
+  } else if (parentTree.getType() == MixPresentation::kTreeType &&
+             childWhichHasBeenRemoved.getType() ==
+                 MixPresentation::kAudioElements) {
+    juce::Logger::outputDebugString(parentTree.toXmlString());
+    juce::Logger::outputDebugString(childWhichHasBeenRemoved.toXmlString());
+
+    juce::Uuid mixPresID = juce::Uuid(parentTree[MixPresentation::kId]);
+
+    // remove Audio Element from SoloMute Repository
+    MixPresentationSoloMute mixPresSoloMute =
+        mixPresentationSoloMuteRepository_->get(mixPresID).value_or(
+            MixPresentationSoloMute());
+
+    for (auto audioElementNode : childWhichHasBeenRemoved) {
+      mixPresSoloMute.removeAudioElement(
+          juce::Uuid(audioElementNode[MixPresentationAudioElement::kId]));
+    }
+
+    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
+  }
 }
