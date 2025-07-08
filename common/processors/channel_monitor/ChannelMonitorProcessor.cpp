@@ -94,9 +94,6 @@ void ChannelMonitorProcessor::valueTreeChildAdded(
   else if (parentTree.getType() == MixPresentation::kTreeType &&
            childWhichHasBeenAdded.getType() ==
                MixPresentation::kAudioElements) {
-    juce::Logger::outputDebugString(parentTree.toXmlString());
-    juce::Logger::outputDebugString(childWhichHasBeenAdded.toXmlString());
-
     juce::Uuid mixPresID = juce::Uuid(parentTree[MixPresentation::kId]);
 
     // add Audio Element to SoloMute Repository
@@ -131,9 +128,6 @@ void ChannelMonitorProcessor::valueTreeChildRemoved(
   } else if (parentTree.getType() == MixPresentation::kTreeType &&
              childWhichHasBeenRemoved.getType() ==
                  MixPresentation::kAudioElements) {
-    juce::Logger::outputDebugString(parentTree.toXmlString());
-    juce::Logger::outputDebugString(childWhichHasBeenRemoved.toXmlString());
-
     juce::Uuid mixPresID = juce::Uuid(parentTree[MixPresentation::kId]);
 
     // remove Audio Element from SoloMute Repository
