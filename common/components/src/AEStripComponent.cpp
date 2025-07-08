@@ -63,13 +63,11 @@ AEStripComponent::AEStripComponent(
   mainLabel.setJustificationType(juce::Justification::topLeft);
   addAndMakeVisible(mainLabel);
 
-  MixPresentationSoloMute mixPresSoloMute = 
+  MixPresentationSoloMute mixPresSoloMute =
       mixPresentationSoloMuteRepository_->get(mixPresID_).value();
 
-  bool initialSoloState =
-      mixPresSoloMute.isAudioElementSoloed(audioelementID_);
-  bool initialMuteState =
-      mixPresSoloMute.isAudioElementMuted(audioelementID_);
+  bool initialSoloState = mixPresSoloMute.isAudioElementSoloed(audioelementID_);
+  bool initialMuteState = mixPresSoloMute.isAudioElementMuted(audioelementID_);
 
   // Setup the solo and mute buttons
   setupToggleButton("S", soloButton_, soloButtonClicked, initialSoloState);
@@ -150,17 +148,19 @@ void AEStripComponent::paint(juce::Graphics& g) {
   }
 }
 
-void AEStripComponent::setupToggleButton(
-    const juce::String& text, juce::TextButton& button,
-    const std::function<void()>& callback, bool initialState) {
+void AEStripComponent::setupToggleButton(const juce::String& text,
+                                         juce::TextButton& button,
+                                         const std::function<void()>& callback,
+                                         bool initialState) {
   button.setButtonText(text);
   button.setToggleable(true);
   button.setToggleState(initialState, juce::dontSendNotification);
   button.setClickingTogglesState(true);
   button.onClick = callback;
   addAndMakeVisible(button);
-  LOG_ANALYTICS(0, "Toggle button " + text.toStdString() + " created. Initial state: " +
-                          std::to_string(initialState));
+  LOG_ANALYTICS(0,
+                "Toggle button " + text.toStdString() +
+                    " created. Initial state: " + std::to_string(initialState));
 }
 
 // Function to store the channel indices of the channels used in the AE
@@ -180,13 +180,17 @@ void AEStripComponent::soloButtonClickedCallback() {  // handle case that solo
       mixPresentationSoloMuteRepository_->get(mixPresID_);
   if (mixPresSoloMuteOpt.has_value()) {
     LOG_ANALYTICS(0, "SoloMute Repo State before solo update: " +
-                        mixPresentationSoloMuteRepository_->getValueTree().toXmlString().toStdString());
+                         mixPresentationSoloMuteRepository_->getValueTree()
+                             .toXmlString()
+                             .toStdString());
     mixPresSoloMute = mixPresSoloMuteOpt.value();
     mixPresSoloMute.setAudioElementSolo(audioelementID_,
                                         soloButton_.getToggleState());
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
     LOG_ANALYTICS(0, "SoloMute Repo State after solo update: " +
-                        mixPresentationSoloMuteRepository_->getValueTree().toXmlString().toStdString());
+                         mixPresentationSoloMuteRepository_->getValueTree()
+                             .toXmlString()
+                             .toStdString());
     updateChannelMutes();
     determineSoloMuteButtonColours();
     muteButton_.repaint();
@@ -315,16 +319,18 @@ void AEStripComponent::updateChannelMutes() {
   if (mixPresSoloMute.isAudioElementMuted(audioelementID_) ||
       (mixPresSoloMute.getAnySoloed() &&
        !mixPresSoloMute.isAudioElementSoloed(audioelementID_))) {
-    muteAEChannels();   
+    muteAEChannels();
     LOG_ANALYTICS(0, "called muteAEChannels()");
   } else {
     unmuteAEChannels();
     LOG_ANALYTICS(0, "called unmuteAEChannels()");
   }
-  LOG_ANALYTICS(0, "updated Channel mutes for audio element: " +
-                        audioelementID_.toString().toStdString() +
-                        " in mix presentation: " + mixPresID_.toString().toStdString());
-  LOG_ANALYTICS(0, multichannelGainRepo_->getTree().toXmlString().toStdString());
+  LOG_ANALYTICS(
+      0, "updated Channel mutes for audio element: " +
+             audioelementID_.toString().toStdString() +
+             " in mix presentation: " + mixPresID_.toString().toStdString());
+  LOG_ANALYTICS(0,
+                multichannelGainRepo_->getTree().toXmlString().toStdString());
 }
 
 void AEStripComponent::determineSoloMuteButtonColours() {
