@@ -26,7 +26,7 @@
 
 struct AudioElementSoloMute : public RepositoryItemBase {
  public:
-  AudioElementSoloMute() : RepositoryItemBase({}){};
+  AudioElementSoloMute() : RepositoryItemBase({}) {};
   AudioElementSoloMute(juce::Uuid id, int referenceID, const juce::String& name,
                        const bool isSoloed = false, const bool isMuted = false)
       : RepositoryItemBase(id),

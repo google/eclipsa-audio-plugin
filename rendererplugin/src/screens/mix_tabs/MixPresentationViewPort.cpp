@@ -26,7 +26,7 @@ MixPresentationViewPort::MixPresentationViewPort(
   viewPort_.setScrollBarsShown(true, false);
 }
 
-MixPresentationViewPort::~MixPresentationViewPort(){};
+MixPresentationViewPort::~MixPresentationViewPort() {};
 
 void MixPresentationViewPort::paint(juce::Graphics& g) {
   const auto bounds = getLocalBounds();
