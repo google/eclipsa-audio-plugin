@@ -79,7 +79,8 @@ class AEStripComponent : public juce::Component,
   int determineColourIndex(const int& channelIndex);
 
   void setupToggleButton(const juce::String& text, juce::TextButton& button,
-                         const std::function<void()>& callback, bool initialState = false);
+                         const std::function<void()>& callback,
+                         bool initialState = false);
 
   // these functions are executed when internal S/M buttons are toggled
   void soloButtonClickedCallback();
