@@ -43,7 +43,8 @@ void MixPresentationSoloMute::setAudioElementSolo(const juce::Uuid& id,
   for (auto& audioElement : audioElements_) {
     if (audioElement.getId() == id) {
       audioElement.setSoloed(isSoloed);
-      LOG_ANALYTICS(0, "Audio element " + id.toString().toStdString() + " soloed: " + std::to_string(isSoloed));
+      LOG_ANALYTICS(0, "Audio element " + id.toString().toStdString() +
+                           " soloed: " + std::to_string(isSoloed));
       return;
     }
   }
