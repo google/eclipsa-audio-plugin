@@ -29,7 +29,8 @@ PresentationTab::PresentationTab(juce::Uuid mixPresID,
       multichannelGainRepo_(&repos.chGainRepo_),
       activeMixRepository_(&repos.activeMPRepo_),
       channelMonitorData_(channelMonitorData),
-      mixPresentationRepository_(&repos.mpRepo_) {
+      mixPresentationRepository_(&repos.mpRepo_),
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_) {
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "PresentationTab created for MixPresentation");
 
