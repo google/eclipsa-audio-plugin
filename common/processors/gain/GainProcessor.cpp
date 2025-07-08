@@ -78,12 +78,6 @@ bool GainProcessor::hasEditor() const {
   return false;  // (change this to false if you choose to not supply an editor)
 }
 
-//==============================================================================
-void GainProcessor::setStateInformation(const void* data, int sizeInBytes) {
-  std::unique_ptr<juce::XmlElement> xmlState(
-      getXmlFromBinary(data, sizeInBytes));
-}
-
 std::vector<juce::dsp::Gain<float>>
 GainProcessor::InitializeChannelGainsDSPs() {
   std::vector<juce::dsp::Gain<float>> channelGainsDSPs(gains_.size());

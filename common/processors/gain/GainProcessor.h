@@ -56,9 +56,6 @@ class GainProcessor final : public ProcessorBase,
   //==============================================================================
   const juce::String getName() const override;
 
-  //==============================================================================
-  void setStateInformation(const void* data, int sizeInBytes) override;
-
   virtual void valueTreePropertyChanged(
       juce::ValueTree& tree, const juce::Identifier& property) override;
   virtual void valueTreeChildAdded(juce::ValueTree& parent,
