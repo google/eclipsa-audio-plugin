@@ -29,20 +29,6 @@ ChannelMonitorProcessor::ChannelMonitorProcessor(
       mixPresentationRepository_(mixPresentationRepository),
       mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository) {
   mixPresentationRepository_->registerListener(this);
-
-  // address the case where there is just 1 mix presentation on start up
-  // that is added before this component is added as a listener
-  // manually add the mixPresentationID to MixPresentataionSoloMuteRepository
-  juce::OwnedArray<MixPresentationSoloMute> mixPresSoloMuteArray;
-  mixPresentationSoloMuteRepository_->getAll(mixPresSoloMuteArray);
-  juce::OwnedArray<MixPresentation> mixPresentationArray;
-  mixPresentationRepository_->getAll(mixPresentationArray);
-
-  if (mixPresentationArray.size() == 1 && mixPresSoloMuteArray.isEmpty()) {
-    MixPresentationSoloMute mixPresentationSoloMute(
-        mixPresentationArray[0]->getId());
-    mixPresentationSoloMuteRepository_->add(mixPresentationSoloMute);
-  }
 }
 
 ChannelMonitorProcessor::~ChannelMonitorProcessor() {

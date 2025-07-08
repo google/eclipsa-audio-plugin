@@ -15,6 +15,7 @@
 #include "MixPresentationSoloMute.h"
 
 #include "juce_core/system/juce_PlatformDefs.h"
+#include "logger/logger.h"
 
 MixPresentationSoloMute::MixPresentationSoloMute()
     : RepositoryItemBase(juce::Uuid::null()) {}
@@ -42,6 +43,7 @@ void MixPresentationSoloMute::setAudioElementSolo(const juce::Uuid& id,
   for (auto& audioElement : audioElements_) {
     if (audioElement.getId() == id) {
       audioElement.setSoloed(isSoloed);
+      LOG_ANALYTICS(0, "Audio element " + id.toString().toStdString() + " soloed: " + std::to_string(isSoloed));
       return;
     }
   }
