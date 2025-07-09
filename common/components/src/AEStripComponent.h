@@ -66,10 +66,6 @@ class AEStripComponent : public juce::Component,
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override;
 
-  void valueTreeChildRemoved(juce::ValueTree& parentTree,
-                             juce::ValueTree& childWhichHasBeenRemoved,
-                             int index) override;
-
   void determineSoloMuteButtonColours();
 
   void assignChannelLabels();

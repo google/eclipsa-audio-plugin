@@ -72,11 +72,12 @@ AEStripComponent::AEStripComponent(
   // Setup the solo and mute buttons
   setupToggleButton("S", soloButton_, soloButtonClicked, initialSoloState);
   setupToggleButton("M", muteButton_, muteButtonClicked, initialMuteState);
+
+  updateChannelMutes();
   determineSoloMuteButtonColours();
 
   addAndMakeVisible(indicatorContainer);
   assignChannelLabels();
-  updateChannelMutes();
 }
 
 AEStripComponent::~AEStripComponent() {
@@ -179,22 +180,10 @@ void AEStripComponent::soloButtonClickedCallback() {  // handle case that solo
   std::optional<MixPresentationSoloMute> mixPresSoloMuteOpt =
       mixPresentationSoloMuteRepository_->get(mixPresID_);
   if (mixPresSoloMuteOpt.has_value()) {
-    LOG_ANALYTICS(0, "SoloMute Repo State before solo update: " +
-                         mixPresentationSoloMuteRepository_->getValueTree()
-                             .toXmlString()
-                             .toStdString());
     mixPresSoloMute = mixPresSoloMuteOpt.value();
     mixPresSoloMute.setAudioElementSolo(audioelementID_,
                                         soloButton_.getToggleState());
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
-    LOG_ANALYTICS(0, "SoloMute Repo State after solo update: " +
-                         mixPresentationSoloMuteRepository_->getValueTree()
-                             .toXmlString()
-                             .toStdString());
-    // updateChannelMutes();
-    // determineSoloMuteButtonColours();
-    // muteButton_.repaint();
-    // soloButton_.repaint();
   } else {
     LOG_ERROR(RendererProcessor::instanceId_,
               "AEChannelStrip:: Could not find mix presentation w/ ID: " +
@@ -211,10 +200,6 @@ void AEStripComponent::muteButtonClickedCallback() {
     mixPresSoloMute.setAudioElementMute(audioelementID_,
                                         muteButton_.getToggleState());
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
-    // updateChannelMutes();
-    // determineSoloMuteButtonColours();
-    // muteButton_.repaint();
-    // soloButton_.repaint();
   } else {
     LOG_ERROR(RendererProcessor::instanceId_,
               "AEChannelStrip:: Could not find mix presentation w/ ID: " +
@@ -320,10 +305,8 @@ void AEStripComponent::updateChannelMutes() {
       (mixPresSoloMute.getAnySoloed() &&
        !mixPresSoloMute.isAudioElementSoloed(audioelementID_))) {
     muteAEChannels();
-    LOG_ANALYTICS(0, "called muteAEChannels()");
   } else {
     unmuteAEChannels();
-    LOG_ANALYTICS(0, "called unmuteAEChannels()");
   }
   LOG_ANALYTICS(
       0, "updated Channel mutes for audio element: " +
@@ -383,38 +366,12 @@ void AEStripComponent::valueTreeChildAdded(
   if (parentID != mixPresID_) {
     return;
   }
-  LOG_ANALYTICS(0, "valueTreeChildAdded called for mixID: " +
-                       mixPresID_.toString().toStdString() +
-                       " and audioelementID: " +
-                       audioelementID_.toString().toStdString());
-  LOG_ANALYTICS(0, " Parent Tree: \n" + parentTree.toXmlString().toStdString());
-  LOG_ANALYTICS(0, " Child Tree: \n" +
-                       childWhichHasBeenAdded.toXmlString().toStdString());
   if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
     updateChannelMutes();
     determineSoloMuteButtonColours();
     muteButton_.repaint();
     soloButton_.repaint();
   }
-}
-
-void AEStripComponent::valueTreeChildRemoved(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
-    int index) {
-  // LOG_ANALYTICS(0, "valueTreeChildRemoved called for mixID: " +
-  //                      mixPresID_.toString().toStdString() +
-  //                      " and audioelementID: " +
-  //                      audioelementID_.toString().toStdString());
-  // LOG_ANALYTICS(0, " Parent Tree: \n" +
-  // parentTree.toXmlString().toStdString()); LOG_ANALYTICS(0, " Child Tree: \n"
-  // +
-  //                      childWhichHasBeenRemoved.toXmlString().toStdString());
-  // if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
-  //   updateChannelMutes();
-  //   determineSoloMuteButtonColours();
-  //   muteButton_.repaint();
-  //   soloButton_.repaint();
-  // }
 }
 
 void AEStripComponent::updateName(const juce::String& name) {
