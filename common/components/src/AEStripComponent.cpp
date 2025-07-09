@@ -191,10 +191,10 @@ void AEStripComponent::soloButtonClickedCallback() {  // handle case that solo
                          mixPresentationSoloMuteRepository_->getValueTree()
                              .toXmlString()
                              .toStdString());
-    updateChannelMutes();
-    determineSoloMuteButtonColours();
-    muteButton_.repaint();
-    soloButton_.repaint();
+    // updateChannelMutes();
+    // determineSoloMuteButtonColours();
+    // muteButton_.repaint();
+    // soloButton_.repaint();
   } else {
     LOG_ERROR(RendererProcessor::instanceId_,
               "AEChannelStrip:: Could not find mix presentation w/ ID: " +
@@ -211,10 +211,10 @@ void AEStripComponent::muteButtonClickedCallback() {
     mixPresSoloMute.setAudioElementMute(audioelementID_,
                                         muteButton_.getToggleState());
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
-    updateChannelMutes();
-    determineSoloMuteButtonColours();
-    muteButton_.repaint();
-    soloButton_.repaint();
+    // updateChannelMutes();
+    // determineSoloMuteButtonColours();
+    // muteButton_.repaint();
+    // soloButton_.repaint();
   } else {
     LOG_ERROR(RendererProcessor::instanceId_,
               "AEChannelStrip:: Could not find mix presentation w/ ID: " +
@@ -377,6 +377,19 @@ void AEStripComponent::determineSoloMuteButtonColours() {
 
 void AEStripComponent::valueTreeChildAdded(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
+  juce::Uuid parentID = juce::Uuid(parentTree[MixPresentationSoloMute::kId]);
+  juce::Uuid childID =
+      juce::Uuid(childWhichHasBeenAdded[MixPresentationSoloMute::kId]);
+  if (parentID != mixPresID_) {
+    return;
+  }
+  LOG_ANALYTICS(0, "valueTreeChildAdded called for mixID: " +
+                       mixPresID_.toString().toStdString() +
+                       " and audioelementID: " +
+                       audioelementID_.toString().toStdString());
+  LOG_ANALYTICS(0, " Parent Tree: \n" + parentTree.toXmlString().toStdString());
+  LOG_ANALYTICS(0, " Child Tree: \n" +
+                       childWhichHasBeenAdded.toXmlString().toStdString());
   if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
     updateChannelMutes();
     determineSoloMuteButtonColours();
@@ -388,12 +401,20 @@ void AEStripComponent::valueTreeChildAdded(
 void AEStripComponent::valueTreeChildRemoved(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
     int index) {
-  if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
-    updateChannelMutes();
-    determineSoloMuteButtonColours();
-    muteButton_.repaint();
-    soloButton_.repaint();
-  }
+  // LOG_ANALYTICS(0, "valueTreeChildRemoved called for mixID: " +
+  //                      mixPresID_.toString().toStdString() +
+  //                      " and audioelementID: " +
+  //                      audioelementID_.toString().toStdString());
+  // LOG_ANALYTICS(0, " Parent Tree: \n" +
+  // parentTree.toXmlString().toStdString()); LOG_ANALYTICS(0, " Child Tree: \n"
+  // +
+  //                      childWhichHasBeenRemoved.toXmlString().toStdString());
+  // if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
+  //   updateChannelMutes();
+  //   determineSoloMuteButtonColours();
+  //   muteButton_.repaint();
+  //   soloButton_.repaint();
+  // }
 }
 
 void AEStripComponent::updateName(const juce::String& name) {
