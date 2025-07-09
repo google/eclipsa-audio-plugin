@@ -24,18 +24,22 @@
 
 #pragma once
 
-#include <data_structures/src/SpeakerMonitorData.h>
+#include <data_structures/src/ChannelMonitorData.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
-#include "../../data_repository/implementation/AudioElementRepository.h"
 #include "../../data_repository/implementation/MixPresentationRepository.h"
 #include "../processor_base/ProcessorBase.h"
+#include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 
 //==============================================================================
-class ChannelMonitorProcessor final : public ProcessorBase {
+class ChannelMonitorProcessor final : public ProcessorBase,
+                                      juce::ValueTree::Listener {
  public:
-  ChannelMonitorProcessor();
+  ChannelMonitorProcessor(
+      ChannelMonitorData& channelMonitorData,
+      MixPresentationRepository* mixPresentationRepository,
+      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository);
   ~ChannelMonitorProcessor() override;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -46,9 +50,17 @@ class ChannelMonitorProcessor final : public ProcessorBase {
 
   const juce::String getName() const override;
 
-  std::vector<float> getPrerdrLoudness() const { return loudness_; }
-
  private:
+  void valueTreeChildAdded(juce::ValueTree& parentTree,
+                           juce::ValueTree& childWhichHasBeenAdded) override;
+
+  void valueTreeChildRemoved(juce::ValueTree& parentTree,
+                             juce::ValueTree& childWhichHasBeenRemoved,
+                             int indexFromWhichChildWasRemoved) override;
+
+  ChannelMonitorData& channelMonitorData_;
+  MixPresentationRepository* mixPresentationRepository_;
+  MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
   int numChannels_;
   // replace with thread safe data-struct
   std::vector<float> loudness_;

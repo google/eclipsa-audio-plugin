@@ -23,8 +23,8 @@
 #include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 #include "data_repository/implementation/MultiChannelGainRepository.h"
-#include "data_structures/src/MixPresentation.h"
-#include "processors/channel_monitor/ChannelMonitorProcessor.h"
+#include "data_structures/src/ChannelMonitorData.h"
+#include "data_structures/src/RepositoryCollection.h"
 
 // Use this to specify how the S/M buttons should look
 class AEStripLookandFeel : public juce::LookAndFeel_V4 {
@@ -36,13 +36,10 @@ class AEStripComponent : public juce::Component,
                          public juce::Timer,
                          public juce::ValueTree::Listener {
  public:
-  AEStripComponent(
-      const int countChannel, const juce::String label,
-      const int startingChannel, MultiChannelRepository* multichannelGainRepo,
-      ChannelMonitorProcessor* channelMonitorProcessor,
-      const juce::Uuid audioelementID, const juce::Uuid mixPresID,
-      MixPresentationRepository* mixPresentationRepository,
-      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository);
+  AEStripComponent(const int countChannel, const juce::String label,
+                   const int startingChannel, RepositoryCollection& repos,
+                   ChannelMonitorData& channelMonitorData,
+                   const juce::Uuid audioelementID, const juce::Uuid mixPresID);
   ~AEStripComponent();
 
   int getChannelCount() const { return channelCount_; }
@@ -126,8 +123,9 @@ class AEStripComponent : public juce::Component,
   // this holds the indices of the channels (0-15, 0-7, etc..)
   std::set<int> channelsSet_;
 
+  std::vector<float> channelLoudnessesRead_;
+  ChannelMonitorData& channelMonitorData_;
   MultiChannelRepository* multichannelGainRepo_;
-  ChannelMonitorProcessor* channelMonitorProcessor_;
   MixPresentationRepository* mixPresentationRepository_;
   MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
 

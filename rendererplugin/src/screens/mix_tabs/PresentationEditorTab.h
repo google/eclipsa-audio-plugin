@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include "../../RendererProcessor.h"
 #include "PresentationEditorViewPort.h"
 #include "components/src/ControlKnobSkewed.h"
 #include "components/src/GainControlTextEditor.h"
@@ -25,7 +24,6 @@
 #include "components/src/SelectionBox.h"
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
-#include "data_structures/src/MixPresentation.h"
 
 class PresentationEditorTabLookAndFeel : public juce::LookAndFeel_V4 {
  public:

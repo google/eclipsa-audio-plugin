@@ -16,35 +16,28 @@
 
 #include <gtest/gtest.h>
 
+#include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/LanguageCodeMetaData.h"
 #include "data_structures/src/MixPresentation.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 TEST(test_channelmonitor_processor, test_getPrerdrLoudness) {
-  AudioElementRepository audioElementRepository_ =
-      juce::ValueTree("audioelements");
+  ChannelMonitorData channelMonitorData;
+
   MixPresentationRepository mixPresentationRepository_ =
       juce::ValueTree("mixPresentation");
+
+  MixPresentationSoloMuteRepository mixPresentationSoloMuteRepository_ =
+      juce::ValueTree("mixPresentationSoloMute");
 
   // temporary hard-code for testing purposes
   juce::Uuid presentationUuid = juce::Uuid();
   MixPresentation presentation(presentationUuid, "English Mix", 1,
                                LanguageData::MixLanguages::English, {});
 
-  juce::Uuid element = juce::Uuid();
-  presentation.addAudioElement(element, 1, "AE1");
-
-  AudioElement audioElement =
-      AudioElement(element, "Audio Element 1", Speakers::k7Point1Point4, 2);
-  audioElementRepository_.add(audioElement);
-
-  juce::Uuid elementa = juce::Uuid();
-  presentation.addAudioElement(elementa, 2, "AE2");
-  mixPresentationRepository_.add(presentation);
-
-  SpeakerMonitorData data;
-
-  ChannelMonitorProcessor channelMonitorProcessor;
+  ChannelMonitorProcessor channelMonitorProcessor(
+      channelMonitorData, &mixPresentationRepository_,
+      &mixPresentationSoloMuteRepository_);
 
   // Check if the gains are being applied correctly
   // Create an AudioBuffer to test the processBlock function
@@ -63,8 +56,11 @@ TEST(test_channelmonitor_processor, test_getPrerdrLoudness) {
   channelMonitorProcessor.prepareToPlay(2, numSamples);
   channelMonitorProcessor.processBlock(testDataBuffer, midiBuffer);
 
+  std::vector<float> channelLoudnessesRead;
+  channelMonitorData.channelLoudnesses.read(channelLoudnessesRead);
+
   for (int i = 0; i < 28; i++) {
     // Channels with value 0.5 have a rough dB value of -6
-    ASSERT_NEAR(channelMonitorProcessor.getPrerdrLoudness()[i], -6.0f, 0.1);
+    ASSERT_NEAR(channelLoudnessesRead[i], -6.0f, 0.1);
   }
 }

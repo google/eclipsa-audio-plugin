@@ -17,12 +17,9 @@
 #pragma once
 #include <components/components.h>
 
-#include "../RendererProcessor.h"
 #include "MixPresentationTagScreen.h"
 #include "components/src/MainEditor.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
-#include "logger/logger.h"
-#include "mix_tabs/PresentationEditorTab.h"
 
 class EditPresentationScreenLookAndFeel : public juce::LookAndFeel_V4 {
  public:

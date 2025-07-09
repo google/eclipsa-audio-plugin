@@ -15,10 +15,10 @@
 #include "PresentationMonitorScreen.h"
 
 #include "../RendererProcessor.h"
-#include "data_repository/implementation/FileExportRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/MixPresentationSoloMute.h"
+#include "data_structures/src/RepositoryCollection.h"
 #include "logger/logger.h"
 
 CustomTabbedComponent::CustomTabbedComponent()
@@ -44,27 +44,21 @@ void CustomTabbedComponent::currentTabChanged(
 }
 
 PresentationMonitorScreen::PresentationMonitorScreen(
-    MainEditor& editor, AudioElementRepository* ae_repository,
-    MultibaseAudioElementSpatialLayoutRepository*
-        audioElementSpatialLayout_repository,
-    MixPresentationRepository* mixPresentationRepository,
-    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository,
-    MultiChannelRepository* multiChannelRepository,
-    ActiveMixRepository* activeMixRepo,
-    ChannelMonitorProcessor* channelMonitorProcessor,
-    FileExportRepository* fileExportRepository, int totalChannelCount)
-    : elementRoutingScreen_(
-          editor, ae_repository, audioElementSpatialLayout_repository,
-          fileExportRepository, mixPresentationRepository, totalChannelCount),
-      editPresentationScreen_(editor, ae_repository, mixPresentationRepository,
-                              activeMixRepo),
+    MainEditor& editor, RepositoryCollection repos,
+    ChannelMonitorData& channelMonitorData, int totalChannelCount)
+    : elementRoutingScreen_(editor, &repos.aeRepo_,
+                            &repos.audioElementSpatialLayoutRepo_,
+                            &repos.fioRepo_, &repos.mpRepo_, totalChannelCount),
+      editPresentationScreen_(editor, &repos.aeRepo_, &repos.mpRepo_,
+                              &repos.activeMPRepo_),
       presentationTabs_(std::make_unique<CustomTabbedComponent>()),
-      channelMonitorProcessor_(channelMonitorProcessor),
-      mixPresentationRepository_(mixPresentationRepository),
-      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository),
-      multiChannelRepository_(multiChannelRepository),
-      audioElementRepository_(ae_repository),
-      activeMixRepository_(activeMixRepo),
+      repos_(repos),
+      mixPresentationRepository_(&repos.mpRepo_),
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_),
+      multiChannelRepository_(&repos.chGainRepo_),
+      audioElementRepository_(&repos.aeRepo_),
+      activeMixRepository_(&repos.activeMPRepo_),
+      channelMonitorData_(channelMonitorData),
       editPresentationButton(
           IconStore::getInstance()
               .getEditIcon()),  // Initialize with specified sizes
@@ -191,16 +185,6 @@ void PresentationMonitorScreen::updateMixPresentations() {
 
   numMixes_ = mixPresentationArray_.size();
 
-  // address the case where there is just 1 mix presentation on start up
-  // that is added before this component is added as a listener
-  // manually add the mixPresentationID to MixPresentataionSoloMuteRepository
-  juce::OwnedArray<MixPresentationSoloMute> mixPresSoloMuteArray;
-  mixPresentationSoloMuteRepository_->getAll(mixPresSoloMuteArray);
-  if (numMixes_ == 1 && mixPresSoloMuteArray.isEmpty()) {
-    MixPresentationSoloMute mixPresentationSoloMute(
-        mixPresentationArray_[0]->getId(), mixPresentationArray_[0]->getName());
-    mixPresentationSoloMuteRepository_->add(mixPresentationSoloMute);
-  }
   LOG_ANALYTICS(
       RendererProcessor::instanceId_,
       "Mix presentations updated. Total mixes: " + std::to_string(numMixes_));
@@ -222,16 +206,15 @@ void PresentationMonitorScreen::updatePresentationTabs() {
   for (auto mix : mixPresentationArray_) {
     presentationTabs_->addTab(
         mix->getName(), EclipsaColours::backgroundOffBlack,
-        new MixPresentationViewPort(
-            mix->getId(), audioElementRepository_, multiChannelRepository_,
-            activeMixRepository_, channelMonitorProcessor_,
-            mixPresentationRepository_, mixPresentationSoloMuteRepository_),
+        new MixPresentationViewPort(mix->getId(), repos_, channelMonitorData_),
         true);
   }
 
   // Get the ID of the active mix presentation.
   juce::Uuid activeMixID = activeMixRepository_->get().getActiveMixId();
   if (activeMixID != juce::Uuid::null()) {
+    LOG_ANALYTICS(0, "Active mix presentation ID: " +
+                         activeMixID.toString().toStdString());
     // Check there exists a tab with the active mix presentation ID.
     for (int i = 0; i < presentationTabs_->getNumTabs(); ++i) {
       MixPresentationViewPort* tab = static_cast<MixPresentationViewPort*>(
@@ -247,6 +230,11 @@ void PresentationMonitorScreen::updatePresentationTabs() {
   // active mix presentation to the last tab and select it.
   else {
     presentationTabs_->setCurrentTabIndex(presentationTabs_->getNumTabs() - 1);
+    MixPresentationViewPort* tab = static_cast<MixPresentationViewPort*>(
+        presentationTabs_->getCurrentContentComponent());
+    juce::Uuid chosenActiveMixID = tab->getMixPresID();
+    LOG_ANALYTICS(0, "No Active mix presentation ID found, so setting it to: " +
+                         chosenActiveMixID.toString().toStdString());
   }
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "All presentation tabs updated.");
@@ -262,17 +250,9 @@ void PresentationMonitorScreen::valueTreeChildAdded(
         childWhichHasBeenAdded[MixPresentation::kPresentationName].toString(),
         EclipsaColours::backgroundOffBlack,
         new MixPresentationViewPort(
-            juce::Uuid(childWhichHasBeenAdded[MixPresentation::kId]),
-            audioElementRepository_, multiChannelRepository_,
-            activeMixRepository_, channelMonitorProcessor_,
-            mixPresentationRepository_, mixPresentationSoloMuteRepository_),
+            juce::Uuid(childWhichHasBeenAdded[MixPresentation::kId]), repos_,
+            channelMonitorData_),
         true);
-
-    MixPresentationSoloMute mixPresentationSoloMute(
-        juce::Uuid(childWhichHasBeenAdded[MixPresentationSoloMute::kId]),
-        childWhichHasBeenAdded[MixPresentationSoloMute::kName]);
-
-    mixPresentationSoloMuteRepository_->updateOrAdd(mixPresentationSoloMute);
 
     // repaint the tabs/presentation screen
     repaint(presentationTabBounds_);
@@ -289,13 +269,6 @@ void PresentationMonitorScreen::valueTreeChildAdded(
         break;
       }
     }
-    // update the name in the solo mute repo as well
-    MixPresentationSoloMute mixPresSoloMute =
-        mixPresentationSoloMuteRepository_->get(mixPresId).value_or(
-            MixPresentationSoloMute());
-    mixPresSoloMute.setName(
-        parentTree[MixPresentation::kPresentationName].toString());
-    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
   }
 }
 
@@ -319,13 +292,6 @@ void PresentationMonitorScreen::valueTreeChildRemoved(
 
     // update the tab button bounds
     updateTabButtonBounds(presentationTabBounds_);
-    // if a mix presentation is removed, remove it from the mpSM repository
-    // this includes removing the audio elements
-    MixPresentationSoloMute mixPresentationSoloMute(
-        juce::Uuid(childWhichHasBeenRemoved[MixPresentationSoloMute::kId]),
-        childWhichHasBeenRemoved[MixPresentationSoloMute::kName]);
-
-    mixPresentationSoloMuteRepository_->remove(mixPresentationSoloMute);
   }
   // repaint the tabs/presentation screen
   repaint(presentationTabBounds_);

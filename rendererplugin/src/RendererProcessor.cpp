@@ -69,9 +69,9 @@ RendererProcessor::RendererProcessor()
         fileExportRepository_, audioElementRepository_,
         mixPresentationRepository_, mixPresentationLoudnessRepository_));
   }
-  audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>());
-  channelMonitorProcessor_ =
-      static_cast<ChannelMonitorProcessor*>(audioProcessors_.back().get());
+  audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>(
+      channelMonitorData_, &mixPresentationRepository_,
+      &mixPresentationSoloMuteRepository_));
   audioProcessors_.push_back(std::make_unique<RenderProcessor>(
       this, &roomSetupRepository_, &audioElementRepository_,
       &mixPresentationRepository_, &activeMixPresentationRepository_,
@@ -153,6 +153,12 @@ void RendererProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     proc->prepareToPlay(sampleRate, samplesPerBlock);
   }
   processingBuffer_.setSize(getMainBusNumInputChannels(), samplesPerBlock);
+  LOG_ANALYTICS(instanceId_, "activeMixPresentation Uuid: " +
+                                 activeMixPresentationRepository_.get()
+                                     .getActiveMixId()
+                                     .toString()
+                                     .toStdString() +
+                                 "\n");
 }
 
 void RendererProcessor::releaseResources() {
@@ -233,6 +239,8 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
 
   updateRepositories();
 
+  initializeMixPresentations();
+
   configureOutputBus();
 
   if (juce::PluginHostType().isPremiere()) {
@@ -246,6 +254,13 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
       setNonRealtime(true);
     }
   }
+
+  LOG_ANALYTICS(instanceId_, "activeMixPresentation Uuid: " +
+                                 activeMixPresentationRepository_.get()
+                                     .getActiveMixId()
+                                     .toString()
+                                     .toStdString() +
+                                 "\n");
 }
 
 void RendererProcessor::updateRepositories() {
@@ -262,8 +277,22 @@ void RendererProcessor::updateRepositories() {
 
   juce::ValueTree mixPresentations =
       persistentState_.getChildWithName(kMixPresentationsKey);
+  int mixPresCount = mixPresentations.getNumChildren();
   if (mixPresentations.isValid()) {
     mixPresentationRepository_.setStateTree(mixPresentations);
+    LOG_ANALYTICS(instanceId_,
+                  "setStateInformation: Mix Presentations was successfully "
+                  "loaded from persistent state.");
+    LOG_ANALYTICS(
+        instanceId_,
+        "The Number of Mix Presentations found in the persistent state was: " +
+            std::to_string(mixPresCount));
+  } else {
+    LOG_ANALYTICS(instanceId_,
+                  "setStateInformation: Mix Presentation tree invalid or no "
+                  "Mix Presentations found. There are currently " +
+                      std::to_string(mixPresCount) +
+                      " Mix Presentations in the repository.");
   }
 
   juce::ValueTree mixPresentationLoudness =
@@ -290,7 +319,23 @@ void RendererProcessor::updateRepositories() {
     fileExportRepository_.setStateTree(fileExport);
   }
 
-  initializeMixPresentations();
+  juce::ValueTree channelGains =
+      persistentState_.getChildWithName(kMultiChannelGainsKey);
+  if (channelGains.isValid()) {
+    multichannelgainRepository_.setStateTree(channelGains);
+  }
+
+  juce::ValueTree muteSoloPlayback =
+      persistentState_.getChildWithName(kMSPlaybackKey);
+  if (muteSoloPlayback.isValid()) {
+    msPlaybackRepository_.setStateTree(muteSoloPlayback);
+  }
+
+  juce::ValueTree mixPresMuteSolo =
+      persistentState_.getChildWithName(kMixPresentationSoloMuteKey);
+  if (mixPresMuteSolo.isValid()) {
+    mixPresentationSoloMuteRepository_.setStateTree(mixPresMuteSolo);
+  }
 }
 
 juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
@@ -346,15 +391,26 @@ void RendererProcessor::valueTreeChildRemoved(
 }
 
 void RendererProcessor::initializeMixPresentations() {
+  juce::ValueTree mixPresTree =
+      persistentState_.getChildWithName(kMixPresentationsKey);
+  int mixPresCount = mixPresTree.getNumChildren();
+  LOG_ANALYTICS(instanceId_,
+                "Initializing MixPresentations. The Number of Mix "
+                "Presentations found in the persistent state was: " +
+                    std::to_string(mixPresCount));
+
   juce::OwnedArray<MixPresentation> mixPresentations;
   mixPresentationRepository_.getAll(mixPresentations);
+
   if (mixPresentations.size() == 0) {
     MixPresentation mixPres(juce::Uuid(), "My Mix Presentation", 1);
     mixPresentationRepository_.add(mixPres);
     activeMixPresentationRepository_.update(mixPres.getId());
     LOG_ANALYTICS(instanceId_,
-                  "setStateInformation: Created a new mix presentation and set "
-                  "it as active.");
+                  "setStateInformation: MixPresentationRepo was empty. Created "
+                  "a new mix presentation w/ Uuid " +
+                      mixPres.getId().toString().toStdString() +
+                      " and set it as active.");
     return;  // Early return since we just set a valid active mix
   }
 

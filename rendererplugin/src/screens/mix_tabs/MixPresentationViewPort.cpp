@@ -15,18 +15,12 @@
 #include "MixPresentationViewPort.h"
 
 MixPresentationViewPort::MixPresentationViewPort(
-    const juce::Uuid mixPresID, AudioElementRepository* aeRepository,
-    MultiChannelRepository* multichannelGainRepo,
-    ActiveMixRepository* activeMixRepo,
-    ChannelMonitorProcessor* channelMonitorProcessor,
-    MixPresentationRepository* mixPresentationRepository,
-    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository)
+    const juce::Uuid mixPresID, RepositoryCollection repos,
+    ChannelMonitorData& channelMonitorData)
     : kmixPresID_(mixPresID),
-      mixPresentationRepository_(mixPresentationRepository),
-      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository),
-      tab_(mixPresID, aeRepository, multichannelGainRepo, activeMixRepo,
-           channelMonitorProcessor, mixPresentationRepository,
-           mixPresentationSoloMuteRepository) {
+      mixPresentationRepository_(&repos.mpRepo_),
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_),
+      tab_(mixPresID, repos, channelMonitorData) {
   addAndMakeVisible(viewPort_);
   viewPort_.setViewedComponent(&tab_);
   viewPort_.setScrollBarsShown(true, false);

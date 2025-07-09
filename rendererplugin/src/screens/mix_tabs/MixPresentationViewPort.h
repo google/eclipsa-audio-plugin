@@ -17,16 +17,14 @@
 #include "PresentationTab.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
+#include "data_structures/src/ChannelMonitorData.h"
+#include "data_structures/src/RepositoryCollection.h"
 
 class MixPresentationViewPort : public juce::Component {
  public:
-  MixPresentationViewPort(
-      const juce::Uuid mixPresID, AudioElementRepository* aeRepository,
-      MultiChannelRepository* multichannelGainRepo,
-      ActiveMixRepository* activeMixRepo,
-      ChannelMonitorProcessor* channelMonitorProcessor,
-      MixPresentationRepository* mixPresentationRepository,
-      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository);
+  MixPresentationViewPort(const juce::Uuid mixPresID,
+                          RepositoryCollection repos,
+                          ChannelMonitorData& channelMonitorData);
   ~MixPresentationViewPort();
 
   void paint(juce::Graphics& g) override;

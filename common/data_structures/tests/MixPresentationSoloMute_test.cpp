@@ -19,8 +19,7 @@
 
 TEST(test_mix_presentation_solo_mute, validity) {
   // Create a mix presentation
-  MixPresentationSoloMute presentation1(juce::Uuid::null(), "TestPresentation",
-                                        false);
+  MixPresentationSoloMute presentation1(juce::Uuid::null(), false);
 
   juce::Uuid element1 = juce::Uuid();
   juce::Uuid element2 = juce::Uuid();
@@ -38,9 +37,6 @@ TEST(test_mix_presentation_solo_mute, validity) {
 
   presentation1.setAudioElementMute(element1, element1Muted);
   presentation1.setAudioElementMute(element2, element2Muted);
-
-  // Update some of it's values
-  presentation1.setName("UpdatedName");
 
   // Create a second presentation from the tree of the first
   MixPresentationSoloMute presentation2 =

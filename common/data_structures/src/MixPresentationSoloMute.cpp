@@ -19,10 +19,8 @@
 MixPresentationSoloMute::MixPresentationSoloMute()
     : RepositoryItemBase(juce::Uuid::null()) {}
 
-MixPresentationSoloMute::MixPresentationSoloMute(juce::Uuid id,
-                                                 juce::String name,
-                                                 bool anySoloed)
-    : RepositoryItemBase(id), mixPresName_(name), anySoloed_(anySoloed) {}
+MixPresentationSoloMute::MixPresentationSoloMute(juce::Uuid id, bool anySoloed)
+    : RepositoryItemBase(id), anySoloed_(anySoloed) {}
 
 void MixPresentationSoloMute::addAudioElement(const juce::Uuid id,
                                               const int referenceId,
@@ -73,8 +71,7 @@ MixPresentationSoloMute MixPresentationSoloMute::fromTree(
     const juce::ValueTree tree) {
   jassert(tree.hasProperty(kId));
 
-  MixPresentationSoloMute mixPres(juce::Uuid(tree[kId]), tree[kName],
-                                  tree[kAnySoloed]);
+  MixPresentationSoloMute mixPres(juce::Uuid(tree[kId]), tree[kAnySoloed]);
 
   juce::ValueTree audioElementsTree = tree.getChildWithName(kAudioElements);
   for (auto audioElementTree : audioElementsTree) {
@@ -86,9 +83,7 @@ MixPresentationSoloMute MixPresentationSoloMute::fromTree(
 }
 
 juce::ValueTree MixPresentationSoloMute::toValueTree() const {
-  juce::ValueTree tree(
-      kTreeType,
-      {{kId, id_.toString()}, {kName, mixPresName_}, {kAnySoloed, false}});
+  juce::ValueTree tree(kTreeType, {{kId, id_.toString()}, {kAnySoloed, false}});
 
   juce::ValueTree audioElementsTree =
       tree.getOrCreateChildWithName(kAudioElements, nullptr);
@@ -106,7 +101,7 @@ juce::ValueTree MixPresentationSoloMute::toValueTree() const {
 
 bool MixPresentationSoloMute::operator==(
     const MixPresentationSoloMute& other) const {
-  if (other.id_ != id_ || other.mixPresName_ != mixPresName_) {
+  if (other.id_ != id_) {
     return false;
   }
   for (auto audioElement = audioElements_.begin();

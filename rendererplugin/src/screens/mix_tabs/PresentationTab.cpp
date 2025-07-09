@@ -17,25 +17,20 @@
 #include <cstddef>
 #include <optional>
 
-#include "data_repository/implementation/MixPresentationRepository.h"
-#include "data_structures/src/AudioElement.h"
-#include "data_structures/src/MixPresentation.h"
-#include "data_structures/src/MixPresentationSoloMute.h"
+#include "data_structures/src/ChannelMonitorData.h"
+#include "data_structures/src/RepositoryCollection.h"
 
-PresentationTab::PresentationTab(
-    juce::Uuid mixPresID, AudioElementRepository* aeRepository,
-    MultiChannelRepository* multichannelGainRepo,
-    ActiveMixRepository* activeMixRepo,
-    ChannelMonitorProcessor* channelMonitorProcessor,
-    MixPresentationRepository* mixPresentationRepository,
-    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository)
-    : audioElementRepository_(aeRepository),
+PresentationTab::PresentationTab(juce::Uuid mixPresID,
+                                 RepositoryCollection repos,
+                                 ChannelMonitorData& channelMonitorData)
+    : repos_(repos),
+      audioElementRepository_(&repos.aeRepo_),
       kmixPresID_(mixPresID),
-      multichannelGainRepo_(multichannelGainRepo),
-      activeMixRepository_(activeMixRepo),
-      channelMonitorProcessor_(channelMonitorProcessor),
-      mixPresentationRepository_(mixPresentationRepository),
-      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository) {
+      multichannelGainRepo_(&repos.chGainRepo_),
+      activeMixRepository_(&repos.activeMPRepo_),
+      channelMonitorData_(channelMonitorData),
+      mixPresentationRepository_(&repos.mpRepo_),
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_) {
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "PresentationTab created for MixPresentation");
 
@@ -107,20 +102,6 @@ void PresentationTab::valueTreeChildAdded(
   if (parentTree.getType() == MixPresentation::kTreeType &&
       juce::Uuid(parentTree[MixPresentation::kId]) == kmixPresID_) {
     resetTab();
-
-    // add Audio Element to SoloMute Repository
-    MixPresentationSoloMute mixPresSoloMute =
-        mixPresentationSoloMuteRepository_->get(kmixPresID_)
-            .value_or(MixPresentationSoloMute());
-
-    for (auto audioElementNode : childWhichHasBeenAdded) {
-      mixPresSoloMute.addAudioElement(
-          juce::Uuid(audioElementNode[MixPresentationAudioElement::kId]),
-          audioElementNode[MixPresentationAudioElement::kReferenceId],
-          audioElementNode[MixPresentation::kPresentationName]);
-    }
-
-    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
   }
 }
 
@@ -130,18 +111,6 @@ void PresentationTab::valueTreeChildRemoved(
   if (childWhichHasBeenRemoved.getType() == MixPresentation::kAudioElements &&
       juce::Uuid(parentTree[MixPresentation::kId]) == kmixPresID_) {
     resetTab();
-
-    // remove Audio Element from SoloMute Repository
-    MixPresentationSoloMute mixPresSoloMute =
-        mixPresentationSoloMuteRepository_->get(kmixPresID_)
-            .value_or(MixPresentationSoloMute());
-
-    for (auto audioElementNode : childWhichHasBeenRemoved) {
-      mixPresSoloMute.removeAudioElement(
-          juce::Uuid(audioElementNode[MixPresentationAudioElement::kId]));
-    }
-
-    mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
   }
 }
 
@@ -199,10 +168,8 @@ void PresentationTab::createAEStrips() {
     int first_channel = audioelement.getFirstChannel();
     juce::String label_text = audioelement.getName();
     aeStrips_.add(std::make_unique<AEStripComponent>(
-        channel_count, label_text, first_channel, multichannelGainRepo_,
-        channelMonitorProcessor_, mixpresentationAudioElements_[i].getId(),
-        kmixPresID_, mixPresentationRepository_,
-        mixPresentationSoloMuteRepository_));
+        channel_count, label_text, first_channel, repos_, channelMonitorData_,
+        mixpresentationAudioElements_[i].getId(), kmixPresID_));
     addAndMakeVisible(aeStrips_.getLast());
   }
 

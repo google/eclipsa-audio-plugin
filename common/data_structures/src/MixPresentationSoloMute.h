@@ -85,8 +85,7 @@ struct AudioElementSoloMute : public RepositoryItemBase {
 class MixPresentationSoloMute final : public RepositoryItemBase {
  public:
   MixPresentationSoloMute();
-  MixPresentationSoloMute(juce::Uuid id, juce::String name,
-                          bool anySoloed = false);
+  MixPresentationSoloMute(juce::Uuid id, bool anySoloed = false);
 
   bool operator==(const MixPresentationSoloMute& other) const;
   bool operator!=(const MixPresentationSoloMute& other) const {
@@ -96,8 +95,6 @@ class MixPresentationSoloMute final : public RepositoryItemBase {
   static MixPresentationSoloMute fromTree(const juce::ValueTree tree);
   virtual juce::ValueTree toValueTree() const override;
 
-  void setName(juce::String name) { mixPresName_ = name; }
-
   void addAudioElement(const juce::Uuid id, const int referenceID,
                        const juce::String& name);
 
@@ -106,8 +103,6 @@ class MixPresentationSoloMute final : public RepositoryItemBase {
   void setAudioElementSolo(const juce::Uuid& id, const bool isSoloed);
 
   void setAudioElementMute(const juce::Uuid& id, const bool isMuted);
-
-  juce::String getName() const { return mixPresName_; }
 
   AudioElementSoloMute getAudioElement(const juce::Uuid& id) const;
   std::vector<AudioElementSoloMute> getAudioElements() const {
@@ -121,12 +116,10 @@ class MixPresentationSoloMute final : public RepositoryItemBase {
   bool isAudioElementMuted(const juce::Uuid& id) const;
 
   inline static const juce::Identifier kTreeType{"mix_presentation_solo_mute"};
-  inline static const juce::Identifier kName{"presentation_name"};
   inline static const juce::Identifier kAudioElements{"audio_elements"};
   inline static const juce::Identifier kAnySoloed{"any_soloed"};
 
  private:
   std::vector<AudioElementSoloMute> audioElements_;
-  juce::String mixPresName_;
   bool anySoloed_;
 };
