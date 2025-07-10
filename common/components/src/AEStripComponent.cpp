@@ -63,14 +63,21 @@ AEStripComponent::AEStripComponent(
   mainLabel.setJustificationType(juce::Justification::topLeft);
   addAndMakeVisible(mainLabel);
 
+  MixPresentationSoloMute mixPresSoloMute =
+      mixPresentationSoloMuteRepository_->get(mixPresID_).value();
+
+  bool initialSoloState = mixPresSoloMute.isAudioElementSoloed(audioelementID_);
+  bool initialMuteState = mixPresSoloMute.isAudioElementMuted(audioelementID_);
+
   // Setup the solo and mute buttons
-  setupToggleButton("S", soloButton_, soloButtonClicked);
-  setupToggleButton("M", muteButton_, muteButtonClicked);
+  setupToggleButton("S", soloButton_, soloButtonClicked, initialSoloState);
+  setupToggleButton("M", muteButton_, muteButtonClicked, initialMuteState);
+
+  updateChannelMutes();
   determineSoloMuteButtonColours();
 
   addAndMakeVisible(indicatorContainer);
   assignChannelLabels();
-  updateChannelMutes();
 }
 
 AEStripComponent::~AEStripComponent() {
@@ -142,14 +149,19 @@ void AEStripComponent::paint(juce::Graphics& g) {
   }
 }
 
-void AEStripComponent::setupToggleButton(
-    const juce::String& text, juce::TextButton& button,
-    const std::function<void()>& callback) {
+void AEStripComponent::setupToggleButton(const juce::String& text,
+                                         juce::TextButton& button,
+                                         const std::function<void()>& callback,
+                                         bool initialState) {
   button.setButtonText(text);
   button.setToggleable(true);
+  button.setToggleState(initialState, juce::dontSendNotification);
   button.setClickingTogglesState(true);
   button.onClick = callback;
   addAndMakeVisible(button);
+  LOG_ANALYTICS(0,
+                "Toggle button " + text.toStdString() +
+                    " created. Initial state: " + std::to_string(initialState));
 }
 
 // Function to store the channel indices of the channels used in the AE
@@ -172,10 +184,6 @@ void AEStripComponent::soloButtonClickedCallback() {  // handle case that solo
     mixPresSoloMute.setAudioElementSolo(audioelementID_,
                                         soloButton_.getToggleState());
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
-    updateChannelMutes();
-    determineSoloMuteButtonColours();
-    muteButton_.repaint();
-    soloButton_.repaint();
   } else {
     LOG_ERROR(RendererProcessor::instanceId_,
               "AEChannelStrip:: Could not find mix presentation w/ ID: " +
@@ -192,10 +200,6 @@ void AEStripComponent::muteButtonClickedCallback() {
     mixPresSoloMute.setAudioElementMute(audioelementID_,
                                         muteButton_.getToggleState());
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
-    updateChannelMutes();
-    determineSoloMuteButtonColours();
-    muteButton_.repaint();
-    soloButton_.repaint();
   } else {
     LOG_ERROR(RendererProcessor::instanceId_,
               "AEChannelStrip:: Could not find mix presentation w/ ID: " +
@@ -304,6 +308,12 @@ void AEStripComponent::updateChannelMutes() {
   } else {
     unmuteAEChannels();
   }
+  LOG_ANALYTICS(
+      0, "updated Channel mutes for audio element: " +
+             audioelementID_.toString().toStdString() +
+             " in mix presentation: " + mixPresID_.toString().toStdString());
+  LOG_ANALYTICS(0,
+                multichannelGainRepo_->getTree().toXmlString().toStdString());
 }
 
 void AEStripComponent::determineSoloMuteButtonColours() {
@@ -350,17 +360,12 @@ void AEStripComponent::determineSoloMuteButtonColours() {
 
 void AEStripComponent::valueTreeChildAdded(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
-  if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
-    updateChannelMutes();
-    determineSoloMuteButtonColours();
-    muteButton_.repaint();
-    soloButton_.repaint();
+  juce::Uuid parentID = juce::Uuid(parentTree[MixPresentationSoloMute::kId]);
+  juce::Uuid childID =
+      juce::Uuid(childWhichHasBeenAdded[MixPresentationSoloMute::kId]);
+  if (parentID != mixPresID_) {
+    return;
   }
-}
-
-void AEStripComponent::valueTreeChildRemoved(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
-    int index) {
   if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {
     updateChannelMutes();
     determineSoloMuteButtonColours();

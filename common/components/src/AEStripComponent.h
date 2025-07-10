@@ -66,10 +66,6 @@ class AEStripComponent : public juce::Component,
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override;
 
-  void valueTreeChildRemoved(juce::ValueTree& parentTree,
-                             juce::ValueTree& childWhichHasBeenRemoved,
-                             int index) override;
-
   void determineSoloMuteButtonColours();
 
   void assignChannelLabels();
@@ -79,7 +75,8 @@ class AEStripComponent : public juce::Component,
   int determineColourIndex(const int& channelIndex);
 
   void setupToggleButton(const juce::String& text, juce::TextButton& button,
-                         const std::function<void()>& callback);
+                         const std::function<void()>& callback,
+                         bool initialState = false);
 
   // these functions are executed when internal S/M buttons are toggled
   void soloButtonClickedCallback();
