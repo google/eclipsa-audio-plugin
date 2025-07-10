@@ -261,6 +261,8 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
                                      .toString()
                                      .toStdString() +
                                  "\n");
+
+  reinitializeAfterStateRestore();
 }
 
 void RendererProcessor::updateRepositories() {
@@ -465,4 +467,14 @@ void RendererProcessor::configureOutputBus() {
   busesLayout.outputBuses.add(outputChannelSet_);
 
   setBusesLayout(busesLayout);
+}
+
+void RendererProcessor::reinitializeAfterStateRestore() {
+  // Broadcast initial element list/layout to plugins after state load
+  syncServer_.updateClients();
+
+  // Notify and reinitialize all child processors as needed
+  for (auto& proc : audioProcessors_) {
+    proc->reinitializeAfterStateRestore();
+  }
 }

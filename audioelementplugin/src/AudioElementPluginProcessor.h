@@ -88,6 +88,7 @@ class AudioElementPluginProcessor final : public ProcessorBase,
   }
 
   AudioElementParameterTree automationParametersTreeState;
+  void reinitializeAfterStateRestore() override;
 
   inline static const ::juce::Identifier
       kAudioElementSpatialLayoutRepositoryStateKey{

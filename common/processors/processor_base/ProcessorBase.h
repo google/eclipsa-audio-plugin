@@ -67,6 +67,7 @@ class ProcessorBase : public juce::AudioProcessor {
   void setStateInformation(const void* data, int sizeInBytes) override {
     juce::ignoreUnused(data, sizeInBytes);
   }
+  virtual void reinitializeAfterStateRestore() {}
 
   juce::AudioProcessorEditor* createEditor() override { return nullptr; }
   bool hasEditor() const override { return false; }

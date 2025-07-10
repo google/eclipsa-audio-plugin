@@ -270,4 +270,22 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
   if (automationTree.isValid()) {
     automationParametersTreeState.replaceState(automationTree);
   }
+
+  // Re-initialize components after state restoration
+  reinitializeAfterStateRestore();
+}
+
+void AudioElementPluginProcessor::reinitializeAfterStateRestore() {
+  // Apply output channel layout
+  AudioElementSpatialLayout layout = audioElementSpatialLayoutRepository_.get();
+  setOutputChannels(layout.getFirstChannel(),
+                    layout.getChannelLayout().getNumChannels());
+
+  // Broadcast layout to renderer
+  syncClient_.sendAudioElementSpatialLayoutRepository();
+
+  // Re-initialize all child processors that require post-state setup
+  for (auto& proc : audioProcessors_) {
+    proc->reinitializeAfterStateRestore();
+  }
 }
