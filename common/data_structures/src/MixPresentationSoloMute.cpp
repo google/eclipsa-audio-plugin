@@ -15,7 +15,6 @@
 #include "MixPresentationSoloMute.h"
 
 #include "juce_core/system/juce_PlatformDefs.h"
-#include "logger/logger.h"
 
 MixPresentationSoloMute::MixPresentationSoloMute()
     : RepositoryItemBase(juce::Uuid::null()) {}
