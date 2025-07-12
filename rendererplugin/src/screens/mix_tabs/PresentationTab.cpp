@@ -26,7 +26,6 @@ PresentationTab::PresentationTab(juce::Uuid mixPresID,
     : repos_(repos),
       audioElementRepository_(&repos.aeRepo_),
       kmixPresID_(mixPresID),
-      multichannelGainRepo_(&repos.chGainRepo_),
       activeMixRepository_(&repos.activeMPRepo_),
       channelMonitorData_(channelMonitorData),
       mixPresentationRepository_(&repos.mpRepo_),
@@ -87,10 +86,6 @@ void PresentationTab::paint(juce::Graphics& g) {
     newbounds.removeFromTop(stripSpacing);
     strip->getBounds();
   }
-}
-
-MultiChannelRepository* PresentationTab::getMultiChannelRepository() {
-  return multichannelGainRepo_;
 }
 
 std::vector<AudioElement> PresentationTab::getAudioElements() {

@@ -35,8 +35,6 @@ class PresentationTab : public juce::Component,
 
   void paint(juce::Graphics& g) override;
 
-  MultiChannelRepository* getMultiChannelRepository();
-
   std::vector<AudioElement> getAudioElements();
 
   void updateActiveMixPresentation() {
@@ -120,7 +118,6 @@ class PresentationTab : public juce::Component,
       audioElements_;  // the audio elements that belong to this mix
   std::vector<MixPresentationAudioElement> mixpresentationAudioElements_;
 
-  MultiChannelRepository* multichannelGainRepo_;
   ChannelMonitorData& channelMonitorData_;
   juce::OwnedArray<AEStripComponent> aeStrips_;
 

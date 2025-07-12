@@ -325,6 +325,11 @@ void RendererProcessor::updateRepositories() {
       persistentState_.getChildWithName(kMultiChannelGainsKey);
   if (channelGains.isValid()) {
     multichannelgainRepository_.setStateTree(channelGains);
+    LOG_ANALYTICS(
+        instanceId_,
+        "setStateInformation: MultiChannelGainRepository was "
+        "successfully loaded from persistent state. \n" +
+            multichannelgainRepository_.getTree().toXmlString().toStdString());
   }
 
   juce::ValueTree muteSoloPlayback =
@@ -432,9 +437,9 @@ void RendererProcessor::initializeMixPresentations() {
 }
 
 void RendererProcessor::configureOutputBus() {
-  // Reaper/VST3 does not support changing the output channel set from Stereo to
-  // other layouts dynamically, so we need to reconfigure the output bus when
-  // the room setup changes.
+  // Reaper/VST3 does not support changing the output channel set from Stereo
+  // to other layouts dynamically, so we need to reconfigure the output bus
+  // when the room setup changes.
   auto hostType = juce::PluginHostType();
   if (!hostType.isReaper()) {
     LOG_ANALYTICS(instanceId_,
@@ -449,12 +454,14 @@ void RendererProcessor::configureOutputBus() {
     outputChannelSet_ =
         roomSetup.getSpeakerLayout().getRoomSpeakerLayout().getChannelSet();
     newChannelSetMsg =
-        "roomSetup.getSpeakerLayout() is valid. Setting outputChannelSet_ to " +
+        "roomSetup.getSpeakerLayout() is valid. Setting outputChannelSet_ "
+        "to " +
         outputChannelSet_.getDescription().toStdString() + "\n";
   } else {
     outputChannelSet_ = juce::AudioChannelSet::stereo();
     newChannelSetMsg =
-        "roomSetup.getSpeakerLayout() is NOT valid. Setting outputChannelSet_ "
+        "roomSetup.getSpeakerLayout() is NOT valid. Setting "
+        "outputChannelSet_ "
         "to stereo \n";
   }
 

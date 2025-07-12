@@ -52,7 +52,8 @@ AEStripComponent::AEStripComponent(
       audioelementID_(audioelementID),
       mixPresID_(mixPresID),
       mixPresentationRepository_(&repos.mpRepo_),
-      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_) {
+      mixPresentationSoloMuteRepository_(&repos.mpSMRepo_),
+      activeMixRepository_(&repos.activeMPRepo_) {
   mixPresentationSoloMuteRepository_->registerListener(this);
   startTimerHz(30);
   setLookAndFeel(&lookAndFeel_);
@@ -159,9 +160,6 @@ void AEStripComponent::setupToggleButton(const juce::String& text,
   button.setClickingTogglesState(true);
   button.onClick = callback;
   addAndMakeVisible(button);
-  LOG_ANALYTICS(0,
-                "Toggle button " + text.toStdString() +
-                    " created. Initial state: " + std::to_string(initialState));
 }
 
 // Function to store the channel indices of the channels used in the AE
@@ -285,6 +283,13 @@ void AEStripComponent::unmuteAEChannels() {
 }
 
 void AEStripComponent::updateChannelMutes() {
+  juce::Uuid activeMixID = activeMixRepository_->get().getActiveMixId();
+
+  if (mixPresID_ != activeMixID) {
+    // if the mix presentation ID is not the active mix ID, do not update
+    // channel mutes
+    return;
+  }
   MixPresentationSoloMute mixPresSoloMute;
   std::optional<MixPresentationSoloMute> mixPresSoloMuteOpt =
       mixPresentationSoloMuteRepository_->get(mixPresID_);
@@ -308,12 +313,6 @@ void AEStripComponent::updateChannelMutes() {
   } else {
     unmuteAEChannels();
   }
-  LOG_ANALYTICS(
-      0, "updated Channel mutes for audio element: " +
-             audioelementID_.toString().toStdString() +
-             " in mix presentation: " + mixPresID_.toString().toStdString());
-  LOG_ANALYTICS(0,
-                multichannelGainRepo_->getTree().toXmlString().toStdString());
 }
 
 void AEStripComponent::determineSoloMuteButtonColours() {
@@ -361,9 +360,10 @@ void AEStripComponent::determineSoloMuteButtonColours() {
 void AEStripComponent::valueTreeChildAdded(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
   juce::Uuid parentID = juce::Uuid(parentTree[MixPresentationSoloMute::kId]);
-  juce::Uuid childID =
-      juce::Uuid(childWhichHasBeenAdded[MixPresentationSoloMute::kId]);
-  if (parentID != mixPresID_) {
+  juce::Uuid activeMixID = activeMixRepository_->get().getActiveMixId();
+  // only update if the AE Strip belongs to the mix presentation that was
+  // changed or if the current mix presentation is the active mix
+  if (parentID != mixPresID_ || parentID != activeMixID) {
     return;
   }
   if (parentTree.getType() == MixPresentationSoloMute::kTreeType) {

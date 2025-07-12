@@ -23,6 +23,7 @@
 #include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 #include "data_repository/implementation/MultiChannelGainRepository.h"
+#include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/RepositoryCollection.h"
 
@@ -125,6 +126,7 @@ class AEStripComponent : public juce::Component,
   MultiChannelRepository* multichannelGainRepo_;
   MixPresentationRepository* mixPresentationRepository_;
   MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
+  ActiveMixRepository* activeMixRepository_;
 
   AEStripLookandFeel lookAndFeel_;
 
