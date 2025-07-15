@@ -25,7 +25,9 @@ To start, clone the repository and populate submodules.
 ```
 git clone --recurse-submodules <Repository URL>
 ```
-Currently the default plugin format that is built is 'Standalone' - a plugin format specific to JUCE which does not require external libraries nor a DAW to host it. This format is useful for quick builds, and is the format built by our CI.
+Currently the default plugin format that is built is 'Standalone' - a plugin format specific to JUCE which does not require external libraries nor a DAW to host it. This format is useful for quick builds, and is the format built by our CI. On MacOS, the Standalone version of the plugin is AU.
+
+Note that the following flags can be combined as needed.
 
 To build the plugin for an AAX (ProToolsDev) host, set flag ```BUILD_AAX```, and indicate preferred build system generator.
 
@@ -41,6 +43,11 @@ cmake -B ./build -DBUILD_VST3=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
 To build all unit tests, set the flag ```INTERNAL_TEST```.
 ```
 cmake -B ./build -INTERNAL_TEST=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
+```
+
+To set the version of the compiled Eclipsa plugin, set the flag ```ECLIPSA_VERSION```
+```
+cmake -B ./build -DECLIPSA_VERSION=0.0.1 -DCMAKE_BUILD_TYPE=Release -G Ninja
 ```
 
 Finally, after running the generate command above, the plugin can be build with the following command:
@@ -89,7 +96,7 @@ The project provides an installer for the AAX plugin which can be generated usin
 
 	Run the build command to generate release .aaxplugin files for both the Eclipsa Audio Renderer Plugin and Eclipsa Audio Element Plugin. 
 	```
-	cmake -B ./build -DBUILD_AAX=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
+	cmake -B ./build -DBUILD_AAX=ON -DCMAKE_BUILD_TYPE=Release -DECLIPSA_VERSION=0.0.1 -G Ninja
 	cmake --build ./build
 	```
 	During the build, necessary libraries will be copied to each plugin’s Resources folder.

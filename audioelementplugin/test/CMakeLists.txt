@@ -11,4 +11,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+eclipsa_add_test(test_audioelement_version_converter AudioElementVersionConverter_test.cpp "AudioElementPlugin;processors")
 
