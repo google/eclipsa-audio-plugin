@@ -222,6 +222,9 @@ void AudioElementPluginProcessor::getStateInformation(
 
   // Always add the latest version attribute to the XML state
 #if defined(ECLIPSA_VERSION)
+  LOG_ANALYTICS(instanceId_,
+                "Audio Element Plugin setting config version to \n" +
+                    std::string(ECLIPSA_VERSION));
   persistentState_.setProperty("version", ECLIPSA_VERSION, nullptr);
 #endif
 
