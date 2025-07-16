@@ -18,28 +18,29 @@
 #include "PerspectiveRoomView.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/Elevation.h"
+#include "data_structures/src/RepositoryCollection.h"
 
 class TopView : public PerspectiveRoomView {
  public:
-  TopView(const SpeakerMonitorData& monitorData);
+  TopView(const SpeakerMonitorData& monitorData, RepositoryCollection repos);
   const float getTrackScaling(const Coordinates::Point4D pt) const override;
 };
 
 class SideView : public PerspectiveRoomView {
  public:
-  SideView(const SpeakerMonitorData& monitorData);
+  SideView(const SpeakerMonitorData& monitorData, RepositoryCollection repos);
   const float getTrackScaling(const Coordinates::Point4D pt) const override;
 };
 
 class RearView : public PerspectiveRoomView {
  public:
-  RearView(const SpeakerMonitorData& monitorData);
+  RearView(const SpeakerMonitorData& monitorData, RepositoryCollection repos);
   const float getTrackScaling(const Coordinates::Point4D pt) const override;
 };
 
 class IsoView : public PerspectiveRoomView {
  public:
-  IsoView(const SpeakerMonitorData& monitorData);
+  IsoView(const SpeakerMonitorData& monitorData, RepositoryCollection repos);
   void drawFace(const std::array<Coordinates::Point2D, 4>& faceVerts,
                 const juce::Colour& c, juce::Graphics& g) override;
   const float getTrackScaling(const Coordinates::Point4D pt) const override;

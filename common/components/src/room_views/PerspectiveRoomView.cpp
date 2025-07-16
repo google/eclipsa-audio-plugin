@@ -15,6 +15,28 @@
 #include "PerspectiveRoomView.h"
 
 #include "Coordinates.h"
+#include "data_structures/src/RepositoryCollection.h"
+
+PerspectiveRoomView::PerspectiveRoomView(
+    const std::vector<FaceLookup::Face>& faces,
+    const Coordinates::Mat4& transformMat,
+    const std::unordered_set<SpeakerLookup::SpeakerTag>& hiddenSpeakers,
+    const juce::Image& figure, const SpeakerMonitorData& monitorData,
+    RepositoryCollection repos)
+    : kTransformMat_(transformMat),
+      kFaces_(faces),
+      kHiddenSpeakers_(hiddenSpeakers),
+      transformedFaces_(std::vector<DrawableFace>(faces.size())),
+      monitorData_(monitorData),
+      rendererPlugin_(
+          true),  // Set to true if this is used in the renderer plugin.
+      mixPresSMRepo_(&repos.mpSMRepo_),
+      activeMixRepo_(&repos.activeMPRepo_),
+      aeslRepo_(&repos.audioElementSpatialLayoutRepo_) {
+  imageComponent_.setImage(figure);
+  addAndMakeVisible(imageComponent_);
+  setSpeakers(Speakers::kStereo);
+}
 
 PerspectiveRoomView::PerspectiveRoomView(
     const std::vector<FaceLookup::Face>& faces,
@@ -25,7 +47,12 @@ PerspectiveRoomView::PerspectiveRoomView(
       kFaces_(faces),
       kHiddenSpeakers_(hiddenSpeakers),
       transformedFaces_(std::vector<DrawableFace>(faces.size())),
-      monitorData_(monitorData) {
+      monitorData_(monitorData),
+      rendererPlugin_(
+          false),  // Set to false if this is not used in the renderer plugin.
+      mixPresSMRepo_(nullptr),
+      activeMixRepo_(nullptr),
+      aeslRepo_(nullptr) {
   imageComponent_.setImage(figure);
   addAndMakeVisible(imageComponent_);
   setSpeakers(Speakers::kStereo);
@@ -116,11 +143,21 @@ void PerspectiveRoomView::transformDynamicVertices() {
 
   // Calculate window coordinates for valid audio element tracks.
   transformedTracks_.clear();
+
+  MixPresentationSoloMute mixPresSoloMute;
+  if (rendererPlugin_) {
+    juce::Uuid activeMix = activeMixRepo_->get().getActiveMixId();
+    mixPresSoloMute = mixPresSMRepo_->get(activeMix).value();
+  }
   for (const AudioElementUpdateData& data : tracks_) {
     DrawableTrack newTrack;
     Coordinates::Point4D pt = {data.x / 50, data.z / 50, -data.y / 50, 1.f};
     newTrack.pos = Coordinates::toWindow(kTransformMat_, wData, pt);
-    newTrack.trackLoudness = data.loudness;
+    if (rendererPlugin_) {
+      newTrack.trackLoudness = assignTrackLoudness(data, mixPresSoloMute);
+    } else {
+      newTrack.trackLoudness = data.loudness;
+    }
     newTrack.trackLabel = data.name;
     newTrack.sizeScale = getTrackScaling(pt);
     transformedTracks_.push_back(newTrack);
@@ -243,4 +280,35 @@ void PerspectiveRoomView::drawTrack(const DrawableTrack& track,
     g.drawText(track.trackLabel, track.pos.a[0] - 50.f, track.pos.a[1] + 10.f,
                100.f, 15.f, juce::Justification::centred);
   }
+}
+
+const float PerspectiveRoomView::assignTrackLoudness(
+    const AudioElementUpdateData& data,
+    const MixPresentationSoloMute& mixPresSoloMute) {
+  const juce::Uuid audioElementUuid = getTrackAudioElementUuid(data.uuid);
+
+  // check if the audio element is even in the mix presentation
+  AudioElementSoloMute audioElementSoloMute =
+      mixPresSoloMute.getAudioElement(audioElementUuid);
+  if (audioElementUuid != audioElementSoloMute.getId()) {
+    return -300.f;  // if not in the active mix presentation, return -300 dB
+  }
+
+  if ((mixPresSoloMute.getAnySoloed() && !audioElementSoloMute.isSoloed()) ||
+      audioElementSoloMute.isMuted()) {
+    // if the audio element is not soloed or muted, return the loudness
+    return -300.f;
+  } else {
+    // if the audio element is soloed or not muted, return the loudness
+    return data.loudness;
+  }
+}
+const juce::Uuid PerspectiveRoomView::getTrackAudioElementUuid(
+    const std::array<char, 16>& uuid) {
+  juce::uint8 rawUUID[sizeof(AudioElementUpdateData::uuid)];
+  std::memcpy(rawUUID, uuid.data(), sizeof(AudioElementUpdateData::uuid));
+
+  AudioElementSpatialLayout aesl = aeslRepo_->get(juce::Uuid(rawUUID)).value();
+
+  return aesl.getAudioElementId();
 }

@@ -14,47 +14,53 @@
 
 #include "PerspectiveRoomViews.h"
 
-TopView::TopView(const SpeakerMonitorData& monitorData)
+#include "data_structures/src/RepositoryCollection.h"
+
+TopView::TopView(const SpeakerMonitorData& monitorData,
+                 RepositoryCollection repos)
     : PerspectiveRoomView(
           FaceLookup::getFaces(FaceLookup::kTop),
           Coordinates::getTopViewTransform(), {SpeakerLookup::kLFE},
-          IconStore::getInstance().getTopIcon(), monitorData) {};
+          IconStore::getInstance().getTopIcon(), monitorData, repos) {};
 
 const float TopView::getTrackScaling(const Coordinates::Point4D pt) const {
   return 0.35 * pt.a[FaceLookup::kAxisY] + 1.35;
 };
 
-SideView::SideView(const SpeakerMonitorData& monitorData)
+SideView::SideView(const SpeakerMonitorData& monitorData,
+                   RepositoryCollection repos)
     : PerspectiveRoomView(
           FaceLookup::getFaces(FaceLookup::kSide),
           Coordinates::getSideViewTransform(),
           {SpeakerLookup::kLS, SpeakerLookup::kLSS, SpeakerLookup::kLRS,
            SpeakerLookup::kLTR, SpeakerLookup::kLFE, SpeakerLookup::kFL,
            SpeakerLookup::kSIL},
-          IconStore::getInstance().getLeftIcon(), monitorData) {};
+          IconStore::getInstance().getLeftIcon(), monitorData, repos) {};
 
 const float SideView::getTrackScaling(const Coordinates::Point4D pt) const {
   return -0.35 * pt.a[FaceLookup::kAxisX] + 1.35;
 };
 
-RearView::RearView(const SpeakerMonitorData& monitorData)
+RearView::RearView(const SpeakerMonitorData& monitorData,
+                   RepositoryCollection repos)
     : PerspectiveRoomView(
           FaceLookup::getFaces(FaceLookup::kRear),
           Coordinates::getRearViewTransform(),
           {SpeakerLookup::kLTB, SpeakerLookup::kRTB, SpeakerLookup::kLFE,
            SpeakerLookup::kTPBL, SpeakerLookup::kTPBR, SpeakerLookup::kBL,
            SpeakerLookup::kBR},
-          IconStore::getInstance().getBackIcon(), monitorData) {};
+          IconStore::getInstance().getBackIcon(), monitorData, repos) {};
 
 const float RearView::getTrackScaling(const Coordinates::Point4D pt) const {
   return 0.35 * pt.a[FaceLookup::kAxisZ] + 1.35;
 };
 
-IsoView::IsoView(const SpeakerMonitorData& monitorData)
+IsoView::IsoView(const SpeakerMonitorData& monitorData,
+                 RepositoryCollection repos)
     : PerspectiveRoomView(
           FaceLookup::getFaces(FaceLookup::kIso),
           Coordinates::getIsoViewTransform(), {SpeakerLookup::kLFE},
-          IconStore::getInstance().getIsoIcon(), monitorData) {};
+          IconStore::getInstance().getIsoIcon(), monitorData, repos) {};
 
 void IsoView::drawFace(const std::array<Coordinates::Point2D, 4>& faceVerts,
                        const juce::Colour& c, juce::Graphics& g) {

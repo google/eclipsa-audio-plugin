@@ -33,6 +33,13 @@ class PerspectiveRoomView : public juce::Component {
       const std::vector<FaceLookup::Face>& faces,
       const Coordinates::Mat4& transformMat,
       const std::unordered_set<SpeakerLookup::SpeakerTag>& hiddenSpeakers,
+      const juce::Image& figure, const SpeakerMonitorData& monitorData,
+      RepositoryCollection repos);
+
+  PerspectiveRoomView(
+      const std::vector<FaceLookup::Face>& faces,
+      const Coordinates::Mat4& transformMat,
+      const std::unordered_set<SpeakerLookup::SpeakerTag>& hiddenSpeakers,
       const juce::Image& figure, const SpeakerMonitorData& monitorData);
   ~PerspectiveRoomView() = default;
 
@@ -97,10 +104,20 @@ class PerspectiveRoomView : public juce::Component {
   std::vector<DrawableTrack> transformedTracks_;
 
  private:
+  const float assignTrackLoudness(
+      const AudioElementUpdateData& data,
+      const MixPresentationSoloMute& mixPresSoloMute);
+
+  const juce::Uuid getTrackAudioElementUuid(const std::array<char, 16>& uuid);
   void updateSpeakerColours();
 
   // Data sources. //
   const SpeakerMonitorData& monitorData_;
+  const bool rendererPlugin_;  // if true the perspective room view is used
+                               // in the renderer plugin.
+  MixPresentationSoloMuteRepository* mixPresSMRepo_;
+  ActiveMixRepository* activeMixRepo_;
+  MultibaseAudioElementSpatialLayoutRepository* aeslRepo_;
   // Data inherent to the room view. //
   const std::vector<FaceLookup::Face> kFaces_;
   // Speakers that are not be drawn for the current room view.

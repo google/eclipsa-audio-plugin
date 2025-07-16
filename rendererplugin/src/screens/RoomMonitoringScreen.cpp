@@ -47,7 +47,7 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
   exportButton.setButtonText("Export");
   addAndMakeVisible(exportButton);
 
-  roomView_ = std::make_unique<IsoView>(monitorData_);
+  roomView_ = std::make_unique<IsoView>(monitorData_, repos_);
   addAndMakeVisible(roomView_.get());
 
   selRoomOpts_.onChange([this] { updateRoomOpts(); });
@@ -212,13 +212,13 @@ void RoomMonitoringScreen::updateRoomView() {
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "room setup changed to: " + selView.toStdString());
   if (selView == "Iso") {
-    roomView_ = std::make_unique<IsoView>(monitorData_);
+    roomView_ = std::make_unique<IsoView>(monitorData_, repos_);
   } else if (selView == "Top") {
-    roomView_ = std::make_unique<TopView>(monitorData_);
+    roomView_ = std::make_unique<TopView>(monitorData_, repos_);
   } else if (selView == "Side") {
-    roomView_ = std::make_unique<SideView>(monitorData_);
+    roomView_ = std::make_unique<SideView>(monitorData_, repos_);
   } else {
-    roomView_ = std::make_unique<RearView>(monitorData_);
+    roomView_ = std::make_unique<RearView>(monitorData_, repos_);
   }
 
   addAndMakeVisible(roomView_.get());
