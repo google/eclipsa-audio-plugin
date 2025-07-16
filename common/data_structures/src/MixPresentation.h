@@ -40,7 +40,7 @@ struct MixPresentationAudioElement : public RepositoryItemBase {
  public:
   MixPresentationAudioElement();
   MixPresentationAudioElement(juce::Uuid id, float defaultMixGain,
-                              const juce::String& name, bool isBinaural = false)
+                              const juce::String& name, bool isBinaural = true)
       : RepositoryItemBase(id),
         defaultMixGain_(defaultMixGain),
         name_(name),
@@ -111,7 +111,7 @@ class MixPresentation final : public RepositoryItemBase {
   void setName(juce::String name) { mixPresentationName_ = name; }
 
   void addAudioElement(const juce::Uuid id, const float defaultMixGain,
-                       const juce::String& name, bool isBinaural = false);
+                       const juce::String& name, bool isBinaural = true);
   void removeAudioElement(juce::Uuid id);
 
   float getDefaultMixGain() const { return defaultMixGain_; }

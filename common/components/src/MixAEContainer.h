@@ -47,6 +47,18 @@ class MixAEContainer : public juce::Component {
     isBinauralCheckbox_.setColour(juce::ToggleButton::textColourId,
                                   EclipsaColours::headingGrey);
     addAndMakeVisible(isBinauralCheckbox_);
+
+    // Configure the tooltip image
+    tooltipImage_.setImage(IconStore::getInstance().getTooltipIcon());
+    tooltipImage_.setTooltip(
+        "Binaural\n\n"
+        "If checked, this audio element will be rendered binaurally during "
+        "binaural "
+        "playback. \n"
+        "If unchecked, this audio element will be rendered as stereo during "
+        "binaural playback.");
+
+    addAndMakeVisible(tooltipImage_);
   }
 
   ~MixAEContainer() override {
@@ -62,7 +74,7 @@ class MixAEContainer : public juce::Component {
   }
   void paint(juce::Graphics& g) override {
     auto bounds = getLocalBounds();
-    auto mixAEContainerBounds = bounds;
+    const auto mixAEContainerBounds = bounds;
 
     // Set the background colour to grey
     g.setColour(EclipsaColours::inactiveGrey);
@@ -70,11 +82,12 @@ class MixAEContainer : public juce::Component {
     // Draw a filled rounded rectangle
     juce::Rectangle<float> rect(bounds.toFloat());
     g.fillRect(rect);
+    const float labelWidth = 0.6f;
+    auto labelBounds = bounds.removeFromLeft(
+        mixAEContainerBounds.proportionOfWidth(labelWidth));
 
-    auto labelBounds = bounds.removeFromLeft(bounds.proportionOfWidth(0.7f));
-
-    auto nameBounds =
-        labelBounds.removeFromTop(bounds.proportionOfHeight(0.5f));
+    auto nameBounds = labelBounds.removeFromTop(
+        mixAEContainerBounds.proportionOfHeight(0.5f));
     nameLabel_.setBounds(nameBounds);
     nameLabel_.setColour(juce::Label::textColourId,
                          EclipsaColours::headingGrey);
@@ -85,9 +98,16 @@ class MixAEContainer : public juce::Component {
     int toRemove = 6;
     bounds.reduce(toRemove, toRemove);
 
+    const float tooltipImageWidth = 0.04f;
+    const float binauralCheckboxWidth = 0.12f;
+
+    auto tooltipImageBounds = bounds.removeFromRight(
+        mixAEContainerBounds.proportionOfWidth(tooltipImageWidth));
+    tooltipImage_.setBounds(tooltipImageBounds);
+
     // Reserve space for the checkbox and button
-    auto checkboxBounds =
-        bounds.removeFromRight(bounds.proportionOfWidth(0.4f));
+    auto checkboxBounds = bounds.removeFromRight(
+        mixAEContainerBounds.proportionOfWidth(binauralCheckboxWidth));
     isBinauralCheckbox_.setBounds(checkboxBounds);
 
     auto buttonBounds = bounds;
@@ -120,6 +140,8 @@ class MixAEContainer : public juce::Component {
 
   juce::ImageButton removeAEButton_;
   juce::ToggleButton isBinauralCheckbox_;
+  juce::TooltipWindow tooltipWindow_;
+  juce::ImageComponent tooltipImage_;
 
   std::vector<juce::Button::Listener*> listeners_;
 };
