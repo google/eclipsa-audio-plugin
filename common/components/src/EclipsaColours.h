@@ -34,6 +34,7 @@ const static juce::Colour drawButtonGrey = juce::Colour(204, 232, 231);
 const static juce::Colour tableAlternateGrey = juce::Colour(22, 29, 29);
 // temporarily use default black
 const static juce::Colour backgroundOffBlack = juce::Colour(14, 21, 20);
+const static juce::Colour transparentBlack = juce::Colours::transparentBlack;
 const static juce::Colour textWhite = juce::Colour(255, 219, 202);
 const static juce::Colour rolloverGrey = juce::Colour(63, 73, 72);
 const static juce::Colour gridLine = juce::Colour(42, 48, 47);

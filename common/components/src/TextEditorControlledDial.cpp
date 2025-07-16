@@ -36,10 +36,10 @@ TextEditorControlledDial::TextEditorControlledDial(
   addAndMakeVisible(textBox_);
 
   if (leftImage.isValid()) {
-    leftButton_.setImages(false, true, true, leftImage, 1.0f,
-                          EclipsaColours::tabTextGrey, leftImage, 1.0f,
-                          EclipsaColours::tabTextGrey, leftImage, 1.0f,
-                          juce::Colours::whitesmoke);
+    leftButton_.setImages(false, true, false, leftImage, 1.0f,
+                          EclipsaColours::transparentBlack, leftImage, 1.0f,
+                          EclipsaColours::transparentBlack, leftImage, 0.7f,
+                          EclipsaColours::transparentBlack);
     addAndMakeVisible(leftButton_);
     leftButton_.onClick = [this]() {
       int value = moveToPreviousMultipleOf5();
@@ -48,10 +48,10 @@ TextEditorControlledDial::TextEditorControlledDial(
     };
   }
   if (rightImage.isValid()) {
-    rightButton_.setImages(false, true, true, rightImage, 1.0f,
-                           EclipsaColours::tabTextGrey, rightImage, 1.0f,
-                           EclipsaColours::tabTextGrey, rightImage, 1.0f,
-                           juce::Colours::whitesmoke);
+    rightButton_.setImages(false, true, false, rightImage, 1.0f,
+                           EclipsaColours::transparentBlack, rightImage, 1.0f,
+                           EclipsaColours::transparentBlack, rightImage, 0.7f,
+                           EclipsaColours::transparentBlack);
     addAndMakeVisible(rightButton_);
     rightButton_.onClick = [this]() {
       int value = moveToNextMultipleOf5();

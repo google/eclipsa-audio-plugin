@@ -82,7 +82,49 @@ AudioElementPluginEditor::AudioElementPluginEditor(
       trackMonitorScreen_(syncClient_, p.getRepositories()),
       layout_(Speakers::k3Point1Point2, "3.1.2") {
   setResizable(true, true);
-  setSize(1552, 724);
+
+  // Get screen dimensions and calculate appropriate size
+  auto displays = juce::Desktop::getInstance().getDisplays();
+  auto mainDisplay = displays.getPrimaryDisplay();
+
+  if (mainDisplay != nullptr) {
+    auto screenArea = mainDisplay->userArea;
+
+    // Calculate plugin size as percentage of screen, with reasonable limits
+    int maxWidth = static_cast<int>(screenArea.getWidth() * 1.0f);
+    int maxHeight = static_cast<int>(screenArea.getHeight() * 1.0f);
+
+    // Preferred size but constrained by screen
+    int preferredWidth = 1552;
+    int preferredHeight = 724;
+
+    int actualWidth = juce::jmin(preferredWidth, maxWidth);
+    int actualHeight = juce::jmin(preferredHeight, maxHeight);
+
+    // Round to even numbers to avoid rendering artifacts
+    actualWidth = (actualWidth + 1) & ~1;    // Round up to even number
+    actualHeight = (actualHeight + 1) & ~1;  // Round up to even number
+
+    setSize(actualWidth, actualHeight);
+
+    // Set resize limits that force even dimensions to prevent artifacts
+    int minWidth =
+        juce::jmin(800, static_cast<int>(screenArea.getWidth() * 0.5f));
+    int minHeight =
+        juce::jmin(500, static_cast<int>(screenArea.getHeight() * 0.35f));
+
+    // Ensure all resize limits are even numbers
+    minWidth = (minWidth + 1) & ~1;
+    minHeight = (minHeight + 1) & ~1;
+    maxWidth = (maxWidth + 1) & ~1;
+    maxHeight = (maxHeight + 1) & ~1;
+
+    setResizeLimits(minWidth, minHeight, maxWidth, maxHeight);
+  } else {
+    // Fallback if screen detection fails
+    setSize(1200, 650);
+    setResizeLimits(800, 500, 1600, 900);
+  }
 
   // Listen for updates to the audio elements
   syncClient_->registerListener(this);
@@ -276,7 +318,26 @@ void AudioElementPluginEditor::paint(juce::Graphics& g) {
   }
 }
 
-void AudioElementPluginEditor::resized() {}
+void AudioElementPluginEditor::resized() {
+  // Snap to even dimensions to prevent rendering artifacts
+  auto currentBounds = getBounds();
+  int width = currentBounds.getWidth();
+  int height = currentBounds.getHeight();
+
+  // Round to even numbers
+  int evenWidth = (width + 1) & ~1;
+  int evenHeight = (height + 1) & ~1;
+
+  // Only update if dimensions changed
+  if (width != evenWidth || height != evenHeight) {
+    setBounds(currentBounds.getX(), currentBounds.getY(), evenWidth,
+              evenHeight);
+    return;  // Avoid infinite recursion
+  }
+
+  // Continue with normal layout logic
+  repaint();
+}
 
 void AudioElementPluginEditor::setMode() {
   if (audioElementSpatialLayoutRepository_->get().isPanningEnabled()) {
