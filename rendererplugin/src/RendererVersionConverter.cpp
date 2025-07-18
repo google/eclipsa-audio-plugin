@@ -26,9 +26,9 @@ void RendererVersionConverter::convertToLatestVersion(
   // --> 1.1.1, then 1.1.1 --> 1.2.0, etc.) This way, any version can be
   // converted to the latest version in a single pass.
 
-  // Add a map for converting (eg: map 1.1.1 to 1.2.0, etc), associating the various
-  // map entries with a source and destintation version and a function to use for
-  // the conversion.
+  // Add a map for converting (eg: map 1.1.1 to 1.2.0, etc), associating the
+  // various map entries with a source and destintation version and a function
+  // to use for the conversion.
 }
 
 void RendererVersionConverter::convertFrom_NoVersion_To_1p1p1(
