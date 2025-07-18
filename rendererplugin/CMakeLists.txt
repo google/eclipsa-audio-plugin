@@ -14,6 +14,7 @@
 
 juce_add_plugin(RendererPlugin
     PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
+    PLUGIN_CODE "Ecrd"
     BUNDLE_ID "${ECLIPSA_RENDERER_BUNDLE_ID}"
     COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
     NEEDS_MIDI_INPUT FALSE
@@ -29,6 +30,7 @@ target_sources(RendererPlugin
     PRIVATE
         src/RendererProcessor.cpp
         src/RendererEditor.cpp
+        src/RendererVersionConverter.cpp
         src/screens/ElementRoutingScreen.cpp
         src/screens/FileExportScreen.cpp
         src/screens/PresentationMonitorScreen.cpp

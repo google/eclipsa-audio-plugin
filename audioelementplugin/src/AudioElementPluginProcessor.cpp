@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "AudioElementPluginEditor.h"
+#include "AudioElementVersionConverter.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/ParameterMetaData.h"
 #include "logger/logger.h"
@@ -219,6 +220,14 @@ void AudioElementPluginProcessor::getStateInformation(
 
   persistentState_.appendChild(automationTree, nullptr);
 
+  // Always add the latest version attribute to the XML state
+#if defined(ECLIPSA_VERSION)
+  LOG_ANALYTICS(instanceId_,
+                "Audio Element Plugin setting config version to \n" +
+                    std::string(ECLIPSA_VERSION));
+  persistentState_.setProperty("version", ECLIPSA_VERSION, nullptr);
+#endif
+
   copyXmlToBinary(*persistentState_.createXml(), destData);
   persistentState_.removeChild(automationTree, nullptr);
 }
@@ -233,6 +242,12 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
   if (xmlState.get() && xmlState->hasTagName(persistentState_.getType())) {
     persistentState_ = juce::ValueTree::fromXml(*xmlState);
   }
+
+  // Check the version converstion to see if version upgrade is needed and apply
+  // upgrades Do this before updating repositories since if we load the
+  // repositories and then update their values, it will cause tree change events
+  // on the processors, which normally updating the repositories would not do.
+  AudioElementVersionConverter::convertToLatestVersion(xmlState);
 
   juce::ValueTree audioElementSpatialLayoutTree =
       persistentState_.getChildWithName(

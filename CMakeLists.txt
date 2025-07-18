@@ -17,6 +17,9 @@ cmake_minimum_required(VERSION 3.29.0)
 if(NOT DEFINED ECLIPSA_VERSION)
     set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
 endif()
+# Set the version information here so it can be used for determining
+# the configuration version
+add_compile_definitions(ECLIPSA_VERSION="${ECLIPSA_VERSION}")
 
 project(Eclipsa LANGUAGES C CXX VERSION ${ECLIPSA_VERSION})
 

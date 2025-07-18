@@ -17,6 +17,7 @@
 #include <processors/processors.h>
 
 #include "RendererEditor.h"
+#include "RendererVersionConverter.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/MixPresentation.h"
@@ -225,6 +226,14 @@ juce::AudioProcessorEditor* RendererProcessor::createEditor() {
 //==============================================================================
 void RendererProcessor::getStateInformation(juce::MemoryBlock& destData) {
   LOG_ANALYTICS(instanceId_, "RendererProcessor getStateInformation \n");
+
+// Always add the latest version attribute to the XML state
+#if defined(ECLIPSA_VERSION)
+  LOG_ANALYTICS(instanceId_, "Renderer Plugin setting config version to \n" +
+                                 std::string(ECLIPSA_VERSION));
+  persistentState_.setProperty("version", ECLIPSA_VERSION, nullptr);
+#endif
+
   copyXmlToBinary(*persistentState_.createXml(), destData);
 }
 
@@ -236,6 +245,12 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
   if (xmlState.get() && xmlState->hasTagName(persistentState_.getType())) {
     persistentState_ = juce::ValueTree::fromXml(*xmlState);
   }
+
+  // Check the version converstion to see if version upgrade is needed and apply
+  // upgrades Do this before updating repositories since if we load the
+  // repositories and then update their values, it will cause tree change events
+  // on the processors, which normally updating the repositories would not do.
+  RendererVersionConverter::convertToLatestVersion(xmlState);
 
   updateRepositories();
 

@@ -14,6 +14,7 @@
 
 juce_add_plugin(AudioElementPlugin
     PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
+    PLUGIN_CODE "Ecae"
     BUNDLE_ID "${ECLIPSA_PANNER_BUNDLE_ID}"
     COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
     NEEDS_MIDI_INPUT FALSE
@@ -29,6 +30,7 @@ target_sources(AudioElementPlugin
     PRIVATE
         src/AudioElementPluginProcessor.cpp
         src/AudioElementPluginEditor.cpp
+        src/AudioElementVersionConverter.cpp
         src/screens/RoomViewScreen.cpp
         src/screens/PositionSelectionScreen.cpp
         src/screens/TrackMonitorScreen.cpp)
