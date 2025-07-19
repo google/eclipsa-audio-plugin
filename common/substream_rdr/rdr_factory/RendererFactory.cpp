@@ -17,6 +17,7 @@
 #include "substream_rdr/bed2bed_rdr/BedToBedRdr.h"
 #include "substream_rdr/bin_rdr/BinauralRdr.h"
 #include "substream_rdr/hoa2bed_rdr/HOAToBedRdr.h"
+#include "substream_rdr/passthrough_rdr/PassthroughRdr.h"
 
 std::unique_ptr<Renderer> createRenderer(
     const Speakers::AudioElementSpeakerLayout inputLayout,
@@ -35,11 +36,13 @@ std::unique_ptr<Renderer> createRenderer(
 
     switch (AEType) {
       case AudioElement::AudioElement_t::AUDIO_ELEMENT_CHANNEL_BASED:
-        return BedToBedRdr::createBedToBedRdr(inputLayout, playbackLayout);
+        if (inputLayout != playbackLayout) {
+          return BedToBedRdr::createBedToBedRdr(inputLayout, playbackLayout);
+        } else {
+          return PassthroughRdr::createPassthroughRdr(playbackLayout);
+        }
       case AudioElement::AudioElement_t::AUDIO_ELEMENT_SCENE_BASED:
         return HOAToBedRdr::createHOAToBedRdr(inputLayout, playbackLayout);
-      default:
-        return nullptr;
     }
   }
 }

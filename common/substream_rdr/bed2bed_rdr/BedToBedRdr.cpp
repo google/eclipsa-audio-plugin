@@ -15,15 +15,12 @@
 #include "BedToBedRdr.h"
 
 #include "BedToBedRdrMats.h"
+#include "logger/logger.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 std::unique_ptr<Renderer> BedToBedRdr::createBedToBedRdr(
     const Speakers::AudioElementSpeakerLayout inputLayout,
     const Speakers::AudioElementSpeakerLayout playbackLayout) {
-  if (inputLayout == playbackLayout) {
-    return nullptr;
-  }
-
   // Lookup b2b conversion matrix.
   const float* rdrMat =
       getMatrixFromLayouts(inputLayout.getExplBaseLayout(), playbackLayout);
@@ -34,6 +31,9 @@ std::unique_ptr<Renderer> BedToBedRdr::createBedToBedRdr(
     return std::unique_ptr<Renderer>(
         new BedToBedRdr(rdrMat, inputLayout, playbackLayout));
   } else {
+    LOG_ERROR(0,
+              "Failed to create BedToBedRdr: No valid conversion matrix found. "
+              "\n Returning nullptr.");
     return nullptr;
   }
 }

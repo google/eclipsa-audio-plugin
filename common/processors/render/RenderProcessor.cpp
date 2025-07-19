@@ -15,26 +15,35 @@
 #include "RenderProcessor.h"
 
 #include <cstddef>
+#include <ranges>
 
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/AudioElement.h"
+#include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
+#include "juce_core/system/juce_PlatformDefs.h"
+#include "logger/logger.h"
 #include "substream_rdr/rdr_factory/Renderer.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 AudioElementRenderer::AudioElementRenderer(
     Speakers::AudioElementSpeakerLayout inputLayout,
     Speakers::AudioElementSpeakerLayout playbackLayout, int firstInputChannel,
-    int samplesPerBlock, int sampleRate)
+    int samplesPerBlock, int sampleRate, bool isBinaural)
     : inputData(inputLayout.getNumChannels(), samplesPerBlock),
       outputData(playbackLayout.getNumChannels(), samplesPerBlock),
       outputDataBinaural(Speakers::kBinaural.getNumChannels(), samplesPerBlock),
       firstChannel(firstInputChannel),
-      inputLayout(inputLayout) {
+      inputLayout(inputLayout),
+      kIsBinaural(isBinaural) {
   renderer = createRenderer(inputLayout, playbackLayout);
-  rendererBinaural = createRenderer(inputLayout, Speakers::kBinaural,
-                                    samplesPerBlock, sampleRate);
+  if (kIsBinaural) {
+    rendererBinaural = createRenderer(inputLayout, Speakers::kBinaural,
+                                      samplesPerBlock, sampleRate);
+  } else {
+    rendererBinaural = createRenderer(inputLayout, Speakers::kStereo);
+  }
 }
 
 //==============================================================================
@@ -106,6 +115,8 @@ void RenderProcessor::initializeRenderers() {
   std::vector<MixPresentationAudioElement> mixPresAEs =
       activeMixPres->getAudioElements();
 
+  // boilerplate ensures that each MixPresentationAudioElement is in the
+  // AudioElementRepository
   std::vector<AudioElement> activeAudioElements;
   for (int i = 0; i < mixPresAEs.size(); ++i) {
     std::optional<AudioElement> ae =
@@ -113,8 +124,15 @@ void RenderProcessor::initializeRenderers() {
 
     if (ae) {
       activeAudioElements.push_back(ae.value());
+    } else {
+      LOG_ERROR(0, "Failed to retrieve mixPresentationAudioElement with ID: " +
+                       mixPresAEs[i].getId().toString().toStdString() +
+                       " from the audio element repository.");
     }
   }
+
+  jassert(activeAudioElements.size() ==
+          mixPresAEs.size());  // Ensure we have all audio elements.
 
   // Get the room's speaker layout
   auto roomSpeakerLayout = roomSetupData_->get().getSpeakerLayout();
@@ -128,7 +146,10 @@ void RenderProcessor::initializeRenderers() {
                              currentSamplesPerBlock_, false, true, true);
 
   // Create a renderer for each audio element
-  for (const AudioElement& audioElement : activeAudioElements) {
+  for (int i = 0; i < activeAudioElements.size(); ++i) {
+    const AudioElement& audioElement = activeAudioElements[i];
+    const MixPresentationAudioElement& mixPresAudioElement =
+        mixPresAEs[i];  // Get the corresponding MixPresentationAudioElement
     Speakers::AudioElementSpeakerLayout audioElementLayout =
         audioElement.getChannelConfig();
 
@@ -141,7 +162,8 @@ void RenderProcessor::initializeRenderers() {
     audioElementRenderers_.push_back(new AudioElementRenderer(
         audioElementLayout,
         roomSetupData_->get().getSpeakerLayout().getRoomSpeakerLayout(),
-        firstChannel, currentSamplesPerBlock_, currentSampleRate_));
+        firstChannel, currentSamplesPerBlock_, currentSampleRate_,
+        mixPresAudioElement.isBinaural()));
   }
 
   // Set up the input and output buffers
@@ -201,37 +223,30 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
 
     // Always attempt to render binaural audio.
-    if (aeRdr->rendererBinaural != nullptr) {
-      aeRdr->rendererBinaural->render(aeRdr->inputData,
-                                      aeRdr->outputDataBinaural);
+    // This renderer is never null, it is either a BinauralRdr, a BedToBedRdr or
+    // a PassthroughRdr.
+    aeRdr->rendererBinaural->render(aeRdr->inputData,
+                                    aeRdr->outputDataBinaural);
 
-      // Mix rendered binaural audio to the internal binaural mix buffer.
-      for (int i = 0; i < Speakers::kBinaural.getNumChannels(); ++i) {
-        binauralMixBuffer_.addFrom(i, 0, aeRdr->outputDataBinaural, i, 0,
-                                   binauralMixBuffer_.getNumSamples());
-      }
+    // Mix rendered binaural audio to the internal binaural mix buffer.
+    for (int i = 0; i < Speakers::kBinaural.getNumChannels(); ++i) {
+      binauralMixBuffer_.addFrom(i, 0, aeRdr->outputDataBinaural, i, 0,
+                                 binauralMixBuffer_.getNumSamples());
     }
 
-    // Render beds audio if playback is not binaural.
-    if (currentPlaybackLayout_ != Speakers::kBinaural) {
-      if (aeRdr->renderer != nullptr) {
-        aeRdr->renderer->render(aeRdr->inputData, aeRdr->outputData);
-      }
-      // If there is no valid renderer, copy the data from input to output.
-      else {
-        const int numSourceChannels = aeRdr->inputData.getNumChannels();
-        for (int i = 0; i < numSourceChannels; ++i) {
-          aeRdr->outputData.copyFrom(i, 0, aeRdr->inputData, i, 0,
-                                     aeRdr->inputData.getNumSamples());
-        }
-      }
+    // Render beds audio if playback is not binaural,
+    // This renderer could be null if the rdrMat does not exist, so ensure the
+    // renderer is not null.
+    if (currentPlaybackLayout_ != Speakers::kBinaural &&
+        aeRdr->renderer != nullptr) {
+      aeRdr->renderer->render(aeRdr->inputData, aeRdr->outputData);
+    }
 
-      // Mix the rendered audio to the internal mix buffer.
-      const int numSourceChannels = aeRdr->outputData.getNumChannels();
-      for (int i = 0; i < numSourceChannels; ++i) {
-        mixBuffer_.addFrom(i, 0, aeRdr->outputData, i, 0,
-                           mixBuffer_.getNumSamples());
-      }
+    // Mix the rendered audio to the internal mix buffer.
+    const int numSourceChannels = aeRdr->outputData.getNumChannels();
+    for (int i = 0; i < numSourceChannels; ++i) {
+      mixBuffer_.addFrom(i, 0, aeRdr->outputData, i, 0,
+                         mixBuffer_.getNumSamples());
     }
   }
 
@@ -261,10 +276,16 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 void RenderProcessor::updateBinauralLoudness(
     juce::AudioBuffer<float>& rdrdAudio) {
   std::array<float, 2> loudnesses;
-  for (int i = 0; i < 2; ++i) {
-    loudnesses[i] = 20.0f * std::log10(rdrdAudio.getRMSLevel(
-                                i, 0, rdrdAudio.getNumSamples()));
+  if (rdrdAudio.getNumChannels() < 2) {
+    loudnesses[0] = -300.f;
+    loudnesses[1] = -300.f;
+  } else {
+    for (int i = 0; i < 2; ++i) {
+      loudnesses[i] = 20.0f * std::log10(rdrdAudio.getRMSLevel(
+                                  i, 0, rdrdAudio.getNumSamples()));
+    }
   }
+
   monitorData_.binauralLoudness.update(loudnesses);
 }
 

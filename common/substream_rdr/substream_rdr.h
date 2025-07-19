@@ -35,6 +35,7 @@ END_JUCE_MODULE_DECLARATION
 #include "bed2bed_rdr/BedToBedRdr.h"
 #include "bin_rdr/BinauralRdr.h"
 #include "hoa2bed_rdr/HOAToBedRdr.h"
+#include "passthrough_rdr/PassthroughRdr.h"
 #include "rdr_factory/RendererFactory.h"
 #include "substream_rdr_utils/Speakers.h"
 #include "surround_panner/AmbisonicPanner.h"

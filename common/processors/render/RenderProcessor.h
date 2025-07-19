@@ -49,6 +49,8 @@ struct AudioElementRenderer {
   // First channel to pull the audio elements data from
   int firstChannel;
 
+  const bool kIsBinaural;
+
   // Layout of the Audio Element.
   Speakers::AudioElementSpeakerLayout inputLayout;
 
@@ -60,7 +62,7 @@ struct AudioElementRenderer {
   AudioElementRenderer(Speakers::AudioElementSpeakerLayout inputLayout,
                        Speakers::AudioElementSpeakerLayout playbackLayout,
                        int firstInputChannel, int samplesPerBlock,
-                       int sampleRate);
+                       int sampleRate, bool isBinaural = true);
 };
 
 //==============================================================================

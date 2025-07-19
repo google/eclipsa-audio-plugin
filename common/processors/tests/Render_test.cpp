@@ -16,7 +16,9 @@
 
 #include "../processor_base/ProcessorBase.h"
 #include "../render/RenderProcessor.h"
+#include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/AudioElement.h"
+#include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -700,5 +702,66 @@ TEST_F(test_render_proc, many_ae_one_mp_amp) {
     for (int j = 0; j < buffer.getNumSamples(); ++j) {
       ASSERT_NE(buffer.getSample(chIdx, j), 0.f);
     }
+  }
+}
+
+// Verify that the correct binaural renderer is initialized
+TEST_F(test_render_proc, binaural_renderers) {
+  Speakers::AudioElementSpeakerLayout layout = Speakers::kBinaural;
+  room.setSpeakerLayout(RoomLayout(layout, layout.toString().toStdString()));
+  roomSetupData.update(room);
+
+  const juce::Uuid mpId;
+  MixPresentation mp(mpId, "All Binaural AEs", 1.f,
+                     LanguageData::MixLanguages::English, {});
+
+  const int kNumAudioElements = 3;
+
+  // ensure all audio elements are binaural
+  for (int i = 0; i < kNumAudioElements; ++i) {
+    int firstChannel = i * 2;
+    AudioElement ae(juce::Uuid(), "Stereo " + std::to_string(i),
+                    Speakers::kStereo, firstChannel);
+    audioElementData.add(ae);
+    // ensure binaural
+    mp.addAudioElement(ae.getId(), 1.f, ae.getName(), true);
+  }
+  mixPresData.updateOrAdd(mp);
+
+  activeMix.updateActiveMixId(mpId);
+  activeMixPresData.update(activeMix);
+
+  proc.prepareToPlay(kSampleRate, kSamplesPerBlock);
+
+  std::vector<AudioElementRenderer*> renderers =
+      proc.getAudioElementRenderers();
+  std::vector<MixPresentationAudioElement> mpAE =
+      mixPresData.get(mpId)->getAudioElements();
+
+  for (int i = 0; i < kNumAudioElements; ++i) {
+    ASSERT_EQ(renderers[i]->kIsBinaural, mpAE[i].isBinaural());
+  }
+
+  const juce::Uuid mpId2;
+  MixPresentation mp2(mpId2, "Non-Binaural AEs", 1.f,
+                      LanguageData::MixLanguages::English, {});
+  // now set all MixPresentationAudioElements to not binaural
+  for (int i = 0; i < kNumAudioElements; ++i) {
+    const juce::Uuid aeID = mpAE[i].getId();
+    mp2.addAudioElement(aeID, 1.f, mpAE[i].getName(), false);
+  }
+  mixPresData.updateOrAdd(mp2);
+
+  activeMix.updateActiveMixId(mpId2);
+  activeMixPresData.update(activeMix);
+
+  proc.prepareToPlay(kSampleRate, kSamplesPerBlock);
+
+  renderers = proc.getAudioElementRenderers();
+  std::vector<MixPresentationAudioElement> mp2AE =
+      mixPresData.get(mpId2)->getAudioElements();
+
+  for (int i = 0; i < kNumAudioElements; ++i) {
+    ASSERT_EQ(renderers[i]->kIsBinaural, mp2AE[i].isBinaural());
   }
 }

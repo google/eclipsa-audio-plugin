@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "substream_rdr.h"
+#include "PassthroughRdr.h"
 
-#include "bed2bed_rdr/BedToBedRdr.cpp"
-#include "bin_rdr/BinauralRdr.cpp"
-#include "hoa2bed_rdr/HOAToBedRdr.cpp"
-#include "passthrough_rdr/PassthroughRdr.cpp"
-#include "rdr_factory/RendererFactory.cpp"
-#include "substream_rdr_utils/Speakers.cpp"
-#include "surround_panner/AmbisonicPanner.cpp"
-#include "surround_panner/BinauralPanner.cpp"
-#include "surround_panner/MonoToSpeakerPanner.cpp"
+std::unique_ptr<Renderer> PassthroughRdr::createPassthroughRdr(
+    const IAMFSpkrLayout layout) {
+  return std::unique_ptr<Renderer>(new PassthroughRdr(layout));
+}
+
+PassthroughRdr::PassthroughRdr(const IAMFSpkrLayout layout)
+    : kLayout_(layout), kNumCh_(layout.getNumChannels()) {}
+
+void PassthroughRdr::render(const FBuffer& srcBuffer, FBuffer& outBuffer) {
+  outBuffer.makeCopyOf(srcBuffer);
+}

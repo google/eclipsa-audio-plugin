@@ -72,19 +72,22 @@ MixPresentationLoudnessExportContainer::createRenderers(
     AudioElement audioElement = audioElements[j];
 
     if (largestLayout == Speakers::kStereo) {
-      rendererPairs.emplace_back(std::make_pair(
-          std::make_unique<AudioElementRenderer>(
-              audioElement.getChannelConfig(), Speakers::kStereo,
-              audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate),
-          nullptr));
+      rendererPairs.emplace_back(
+          std::make_pair(std::make_unique<AudioElementRenderer>(
+                             audioElement.getChannelConfig(), Speakers::kStereo,
+                             audioElement.getFirstChannel(), kSamplesPerBlock,
+                             kSampleRate, false),
+                         nullptr));
     } else {
-      rendererPairs.emplace_back(std::make_pair(
-          std::make_unique<AudioElementRenderer>(
-              audioElement.getChannelConfig(), Speakers::kStereo,
-              audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate),
-          std::make_unique<AudioElementRenderer>(
-              audioElement.getChannelConfig(), largestLayout,
-              audioElement.getFirstChannel(), kSamplesPerBlock, kSampleRate)));
+      rendererPairs.emplace_back(
+          std::make_pair(std::make_unique<AudioElementRenderer>(
+                             audioElement.getChannelConfig(), Speakers::kStereo,
+                             audioElement.getFirstChannel(), kSamplesPerBlock,
+                             kSampleRate, false),
+                         std::make_unique<AudioElementRenderer>(
+                             audioElement.getChannelConfig(), largestLayout,
+                             audioElement.getFirstChannel(), kSamplesPerBlock,
+                             kSampleRate, false)));
     }
   }
   return rendererPairs;

@@ -60,14 +60,12 @@ TEST(test_b2b_rdr, construct_rdr) {
   Speakers::FBuffer inputBuff;
   for (const auto in : inputLayouts) {
     for (const auto out : playbackLayouts) {
-      // If the input layout is the same as the output layout a renderer need
-      // not be constructed.
+      // If the input layout is the same as the output layout a passthrough
+      // renderer is constructed instead.
       if (in == out) {
-        ASSERT_TRUE(BedToBedRdr::createBedToBedRdr(in, out) == nullptr);
-
-      } else {
-        ASSERT_TRUE(BedToBedRdr::createBedToBedRdr(in, out) != nullptr);
+        continue;
       }
+      ASSERT_TRUE(BedToBedRdr::createBedToBedRdr(in, out) != nullptr);
     }
   }
 }
