@@ -79,6 +79,11 @@ void Logger::init(const std::string& pluginName, size_t maxFileSizeMB,
             boost::log::keywords::max_files =
                 5  // Max number of rotated log files to keep
             ));
+
+    // Trigger the collector to scan for existing files and enforce retention
+    // policies
+    fileSink->locked_backend()->scan_for_files();
+
     // Store the log file pattern
     logFilePattern = filePattern;
 
