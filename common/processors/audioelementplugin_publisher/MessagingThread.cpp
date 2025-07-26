@@ -19,7 +19,9 @@
 #include "MessagingThread.h"
 
 MessagingThread::MessagingThread(const juce::String& threadName)
-    : juce::Thread(threadName) {}
+    : juce::Thread(threadName) {
+  startThread();  // Start the thread immediately
+}
 
 MessagingThread::~MessagingThread() {
   signalThreadShouldExit();
