@@ -34,7 +34,6 @@ AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
   localData_.x = automationParameterTree_->getXPosition();
   localData_.y = automationParameterTree_->getYPosition();
   localData_.z = automationParameterTree_->getZPosition();
-  dataChanged_ = true;
 
   monitorData_.avgLoudness.update(-70.f);
   jassert(messagingThread_ != nullptr);
@@ -51,12 +50,9 @@ AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
 AudioElementPluginDataPublisher::~AudioElementPluginDataPublisher() {}
 
 void AudioElementPluginDataPublisher::prepareToPlay(double sampleRate,
-                                                    int samplesPerBlock) {
-  dataChanged_ = true;
-}
+                                                    int samplesPerBlock) {}
 
 void AudioElementPluginDataPublisher::updateData() {
-  dataChanged_ = true;
   // Fetch the audio element plugin name from the repository
   strncpy(localData_.name,
           audioElementSpatialLayoutData_->get().getName().toRawUTF8(),

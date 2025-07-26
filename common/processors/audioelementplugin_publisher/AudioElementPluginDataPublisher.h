@@ -21,6 +21,7 @@
 #include "../processor_base/ProcessorBase.h"
 #include "MessagingThread.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
+#include "data_structures/src/AudioElementCommunication.h"
 #include "data_structures/src/AudioElementParameterTree.h"
 #include "data_structures/src/ParameterMetaData.h"
 #include "data_structures/src/SpeakerMonitorData.h"
@@ -82,7 +83,7 @@ class AudioElementPluginDataPublisher final
     } else if (parameterID == AutoParamMetaData::zPosition) {
       localData_.z = newValue;
     }
-    dataChanged_ = true;
+    updateData();
   }
 
   //==============================================================================
@@ -94,7 +95,6 @@ class AudioElementPluginDataPublisher final
   AudioElementParameterTree* automationParameterTree_;
   SpeakerMonitorData& monitorData_;
   std::unique_ptr<MessagingThread> messagingThread_;
-  bool dataChanged_;
   AudioElementUpdateData localData_;
   int channels_;
 
