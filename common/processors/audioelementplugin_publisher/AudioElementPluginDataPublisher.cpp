@@ -19,6 +19,7 @@
 
 #include "data_structures/src/AudioElementCommunication.h"
 #include "data_structures/src/SpeakerMonitorData.h"
+#include "processors/audioelementplugin_publisher/MessagingThread.h"
 
 AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
     AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository,
@@ -26,13 +27,17 @@ AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
     SpeakerMonitorData& monitorData)
     : audioElementSpatialLayoutData_(audioElementSpatialLayoutRepository),
       automationParameterTree_(automationParameterTree),
-      monitorData_(monitorData) {
+      monitorData_(monitorData),
+      messagingThread_(std::make_unique<MessagingThread>(
+          juce::String("AudioElementPublisherThread"))) {
   // Set up the initial data
   localData_.x = automationParameterTree_->getXPosition();
   localData_.y = automationParameterTree_->getYPosition();
   localData_.z = automationParameterTree_->getZPosition();
   dataChanged_ = true;
 
+  monitorData_.avgLoudness.update(-70.f);
+  jassert(messagingThread_ != nullptr);
   // Update any information from the repository
   updateData();
 
@@ -41,7 +46,6 @@ AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
   automationParameterTree_->addZPositionListener(this);
 
   audioElementSpatialLayoutRepository->registerListener(this);
-  startTimerHz(60);
 }
 
 AudioElementPluginDataPublisher::~AudioElementPluginDataPublisher() {}
@@ -66,7 +70,13 @@ void AudioElementPluginDataPublisher::updateData() {
               audioElementSpatialLayoutData_->get().getId().getRawData(),
               localData_.uuid.size());
 
-  monitorData_.avgLoudness.update(-70.f);  // Reset the average loudness
+  float loudness(-70.f);
+
+  monitorData_.avgLoudness.read(loudness);  // Reset the average loudness
+
+  localData_.loudness = loudness;
+
+  messagingThread_->pushAudioElementUpdateData(localData_);
 }
 
 void AudioElementPluginDataPublisher::processBlock(
@@ -80,22 +90,9 @@ void AudioElementPluginDataPublisher::processBlock(
   }
   loudness = loudness / channels_;
   monitorData_.avgLoudness.update(loudness);
-}
 
-void AudioElementPluginDataPublisher::timerCallback() {
-  if (publisher_ == nullptr) {
-    publisher_ =
-        std::unique_ptr<AudioElementPublisher>(new AudioElementPublisher());
-  }
-  float loudness(-70.f);
-  monitorData_.avgLoudness.read(loudness);
-  if (localData_.loudness != loudness) {
+  if (loudness != localData_.loudness) {
     localData_.loudness = loudness;
-    dataChanged_ = true;
-  }
-
-  if (dataChanged_) {
-    publisher_->publishData(localData_);
-    dataChanged_ = false;
+    messagingThread_->pushAudioElementUpdateData(localData_);
   }
 }

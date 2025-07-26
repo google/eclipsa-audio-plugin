@@ -19,9 +19,8 @@
 #include <memory>
 
 #include "../processor_base/ProcessorBase.h"
-#include "data_repository/implementation/AudioElementRepository.h"
+#include "MessagingThread.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
-#include "data_structures/src/AudioElementCommunication.h"
 #include "data_structures/src/AudioElementParameterTree.h"
 #include "data_structures/src/ParameterMetaData.h"
 #include "data_structures/src/SpeakerMonitorData.h"
@@ -30,8 +29,7 @@
 class AudioElementPluginDataPublisher final
     : public ProcessorBase,
       juce::ValueTree::Listener,
-      public juce::AudioProcessorValueTreeState::Listener,
-      public juce::Timer {
+      public juce::AudioProcessorValueTreeState::Listener {
  public:
   //==============================================================================
   AudioElementPluginDataPublisher(
@@ -90,15 +88,14 @@ class AudioElementPluginDataPublisher final
   //==============================================================================
 
  private:
-  void timerCallback() override;
   void updateData();
 
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutData_;
   AudioElementParameterTree* automationParameterTree_;
   SpeakerMonitorData& monitorData_;
+  std::unique_ptr<MessagingThread> messagingThread_;
   bool dataChanged_;
   AudioElementUpdateData localData_;
-  std::unique_ptr<AudioElementPublisher> publisher_;
   int channels_;
 
   //==============================================================================
