@@ -226,6 +226,7 @@ juce::Rectangle<int> AEStripComponent::setLightsSpacing(
 
 void AEStripComponent::timerCallback() {
   size_t i = 0;
+  channelMonitorData_.channelLoudnesses.read(channelLoudnessesRead_);
   for (auto channelIndex : channelsSet_) {
     channelIndicators[i]->setColour(determineColourIndex(channelIndex));
     channelIndicators[i]->repaint();
