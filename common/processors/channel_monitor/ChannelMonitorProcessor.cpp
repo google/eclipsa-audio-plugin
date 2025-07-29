@@ -28,6 +28,7 @@ ChannelMonitorProcessor::ChannelMonitorProcessor(
       loudness_(std::vector<float>(numChannels_, -300.f)),
       mixPresentationRepository_(mixPresentationRepository),
       mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository) {
+  channelMonitorData_.reinitializeLoudnesses(numChannels_);
   mixPresentationRepository_->registerListener(this);
 }
 
