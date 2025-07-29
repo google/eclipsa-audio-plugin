@@ -229,12 +229,7 @@ void AEStripComponent::timerCallback() {
   const bool ableToRead =
       channelMonitorData_.channelLoudnesses.read(channelLoudnessesRead_);
   for (auto channelIndex : channelsSet_) {
-    if (!ableToRead || channelLoudnessesRead_.size() < channelsSet_.size()) {
-      channelIndicators[i]->setColour(0);  // inactive
-    } else {
-      channelIndicators[i]->setColour(determineColourIndex(channelIndex));
-    }
-
+    channelIndicators[i]->setColour(determineColourIndex(channelIndex));
     channelIndicators[i]->repaint();
     ++i;
   }

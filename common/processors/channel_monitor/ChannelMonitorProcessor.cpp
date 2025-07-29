@@ -14,25 +14,31 @@
 
 #include "ChannelMonitorProcessor.h"
 
+#include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
+#include "data_structures/src/AudioElement.h"
 #include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/MixPresentation.h"
 
 ChannelMonitorProcessor::ChannelMonitorProcessor(
     ChannelMonitorData& channelMonitorData,
     MixPresentationRepository* mixPresentationRepository,
-    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository)
+    MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository,
+    AudioElementRepository* audioElementRepository)
     : numChannels_(juce::AudioChannelSet::ambisonic(5).size()),
       channelMonitorData_(channelMonitorData),
       loudness_(std::vector<float>(numChannels_, -300.f)),
       mixPresentationRepository_(mixPresentationRepository),
-      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository) {
+      mixPresentationSoloMuteRepository_(mixPresentationSoloMuteRepository),
+      audioElementRepository_(audioElementRepository) {
   mixPresentationRepository_->registerListener(this);
+  audioElementRepository_->registerListener(this);
 }
 
 ChannelMonitorProcessor::~ChannelMonitorProcessor() {
   mixPresentationRepository_->deregisterListener(this);
+  audioElementRepository_->deregisterListener(this);
 }
 
 const juce::String ChannelMonitorProcessor::getName() const {
@@ -95,6 +101,9 @@ void ChannelMonitorProcessor::valueTreeChildAdded(
     }
 
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
+  } else if (parentTree.getType() == AudioElement::kRepoTreeType &&
+             childWhichHasBeenAdded.getType() == AudioElement::kTreeType) {
+    updateLoudnessVec();
   }
 }
 
@@ -127,5 +136,25 @@ void ChannelMonitorProcessor::valueTreeChildRemoved(
     }
 
     mixPresentationSoloMuteRepository_->update(mixPresSoloMute);
+  } else if (parentTree.getType() == AudioElement::kRepoTreeType &&
+             childWhichHasBeenRemoved.getType() == AudioElement::kTreeType) {
+    updateLoudnessVec();
   }
+}
+
+void ChannelMonitorProcessor::updateLoudnessVec() {
+  juce::OwnedArray<AudioElement> audioElements;
+  audioElementRepository_->getAll(audioElements);
+  int lastAEFirstChannel = 0;
+  int channelCount = 0;
+  for (const auto& audioElement : audioElements) {
+    int firstChannel = audioElement->getFirstChannel();
+    if (firstChannel >= lastAEFirstChannel) {
+      lastAEFirstChannel = firstChannel;
+      channelCount = audioElement->getChannelCount();
+    }
+  }
+  int numChannels = lastAEFirstChannel + channelCount;
+  loudness_.resize(numChannels, -300.f);
+  channelMonitorData_.channelLoudnesses.update(loudness_);
 }

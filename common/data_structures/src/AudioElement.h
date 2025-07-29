@@ -75,6 +75,8 @@ class AudioElement final : public RepositoryItemBase {
   inline static const juce::Identifier kDescription{"description"};
   inline static const juce::Identifier kChannelConfig{"channel_config"};
   inline static const juce::Identifier kFirstChannel{"first_channel"};
+  inline static const juce::Identifier kRepoTreeType{
+      "audio_elements"};  // for repository
 
  private:
   void populateScalableChannelLayoutConfig(

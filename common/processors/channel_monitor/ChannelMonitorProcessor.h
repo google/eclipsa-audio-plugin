@@ -30,6 +30,7 @@
 
 #include "../../data_repository/implementation/MixPresentationRepository.h"
 #include "../processor_base/ProcessorBase.h"
+#include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/MixPresentationSoloMuteRepository.h"
 
 //==============================================================================
@@ -39,7 +40,8 @@ class ChannelMonitorProcessor final : public ProcessorBase,
   ChannelMonitorProcessor(
       ChannelMonitorData& channelMonitorData,
       MixPresentationRepository* mixPresentationRepository,
-      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository);
+      MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository,
+      AudioElementRepository* audioElementRepository);
   ~ChannelMonitorProcessor() override;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -51,6 +53,8 @@ class ChannelMonitorProcessor final : public ProcessorBase,
   const juce::String getName() const override;
 
  private:
+  void updateLoudnessVec();
+
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override;
 
@@ -61,6 +65,7 @@ class ChannelMonitorProcessor final : public ProcessorBase,
   ChannelMonitorData& channelMonitorData_;
   MixPresentationRepository* mixPresentationRepository_;
   MixPresentationSoloMuteRepository* mixPresentationSoloMuteRepository_;
+  AudioElementRepository* audioElementRepository_;
   int numChannels_;
   // replace with thread safe data-struct
   std::vector<float> loudness_;

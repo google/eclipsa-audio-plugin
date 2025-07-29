@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include "data_repository/implementation/AudioElementRepository.h"
 #include "data_structures/src/ChannelMonitorData.h"
 #include "data_structures/src/LanguageCodeMetaData.h"
 #include "data_structures/src/MixPresentation.h"
@@ -30,6 +31,9 @@ TEST(test_channelmonitor_processor, test_getPrerdrLoudness) {
   MixPresentationSoloMuteRepository mixPresentationSoloMuteRepository_ =
       juce::ValueTree("mixPresentationSoloMute");
 
+  AudioElementRepository audioElementRepository_ =
+      juce::ValueTree("audioElementRepository");
+
   // temporary hard-code for testing purposes
   juce::Uuid presentationUuid = juce::Uuid();
   MixPresentation presentation(presentationUuid, "English Mix", 1,
@@ -37,7 +41,7 @@ TEST(test_channelmonitor_processor, test_getPrerdrLoudness) {
 
   ChannelMonitorProcessor channelMonitorProcessor(
       channelMonitorData, &mixPresentationRepository_,
-      &mixPresentationSoloMuteRepository_);
+      &mixPresentationSoloMuteRepository_, &audioElementRepository_);
 
   // Check if the gains are being applied correctly
   // Create an AudioBuffer to test the processBlock function

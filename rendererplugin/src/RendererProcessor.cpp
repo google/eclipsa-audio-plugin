@@ -72,7 +72,7 @@ RendererProcessor::RendererProcessor()
   }
   audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>(
       channelMonitorData_, &mixPresentationRepository_,
-      &mixPresentationSoloMuteRepository_));
+      &mixPresentationSoloMuteRepository_, &audioElementRepository_));
   audioProcessors_.push_back(std::make_unique<RenderProcessor>(
       this, &roomSetupRepository_, &audioElementRepository_,
       &mixPresentationRepository_, &activeMixPresentationRepository_,
