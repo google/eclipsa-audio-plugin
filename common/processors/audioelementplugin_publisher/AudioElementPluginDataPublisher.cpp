@@ -35,7 +35,7 @@ AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
   localData_.y = automationParameterTree_->getYPosition();
   localData_.z = automationParameterTree_->getZPosition();
 
-  monitorData_.avgLoudness.update(-70.f);
+  avgLoudness_.update(-70.f);
   jassert(messagingThread_ != nullptr);
   // Update any information from the repository
   updateData();
@@ -68,7 +68,7 @@ void AudioElementPluginDataPublisher::updateData() {
 
   float loudness(-70.f);
 
-  monitorData_.avgLoudness.read(loudness);  // Reset the average loudness
+  avgLoudness_.read(loudness);  // Reset the average loudness
 
   localData_.loudness = loudness;
 
@@ -85,7 +85,7 @@ void AudioElementPluginDataPublisher::processBlock(
     loudness += std::max(chLoud, -70.0f);
   }
   loudness = loudness / channels_;
-  monitorData_.avgLoudness.update(loudness);
+  avgLoudness_.update(loudness);
 
   if (loudness != localData_.loudness) {
     localData_.loudness = loudness;

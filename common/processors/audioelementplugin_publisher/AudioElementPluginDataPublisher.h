@@ -24,6 +24,7 @@
 #include "data_structures/src/AudioElementCommunication.h"
 #include "data_structures/src/AudioElementParameterTree.h"
 #include "data_structures/src/ParameterMetaData.h"
+#include "data_structures/src/RealtimeDataType.h"
 #include "data_structures/src/SpeakerMonitorData.h"
 
 //==============================================================================
@@ -91,6 +92,7 @@ class AudioElementPluginDataPublisher final
  private:
   void updateData();
 
+  RealtimeDataType<float> avgLoudness_;
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutData_;
   AudioElementParameterTree* automationParameterTree_;
   SpeakerMonitorData& monitorData_;

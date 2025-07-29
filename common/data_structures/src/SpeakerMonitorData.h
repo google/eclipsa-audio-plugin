@@ -28,5 +28,4 @@ struct SpeakerMonitorData {
   RealtimeDataType<MeasureEBU128::LoudnessStats> loudnessEBU128;
   RealtimeDataType<std::vector<float>> playbackLoudness;
   RealtimeDataType<std::array<float, 2>> binauralLoudness;
-  RealtimeDataType<float> avgLoudness;  // Used by the Audio Element Plugin only
 };
