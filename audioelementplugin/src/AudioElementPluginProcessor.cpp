@@ -53,8 +53,7 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   audioProcessors_.push_back(std::make_unique<TrackMonitorProcessor>(
       monitorData_, &audioElementSpatialLayoutRepository_));
   audioProcessors_.push_back(std::make_unique<AudioElementPluginDataPublisher>(
-      &audioElementSpatialLayoutRepository_, &automationParametersTreeState,
-      monitorData_));
+      &audioElementSpatialLayoutRepository_, &automationParametersTreeState));
   audioProcessors_.push_back(std::make_unique<SoundFieldProcessor>(
       &audioElementSpatialLayoutRepository_, &syncClient_, &ambisonicsData_));
   audioProcessors_.push_back(std::make_unique<RoutingProcessor>(

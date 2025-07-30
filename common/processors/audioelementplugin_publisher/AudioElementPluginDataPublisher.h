@@ -36,8 +36,7 @@ class AudioElementPluginDataPublisher final
   //==============================================================================
   AudioElementPluginDataPublisher(
       AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository,
-      AudioElementParameterTree* automationParameterTree,
-      SpeakerMonitorData& monitorData);
+      AudioElementParameterTree* automationParameterTree);
   ~AudioElementPluginDataPublisher() override;
 
   //==============================================================================
@@ -95,7 +94,6 @@ class AudioElementPluginDataPublisher final
   RealtimeDataType<float> avgLoudness_;
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutData_;
   AudioElementParameterTree* automationParameterTree_;
-  SpeakerMonitorData& monitorData_;
   std::unique_ptr<MessagingThread> messagingThread_;
   AudioElementUpdateData localData_;
   int channels_;

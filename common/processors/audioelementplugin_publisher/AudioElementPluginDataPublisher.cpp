@@ -18,16 +18,13 @@
 #include <memory>
 
 #include "data_structures/src/AudioElementCommunication.h"
-#include "data_structures/src/SpeakerMonitorData.h"
 #include "processors/audioelementplugin_publisher/MessagingThread.h"
 
 AudioElementPluginDataPublisher::AudioElementPluginDataPublisher(
     AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository,
-    AudioElementParameterTree* automationParameterTree,
-    SpeakerMonitorData& monitorData)
+    AudioElementParameterTree* automationParameterTree)
     : audioElementSpatialLayoutData_(audioElementSpatialLayoutRepository),
       automationParameterTree_(automationParameterTree),
-      monitorData_(monitorData),
       messagingThread_(std::make_unique<MessagingThread>(
           juce::String("AudioElementPublisherThread"))) {
   // Set up the initial data
