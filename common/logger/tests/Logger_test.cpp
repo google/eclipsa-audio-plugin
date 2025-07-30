@@ -17,12 +17,13 @@
 #include <gtest/gtest.h>
 #include <juce_core/juce_core.h>
 
+#include <chrono>
 #include <fstream>
 #include <string>
 #include <thread>
 
 // Helper function to read log file content
-std::string readLogFile(const std::string& logFilePath) {
+static std::string readLogFile(const std::string& logFilePath) {
   std::ifstream file(logFilePath);
   return std::string((std::istreambuf_iterator<char>(file)),
                      std::istreambuf_iterator<char>());
@@ -225,6 +226,159 @@ TEST(LoggerTest, LoggerInitMultipleCalls) {
   EXPECT_NE(logContent.find("Test message after multiple init calls"),
             std::string::npos)
       << "Log message not found - logger may have been reinitialized";
+
+  // Clean up
+  for (const auto& file : logFiles) {
+    std::remove(file.c_str());
+  }
+}
+
+// Test File Retention Policy
+TEST(LoggerTest, FileRetentionPolicy) {
+  Logger::getInstance().init("testlog", 1, boost::log::trivial::info);
+
+  // Clean up existing log files before the test
+  std::vector<std::string> existingLogFiles =
+      Logger::getInstance().getLogFilePaths();
+  for (const auto& file : existingLogFiles) {
+    std::remove(file.c_str());
+  }
+
+  // Generate large messages (~512 KB each) to trigger rotation
+  std::string large_msg(512 * 1024, 'A');
+
+  // Create enough messages to trigger multiple rotations
+  for (int i = 0; i < 20; ++i) {
+    LOG_INFO(1, large_msg + " Rotation test " + std::to_string(i));
+    Logger::getInstance().flush();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  // Verify file retention policy
+  std::vector<std::string> logFiles = Logger::getInstance().getLogFilePaths();
+
+  // Boost.Log may temporarily create a 6th file during rotation before cleanup
+  ASSERT_LE(logFiles.size(), 6u)
+      << "Expected at most 6 log files (5 + 1 temporary during rotation).";
+  ASSERT_GE(logFiles.size(), 5u)
+      << "Expected at least 5 log files after retention policy.";
+
+  // Allow time for cleanup if needed
+  if (logFiles.size() == 6) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    logFiles = Logger::getInstance().getLogFilePaths();
+  }
+
+  // Extract file numbers to verify oldest files were deleted
+  std::vector<int> fileNumbers;
+  for (const auto& filePath : logFiles) {
+    boost::filesystem::path p(filePath);
+    std::string fname = p.filename().string();
+    size_t underscorePos = fname.find('_');
+    if (underscorePos == std::string::npos) continue;
+    size_t dotPos = fname.rfind('.');
+    if (dotPos == std::string::npos) continue;
+    std::string numStr =
+        fname.substr(underscorePos + 1, dotPos - underscorePos - 1);
+    try {
+      fileNumbers.push_back(std::stoi(numStr));
+    } catch (...) {
+      FAIL() << "Failed to parse file number from " << fname;
+    }
+  }
+
+  // Verify retention policy worked by checking file numbers
+  std::sort(fileNumbers.begin(), fileNumbers.end());
+  ASSERT_GE(fileNumbers.size(), 5u);
+  ASSERT_LE(fileNumbers.size(), 6u);
+
+  // Verify that old files were deleted (min file number should be > 5)
+  EXPECT_GT(fileNumbers[0], 5)
+      << "Expected oldest files to be deleted; min file number should be > 5.";
+
+  // Verify files are consecutive (no gaps)
+  for (size_t j = 1; j < fileNumbers.size(); ++j) {
+    EXPECT_EQ(fileNumbers[j], fileNumbers[j - 1] + 1)
+        << "File numbers are not consecutive.";
+  }
+
+  // Clean up
+  for (const auto& file : logFiles) {
+    std::remove(file.c_str());
+  }
+}
+
+// Test File Retention During Active Logging
+TEST(LoggerTest, FileRetentionDuringActiveLogging) {
+  Logger::getInstance().init("testlog", 1, boost::log::trivial::info);
+
+  // Clean up existing log files before the test
+  std::vector<std::string> existingLogFiles =
+      Logger::getInstance().getLogFilePaths();
+  for (const auto& file : existingLogFiles) {
+    std::remove(file.c_str());
+  }
+
+  // Generate messages to create 5 files
+  std::string large_msg(512 * 1024, 'B');
+  for (int i = 0; i < 10; ++i) {
+    LOG_INFO(1, large_msg + " Initial file " + std::to_string(i));
+    Logger::getInstance().flush();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  // Verify we have appropriate number of files
+  std::vector<std::string> logFiles = Logger::getInstance().getLogFilePaths();
+  ASSERT_LE(logFiles.size(), 6u) << "Expected at most 6 log files.";
+
+  // Trigger rotation beyond the 5-file limit
+  LOG_INFO(1, large_msg + " Trigger rotation");
+  Logger::getInstance().flush();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  // Check that we still have proper file count
+  logFiles = Logger::getInstance().getLogFilePaths();
+  ASSERT_LE(logFiles.size(), 6u) << "Expected at most 6 log files.";
+  ASSERT_GE(logFiles.size(), 5u) << "Expected at least 5 log files.";
+
+  // Allow time for cleanup if needed
+  if (logFiles.size() == 6) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    logFiles = Logger::getInstance().getLogFilePaths();
+  }
+
+  // Extract file numbers to verify the oldest file was deleted
+  std::vector<int> fileNumbers;
+  for (const auto& filePath : logFiles) {
+    boost::filesystem::path p(filePath);
+    std::string fname = p.filename().string();
+    size_t underscorePos = fname.find('_');
+    if (underscorePos == std::string::npos) continue;
+    size_t dotPos = fname.rfind('.');
+    if (dotPos == std::string::npos) continue;
+    std::string numStr =
+        fname.substr(underscorePos + 1, dotPos - underscorePos - 1);
+    try {
+      fileNumbers.push_back(std::stoi(numStr));
+    } catch (...) {
+      FAIL() << "Failed to parse file number from " << fname;
+    }
+  }
+
+  // Sort and verify the file numbers show that deletion occurred
+  std::sort(fileNumbers.begin(), fileNumbers.end());
+  ASSERT_GE(fileNumbers.size(), 5u);
+  ASSERT_LE(fileNumbers.size(), 6u);
+
+  // The minimum file number should be > 0 (indicating file 0 was deleted)
+  EXPECT_GT(fileNumbers[0], 0)
+      << "Oldest file should have been deleted during rotation.";
+
+  // Files should be consecutive
+  for (size_t j = 1; j < fileNumbers.size(); ++j) {
+    EXPECT_EQ(fileNumbers[j], fileNumbers[j - 1] + 1)
+        << "File numbers are not consecutive.";
+  }
 
   // Clean up
   for (const auto& file : logFiles) {

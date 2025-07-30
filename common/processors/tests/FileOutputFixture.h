@@ -807,7 +807,7 @@ class SharedTestFixture : public ::testing::Test {
   std::string getLoggedExportStatus() {
     // Store the log file paths for later use in tests
     logFilePaths = Logger::getInstance().getLogFilePaths();
-    std::string lastLine;
+    std::string allLogContent;
     for (const auto& logFilePath : logFilePaths) {
       std::ifstream logFile(logFilePath);
       if (!logFile.is_open()) {
@@ -816,11 +816,11 @@ class SharedTestFixture : public ::testing::Test {
       }
       std::string currLine;
       while (std::getline(logFile, currLine)) {
-        lastLine = currLine;
+        allLogContent += currLine + "\n";
       }
       logFile.close();
     }
-    return lastLine;
+    return allLogContent;
   }
 
   // Helper method to generate IAMF files and perform verification for demuxer
