@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  BUILD_TYPE: Debug
+  BUILD_TYPE: Release
   TEST_TYPE: CI_TEST
   GENERATOR: "Unix Makefiles"
   CXX_COMPILER: clang++
