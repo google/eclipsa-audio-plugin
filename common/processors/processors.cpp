@@ -15,6 +15,7 @@
 #include "processors.h"
 
 #include "audioelementplugin_publisher/AudioElementPluginDataPublisher.cpp"
+#include "audioelementplugin_publisher/MessagingThread.cpp"
 #include "channel_monitor/ChannelMonitorProcessor.cpp"
 #include "file_output/FileOutputProcessor.cpp"
 #include "file_output/FileOutputProcessor_PremierePro.cpp"

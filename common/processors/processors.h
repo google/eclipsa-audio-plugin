@@ -33,6 +33,7 @@ END_JUCE_MODULE_DECLARATION
 #endif
 
 #include "audioelementplugin_publisher/AudioElementPluginDataPublisher.h"
+#include "audioelementplugin_publisher/MessagingThread.h"
 #include "channel_monitor/ChannelMonitorProcessor.h"
 #include "file_output/FileOutputProcessor.h"
 #include "file_output/FileOutputProcessor_PremierePro.h"

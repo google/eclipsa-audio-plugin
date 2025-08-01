@@ -19,11 +19,13 @@
 #include <memory>
 
 #include "../processor_base/ProcessorBase.h"
-#include "data_repository/implementation/AudioElementRepository.h"
+#include "MessagingThread.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
 #include "data_structures/src/AudioElementCommunication.h"
 #include "data_structures/src/AudioElementParameterTree.h"
 #include "data_structures/src/ParameterMetaData.h"
+#include "data_structures/src/RealtimeDataType.h"
+#include "data_structures/src/SpeakerMonitorData.h"
 
 //==============================================================================
 class AudioElementPluginDataPublisher final
@@ -81,7 +83,7 @@ class AudioElementPluginDataPublisher final
     } else if (parameterID == AutoParamMetaData::zPosition) {
       localData_.z = newValue;
     }
-    dataChanged_ = true;
+    updateData();
   }
 
   //==============================================================================
@@ -89,11 +91,11 @@ class AudioElementPluginDataPublisher final
  private:
   void updateData();
 
+  RealtimeDataType<float> avgLoudness_;
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutData_;
   AudioElementParameterTree* automationParameterTree_;
-  bool dataChanged_;
+  std::unique_ptr<MessagingThread> messagingThread_;
   AudioElementUpdateData localData_;
-  std::unique_ptr<AudioElementPublisher> publisher_;
   int channels_;
 
   //==============================================================================
