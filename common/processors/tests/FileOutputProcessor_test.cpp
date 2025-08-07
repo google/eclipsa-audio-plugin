@@ -107,6 +107,8 @@ TEST(test_fio_proc, md_from_ae_repo) {
   fio_proc.updateIamfMDFromRepository(audioElementRepository, iamfMD,
                                       audioElementIDMap);
 
+  juce::Logger::outputDebugString(juce::String(iamfMD.DebugString()));
+
   // Validate the related IAMF metadata fields updated.
   auto ae1MD = iamfMD.audio_element_metadata(0);
   auto ae2MD = iamfMD.audio_element_metadata(1);

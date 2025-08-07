@@ -29,30 +29,32 @@ configure_file(${TEMPLATE_FILE} ${HEADER_FILE} @ONLY)
 include("${CMAKE_SOURCE_DIR}/third_party/protobuf/cmake/protobuf-generate.cmake")
 
 set(PROTO_FILES
-  "proto/arbitrary_obu.proto"
-  "proto/audio_element.proto"
-  "proto/audio_frame.proto"
-  "proto/codec_config.proto"
-  "proto/ia_sequence_header.proto"
-  "proto/mix_presentation.proto"
-  "proto/obu_header.proto"
-  "proto/param_definitions.proto"
-  "proto/parameter_block.proto"
-  "proto/parameter_data.proto"
-  "proto/temporal_delimiter.proto"
-  "proto/test_vector_metadata.proto"
-  "proto/user_metadata.proto"
+  "iamf/cli/proto/arbitrary_obu.proto"
+  "iamf/cli/proto/audio_element.proto"
+  "iamf/cli/proto/audio_frame.proto"
+  "iamf/cli/proto/codec_config.proto"
+  "iamf/cli/proto/encoder_control_metadata.proto"
+  "iamf/cli/proto/ia_sequence_header.proto"
+  "iamf/cli/proto/mix_presentation.proto"
+  "iamf/cli/proto/obu_header.proto"
+  "iamf/cli/proto/output_audio_format.proto"
+  "iamf/cli/proto/param_definitions.proto"
+  "iamf/cli/proto/parameter_block.proto"
+  "iamf/cli/proto/parameter_data.proto"
+  "iamf/cli/proto/temporal_delimiter.proto"
+  "iamf/cli/proto/test_vector_metadata.proto"
+  "iamf/cli/proto/user_metadata.proto"
 )
 
-set(PROTO_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+set(PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Generate protobuf files
 add_library(proto-objects OBJECT ${PROTO_FILES})
-target_include_directories(proto-objects PUBLIC ${PROTO_BINARY_DIR})
+target_include_directories(proto-objects PUBLIC "${CMAKE_CURRENT_BINARY_DIR}" "${PROTO_BINARY_DIR}/iamf/cli/proto" "${CMAKE_CURRENT_LIST_DIR}/include/iamftools")
 target_link_libraries(proto-objects PUBLIC protobuf::libprotobuf)
 protobuf_generate(
   TARGET proto-objects
-  IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}/proto"
+  IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}"
   PROTOC_OUT_DIR "${PROTO_BINARY_DIR}"
 )
 

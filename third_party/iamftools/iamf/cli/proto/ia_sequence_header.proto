@@ -8,10 +8,28 @@
 // source code in the PATENTS file, you can obtain it at
 // www.aomedia.org/license/patent.
 
-syntax = "proto2";
+edition = "2023";
 
 package iamf_tools_cli_proto;
 
-message TemporalDelimiterObuMetadata {
-  optional bool enable_temporal_delimiters = 1;
+import "iamf/cli/proto/obu_header.proto";
+
+enum ProfileVersion {
+  option features.enum_type = CLOSED;
+
+  PROFILE_VERSION_INVALID = 0;
+  PROFILE_VERSION_SIMPLE = 1;
+  PROFILE_VERSION_BASE = 2;
+  PROFILE_VERSION_BASE_ENHANCED = 3;
+  PROFILE_VERSION_RESERVED_255 = 256;
+}
+
+message IASequenceHeaderObuMetadata {
+  uint32 ia_code = 1 [
+    default = 0x69616d66 /* "iamf" */
+  ];
+
+  ProfileVersion primary_profile = 2;
+  ProfileVersion additional_profile = 3;
+  ObuHeaderMetadata obu_header = 4;
 }
