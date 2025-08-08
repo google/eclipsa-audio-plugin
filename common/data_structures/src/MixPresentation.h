@@ -26,7 +26,7 @@
 #include "../src/RepositoryItem.h"
 #include "LanguageCodeMetaData.h"
 #include "data_structures/src/MixPresentationLoudness.h"
-#include "iamftools/commit_hash.h"
+#include "iamf/include/iamf_tools/commit_hash.h"
 #include "mix_presentation.pb.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 #include "user_metadata.pb.h"

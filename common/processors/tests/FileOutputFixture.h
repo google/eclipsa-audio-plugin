@@ -42,7 +42,7 @@
 #include "dep_wavwriter.h"
 #include "google/protobuf/text_format.h"
 #include "ia_sequence_header.pb.h"
-#include "iamftools/encoder_main_lib.h"
+#include "iamf/include/iamf_tools/encoder_main_lib.h"
 #include "processors/file_output/FileOutputProcessor.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 #include "user_metadata.pb.h"

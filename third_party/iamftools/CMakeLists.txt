@@ -1,6 +1,6 @@
 add_library(iamftools INTERFACE)
 target_compile_options(iamftools INTERFACE "-w") # Silence is golden
-target_include_directories(iamftools INTERFACE "include/")
+target_include_directories(iamftools INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/iamf/include/iamf_tools")
 
 add_library(iamftools_dylib SHARED IMPORTED)
 set_target_properties(iamftools_dylib PROPERTIES
@@ -19,8 +19,8 @@ file(STRINGS "${README_FILE}" COMMIT_LINE REGEX "Commit: https://github.com/AOMe
 string(REGEX REPLACE ".*commit/([a-f0-9]+).*" "GitHub/iamf-tools@\\1" COMMIT_HASH "${COMMIT_LINE}")
 
 # Set the path to the header and template file
-set(HEADER_FILE "${CMAKE_CURRENT_LIST_DIR}/include/iamftools/commit_hash.h")
-set(TEMPLATE_FILE "${CMAKE_CURRENT_LIST_DIR}/include/iamftools/commit_hash.h.in")
+set(HEADER_FILE "${CMAKE_CURRENT_LIST_DIR}/iamf/include/iamf_tools/commit_hash.h")
+set(TEMPLATE_FILE "${CMAKE_CURRENT_LIST_DIR}/iamf/include/iamf_tools/commit_hash.h.in")
 
 # Configure the header file
 configure_file(${TEMPLATE_FILE} ${HEADER_FILE} @ONLY)
@@ -50,7 +50,7 @@ set(PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Generate protobuf files
 add_library(proto-objects OBJECT ${PROTO_FILES})
-target_include_directories(proto-objects PUBLIC "${CMAKE_CURRENT_BINARY_DIR}" "${PROTO_BINARY_DIR}/iamf/cli/proto" "${CMAKE_CURRENT_LIST_DIR}/include/iamftools")
+target_include_directories(proto-objects PUBLIC "${CMAKE_CURRENT_BINARY_DIR}" "${PROTO_BINARY_DIR}/iamf/cli/proto" "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/iamf/include/iamf_tools")
 target_link_libraries(proto-objects PUBLIC protobuf::libprotobuf)
 protobuf_generate(
   TARGET proto-objects
