@@ -33,6 +33,7 @@
 #include "AudioElementFileWriter.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "iamf/include/iamf_tools/encoder_main_lib.h"
+#include "iamf/include/iamf_tools/iamf_encoder_factory.h"
 #include "user_metadata.pb.h"
 
 //==============================================================================
