@@ -26,6 +26,7 @@ jobs:
           submodules: recursive
 
       - name: Cache Protobuf Build
+        if: ${{ false }}  # flip to true later
         id: protobuf-cache
         uses: actions/cache@v3
         with:
@@ -35,6 +36,7 @@ jobs:
             ${{ runner.os }}-protobuf-build-
 
       - name: Check Protobuf Cache
+        if: ${{ false }}  # flip to true later
         run: |
           echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
           if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -60,6 +62,7 @@ jobs:
           fi
 
       - name: Cache IAMF Build
+        if: ${{ false }}  # flip to true later
         id: iamf-cache
         uses: actions/cache@v3
         with:
@@ -69,6 +72,7 @@ jobs:
             ${{ runner.os }}-iamf-build-
 
       - name: Check IAMF Cache
+        if: ${{ false }}  # flip to true later
         run: |
           echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
           if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
