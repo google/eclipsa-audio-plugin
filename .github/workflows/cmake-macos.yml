@@ -23,20 +23,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          submodules: recursive
+          submodules: recursive        
 
       - name: Cache Protobuf Build
-        if: ${{ false }}  # flip to true later
         id: protobuf-cache
         uses: actions/cache@v3
         with:
           path: build/third_party/protobuf
-          key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/CMakeLists.txt') }}
+          key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/version.json') }}
           restore-keys: |
             ${{ runner.os }}-protobuf-build-
 
       - name: Check Protobuf Cache
-        if: ${{ false }}  # flip to true later
         run: |
           echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
           if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -62,7 +60,6 @@ jobs:
           fi
 
       - name: Cache IAMF Build
-        if: ${{ false }}  # flip to true later
         id: iamf-cache
         uses: actions/cache@v3
         with:
@@ -72,7 +69,6 @@ jobs:
             ${{ runner.os }}-iamf-build-
 
       - name: Check IAMF Cache
-        if: ${{ false }}  # flip to true later
         run: |
           echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
           if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
