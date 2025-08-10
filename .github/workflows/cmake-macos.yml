@@ -63,8 +63,6 @@ jobs:
         with:
           path: build/third_party/iamf
           key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/iamf/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-iamf-build-
 
       - name: Check IAMF Cache
         run: |
