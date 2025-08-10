@@ -31,8 +31,6 @@ jobs:
         with:
           path: build/third_party/protobuf
           key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/version.json') }}
-          restore-keys: |
-            ${{ runner.os }}-protobuf-build-
 
       - name: Check Protobuf Cache
         run: |
