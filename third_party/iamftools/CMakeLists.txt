@@ -50,7 +50,7 @@ set(PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Generate protobuf files
 add_library(proto-objects OBJECT ${PROTO_FILES})
-target_include_directories(proto-objects PUBLIC "${CMAKE_CURRENT_BINARY_DIR}" "${PROTO_BINARY_DIR}/iamf/cli/proto" "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/iamf/include/iamf_tools")
+target_include_directories(proto-objects PUBLIC "${CMAKE_CURRENT_BINARY_DIR}" "${PROTO_BINARY_DIR}/iamf/cli/proto")
 target_link_libraries(proto-objects PUBLIC protobuf::libprotobuf)
 protobuf_generate(
   TARGET proto-objects
