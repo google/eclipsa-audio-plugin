@@ -1,0 +1,164 @@
+// Copyright (c) 2023, Alliance for Open Media. All rights reserved
+//
+// This source code is subject to the terms of the BSD 3-Clause Clear License
+// and the Alliance for Open Media Patent License 1.0. If the BSD 3-Clause Clear
+// License was not distributed with this source code in the LICENSE file, you
+// can obtain it at www.aomedia.org/license/software-license/bsd-3-c-c. If the
+// Alliance for Open Media Patent License 1.0 was not distributed with this
+// source code in the PATENTS file, you can obtain it at
+// www.aomedia.org/license/patent.
+
+edition = "2023";
+
+package iamf_tools_cli_proto;
+
+import "iamf/cli/proto/obu_header.proto";
+import "iamf/cli/proto/param_definitions.proto";
+
+option features.enum_type = CLOSED;
+
+enum AudioElementType {
+  AUDIO_ELEMENT_INVALID = 0;
+  AUDIO_ELEMENT_CHANNEL_BASED = 1;
+  AUDIO_ELEMENT_SCENE_BASED = 2;
+}
+
+message ParamDefinitionExtension {
+  // `param_definition_size` is ignored. The value in the bitstream is inferred
+  // based on the size of `param_definition_bytes`.
+  uint32 param_definition_size = 1 [deprecated = true];
+  bytes param_definition_bytes = 2;
+}
+
+message AudioElementParam {
+  uint32 deprecated_param_definition_type = 1 [deprecated = true];
+
+  ParamDefinitionType param_definition_type = 5;
+
+  oneof param_definition {
+    DemixingParamDefinition demixing_param = 2;
+    ReconGainParamDefinition recon_gain_param = 3;
+    ParamDefinitionExtension param_definition_extension = 4;
+  }
+
+  // Next ID: 6
+}
+
+// Valid proto enums start at index 1, which are different from the
+// corresponding enums in C++, e.g. kLayoutMono = 0.
+enum LoudspeakerLayout {
+  LOUDSPEAKER_LAYOUT_INVALID = 0;
+  LOUDSPEAKER_LAYOUT_MONO = 1;
+  LOUDSPEAKER_LAYOUT_STEREO = 2;
+  LOUDSPEAKER_LAYOUT_5_1_CH = 3;
+  LOUDSPEAKER_LAYOUT_5_1_2_CH = 4;
+  LOUDSPEAKER_LAYOUT_5_1_4_CH = 5;
+  LOUDSPEAKER_LAYOUT_7_1_CH = 6;
+  LOUDSPEAKER_LAYOUT_7_1_2_CH = 7;
+  LOUDSPEAKER_LAYOUT_7_1_4_CH = 8;
+  LOUDSPEAKER_LAYOUT_3_1_2_CH = 9;
+  LOUDSPEAKER_LAYOUT_BINAURAL = 10;
+  LOUDSPEAKER_LAYOUT_RESERVED_10 = 11;
+  LOUDSPEAKER_LAYOUT_RESERVED_14 = 15;
+  LOUDSPEAKER_LAYOUT_EXPANDED = 16;
+}
+
+enum ExpandedLoudspeakerLayout {
+  EXPANDED_LOUDSPEAKER_LAYOUT_INVALID = 0;
+  EXPANDED_LOUDSPEAKER_LAYOUT_LFE = 1;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_S = 2;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_SS = 3;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_RS = 4;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_TF = 5;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_TB = 6;
+  EXPANDED_LOUDSPEAKER_LAYOUT_TOP_4_CH = 7;
+  EXPANDED_LOUDSPEAKER_LAYOUT_3_0_CH = 8;
+  EXPANDED_LOUDSPEAKER_LAYOUT_9_1_6_CH = 9;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_F = 10;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_SI = 11;
+  EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_TP_SI = 12;
+  EXPANDED_LOUDSPEAKER_LAYOUT_TOP_6_CH = 13;
+  EXPANDED_LOUDSPEAKER_LAYOUT_RESERVED_13 = 14;
+  EXPANDED_LOUDSPEAKER_LAYOUT_RESERVED_255 = 256;
+}
+
+message ChannelAudioLayerConfig {
+  uint32 deprecated_loudspeaker_layout = 1 [deprecated = true];
+
+  LoudspeakerLayout loudspeaker_layout = 10;
+  uint32 output_gain_is_present_flag = 2;
+  uint32 recon_gain_is_present_flag = 3;
+  uint32 reserved_a = 4;
+  uint32 substream_count = 5;
+  uint32 coupled_substream_count = 6;
+  uint32 output_gain_flag = 7;
+  uint32 reserved_b = 8;
+  int32 output_gain = 9;
+  ExpandedLoudspeakerLayout expanded_loudspeaker_layout = 11;
+}
+
+message ScalableChannelLayoutConfig {
+  // `num_layers` is ignored. The value in the bitstream is inferred based on
+  // the number of `channel_audio_layer_configs`.
+  uint32 num_layers = 1 [deprecated = true];
+  uint32 reserved = 2;
+  repeated ChannelAudioLayerConfig channel_audio_layer_configs = 3;
+}
+
+enum AmbisonicsMode {
+  AMBISONICS_MODE_INVALID = 0;
+  AMBISONICS_MODE_MONO = 1;
+  AMBISONICS_MODE_PROJECTION = 2;
+}
+
+message AmbisonicsMonoConfig {
+  uint32 output_channel_count = 1;
+  uint32 substream_count = 2;
+  repeated uint32 channel_mapping = 3;
+}
+
+message AmbisonicsProjectionConfig {
+  uint32 output_channel_count = 1;
+  uint32 substream_count = 2;
+  uint32 coupled_substream_count = 3;
+  repeated int32 demixing_matrix = 4;
+}
+
+message AmbisonicsConfig {
+  AmbisonicsMode ambisonics_mode = 1;
+
+  oneof ambisonics_config {
+    AmbisonicsMonoConfig ambisonics_mono_config = 2;
+    AmbisonicsProjectionConfig ambisonics_projection_config = 3;
+  }
+}
+
+message AudioElementConfigExtension {
+  // `audio_element_config_size` is ignored. The value in the bitstream is
+  // inferred based on the size of `audio_element_config_bytes`.
+  uint32 audio_element_config_size = 1 [deprecated = true];
+  bytes audio_element_config_bytes = 2;
+}
+
+message AudioElementObuMetadata {
+  uint32 audio_element_id = 1;
+  AudioElementType audio_element_type = 2;
+  uint32 reserved = 3;
+  uint32 codec_config_id = 4;
+  // `num_substreams` is ignored. The value in the bitstream is inferred based
+  // on the number of `audio_substream_ids`.
+  uint32 num_substreams = 5 [deprecated = true];
+  repeated uint32 audio_substream_ids = 6;
+  // `num_parameters` is ignored. The value in the bitstream is inferred based
+  // on the number of `audio_element_params`.
+  uint32 num_parameters = 7 [deprecated = true];
+  repeated AudioElementParam audio_element_params = 8;
+
+  oneof config {
+    ScalableChannelLayoutConfig scalable_channel_layout_config = 9;
+    AmbisonicsConfig ambisonics_config = 10;
+    AudioElementConfigExtension audio_element_config_extension = 11;
+  }
+
+  ObuHeaderMetadata obu_header = 12;
+}

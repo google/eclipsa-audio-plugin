@@ -26,7 +26,7 @@
 #include "FileWriter.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/RoomSetup.h"
-#include "iamftools/encoder_main_lib.h"
+#include "iamf/include/iamf_tools/encoder_main_lib.h"
 #include "user_metadata.pb.h"
 
 //==============================================================================

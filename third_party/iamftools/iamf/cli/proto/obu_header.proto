@@ -1,0 +1,34 @@
+// Copyright (c) 2023, Alliance for Open Media. All rights reserved
+//
+// This source code is subject to the terms of the BSD 3-Clause Clear License
+// and the Alliance for Open Media Patent License 1.0. If the BSD 3-Clause Clear
+// License was not distributed with this source code in the LICENSE file, you
+// can obtain it at www.aomedia.org/license/software-license/bsd-3-c-c. If the
+// Alliance for Open Media Patent License 1.0 was not distributed with this
+// source code in the PATENTS file, you can obtain it at
+// www.aomedia.org/license/patent.
+
+edition = "2023";
+
+package iamf_tools_cli_proto;
+
+message ObuHeaderMetadata {
+  reserved 1, 5;
+
+  bool obu_redundant_copy = 2 [default = false];
+
+  bool obu_trimming_status_flag = 3 [default = false];
+
+  bool obu_extension_flag = 4 [default = false];
+
+  uint32 num_samples_to_trim_at_end = 6 [default = 0];
+
+  uint32 num_samples_to_trim_at_start = 7 [default = 0];
+
+  // `extension_header_size` is ignored. The presence in the bitstream is
+  // determined by `obu_extension_flag`. The value in the bitstream is inferred
+  // based on the size of `extension_header_bytes`.
+  uint32 extension_header_size = 8 [default = 0, deprecated = true];
+
+  bytes extension_header_bytes = 9 [default = ""];
+}

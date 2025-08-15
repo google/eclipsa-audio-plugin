@@ -13,6 +13,7 @@ env:
   GENERATOR: "Unix Makefiles"
   CXX_COMPILER: clang++
   C_COMPILER: clang
+  CLEAN_BUILD: false
 
 jobs:
   build:
@@ -26,92 +27,95 @@ jobs:
           submodules: recursive
 
       - name: Cache Protobuf Build
+        if: env.CLEAN_BUILD != 'true'
         id: protobuf-cache
         uses: actions/cache@v3
         with:
           path: build/third_party/protobuf
-          key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-protobuf-build-
+          key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/version.json') }}
 
       - name: Check Protobuf Cache
+        if: env.CLEAN_BUILD != 'true'
         run: |
           echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
           if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "Protobuf cache missed or expired, cleaning protobuf build directory."
-            if [ -d "build/third_party/protobuf" ]; then rm -rf build/third_party/protobuf; fi
+            echo "Protobuf cache missed or expired, setting CLEAN_BUILD to true."
+            echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache JUCE Build
+        if: env.CLEAN_BUILD != 'true'
         id: juce-cache
         uses: actions/cache@v3
         with:
           path: build/third_party/JUCE
           key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-juce-build-
 
       - name: Check JUCE Cache
+        if: env.CLEAN_BUILD != 'true'
         run: |
           echo "JUCE cache hit: ${{ steps.juce-cache.outputs.cache-hit }}"
           if [ "${{ steps.juce-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "JUCE cache missed or expired, cleaning JUCE build directory."
-            if [ -d "build/third_party/JUCE" ]; then rm -rf build/third_party/JUCE; fi
+            echo "JUCE cache missed or expired, setting CLEAN_BUILD to true."
+            echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache IAMF Build
+        if: env.CLEAN_BUILD != 'true'
         id: iamf-cache
         uses: actions/cache@v3
         with:
           path: build/third_party/iamf
           key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/iamf/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-iamf-build-
 
       - name: Check IAMF Cache
+        if: env.CLEAN_BUILD != 'true'
         run: |
           echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
           if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "IAMF cache missed or expired, cleaning IAMF build directory."
-            if [ -d "build/third_party/iamf" ]; then rm -rf build/third_party/iamf; fi
+            echo "IAMF cache missed or expired, setting CLEAN_BUILD to true."
+            echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache Libear Build
+        if: env.CLEAN_BUILD != 'true'
         id: libear-cache
         uses: actions/cache@v3
         with:
           path: build/third_party/libear
           key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-libear-build-
 
       - name: Check Libear Cache
+        if: env.CLEAN_BUILD != 'true'
         run: |
           echo "Libear cache hit: ${{ steps.libear-cache.outputs.cache-hit }}"
           if [ "${{ steps.libear-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "Libear cache missed or expired, cleaning Libear build directory."
-            if [ -d "build/third_party/libear" ]; then rm -rf build/third_party/libear; fi
+            echo "Libear cache missed or expired, setting CLEAN_BUILD to true."
+            echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache Main Build
+        if: env.CLEAN_BUILD != 'true'
         id: main-build-cache
         uses: actions/cache@v3
         with:
           path: build
           key: ${{ runner.os }}-main-build-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h') }}
-          restore-keys: |
-            ${{ runner.os }}-main-build-
 
       - name: Check Main Build Cache
+        if: env.CLEAN_BUILD != 'true'
         run: |
           echo "Main build cache hit: ${{ steps.main-build-cache.outputs.cache-hit }}"
           if [ "${{ steps.main-build-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "Main build cache missed or expired, will clean the main build directory."
-            if [ -d "build/third_party" ]; then
-              #find build -mindepth 1 -maxdepth 1 -not -name external -exec rm -rf {} +;
-              find build/third_party -mindepth 1 -maxdepth 1 -not -name protobuf -not -name JUCE -not -name iamf -not -name libear -exec rm -rf {} +;
-            fi
+            echo "Main build cache missed or expired, setting CLEAN_BUILD to true."
+            echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
+
+      - name: Check Clean Build
+        if: env.CLEAN_BUILD == 'true'
+        run: |
+          echo "CLEAN_BUILD is true, removing entire build directory."
+          if [ -d "build" ]; then rm -rf build; fi
 
       - name: Check Formatting
         run: |
