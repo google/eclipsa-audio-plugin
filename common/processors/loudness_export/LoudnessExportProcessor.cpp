@@ -265,6 +265,11 @@ bool LoudnessExportProcessor::areLoudnessCalcsRequired(
     return false;
   }
 
+  // Safety check to prevent division by zero during auval testing
+  if (sampleRate_ <= 0) {
+    return false;
+  }
+
   // Calculate the current time with the existing number of samples that have
   // been processed
   long currentTime = sampleTally_ / sampleRate_;

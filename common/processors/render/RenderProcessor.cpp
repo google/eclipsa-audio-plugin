@@ -92,7 +92,9 @@ RenderProcessor::~RenderProcessor() {
 void RenderProcessor::initializeRenderers() {
   // Suspending processing while we update the renderers.
   hostProcessor_->suspendProcessing(true);
+#if !JucePlugin_Build_AU
   const juce::SpinLock::ScopedLockType lock(renderersLock_);
+#endif
 
   // Clear the current renderers.
   for (AudioElementRenderer* rdr : audioElementRenderers_) {
@@ -205,7 +207,9 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   // Take the renderers lock to prevent the renderers from being modified by the
   // UI thread while processing.
+#if !JucePlugin_Build_AU
   const juce::SpinLock::ScopedLockType lock(renderersLock_);
+#endif
 
   // Fetch each audio element currently being played back, render it to this
   // room setup

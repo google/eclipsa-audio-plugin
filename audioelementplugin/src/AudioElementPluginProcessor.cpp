@@ -30,8 +30,32 @@
 
 int AudioElementPluginProcessor::instanceId_ = 0;
 
+// Helpers for host layout negotiation (anonymous namespace for internal linkage)
+namespace {
+inline bool isNamedBed(const juce::AudioChannelSet& s) {
+  return s == juce::AudioChannelSet::stereo() ||
+         s == juce::AudioChannelSet::create5point1() ||
+         s == juce::AudioChannelSet::create7point1() ||
+         s == juce::AudioChannelSet::create7point1point2() ||
+         s == juce::AudioChannelSet::create7point1point4();
+}
+inline bool isSymmetricDiscrete(const juce::AudioChannelSet& s) {
+  if (!s.isDiscreteLayout()) return false;
+  const int n = s.size();
+  return n >= 1 && n <= 16;  // covers 1,2,6,8,10,12 etc.
+}
+}  // namespace
+
 AudioElementPluginProcessor::AudioElementPluginProcessor()
-    : ProcessorBase(juce::AudioChannelSet::mono(), getHostWideLayout()),
+#if JucePlugin_Build_AU
+    // For AU builds: use host-wide layout only for Logic Pro, not Premiere Pro
+    : ProcessorBase(
+          juce::PluginHostType().isPremiere() ? juce::AudioChannelSet::mono() : ProcessorBase::getHostWideLayout(),
+          ProcessorBase::getHostWideLayout()),
+#else
+    // For other formats: keep original behavior (mono input, wide output)
+    : ProcessorBase(juce::AudioChannelSet::mono(), ProcessorBase::getHostWideLayout()),
+#endif
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
           persistentState_.getOrCreateChildWithName(
@@ -86,10 +110,18 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
 
 void AudioElementPluginProcessor::releaseResources() {}
 
-bool AudioElementPluginProcessor::isBusesLayoutSupported(
-    const BusesLayout& layouts) const {
-  // Support mono/stero input?
-  // Always output to ambisonic 5
+bool AudioElementPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+#if JucePlugin_Build_AU
+  // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
+  if (!juce::PluginHostType().isPremiere()) {
+    // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
+    const auto in = layouts.getMainInputChannelSet();
+    const auto out = layouts.getMainOutputChannelSet();
+    if (in.isDisabled() || out.isDisabled()) return false;
+    return isNamedBed(in) || isSymmetricDiscrete(in);
+  }
+  // For Premiere Pro AU and all other cases: fall through to original code below
+#endif
 
   // prevent REAPER from downsizing the output channel set when
   // the probing for smaller output channel sets (i.e STEREO)
