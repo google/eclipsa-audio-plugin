@@ -4,11 +4,11 @@
 #include "filesystem"
 #include "google/protobuf/text_format.h"
 #include "ia_sequence_header.pb.h"
-#include "iamftools/encoder_main_lib.h"
+#include "iamf/include/iamf_tools/encoder_main_lib.h"
 #include "user_metadata.pb.h"
 
-static void
-AddIaSequenceHeader(iamf_tools_cli_proto::UserMetadata &user_metadata) {
+static void AddIaSequenceHeader(
+    iamf_tools_cli_proto::UserMetadata& user_metadata) {
   google::protobuf::TextFormat::ParseFromString(
       R"pb(
         primary_profile: PROFILE_VERSION_SIMPLE
@@ -17,7 +17,7 @@ AddIaSequenceHeader(iamf_tools_cli_proto::UserMetadata &user_metadata) {
       user_metadata.add_ia_sequence_header_metadata());
 }
 
-static void AddCodecConfig(iamf_tools_cli_proto::UserMetadata &user_metadata) {
+static void AddCodecConfig(iamf_tools_cli_proto::UserMetadata& user_metadata) {
   google::protobuf::TextFormat::ParseFromString(
       R"pb(
         codec_config_id: 200

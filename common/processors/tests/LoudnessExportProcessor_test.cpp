@@ -36,7 +36,7 @@
 #include "data_structures/src/MixPresentationLoudness.h"
 #include "google/protobuf/text_format.h"
 #include "ia_sequence_header.pb.h"
-#include "iamftools/encoder_main_lib.h"
+#include "iamf/include/iamf_tools/encoder_main_lib.h"
 #include "processors/mix_monitoring/loudness_standards/MeasureEBU128.h"
 #include "processors/render/RenderProcessor.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"

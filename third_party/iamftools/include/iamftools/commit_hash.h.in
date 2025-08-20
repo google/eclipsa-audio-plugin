@@ -1,8 +1,0 @@
-#ifndef GIT_INFO_H
-#define GIT_INFO_H
-
-#include <string>
-
-const std::string GIT_COMMIT_HASH = "@COMMIT_HASH@";
-
-#endif  // GIT_INFO_H

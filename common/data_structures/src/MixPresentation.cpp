@@ -22,7 +22,7 @@
 
 #include "RepositoryItem.h"
 #include "data_structures/src/MixPresentationLoudness.h"
-#include "iamftools/commit_hash.h"
+#include "iamf/include/iamf_tools/commit_hash.h"
 #include "juce_core/system/juce_PlatformDefs.h"
 #include "mix_presentation.pb.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
