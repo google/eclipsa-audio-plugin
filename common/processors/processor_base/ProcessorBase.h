@@ -47,7 +47,8 @@ class ProcessorBase : public juce::AudioProcessor {
   // derived processors (cannot rely on virtual functions there).
   static inline juce::AudioChannelSet getHostWideLayout() {
 #if JucePlugin_Build_AU
-    // AU builds: preserve original Premiere Pro behavior, add Logic Pro-specific changes
+    // AU builds: preserve original Premiere Pro behavior, add Logic
+    // Pro-specific changes
     if (juce::PluginHostType().isPremiere()) {
       // Premiere Pro AU: use original behavior (Ambisonics order 3)
       return juce::AudioChannelSet::ambisonic(3);
