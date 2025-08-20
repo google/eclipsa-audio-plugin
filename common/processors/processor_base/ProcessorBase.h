@@ -46,24 +46,15 @@ class ProcessorBase : public juce::AudioProcessor {
   // Static helper so it can be used inside member initializer lists of
   // derived processors (cannot rely on virtual functions there).
   static inline juce::AudioChannelSet getHostWideLayout() {
-#if JucePlugin_Build_AU
-    // AU builds: preserve original Premiere Pro behavior, add Logic
-    // Pro-specific changes
-    if (juce::PluginHostType().isPremiere()) {
-      // Premiere Pro AU: use original behavior (Ambisonics order 3)
-      return juce::AudioChannelSet::ambisonic(3);
-    } else {
-      // Logic Pro and auval testing: use 7.1.2 for Atmos compatibility
-      return juce::AudioChannelSet::create7point1point4();
-    }
-#else
     // Non-AU builds: original behavior for all DAWs
     if (juce::PluginHostType().isPremiere()) {
       return juce::AudioChannelSet::ambisonic(3);
+    } else if (juce::PluginHostType().isLogic() ||
+               juce::PluginHostType().isAUVal()) {
+      return juce::AudioChannelSet::create7point1point4();
     } else {
       return juce::AudioChannelSet::ambisonic(5);
     }
-#endif
   }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override {

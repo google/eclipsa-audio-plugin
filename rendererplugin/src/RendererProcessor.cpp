@@ -43,17 +43,12 @@ inline bool isSymmetricDiscrete(const juce::AudioChannelSet& s) {
 }  // namespace
 
 RendererProcessor::RendererProcessor()
-#if JucePlugin_Build_AU
     // For AU builds: use host-wide output only for Logic Pro, not Premiere Pro
-    : ProcessorBase(ProcessorBase::getHostWideLayout(),
-                    juce::PluginHostType().isPremiere()
-                        ? juce::AudioChannelSet::stereo()
-                        : ProcessorBase::getHostWideLayout()),
-#else
-    // For other formats: original behavior (wide input, stereo output)
-    : ProcessorBase(ProcessorBase::getHostWideLayout(),
-                    juce::AudioChannelSet::stereo()),
-#endif
+    : ProcessorBase(
+          ProcessorBase::getHostWideLayout(),
+          (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal())
+              ? ProcessorBase::getHostWideLayout()
+              : juce::AudioChannelSet::stereo()),
       // Load persistent state. Initialize repositories from persistent state.
       persistentState_(kRendererStateKey),
       roomSetupRepository_(getTreeWithId(kRoomSetupKey)),
@@ -124,19 +119,14 @@ RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-#if JucePlugin_Build_AU
   // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
-  if (!juce::PluginHostType().isPremiere()) {
+  if (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal()) {
     // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
     const auto in = layouts.getMainInputChannelSet();
     const auto out = layouts.getMainOutputChannelSet();
     if (in.isDisabled() || out.isDisabled()) return false;
     return isNamedBed(in) || isSymmetricDiscrete(in);
   }
-  // For Premiere Pro AU and all other cases: fall through to original code
-  // below
-#endif
-
   // Original working code for all DAWs (including Premiere Pro AU)
 
   // Ensure the input channel set is wide enough for us
@@ -224,8 +214,10 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                      juce::MidiBuffer& midiMessages) {
   juce::ignoreUnused(midiMessages);
 
-#if JUCE_DEBUG && !JucePlugin_Build_AU
-  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
+#if JUCE_DEBUG
+  if (!(juce::PluginHostType().isAUVal() || juce::PluginHostType().isLogic())) {
+    juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
+  }
 #endif
 
   juce::ScopedNoDenormals noDenormals;
@@ -428,9 +420,11 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 
 void RendererProcessor::checkManualOfflineStartStop() {
 // This is utilized by debug builds to perform the manual bounce operation
-#if JUCE_DEBUG && !JucePlugin_Build_AU
+#if JUCE_DEBUG
   // Disable debug spinlock for AU builds as it can cause auval crashes
-  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
+  if (!(juce::PluginHostType().isAUVal() || juce::PluginHostType().isLogic())) {
+    juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
+  }
   FileExport configParams = fileExportRepository_.get();
 
   if (isRealtime_ != configParams.getManualExport()) {

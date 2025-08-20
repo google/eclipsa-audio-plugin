@@ -48,17 +48,12 @@ inline bool isSymmetricDiscrete(const juce::AudioChannelSet& s) {
 }  // namespace
 
 AudioElementPluginProcessor::AudioElementPluginProcessor()
-#if JucePlugin_Build_AU
     // For AU builds: use host-wide layout only for Logic Pro, not Premiere Pro
-    : ProcessorBase(juce::PluginHostType().isPremiere()
-                        ? juce::AudioChannelSet::mono()
-                        : ProcessorBase::getHostWideLayout(),
-                    ProcessorBase::getHostWideLayout()),
-#else
-    // For other formats: keep original behavior (mono input, wide output)
-    : ProcessorBase(juce::AudioChannelSet::mono(),
-                    ProcessorBase::getHostWideLayout()),
-#endif
+    : ProcessorBase(
+          (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal())
+              ? ProcessorBase::getHostWideLayout()
+              : juce::AudioChannelSet::mono(),
+          ProcessorBase::getHostWideLayout()),
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
           persistentState_.getOrCreateChildWithName(
@@ -115,18 +110,14 @@ void AudioElementPluginProcessor::releaseResources() {}
 
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-#if JucePlugin_Build_AU
   // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
-  if (!juce::PluginHostType().isPremiere()) {
+  if (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal()) {
     // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
     const auto in = layouts.getMainInputChannelSet();
     const auto out = layouts.getMainOutputChannelSet();
     if (in.isDisabled() || out.isDisabled()) return false;
     return isNamedBed(in) || isSymmetricDiscrete(in);
   }
-  // For Premiere Pro AU and all other cases: fall through to original code
-  // below
-#endif
 
   // prevent REAPER from downsizing the output channel set when
   // the probing for smaller output channel sets (i.e STEREO)
