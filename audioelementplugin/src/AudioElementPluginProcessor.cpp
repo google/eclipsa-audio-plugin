@@ -30,7 +30,8 @@
 
 int AudioElementPluginProcessor::instanceId_ = 0;
 
-// Helpers for host layout negotiation (anonymous namespace for internal linkage)
+// Helpers for host layout negotiation (anonymous namespace for internal
+// linkage)
 namespace {
 inline bool isNamedBed(const juce::AudioChannelSet& s) {
   return s == juce::AudioChannelSet::stereo() ||
@@ -49,12 +50,14 @@ inline bool isSymmetricDiscrete(const juce::AudioChannelSet& s) {
 AudioElementPluginProcessor::AudioElementPluginProcessor()
 #if JucePlugin_Build_AU
     // For AU builds: use host-wide layout only for Logic Pro, not Premiere Pro
-    : ProcessorBase(
-          juce::PluginHostType().isPremiere() ? juce::AudioChannelSet::mono() : ProcessorBase::getHostWideLayout(),
-          ProcessorBase::getHostWideLayout()),
+    : ProcessorBase(juce::PluginHostType().isPremiere()
+                        ? juce::AudioChannelSet::mono()
+                        : ProcessorBase::getHostWideLayout(),
+                    ProcessorBase::getHostWideLayout()),
 #else
     // For other formats: keep original behavior (mono input, wide output)
-    : ProcessorBase(juce::AudioChannelSet::mono(), ProcessorBase::getHostWideLayout()),
+    : ProcessorBase(juce::AudioChannelSet::mono(),
+                    ProcessorBase::getHostWideLayout()),
 #endif
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
@@ -110,7 +113,8 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
 
 void AudioElementPluginProcessor::releaseResources() {}
 
-bool AudioElementPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+bool AudioElementPluginProcessor::isBusesLayoutSupported(
+    const BusesLayout& layouts) const {
 #if JucePlugin_Build_AU
   // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
   if (!juce::PluginHostType().isPremiere()) {
@@ -120,7 +124,8 @@ bool AudioElementPluginProcessor::isBusesLayoutSupported(const BusesLayout& layo
     if (in.isDisabled() || out.isDisabled()) return false;
     return isNamedBed(in) || isSymmetricDiscrete(in);
   }
-  // For Premiere Pro AU and all other cases: fall through to original code below
+  // For Premiere Pro AU and all other cases: fall through to original code
+  // below
 #endif
 
   // prevent REAPER from downsizing the output channel set when
@@ -224,11 +229,11 @@ void AudioElementPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     float currentVolume = automationParametersTreeState.getVolume();
     // convert to linear gain
     float linearGain = juce::Decibels::decibelsToGain(currentVolume);
-    // Apply the volume to each sample in the buffer
-    for (int channel = firstOutputChannel;
-         channel < firstOutputChannel + outputChannelCount; ++channel) {
-      // current volume is an implicit converion from a RangedAudioParameter
-      // to a float safe to use .applyGain
+    // Apply the volume to each sample in the buffer (bounded by buffer size to
+    // avoid OOB)
+    int lastChan = std::min(firstOutputChannel + outputChannelCount,
+                            buffer.getNumChannels());
+    for (int channel = firstOutputChannel; channel < lastChan; ++channel) {
       buffer.applyGain(channel, 0, buffer.getNumSamples(), linearGain);
     }
   }

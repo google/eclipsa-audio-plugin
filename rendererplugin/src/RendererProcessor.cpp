@@ -46,7 +46,9 @@ RendererProcessor::RendererProcessor()
 #if JucePlugin_Build_AU
     // For AU builds: use host-wide output only for Logic Pro, not Premiere Pro
     : ProcessorBase(ProcessorBase::getHostWideLayout(),
-                    juce::PluginHostType().isPremiere() ? juce::AudioChannelSet::stereo() : ProcessorBase::getHostWideLayout()),
+                    juce::PluginHostType().isPremiere()
+                        ? juce::AudioChannelSet::stereo()
+                        : ProcessorBase::getHostWideLayout()),
 #else
     // For other formats: original behavior (wide input, stereo output)
     : ProcessorBase(ProcessorBase::getHostWideLayout(),
@@ -120,7 +122,8 @@ RendererProcessor::RendererProcessor()
 
 RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
-bool RendererProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+bool RendererProcessor::isBusesLayoutSupported(
+    const BusesLayout& layouts) const {
 #if JucePlugin_Build_AU
   // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
   if (!juce::PluginHostType().isPremiere()) {
@@ -130,11 +133,12 @@ bool RendererProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
     if (in.isDisabled() || out.isDisabled()) return false;
     return isNamedBed(in) || isSymmetricDiscrete(in);
   }
-  // For Premiere Pro AU and all other cases: fall through to original code below
+  // For Premiere Pro AU and all other cases: fall through to original code
+  // below
 #endif
 
   // Original working code for all DAWs (including Premiere Pro AU)
-  
+
   // Ensure the input channel set is wide enough for us
   if (layouts.getMainInputChannelSet() != getHostWideLayout()) {
     return false;
@@ -193,7 +197,8 @@ void RendererProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
   // Keep a wide internal processing buffer (28 ch) regardless of the active bus
   // to avoid auval crashes when Logic probes wider layouts.
   // Use host layout size instead of hardcoded 28 for consistency
-  processingBuffer_.setSize(getHostWideLayout().size(), samplesPerBlock, false, true, true);
+  processingBuffer_.setSize(getHostWideLayout().size(), samplesPerBlock, false,
+                            true, true);
   LOG_ANALYTICS(instanceId_, "activeMixPresentation Uuid: " +
                                  activeMixPresentationRepository_.get()
                                      .getActiveMixId()
@@ -241,12 +246,12 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   // to more channels than are available on output. ProTools makes channels
   // beyond the playback layout channel read-only in the buffer, so we
   // need to copy the data into a buffer we can modify.
-  
+
   // Add bounds checking to prevent crashes during auval testing
-  int channelsToCopy = juce::jmin(totalNumInputChannels, 
-                                  buffer.getNumChannels(), 
-                                  processingBuffer_.getNumChannels());
-  
+  int channelsToCopy =
+      juce::jmin(totalNumInputChannels, buffer.getNumChannels(),
+                 processingBuffer_.getNumChannels());
+
   for (int ch = 0; ch < channelsToCopy; ++ch) {
     processingBuffer_.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());
   }
@@ -259,10 +264,10 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   // Copy the processing buffer back to the output buffer
   // Copy back only the number of channels that the DAW expects to render
-  int channelsToOutput = juce::jmin(totalNumOutputChannels, 
-                                    buffer.getNumChannels(), 
-                                    processingBuffer_.getNumChannels());
-  
+  int channelsToOutput =
+      juce::jmin(totalNumOutputChannels, buffer.getNumChannels(),
+                 processingBuffer_.getNumChannels());
+
   for (int ch = 0; ch < channelsToOutput; ++ch) {
     buffer.copyFrom(ch, 0, processingBuffer_, ch, 0, buffer.getNumSamples());
   }

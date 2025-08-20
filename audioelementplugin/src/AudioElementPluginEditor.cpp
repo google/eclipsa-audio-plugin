@@ -235,12 +235,27 @@ void AudioElementPluginEditor::setAudioElementSelection() {
   juce::OwnedArray<AudioElement> elements;
   syncClient_->getAudioElements(elements);
   juce::String selectedElementName = "";
+  audioElementEnabled_.clear();
+  static const bool isLogic = juce::PluginHostType().isLogic();
+  int hostOutChans = 0;
+  if (auto* proc =
+          dynamic_cast<AudioElementPluginProcessor*>(getAudioProcessor())) {
+    hostOutChans = proc->getBusesLayout().getMainOutputChannelSet().size();
+  }
   for (int i = 0; i < elements.size(); i++) {
+    bool enable = true;
+    if (isLogic) {
+      int layoutChannels = elements[i]->getChannelConfig().getNumChannels();
+      // Allow selecting layouts whose channel count does not exceed host output
+      if (hostOutChans > 0 && layoutChannels > hostOutChans) enable = false;
+    }
     if (elements[i]->getId() == toSelect) {
       selectedElementName = elements[i]->getName();
       roomViewScreen_.updateSpeakerSetup(elements[i]->getChannelConfig());
     }
-    audioElementSelectionBox_.addOption(elements[i]->getName());
+    // Add option with enabled/disabled state (disabled are non-clickable)
+    audioElementSelectionBox_.addOption(elements[i]->getName(), enable);
+    audioElementEnabled_.push_back(enable);
   }
   audioElementSelectionBox_.setOption(selectedElementName);
 }

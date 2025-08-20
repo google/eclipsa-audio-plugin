@@ -29,6 +29,7 @@ class DAWCompatibilityChecker {
       case juce::PluginHostType::AvidProTools:
       case juce::PluginHostType::Reaper:
       case juce::PluginHostType::AdobePremierePro:
+      case juce::PluginHostType::AppleLogic:
         return true;
 
       // All other DAWs are unsupported
