@@ -215,9 +215,7 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   juce::ignoreUnused(midiMessages);
 
 #if JUCE_DEBUG
-  if (!(juce::PluginHostType().isAUVal() || juce::PluginHostType().isLogic())) {
-    juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
-  }
+  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
 #endif
 
   juce::ScopedNoDenormals noDenormals;
@@ -248,8 +246,6 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     processingBuffer_.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());
   }
 
-  // Test with processors one by one to isolate the crash
-  // Currently testing: GainProcessor + ChannelMonitorProcessor
   for (const auto& proc : audioProcessors_) {
     proc->processBlock(processingBuffer_, midiMessages);
   }
@@ -421,10 +417,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 void RendererProcessor::checkManualOfflineStartStop() {
 // This is utilized by debug builds to perform the manual bounce operation
 #if JUCE_DEBUG
-  // Disable debug spinlock for AU builds as it can cause auval crashes
-  if (!(juce::PluginHostType().isAUVal() || juce::PluginHostType().isLogic())) {
-    juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
-  }
+  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
   FileExport configParams = fileExportRepository_.get();
 
   if (isRealtime_ != configParams.getManualExport()) {
