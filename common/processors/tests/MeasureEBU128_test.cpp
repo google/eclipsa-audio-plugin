@@ -158,13 +158,14 @@ TEST(test_ebu128_measurements, loudness_test) {
     // Check the measured loudness against pre-recorded values
     std::cout << loudness.loudnessIntegrated << " " << loudness.loudnessTruePeak
               << " " << loudness.loudnessRange << std::endl;
-    EXPECT_NEAR(loudness.loudnessIntegrated, test.loudnessIntegrated, 0.1);
-    EXPECT_NEAR(loudness.loudnessTruePeak, test.loudnessTruePeak, 0.1);
+    ASSERT_NEAR(loudness.loudnessIntegrated, test.loudnessIntegrated, 0.1);
+    ASSERT_NEAR(loudness.loudnessTruePeak, test.loudnessTruePeak, 0.1)
+        << "Failed for layout: " << test.speakerLayout.toString();
 
     // Note: It's unclear to me why the error here is still so large in
     // comparison to FFMPEG. The calculation looks
     // correct, perhaps FFMPEG calculates the gating differently because it has
-    // access to the entire file? --Branden
-    EXPECT_NEAR(loudness.loudnessRange, test.loudnessRange, 1);
+    // access to the entire file?
+    ASSERT_NEAR(loudness.loudnessRange, test.loudnessRange, 1);
   }
 }

@@ -18,6 +18,7 @@ juce_add_modules(
     data_repository
     data_structures
     logger
+    player
     processors
     substream_rdr)
 
@@ -29,6 +30,7 @@ if(CI_TEST OR INTERNAL_TEST)
     add_subdirectory(logger/tests)
     add_subdirectory(data_structures/tests)
     add_subdirectory(substream_rdr/tests)
+    add_subdirectory(player/test)
     
 endif()
 
@@ -58,6 +60,7 @@ target_include_directories(substream_rdr INTERFACE  "${spatialaudio_SOURCE_DIR}/
 # Link libraries with internal dependencies on external libs
 target_link_libraries(substream_rdr INTERFACE libspatialaudio obr libear data_structures)
 target_link_libraries(processors INTERFACE gpac libear iamftools logger substream_rdr libzmq saf saf_example_ambi_dec lufs_meter)
-target_link_libraries(components INTERFACE binary_data libear substream_rdr processors)
+target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
 target_link_libraries(data_structures INTERFACE iamftools substream_rdr Boost::lockfree)
-target_link_libraries(logger INTERFACE Boost::log Boost::log_setup Boost::thread Boost::filesystem juce::juce_core) 
+target_link_libraries(logger INTERFACE Boost::log Boost::log_setup Boost::thread Boost::filesystem juce::juce_core)
+target_link_libraries(player INTERFACE processors substream_rdr)

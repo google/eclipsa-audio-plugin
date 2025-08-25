@@ -79,6 +79,7 @@ target_link_libraries(RendererPlugin
         substream_rdr
         processors
         components
+        player
         logger
         data_repository
         data_structures

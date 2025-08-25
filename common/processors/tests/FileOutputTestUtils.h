@@ -332,7 +332,7 @@ class MP4IAMFDemuxer {
   }
 };
 
-// Debug utility for writing auto data out for offline analysis
+// Debug tool for writing audio data to wave files for offline tools
 class WavFileWriter {
  public:
   WavFileWriter(const std::filesystem::path& filePath, int numChannels,

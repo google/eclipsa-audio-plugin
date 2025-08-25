@@ -34,7 +34,7 @@ TEST(test_file_export_repository, mod_export) {
   FileExport testExportData(0, 0, "/test/path/test.wav", "/test/path", IAMF,
                             LPCM, 16, 44100, true, true, true,
                             "/test/path/test.mp4", "/test/path", true,
-                            FileProfile::SIMPLE, 8, 64000, 24);
+                            FileProfile::SIMPLE, 8, 64000, 24, false);
   repositoryInstance.update(testExportData);
   FileExport updatedExportData = repositoryInstance.get();
   ASSERT_EQ(testExportData.getAudioCodec(), updatedExportData.getAudioCodec());

@@ -94,10 +94,12 @@ float MeasureEBU128::calculateTruePeakLevel(
                                      upsampledBuffer_.getWritePointer(i),
                                      buffer.getNumSamples() * kUpsampleRatio_);
 
-    // LPF.
+    // LPF. The ITU spec specifies 20kHz, but we must clamp to below Nyquist.
     juce::IIRFilter lpfFilter;
+    const double kUpsampledRate = kSampleRate_ * kUpsampleRatio_;
+    const double kCutoffFreq = std::min(20e3, kUpsampledRate / 2.0 * 0.95);
     lpfFilter.setCoefficients(
-        juce::IIRCoefficients::makeLowPass(kSampleRate_, 20e3));
+        juce::IIRCoefficients::makeLowPass(kSampleRate_, kCutoffFreq));
     lpfFilter.processSamples(upsampledBuffer_.getWritePointer(i),
                              upsampledBuffer_.getNumSamples());
   }
