@@ -24,24 +24,9 @@
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
 #include "processors/processor_base/ProcessorBase.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 //==============================================================================
-namespace {
-inline bool isNamedBed(const juce::AudioChannelSet& s) {
-  return s == juce::AudioChannelSet::stereo() ||
-         s == juce::AudioChannelSet::create5point1() ||
-         s == juce::AudioChannelSet::create7point1() ||
-         s == juce::AudioChannelSet::create7point1point2() ||
-         s == juce::AudioChannelSet::create7point1point4();
-}
-
-inline bool isSymmetricDiscrete(const juce::AudioChannelSet& s) {
-  if (!s.isDiscreteLayout()) return false;
-  const int n = s.size();
-  return n >= 1 && n <= 16;  // covers 1,2,6,8,10,12 etc.
-}
-}  // namespace
-
 RendererProcessor::RendererProcessor()
     // For AU builds: use host-wide output only for Logic Pro, not Premiere Pro
     : ProcessorBase(
@@ -125,7 +110,7 @@ bool RendererProcessor::isBusesLayoutSupported(
     const auto in = layouts.getMainInputChannelSet();
     const auto out = layouts.getMainOutputChannelSet();
     if (in.isDisabled() || out.isDisabled()) return false;
-    return isNamedBed(in) || isSymmetricDiscrete(in);
+    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
   }
   // Original working code for all DAWs (including Premiere Pro AU)
 
