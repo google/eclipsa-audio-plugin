@@ -30,13 +30,13 @@ class DummyHostProcessor final : public ProcessorBase {
   }
 };
 
-DummyHostProcessor hostProc;
 const int kSampleRate = 48000;
 
 void ensureAmbisonicToStereoIsRenderedCorrectly(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -83,6 +83,7 @@ void ensureTwoStereoElementsAreMixedCorrectly(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -119,6 +120,7 @@ void ensureMonoToStereoIsRenderedCorrectly(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -151,6 +153,7 @@ void ensureStereoToFiveOneIsRenderedCorrectly(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -186,6 +189,7 @@ void ensureStereoToStereoIsRenderedCorrectly(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -219,6 +223,7 @@ void ensureRoomUpdatesWhenRoomSetupChanges(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -241,6 +246,7 @@ void ensureProcessorInitializedCorrectly(
     RoomSetupRepository roomSetupData, AudioElementRepository audioElementData,
     MixPresentationRepository mixPresData, ActiveMixRepository activeMixdata,
     SpeakerMonitorData& rtData) {
+  DummyHostProcessor hostProc;
   RenderProcessor rProcessor(&hostProc, &roomSetupData, &audioElementData,
                              &mixPresData, &activeMixdata, rtData);
 
@@ -339,8 +345,7 @@ TEST(test_render_processor, addbus) {
 class test_render_proc : public ::testing::Test {
  protected:
   test_render_proc()
-      : host(),
-        temporaryState("Test"),
+      : temporaryState("Test"),
         // Initialize repositories as children of the temporary state tree.
         roomSetupData(temporaryState.getOrCreateChildWithName(
             RoomSetup::kTreeType, nullptr)),
@@ -350,6 +355,7 @@ class test_render_proc : public ::testing::Test {
             MixPresentation::kTreeType, nullptr)),
         activeMixPresData(temporaryState.getOrCreateChildWithName(
             ActiveMixPresentation::kTreeType, nullptr)),
+        host(),
         proc(&host, &roomSetupData, &audioElementData, &mixPresData,
              &activeMixPresData, rtData) {}
 

@@ -21,13 +21,14 @@
 class ProcessorBase : public juce::AudioProcessor {
  public:
   // This constructor is called by our internal processors
-  // Just default them to ambisonics 5 for now, it shouldn't really matter
+  // Default to a sensible wide layout for the host so internal processors
+  // behave consistently. AU defaults to a named bed (7.1.2) for Logic/Atmos
+  // while other formats default to Ambisonics order 5.
   ProcessorBase()
       : juce::AudioProcessor(
             BusesProperties()
-                .withInput("Input", juce::AudioChannelSet::ambisonic(5), true)
-                .withOutput("Output", juce::AudioChannelSet::ambisonic(5),
-                            true)) {}
+                .withInput("Input", getHostWideLayout(), true)
+                .withOutput("Output", getHostWideLayout(), true)) {}
 
   // This constructor is called by the actual plugins
   // It allows the supported channels to be explicitly stated. This is used by
@@ -41,6 +42,20 @@ class ProcessorBase : public juce::AudioProcessor {
 
   explicit ProcessorBase(const BusesProperties& ioLayouts)
       : AudioProcessor(ioLayouts) {}
+
+  // Static helper so it can be used inside member initializer lists of
+  // derived processors (cannot rely on virtual functions there).
+  static inline juce::AudioChannelSet getHostWideLayout() {
+    // Non-AU builds: original behavior for all DAWs
+    if (juce::PluginHostType().isPremiere()) {
+      return juce::AudioChannelSet::ambisonic(3);
+    } else if (juce::PluginHostType().isLogic() ||
+               juce::PluginHostType().isAUVal()) {
+      return juce::AudioChannelSet::create7point1point4();
+    } else {
+      return juce::AudioChannelSet::ambisonic(5);
+    }
+  }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override {
     juce::ignoreUnused(sampleRate, samplesPerBlock);
@@ -91,13 +106,5 @@ class ProcessorBase : public juce::AudioProcessor {
   }
   void changeProgramName(int index, const juce::String& newName) override {
     juce::ignoreUnused(index, newName);
-  }
-
-  static juce::AudioChannelSet getHostWideLayout() {
-    if (juce::PluginHostType().isPremiere()) {
-      return juce::AudioChannelSet::ambisonic(3);
-    } else {
-      return juce::AudioChannelSet::ambisonic(5);
-    }
   }
 };

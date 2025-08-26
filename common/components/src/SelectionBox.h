@@ -180,8 +180,12 @@ class SelectionBox : public juce::Component {
     selectionBox_.hidePopup();
   }
 
-  void addOption(juce::String option) {
-    selectionBox_.addItem(option, selectionBox_.getNumItems() + 1);
+  void addOption(juce::String option, bool enabled = true) {
+    int id = selectionBox_.getNumItems() + 1;
+    selectionBox_.addItem(option, id);
+    if (!enabled) {
+      selectionBox_.setItemEnabled(id, false);
+    }
     if (selectionBox_.getNumItems() == 1) {
       selectionBox_.setSelectedId(1);
     }

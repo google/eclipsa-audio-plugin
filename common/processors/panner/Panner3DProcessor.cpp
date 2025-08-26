@@ -117,9 +117,17 @@ void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Manually copy the number of channels of the output layout from the
     // output buffer to the input buffer to avoid resizing.
-    for (int channel = 0; channel < outputBuffer_.getNumChannels(); ++channel) {
+    const int copyChannels =
+        std::min(outputBuffer_.getNumChannels(), buffer.getNumChannels());
+    for (int channel = 0; channel < copyChannels; ++channel) {
       buffer.copyFrom(channel, 0, outputBuffer_, channel, 0,
                       buffer.getNumSamples());
+    }
+    // If truncated, clear any remaining host channels (so stale data isn't
+    // left)
+    for (int channel = copyChannels; channel < buffer.getNumChannels();
+         ++channel) {
+      buffer.clear(channel, 0, buffer.getNumSamples());
     }
   }
 

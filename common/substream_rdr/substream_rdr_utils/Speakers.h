@@ -33,6 +33,21 @@ typedef juce::AudioChannelSet ChannelSet;
 typedef juce::AudioChannelSet::ChannelType ChannelType;
 typedef juce::AudioBuffer<float> FBuffer;
 
+// Utility functions for channel layout validation
+inline bool isNamedBed(const juce::AudioChannelSet& s) {
+  return s == juce::AudioChannelSet::stereo() ||
+         s == juce::AudioChannelSet::create5point1() ||
+         s == juce::AudioChannelSet::create7point1() ||
+         s == juce::AudioChannelSet::create7point1point2() ||
+         s == juce::AudioChannelSet::create7point1point4();
+}
+
+inline bool isSymmetricDiscrete(const juce::AudioChannelSet& s) {
+  if (!s.isDiscreteLayout()) return false;
+  const int n = s.size();
+  return n >= 1 && n <= 16;  // covers 1,2,6,8,10,12 etc.
+}
+
 struct ChGainMap {
   int destIdx, srcIdx;
   float gain;

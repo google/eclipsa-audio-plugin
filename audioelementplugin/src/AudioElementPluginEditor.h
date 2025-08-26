@@ -100,6 +100,8 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
   TitledTextBox trackNameTextBox_;
   TitledTextBox outputModeTypeLabel_;
   SelectionBox audioElementSelectionBox_;
+  std::vector<bool>
+      audioElementEnabled_;  // parallel to selection items for Logic gating
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioElementPluginEditor)
 };

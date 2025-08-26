@@ -24,10 +24,16 @@
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
 #include "processors/processor_base/ProcessorBase.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 //==============================================================================
 RendererProcessor::RendererProcessor()
-    : ProcessorBase(getHostWideLayout(), juce::AudioChannelSet::stereo()),
+    // For AU builds: use host-wide output only for Logic Pro, not Premiere Pro
+    : ProcessorBase(
+          ProcessorBase::getHostWideLayout(),
+          (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal())
+              ? ProcessorBase::getHostWideLayout()
+              : juce::AudioChannelSet::stereo()),
       // Load persistent state. Initialize repositories from persistent state.
       persistentState_(kRendererStateKey),
       roomSetupRepository_(getTreeWithId(kRoomSetupKey)),
@@ -83,9 +89,9 @@ RendererProcessor::RendererProcessor()
   audioProcessors_.push_back(std::make_unique<MixMonitorProcessor>(
       roomSetupRepository_, monitorData_));
   audioProcessors_.push_back(std::make_unique<RemappingProcessor>(this, true));
-  // 28 is the maximum number of channels an IAMF file can contain
+  // Use host layout size for output channels configuration
   juce::AudioChannelSet outputChannels;
-  for (int i = 0; i < 28; i++) {
+  for (int i = 0; i < getHostWideLayout().size(); i++) {
     outputChannels.addChannel((juce::AudioChannelSet::ChannelType)i);
   }
 
@@ -98,6 +104,16 @@ RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
+  // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
+  if (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal()) {
+    // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
+    const auto in = layouts.getMainInputChannelSet();
+    const auto out = layouts.getMainOutputChannelSet();
+    if (in.isDisabled() || out.isDisabled()) return false;
+    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
+  }
+  // Original working code for all DAWs (including Premiere Pro AU)
+
   // Ensure the input channel set is wide enough for us
   if (layouts.getMainInputChannelSet() != getHostWideLayout()) {
     return false;
@@ -153,7 +169,11 @@ void RendererProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
   for (const auto& proc : audioProcessors_) {
     proc->prepareToPlay(sampleRate, samplesPerBlock);
   }
-  processingBuffer_.setSize(getMainBusNumInputChannels(), samplesPerBlock);
+  // Keep a wide internal processing buffer (28 ch) regardless of the active bus
+  // to avoid auval crashes when Logic probes wider layouts.
+  // Use host layout size instead of hardcoded 28 for consistency
+  processingBuffer_.setSize(getHostWideLayout().size(), samplesPerBlock, false,
+                            true, true);
   LOG_ANALYTICS(instanceId_, "activeMixPresentation Uuid: " +
                                  activeMixPresentationRepository_.get()
                                      .getActiveMixId()
@@ -201,16 +221,27 @@ void RendererProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   // to more channels than are available on output. ProTools makes channels
   // beyond the playback layout channel read-only in the buffer, so we
   // need to copy the data into a buffer we can modify.
-  for (int ch = 0; ch < totalNumInputChannels; ++ch) {
+
+  // Add bounds checking to prevent crashes during auval testing
+  int channelsToCopy =
+      juce::jmin(totalNumInputChannels, buffer.getNumChannels(),
+                 processingBuffer_.getNumChannels());
+
+  for (int ch = 0; ch < channelsToCopy; ++ch) {
     processingBuffer_.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());
   }
 
-  for (const auto& proc : audioProcessors_)
+  for (const auto& proc : audioProcessors_) {
     proc->processBlock(processingBuffer_, midiMessages);
+  }
 
   // Copy the processing buffer back to the output buffer
   // Copy back only the number of channels that the DAW expects to render
-  for (int ch = 0; ch < totalNumOutputChannels; ++ch) {
+  int channelsToOutput =
+      juce::jmin(totalNumOutputChannels, buffer.getNumChannels(),
+                 processingBuffer_.getNumChannels());
+
+  for (int ch = 0; ch < channelsToOutput; ++ch) {
     buffer.copyFrom(ch, 0, processingBuffer_, ch, 0, buffer.getNumSamples());
   }
 }

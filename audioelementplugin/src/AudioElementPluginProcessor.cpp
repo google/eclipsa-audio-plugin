@@ -27,11 +27,17 @@
 #include "processors/mix_monitoring/TrackMonitorProcessor.h"
 #include "processors/panner/Panner3DProcessor.h"
 #include "processors/routing/RoutingProcessor.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 int AudioElementPluginProcessor::instanceId_ = 0;
 
 AudioElementPluginProcessor::AudioElementPluginProcessor()
-    : ProcessorBase(juce::AudioChannelSet::mono(), getHostWideLayout()),
+    // For AU builds: use host-wide layout only for Logic Pro, not Premiere Pro
+    : ProcessorBase(
+          (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal())
+              ? ProcessorBase::getHostWideLayout()
+              : juce::AudioChannelSet::mono(),
+          ProcessorBase::getHostWideLayout()),
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
           persistentState_.getOrCreateChildWithName(
@@ -88,8 +94,14 @@ void AudioElementPluginProcessor::releaseResources() {}
 
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-  // Support mono/stero input?
-  // Always output to ambisonic 5
+  // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
+  if (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal()) {
+    // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
+    const auto in = layouts.getMainInputChannelSet();
+    const auto out = layouts.getMainOutputChannelSet();
+    if (in.isDisabled() || out.isDisabled()) return false;
+    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
+  }
 
   // prevent REAPER from downsizing the output channel set when
   // the probing for smaller output channel sets (i.e STEREO)
@@ -192,11 +204,11 @@ void AudioElementPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     float currentVolume = automationParametersTreeState.getVolume();
     // convert to linear gain
     float linearGain = juce::Decibels::decibelsToGain(currentVolume);
-    // Apply the volume to each sample in the buffer
-    for (int channel = firstOutputChannel;
-         channel < firstOutputChannel + outputChannelCount; ++channel) {
-      // current volume is an implicit converion from a RangedAudioParameter
-      // to a float safe to use .applyGain
+    // Apply the volume to each sample in the buffer (bounded by buffer size to
+    // avoid OOB)
+    int lastChan = std::min(firstOutputChannel + outputChannelCount,
+                            buffer.getNumChannels());
+    for (int channel = firstOutputChannel; channel < lastChan; ++channel) {
       buffer.applyGain(channel, 0, buffer.getNumSamples(), linearGain);
     }
   }

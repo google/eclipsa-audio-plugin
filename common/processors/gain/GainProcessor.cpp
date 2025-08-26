@@ -53,11 +53,15 @@ void GainProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   juce::ScopedNoDenormals noDenormals;
 
-  for (int i = 0; i < channelGainsDSP_.size(); i++) {
+  for (int i = 0; i < juce::jmin(static_cast<int>(channelGainsDSP_.size()),
+                                 static_cast<int>(gains_.size()));
+       i++) {
     setGain(i, gains_[i]->get());
   }
 
-  for (int i = 0; i < buffer.getNumChannels(); i++) {
+  for (int i = 0; i < juce::jmin(buffer.getNumChannels(),
+                                 static_cast<int>(channelGainsDSP_.size()));
+       i++) {
     juce::dsp::AudioBlock<float> block(&buffer.getArrayOfWritePointers()[i], 1,
                                        m_samplesPerBlock_);
     juce::dsp::ProcessContextReplacing<float> processContext(block);

@@ -27,19 +27,20 @@ class TestBaseProcessor : public ProcessorBase {
   }
 };
 
-TestBaseProcessor proc;
-
 TEST(test_base_processor, defaultbuses) {
+  TestBaseProcessor proc;
   ASSERT_EQ(proc.getBusCount(input), 1);
   ASSERT_EQ(proc.getBusCount(output), 1);
 }
 
 TEST(test_base_processor, addbus) {
+  TestBaseProcessor proc;
   ASSERT_TRUE(proc.canAddBus(input));
   ASSERT_TRUE(proc.canAddBus(output));
 }
 
 TEST(test_base_processor, removedefaultbus) {
+  TestBaseProcessor proc;
   ASSERT_FALSE(proc.canRemoveBus(input));
   ASSERT_FALSE(proc.canRemoveBus(output));
 }
