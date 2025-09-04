@@ -18,6 +18,7 @@
 
 #include "RendererEditor.h"
 #include "RendererVersionConverter.h"
+#include "components/src/CustomHostDetector.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/MixPresentation.h"
@@ -28,10 +29,10 @@
 
 //==============================================================================
 RendererProcessor::RendererProcessor()
-    // For AU builds: use host-wide output only for Logic Pro, not Premiere Pro
+    // For AU builds: use host-wide output only for Logic Pro/auval, not Premiere Pro
     : ProcessorBase(
           ProcessorBase::getHostWideLayout(),
-          (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal())
+          CustomHostDetector().isAUValidationContext()
               ? ProcessorBase::getHostWideLayout()
               : juce::AudioChannelSet::stereo()),
       // Load persistent state. Initialize repositories from persistent state.
@@ -104,8 +105,9 @@ RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-  // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
-  if (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal()) {
+  // Special handling for Logic Pro/auval only - don't interfere with Premiere Pro AU
+  CustomHostDetector hostDetector;
+  if (hostDetector.isAUValidationContext()) {
     // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
     const auto in = layouts.getMainInputChannelSet();
     const auto out = layouts.getMainOutputChannelSet();

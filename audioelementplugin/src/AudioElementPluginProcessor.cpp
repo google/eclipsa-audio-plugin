@@ -20,6 +20,7 @@
 
 #include "AudioElementPluginEditor.h"
 #include "AudioElementVersionConverter.h"
+#include "components/src/CustomHostDetector.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/ParameterMetaData.h"
 #include "logger/logger.h"
@@ -32,9 +33,9 @@
 int AudioElementPluginProcessor::instanceId_ = 0;
 
 AudioElementPluginProcessor::AudioElementPluginProcessor()
-    // For AU builds: use host-wide layout only for Logic Pro, not Premiere Pro
+    // For AU builds: use host-wide layout only for Logic Pro/auval, not Premiere Pro
     : ProcessorBase(
-          (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal())
+          CustomHostDetector().isAUValidationContext()
               ? ProcessorBase::getHostWideLayout()
               : juce::AudioChannelSet::mono(),
           ProcessorBase::getHostWideLayout()),
@@ -94,15 +95,24 @@ void AudioElementPluginProcessor::releaseResources() {}
 
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-  // Special handling for Logic Pro only - don't interfere with Premiere Pro AU
-  if (juce::PluginHostType().isLogic() || juce::PluginHostType().isAUVal()) {
-    // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
+  // Special handling for AU format (but not Premiere Pro AU)
+#if JucePlugin_Build_AU
+  CustomHostDetector hostDetector;
+  if (hostDetector.isAUValidationContext()) {
+    // This is AU format and Logic Pro/auval: use strict validation for AU compliance
     const auto in = layouts.getMainInputChannelSet();
     const auto out = layouts.getMainOutputChannelSet();
     if (in.isDisabled() || out.isDisabled()) return false;
-    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
+    
+    // For AU validation, be more restrictive - only allow valid combinations
+    if (out == getHostWideLayout()) {
+      return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
+    }
+    return false;
   }
+#endif
 
+  // Original logic for non-AU formats or Premiere Pro AU
   // prevent REAPER from downsizing the output channel set when
   // the probing for smaller output channel sets (i.e STEREO)
   // right after the desired/most complex layout has been assigned to the output
