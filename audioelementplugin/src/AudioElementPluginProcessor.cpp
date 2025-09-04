@@ -96,23 +96,14 @@ void AudioElementPluginProcessor::releaseResources() {}
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
   // Special handling for AU format (but not Premiere Pro AU)
-#if JucePlugin_Build_AU
   CustomHostDetector hostDetector;
   if (hostDetector.isAUValidationContext()) {
-    // This is AU format and Logic Pro/auval: use strict validation for AU compliance
     const auto in = layouts.getMainInputChannelSet();
     const auto out = layouts.getMainOutputChannelSet();
     if (in.isDisabled() || out.isDisabled()) return false;
-    
-    // For AU validation, be more restrictive - only allow valid combinations
-    if (out == getHostWideLayout()) {
       return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
-    }
-    return false;
   }
-#endif
 
-  // Original logic for non-AU formats or Premiere Pro AU
   // prevent REAPER from downsizing the output channel set when
   // the probing for smaller output channel sets (i.e STEREO)
   // right after the desired/most complex layout has been assigned to the output
