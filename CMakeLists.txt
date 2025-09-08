@@ -48,7 +48,7 @@ option(ECLIPSA_LOGIC_PRO_OPTIMIZE "Enable Logic Pro specific audio layout optimi
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
+set(CMAKE_BUILD_RPATH "@loader_path/../Resources")
 set(PLUGIN_FORMATS "AU")
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
