@@ -42,6 +42,9 @@ if(NOT DEFINED ECLIPSA_PANNER_BUNDLE_ID)
     set(ECLIPSA_PANNER_BUNDLE_ID "com.eclipsaproject.panner" CACHE STRING "Bundle ID for the panner plugin")
 endif()
 
+# Enable Logic Pro specific optimizations for AU builds on macOS
+option(ECLIPSA_LOGIC_PRO_OPTIMIZE "Enable Logic Pro specific audio layout optimizations" ON)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

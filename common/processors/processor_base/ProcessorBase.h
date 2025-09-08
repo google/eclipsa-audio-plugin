@@ -17,7 +17,6 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../../components/src/CustomHostDetector.h"
 
 class ProcessorBase : public juce::AudioProcessor {
  public:
@@ -47,15 +46,15 @@ class ProcessorBase : public juce::AudioProcessor {
   // Static helper so it can be used inside member initializer lists of
   // derived processors (cannot rely on virtual functions there).
   static inline juce::AudioChannelSet getHostWideLayout() {
-    CustomHostDetector hostDetector;
-    // Non-AU builds: original behavior for all DAWs
-    if (hostDetector.isPremiere()) {
+#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
+    return juce::AudioChannelSet::create7point1point4();
+#else
+    if (juce::PluginHostType().isPremiere()) {
       return juce::AudioChannelSet::ambisonic(3);
-    } else if (hostDetector.isLogic() || hostDetector.isAUVal()) {
-      return juce::AudioChannelSet::create7point1point4();
     } else {
       return juce::AudioChannelSet::ambisonic(5);
     }
+#endif
   }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override {

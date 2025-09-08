@@ -52,6 +52,11 @@ target_compile_definitions(RendererPlugin
         JucePlugin_IsSynth=1
         JucePlugin_Category="Synth")
 
+# Add Logic Pro optimization flag when enabled
+if(ECLIPSA_LOGIC_PRO_OPTIMIZE)
+    target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_OPTIMIZE=1)
+endif()
+
 target_link_options(RendererPlugin
     PUBLIC
         "-Wl"

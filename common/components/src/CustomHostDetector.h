@@ -18,51 +18,91 @@
 
 #include <juce_audio_plugin_client/juce_audio_plugin_client.h>
 
+#include "logger/logger.h"
+#if JUCE_MAC
+#include <libproc.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 /**
  * Custom host detector that fixes JUCE 7.0.12 auval detection bug.
  * JUCE's PluginHostType().isAUVal() looks for "auvaltool" but the actual
  * executable is "auval", causing false negatives during AU validation.
  */
 class CustomHostDetector {
-public:
-    CustomHostDetector() {
-        detectHost();
-    }
-    
-    // Main method for AU validation context detection
-    bool isAUValidationContext() const {
-        return isAUVal_ || hostType_.isAUVal() || hostType_.isLogic();
-    }
-    
-    // Standard JUCE host detection methods (delegate to JUCE)
-    bool isLogic() const { return hostType_.isLogic(); }
-    bool isGarageBand() const { return hostType_.isGarageBand(); }
-    bool isPremiere() const { return hostType_.isPremiere(); }
-    bool isReaper() const { return hostType_.isReaper(); }
-    
-    // Our custom auval detection
-    bool isAUVal() const { return isAUVal_; }
+ public:
+  CustomHostDetector() { detectHost(); }
 
-private:
-    void detectHost() {
-        // Get the host executable path/name
-        hostPath_ = juce::File::getSpecialLocation(juce::File::currentExecutableFile).getFullPathName();
-        hostFilename_ = juce::File::getSpecialLocation(juce::File::currentExecutableFile).getFileName();
-        
-        // Detect AU validation tools (fix for JUCE bug)
-        isAUVal_ = isAUValidationTool();
+  // Main method for AU validation context detection
+  bool isAUValidationContext() const {
+    return isAUVal_ || hostType_.isAUVal() || hostType_.isLogic();
+  }
+
+  // Standard JUCE host detection methods (delegate to JUCE)
+  bool isLogic() const { return hostType_.isLogic(); }
+  bool isGarageBand() const { return hostType_.isGarageBand(); }
+  bool isPremiere() const { return hostType_.isPremiere(); }
+  bool isReaper() const { return hostType_.isReaper(); }
+
+  // Our custom auval detection
+  bool isAUVal() const { return isAUVal_; }
+
+ private:
+  void detectHost() {
+    // Get the host executable path/name
+    hostPath_ =
+        juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+            .getFullPathName();
+    hostFilename_ =
+        juce::File::getSpecialLocation(juce::File::currentExecutableFile)
+            .getFileName();
+
+    // Debug logging to see what we're detecting
+    LOG_INFO(0, "CustomHostDetector: hostPath = " + hostPath_.toStdString());
+    LOG_INFO(
+        0, "CustomHostDetector: hostFilename = " + hostFilename_.toStdString());
+
+    // Detect AU validation tools (fix for JUCE bug)
+    isAUVal_ = isAUValidationTool();
+
+    LOG_INFO(0, "CustomHostDetector: isAUVal = " +
+                    std::string(isAUVal_ ? "true" : "false"));
+    LOG_INFO(0, "CustomHostDetector: JUCE isAUVal = " +
+                    std::string(hostType_.isAUVal() ? "true" : "false"));
+    LOG_INFO(0, "CustomHostDetector: isLogic = " +
+                    std::string(hostType_.isLogic() ? "true" : "false"));
+  }
+
+  bool isAUValidationTool() const {
+    // Direct executable name/path checks
+    if (hostFilename_.containsIgnoreCase("auval") ||
+        hostFilename_.containsIgnoreCase("auvaltool") ||
+        hostPath_.containsIgnoreCase("auval") ||
+        hostPath_.containsIgnoreCase("AudioUnitHosting"))
+      return true;
+
+#if JUCE_MAC
+    // Walk up the parent process chain a few levels to see if launched by auval
+    pid_t pid = getpid();
+    for (int depth = 0; depth < 4; ++depth) {
+      struct proc_bsdinfo procInfo;
+      if (proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &procInfo, sizeof(procInfo)) !=
+          sizeof(procInfo))
+        break;
+      juce::String parentName(procInfo.pbi_name);
+      if (parentName.containsIgnoreCase("auval")) {
+        return true;
+      }
+      pid = procInfo.pbi_ppid;
+      if (pid <= 1) break;
     }
-    
-    bool isAUValidationTool() const {
-        // Check for various AU validation tool names
-        return hostFilename_.containsIgnoreCase("auval") ||
-               hostFilename_.containsIgnoreCase("auvaltool") ||
-               hostPath_.containsIgnoreCase("auval") ||
-               hostPath_.containsIgnoreCase("AudioUnitHosting");
-    }
-    
-    juce::PluginHostType hostType_;
-    juce::String hostPath_;
-    juce::String hostFilename_;
-    bool isAUVal_;
+#endif
+    return false;
+  }
+
+  juce::PluginHostType hostType_;
+  juce::String hostPath_;
+  juce::String hostFilename_;
+  bool isAUVal_;
 };

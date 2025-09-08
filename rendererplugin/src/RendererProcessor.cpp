@@ -18,7 +18,6 @@
 
 #include "RendererEditor.h"
 #include "RendererVersionConverter.h"
-#include "components/src/CustomHostDetector.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
 #include "data_structures/src/MixPresentation.h"
@@ -29,12 +28,13 @@
 
 //==============================================================================
 RendererProcessor::RendererProcessor()
-    // For AU builds: use host-wide output only for Logic Pro/auval, not Premiere Pro
-    : ProcessorBase(
-          ProcessorBase::getHostWideLayout(),
-          CustomHostDetector().isAUValidationContext()
-              ? ProcessorBase::getHostWideLayout()
-              : juce::AudioChannelSet::stereo()),
+    // Logic Pro optimized builds: use host-wide layout
+    : ProcessorBase(ProcessorBase::getHostWideLayout(),
+#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
+                    ProcessorBase::getHostWideLayout()),
+#else
+                    juce::AudioChannelSet::stereo()),
+#endif
       // Load persistent state. Initialize repositories from persistent state.
       persistentState_(kRendererStateKey),
       roomSetupRepository_(getTreeWithId(kRoomSetupKey)),
@@ -105,17 +105,14 @@ RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-  // Special handling for Logic Pro/auval only - don't interfere with Premiere Pro AU
-  CustomHostDetector hostDetector;
-  if (hostDetector.isAUValidationContext()) {
-    // This is Logic Pro or auval testing: use our targeted Logic Pro fixes
-    const auto in = layouts.getMainInputChannelSet();
-    const auto out = layouts.getMainOutputChannelSet();
-    if (in.isDisabled() || out.isDisabled()) return false;
-    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
-  }
-  // Original working code for all DAWs (including Premiere Pro AU)
-
+#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
+  // Logic Pro optimized builds: use wide layout support
+  const auto in = layouts.getMainInputChannelSet();
+  const auto out = layouts.getMainOutputChannelSet();
+  if (in.isDisabled() || out.isDisabled()) return false;
+  return Speakers::isNamedBed(out) || Speakers::isSymmetricDiscrete(out);
+#else
+  // Non-optimized builds: original working code for all DAWs
   // Ensure the input channel set is wide enough for us
   if (layouts.getMainInputChannelSet() != getHostWideLayout()) {
     return false;
@@ -144,6 +141,7 @@ bool RendererProcessor::isBusesLayoutSupported(
   } else {
     return false;
   }
+#endif
 }
 
 bool RendererProcessor::applyBusLayouts(const BusesLayout& layouts) {

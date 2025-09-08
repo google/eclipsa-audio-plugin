@@ -20,7 +20,6 @@
 
 #include "AudioElementPluginEditor.h"
 #include "AudioElementVersionConverter.h"
-#include "components/src/CustomHostDetector.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/ParameterMetaData.h"
 #include "logger/logger.h"
@@ -33,11 +32,13 @@
 int AudioElementPluginProcessor::instanceId_ = 0;
 
 AudioElementPluginProcessor::AudioElementPluginProcessor()
-    // For AU builds: use host-wide layout only for Logic Pro/auval, not Premiere Pro
+    // For Logic Pro optimized builds: use host-wide layout
     : ProcessorBase(
-          CustomHostDetector().isAUValidationContext()
-              ? ProcessorBase::getHostWideLayout()
-              : juce::AudioChannelSet::mono(),
+#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
+          ProcessorBase::getHostWideLayout(),
+#else
+          juce::AudioChannelSet::mono(),
+#endif
           ProcessorBase::getHostWideLayout()),
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
@@ -95,14 +96,13 @@ void AudioElementPluginProcessor::releaseResources() {}
 
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-  // Special handling for AU format (but not Premiere Pro AU)
-  CustomHostDetector hostDetector;
-  if (hostDetector.isAUValidationContext()) {
-    const auto in = layouts.getMainInputChannelSet();
-    const auto out = layouts.getMainOutputChannelSet();
-    if (in.isDisabled() || out.isDisabled()) return false;
-      return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
-  }
+#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
+  // Logic Pro optimized builds: use wide layout support
+  const auto in = layouts.getMainInputChannelSet();
+  const auto out = layouts.getMainOutputChannelSet();
+  if (in.isDisabled() || out.isDisabled()) return false;
+  return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
+#else
 
   // prevent REAPER from downsizing the output channel set when
   // the probing for smaller output channel sets (i.e STEREO)
@@ -139,6 +139,7 @@ bool AudioElementPluginProcessor::isBusesLayoutSupported(
   }
 
   return false;
+#endif
 }
 
 bool AudioElementPluginProcessor::applyBusLayouts(const BusesLayout& layouts) {
