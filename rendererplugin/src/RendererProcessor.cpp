@@ -110,7 +110,7 @@ bool RendererProcessor::isBusesLayoutSupported(
   const auto in = layouts.getMainInputChannelSet();
   const auto out = layouts.getMainOutputChannelSet();
   if (in.isDisabled() || out.isDisabled()) return false;
-  return Speakers::isNamedBed(out) || Speakers::isSymmetricDiscrete(out);
+  return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
 #else
   // Non-optimized builds: original working code for all DAWs
   // Ensure the input channel set is wide enough for us
