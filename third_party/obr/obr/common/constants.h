@@ -66,6 +66,10 @@ static const float kTwoPi = static_cast<float>(2.0 * std::numbers::pi_v<float>);
 static const float kRadiansFromDegrees =
     static_cast<float>(std::numbers::pi_v<float> / 180.0);
 
+// Defines conversion factor from radians to degrees.
+static const float kDegreesFromRadians =
+    static_cast<float>(180.0 / std::numbers::pi_v<float>);
+
 }  // namespace obr
 
 #endif  // OBR_COMMON_CONSTANTS_H_

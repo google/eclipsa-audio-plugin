@@ -115,4 +115,5 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(int, flac_compression_level, FlacCompressionLevel);
   EXPORT_VALUE(int, opus_total_bitrate, OpusTotalBitrate);
   EXPORT_VALUE(int, lpcm_sample_size, LPCMSampleSize);
+  EXPORT_VALUE(long, sample_tally, SampleTally);
 };

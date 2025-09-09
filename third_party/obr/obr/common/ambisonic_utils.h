@@ -49,6 +49,23 @@ inline float Sn3dNormalization(int degree, int order) {
                    Factorial(degree + std::abs(order)));
 }
 
+/*!\brief Returns the number of spherical harmonics for a periphonic ambisonic
+ * sound field of |ambisonic_order|.
+ */
+inline size_t GetNumPeriphonicComponents(int ambisonic_order) {
+  return static_cast<size_t>((ambisonic_order + 1) * (ambisonic_order + 1));
+}
+
+/*!\brief Returns the number of periphonic spherical harmonics (SHs) for a
+ * particular Ambisonic order. E.g. number of 1st, 2nd or 3rd degree SHs in a
+ * 3rd order sound field.
+ */
+inline size_t GetNumNthOrderPeriphonicComponents(int ambisonic_order) {
+  if (ambisonic_order == 0) return 1;
+  return static_cast<size_t>(GetNumPeriphonicComponents(ambisonic_order) -
+                             GetNumPeriphonicComponents(ambisonic_order - 1));
+}
+
 /*!\brief Calculates the order of the current spherical harmonic channel as the
  * integer part of a square root of the channel number. Please note, that in
  * Ambisonics the terms 'order' (usually denoted as 'n') and 'degree' (usually

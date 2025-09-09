@@ -14,4 +14,7 @@ cd "$1" || exit
 # Find and remove all files except .h files
 find . -type f ! -name '*.h' -exec rm -f {} +
 
+# Remove test/ directories if they exist
+find . -type d -name 'test' -exec rm -rf {} +
+
 echo "All files except .h files have been removed from $1"

@@ -12,7 +12,7 @@ edition = "2023";
 
 package iamf_tools_cli_proto;
 
-import "iamf/cli/proto/output_audio_format.proto";
+import "output_audio_format.proto";
 
 // Controls for the encoder behavior.
 message EncoderControlMetadata {

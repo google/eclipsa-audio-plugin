@@ -44,8 +44,8 @@ void writeIASeqHdr(FileProfile profileVersion,
   }
 }
 
-void writeLPCMConfigMD(const int samplesPerBlock, const int samplesProcessed,
-                       const int sampleRate, const int sampleSize,
+void writeLPCMConfigMD(const int samplesPerBlock, const int sampleRate,
+                       const int sampleSize,
                        iamf_tools_cli_proto::UserMetadata& user_metadata) {
   auto codecMD = user_metadata.codec_config_metadata_size() == 0
                      ? user_metadata.add_codec_config_metadata()
@@ -66,6 +66,7 @@ void writeLPCMConfigMD(const int samplesPerBlock, const int samplesProcessed,
 
 void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
                        const int bitsPerSample, const int compressionLevel,
+                       const int sampleRate,
                        iamf_tools_cli_proto::UserMetadata& user_metadata) {
   auto codec = user_metadata.add_codec_config_metadata();
   codec->set_codec_config_id(200);
@@ -83,7 +84,7 @@ void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
   flacMD->mutable_header()->set_metadata_data_block_length(34);
   flacMD->mutable_stream_info()->set_minimum_block_size(samplesPerBlock);
   flacMD->mutable_stream_info()->set_maximum_block_size(samplesPerBlock);
-  flacMD->mutable_stream_info()->set_sample_rate(48e3);
+  flacMD->mutable_stream_info()->set_sample_rate(sampleRate);
 
   // Note that bits per sample seems to be 0 based, ie, we'd expect 16 to work
   // here but it doesn't and 15 does, we'd expect 24 to work but it doesn't and
@@ -101,14 +102,46 @@ void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
 
   auto codecConfig = codec->mutable_codec_config();
   codecConfig->set_codec_id(::iamf_tools_cli_proto::CodecId::CODEC_ID_OPUS);
-  // For 48kHz, must be one of 120, 240, 480 or 960. Can't be the number of
-  // samples per block since it may not be one of those values.
-  codecConfig->set_num_samples_per_frame(960);
+
+  // Set samples per frame based on sample rate
+  // Valid frame sizes for Opus at different sample rates:
+  int samplesPerFrame;
+  int preSkip;
+  int validatedBitrate;
+
+  switch (sampleRate) {
+    case 16000:
+      samplesPerFrame = 320;  // 20ms frame at 16kHz
+      preSkip = 104;          // Scaled pre-skip for 16kHz
+      // Clamp bitrate for 16kHz: 8-64 kbps per channel
+      validatedBitrate = std::max(8000, std::min(64000, bitratePerChannel));
+      break;
+    case 24000:
+      samplesPerFrame = 480;  // 20ms frame at 24kHz
+      preSkip = 156;          // Scaled pre-skip for 24kHz
+      // Clamp bitrate for 24kHz: 16-96 kbps per channel
+      validatedBitrate = std::max(16000, std::min(96000, bitratePerChannel));
+      break;
+    case 48000:
+      samplesPerFrame = 960;  // 20ms frame at 48kHz
+      preSkip = 312;          // Standard pre-skip for 48kHz
+      // Clamp bitrate for 48kHz: 32-256 kbps per channel
+      validatedBitrate = std::max(32000, std::min(256000, bitratePerChannel));
+      break;
+    default:
+      // Default to 48kHz values for unsupported sample rates
+      samplesPerFrame = 960;
+      preSkip = 312;
+      validatedBitrate = std::max(32000, std::min(256000, bitratePerChannel));
+      break;
+  }
+
+  codecConfig->set_num_samples_per_frame(samplesPerFrame);
   codecConfig->set_audio_roll_distance(-4);
 
   auto opusConfig = codecConfig->mutable_decoder_config_opus();
   opusConfig->set_input_sample_rate(sampleRate);
-  opusConfig->set_pre_skip(312);  // Number of audio samples to be trimmed
+  opusConfig->set_pre_skip(preSkip);
   opusConfig->set_version(1);
 
   // Set the opus encoder metadata.
@@ -116,7 +149,7 @@ void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
   // allocated data is owned by the protobuf and is deleted when the protobuf
   // is deleted.
   auto opusMD = new iamf_tools_cli_proto::OpusEncoderMetadata();
-  opusMD->set_target_bitrate_per_channel(bitratePerChannel);
+  opusMD->set_target_bitrate_per_channel(validatedBitrate);
   opusMD->set_application(
       ::iamf_tools_cli_proto::OpusApplicationFlag::APPLICATION_AUDIO);
   opusMD->set_use_float_api(false);
@@ -129,8 +162,6 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   const juce::String inputAudioFile = exportData.getExportFile();
   const juce::String inputVideoFile = exportData.getVideoSource();
   const juce::String outputMuxdFile = exportData.getVideoExportFolder();
-  const std::basic_string<char> pluginIdentifier("Eclipsa Audio Renderer");
-  // Logger::getInstance().init("LOG_FILE_PATH);
 
   GF_Err gf_err = GF_OK;
   GF_FilterSession* session = gf_fs_new_defaults(GF_FilterSessionFlags(0));
@@ -144,7 +175,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* src_audio = gf_fs_load_source(session, inputAudioFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_INFO(0, "IAMF Muxing: Failed to load audio file.");
+    LOG_ERROR(0, "IAMF Muxing: Failed to load audio file.");
     return false;
   }
 
@@ -152,7 +183,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* src_video = gf_fs_load_source(session, inputVideoFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_INFO(0, "IAMF Muxing: Failed to load video file.");
+    LOG_ERROR(0, "IAMF Muxing: Failed to load video file.");
     gf_fs_del(session);
     return false;
   }
@@ -161,7 +192,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* dest_filter = gf_fs_load_destination(
       session, outputMuxdFile.toRawUTF8(), NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_INFO(0, "IAMF Muxing: Failed to load output file filter.");
+    LOG_ERROR(0, "IAMF Muxing: Failed to load output file filter.");
     gf_fs_del(session);
     return false;
   }
@@ -169,7 +200,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   // Reframer for audio stream.
   GF_Filter* reframer_filter = gf_fs_load_filter(session, "rfav1", &gf_err);
   if (gf_err != GF_OK) {
-    LOG_INFO(0, "IAMF Muxing: Failed to load reframer filter.");
+    LOG_ERROR(0, "IAMF Muxing: Failed to load reframer filter.");
     gf_fs_del(session);
     return false;
   }
@@ -177,7 +208,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   // Filter for muxing audio and video.
   GF_Filter* mux_filter = gf_fs_load_filter(session, "mp4mx", &gf_err);
   if (gf_err != GF_OK) {
-    LOG_INFO(0, "IAMF Muxing: Failed to load muxing filter.");
+    LOG_ERROR(0, "IAMF Muxing: Failed to load muxing filter.");
     gf_fs_del(session);
     return false;
   }
@@ -186,7 +217,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* audio_remover =
       gf_fs_load_filter(session, "mp4dmx:tkid=video", &gf_err);
   if (gf_err != GF_OK) {
-    LOG_INFO(0, "IAMF Muxing: Failed to load audio remover filter.");
+    LOG_ERROR(0, "IAMF Muxing: Failed to load audio remover filter.");
     gf_fs_del(session);
     return false;
   }

@@ -12,7 +12,7 @@ edition = "2023";
 
 package iamf_tools_cli_proto;
 
-import "iamf/cli/proto/parameter_data.proto";
+import "parameter_data.proto";
 
 // Valid proto enums start at index 1, which are different from the
 // corresponding enums in C++, e.g. kParameterDefinitionMixGain = 0.

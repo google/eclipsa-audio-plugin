@@ -32,9 +32,7 @@
 #include "../processor_base/ProcessorBase.h"
 #include "AudioElementFileWriter.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
-#include "iamf/include/iamf_tools/encoder_main_lib.h"
-#include "iamf/include/iamf_tools/iamf_encoder_factory.h"
-#include "user_metadata.pb.h"
+#include "iamf_export_utils/IAMFFileWriter.h"
 
 //==============================================================================
 class FileOutputProcessor : public ProcessorBase {
@@ -56,45 +54,13 @@ class FileOutputProcessor : public ProcessorBase {
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 
   //==============================================================================
-  juce::AudioProcessorEditor* createEditor() override;
-  bool hasEditor() const override;
+  juce::AudioProcessorEditor* createEditor() override { return nullptr; }
+  bool hasEditor() const override { return false; }
 
   //==============================================================================
   const juce::String getName() const override;
 
-  // Update the default IAMF metadata from repository sources.
-  void updateIamfMDFromRepositories(iamf_tools_cli_proto::UserMetadata& iamfMD);
-
-  // From the FileExportRepository, updates:
-  // codec_config_metadata.
-  void updateIamfMDFromRepository(FileExportRepository& fileExportRepository,
-                                  iamf_tools_cli_proto::UserMetadata& iamfMD);
-
-  // From the AudioElementRepository, updates:
-  // audio_element_metadata, audio_frame_metadata.
-  void updateIamfMDFromRepository(
-      AudioElementRepository& audioElementRepository,
-      iamf_tools_cli_proto::UserMetadata& iamfMD,
-      std::unordered_map<juce::Uuid, int>& audioElementIDMap);
-
-  // From the MixPresentationRepository, updates:
-  // mix_presentation_metadata.
-  void updateIamfMDFromRepository(
-      MixPresentationRepository& mixPresentationRepository,
-      iamf_tools_cli_proto::UserMetadata& iamfMD,
-      std::unordered_map<juce::Uuid, int>& audioElementIDMap);
-
-  // Export an IAMF file and handle possible errors.
-  bool exportIamfFile(const juce::String input_wav_path,
-                      const juce::String output_iamf_path);
-
-  // Initialize IAMF metadata to reasonable defaults.
-  void initIamfMetadata(iamf_tools_cli_proto::UserMetadata& iamfMD,
-                        juce::String outputFilename) const;
-
  protected:
-  void dumpExportLogs(const absl::Status& status) const;
-
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout params;
     return params;
@@ -127,6 +93,7 @@ class FileOutputProcessor : public ProcessorBase {
   int startTime_;
   int endTime_;
   long sampleTally_;
+  std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FileOutputProcessor)
 };

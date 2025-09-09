@@ -67,8 +67,7 @@ class AudioElement final : public RepositoryItemBase {
       int& minimumSubstreamId) const;
 
   void populateIamfAudioFrameMetadata(
-      iamf_tools_cli_proto::AudioFrameObuMetadata* afMD, const int aeID,
-      const std::string& aeSourceAudio, const int framesWritten) const;
+      iamf_tools_cli_proto::AudioFrameObuMetadata* afMD, const int aeID) const;
 
   inline static const juce::Identifier kTreeType{"audio_element"};
   inline static const juce::Identifier kName{"name"};

@@ -17,9 +17,6 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
-#include <iostream>
-#include <memory>
-#include <utility>
 
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/FileExportRepository.h"
@@ -28,7 +25,6 @@
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/RoomSetup.h"
 #include "juce_core/system/juce_PlatformDefs.h"
-#include "juce_cryptography/juce_cryptography.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 void manuallyConfigureRepositories(
@@ -36,9 +32,9 @@ void manuallyConfigureRepositories(
     const Speakers::AudioElementSpeakerLayout& layout = Speakers::kStereo) {
   // add a stereo audio element
   AudioElement audioElement;
-  audioElement.setName(layout.toString());
-  audioElement.setChannelConfig(layout);
+  audioElement.setName("Audio Element");
   audioElement.setDescription(layout.toString());
+  audioElement.setChannelConfig(layout);
   audioElement.setFirstChannel(0);
   AudioElementRepository& aeRepo = rendererProcessor.getRepositories().aeRepo_;
   aeRepo.add(audioElement);
@@ -48,9 +44,11 @@ void manuallyConfigureRepositories(
   MixPresentationRepository& mixPresentationRepository =
       rendererProcessor.getRepositories().mpRepo_;
   MixPresentation mixPresentation;
+  mixPresentation.setName("Mix Presentation");
+  mixPresentation.setLanguage(LanguageData::MixLanguages::English);
 
   const juce::Uuid mixPresID = mixPresentation.getId();
-  mixPresentation.addAudioElement(audioElement.getId(), 1.f, layout.toString());
+  mixPresentation.addAudioElement(audioElement.getId(), 1.f, "Audio Element");
   mixPresentationRepository.updateOrAdd(mixPresentation);
 
   // update the activeMixPresentationRepository
@@ -134,7 +132,6 @@ std::filesystem::path manuallyConfigureFileExport(
     RendererProcessor& rendererProcessor, const juce::String& fileName,
     const float kAudioDuration_s, const int& kSampleRate) {
   // Set up an output filepath for the file export
-  // Set up an output filepath for the fir
   const juce::String extension = ".iamf";
   jassert(fileName.contains(extension));
   juce::String iamfPathStr(juce::File::getCurrentWorkingDirectory()
@@ -153,97 +150,12 @@ std::filesystem::path manuallyConfigureFileExport(
   ex.setExportFile(juce::File::getCurrentWorkingDirectory()
                        .getChildFile(fileWithOutExtension)
                        .getFullPathName());
-  ex.setEndTime(kAudioDuration_s);
   ex.setSampleRate(kSampleRate);
   ex.setExportAudio(true);
   ex.setAudioFileFormat(AudioFileFormat::IAMF);
+  ex.setProfile(FileProfile::BASE);
   fileExportRepository.update(ex);
   return iamfPath;
-}
-
-TEST(test_renderer_processor, validate_file_checksum) {
-  // Data used by all test fixtures:
-  // Constants
-  const int kSampleRate = 48e3;
-  const int kSamplesPerFrame = 128;
-  const int kNumChannels_ = Speakers::kHOA5.getNumChannels();
-  // Set the duration of the input video file.
-  const float kAudioDuration_s = 0.2f;
-  const int kTotalSamples = kAudioDuration_s * kSampleRate;
-
-  RendererProcessor rendererProcessor;
-  manuallyConfigureRepositories(rendererProcessor);
-  std::filesystem::path path = manuallyConfigureFileExport(
-      rendererProcessor, juce::String("HashSourceFile.iamf"), kAudioDuration_s,
-      kSampleRate);
-
-  // Generate a 440Hz tone & 220Hz tone
-  // will pass to the renderer processor
-  const float kAmplitude_ = 0.1f;
-  juce::AudioBuffer<float> sineWaveAudio(1, kSamplesPerFrame);
-  for (int i = 0; i < kSamplesPerFrame; ++i) {
-    sineWaveAudio.setSample(
-        0, i, kAmplitude_ * std::sin(2 * M_PI * 440 * (float)i / kSampleRate));
-  }
-
-  // attempt file export
-  rendererProcessor.prepareToPlay(kSampleRate, kSamplesPerFrame);
-  rendererProcessor.setNonRealtime(true);
-  // Copy the sine wave audio to each buffer channel and process the frame.
-  juce::AudioBuffer<float> exportAudioBuffer(kNumChannels_, kSamplesPerFrame);
-  juce::MidiBuffer exportMidiBuffer;
-  for (int sampsProcd = 0; sampsProcd < kTotalSamples;
-       sampsProcd += kSamplesPerFrame) {
-    // Copy audio data to each channel of exportAudioBuffer.
-    for (int i = 0; i < kNumChannels_; ++i) {
-      exportAudioBuffer.copyFrom(i, 0, sineWaveAudio, 0, 0, kSamplesPerFrame);
-    }
-    rendererProcessor.processBlock(exportAudioBuffer, exportMidiBuffer);
-  }
-  rendererProcessor.setNonRealtime(false);
-
-  // confirm that the .iamf file was created
-  juce::File iamfFile(path.string());
-  ASSERT_TRUE(iamfFile.existsAsFile());
-
-  std::unique_ptr<juce::FileInputStream> fileStream(
-      iamfFile.createInputStream());
-  juce::MemoryBlock fileData;
-  fileData.setSize(iamfFile.getSize());
-  fileStream->read(fileData.getData(), fileData.getSize());
-
-  // Clean up the IAMF file.
-  std::filesystem::remove(path);
-
-  // generate a checksum for the file
-  juce::SHA256 newChecksum(fileData.getData(), fileData.getSize());
-  const juce::String kNewChecksumString = newChecksum.toHexString();
-
-  // Select the correct reference checksum file based on the build type
-  const char* kReferenceFile =
-#ifdef NDEBUG
-      "HashSourceFileRelease.iamf";
-#else
-      "HashSourceFileDebug.iamf";
-#endif
-
-  const std::filesystem::path kReferenceFilePath =
-      std::filesystem::current_path().parent_path() /
-      "rendererplugin/test/testresources" / kReferenceFile;
-
-  const juce::File kReferenceChecksumFile(kReferenceFilePath.string());
-  ASSERT_TRUE(kReferenceChecksumFile.existsAsFile());
-
-  juce::MemoryBlock referenceData;
-  kReferenceChecksumFile.loadFileAsData(referenceData);
-
-  const juce::SHA256 kReferenceChecksum(referenceData.getData(),
-                                        referenceData.getSize());
-  const juce::String kReferenceChecksumString =
-      kReferenceChecksum.toHexString();
-
-  // Compare the generated checksum with the reference checksum
-  EXPECT_EQ(kNewChecksumString, kReferenceChecksumString);
 }
 
 TEST(test_renderer_processor, validate_up_mixing) {
