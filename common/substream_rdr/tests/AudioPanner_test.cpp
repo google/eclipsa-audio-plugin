@@ -40,7 +40,9 @@ struct TestLayout {
 };
 
 const std::vector<AudioElementSpeakerLayout> kAmbiOutputLayouts = {
-    Speakers::kHOA1, Speakers::kHOA2, Speakers::kHOA3,
+    Speakers::kHOA1,
+    Speakers::kHOA2,
+    Speakers::kHOA3,
     //  Speakers::kHOA4,Speakers::kHOA5, Speakers::kHOA6, Speakers::kHOA7
 };
 
