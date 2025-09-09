@@ -67,6 +67,7 @@ if(CI_TEST OR INTERNAL_TEST)
     enable_testing()
     include(GoogleTest)
     include("cmake/eclipsa_test.cmake")
+    include("cmake/eclipsa_build_tests.cmake")
 endif()
 
 add_subdirectory(third_party)
@@ -91,3 +92,5 @@ endif()
 add_subdirectory(common)
 add_subdirectory(rendererplugin)
 add_subdirectory(audioelementplugin)
+
+eclipsa_build_tests()

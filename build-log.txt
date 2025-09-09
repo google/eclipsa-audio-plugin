@@ -1,0 +1,917 @@
+[  0%] Built target spinlock_wait
+[  0%] Built target strerror
+[  0%] Built target exponential_biased
+[  0%] Built target int128
+[  0%] Built target civil_time
+[  0%] Built target log_severity
+[  0%] Built target gtest
+[  2%] Built target flags_commandlineflag_internal
+[  2%] Built target leak_check
+[  2%] Built target utf8_range
+[  3%] Built target random_internal_platform
+[  3%] Built target log_internal_nullguard
+[  3%] Built target random_seed_gen_exception
+[  3%] Built target periodic_sampler
+[  3%] Built target time_zone
+[  3%] Built target pffft
+[  3%] Built target boost_atomic
+[  4%] Built target boost_exception
+[  4%] Built target boost_context
+[  4%] Built target boost_container
+[  4%] Built target boost_random
+[  5%] Built target boost_chrono
+[  5%] Generating juce_binarydata_binary_data/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData2.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData3.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData4.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData5.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData6.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData7.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData8.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData9.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData10.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData11.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData12.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData13.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData14.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData15.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData16.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData17.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData18.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData19.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData20.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData21.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData22.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData23.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData24.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData25.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData26.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData27.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData28.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData29.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData.h
+[  7%] Built target iamf
+[  8%] Built target gmock
+[  8%] Built target juce_vst3_helper
+[  8%] Built target gtest_main
+[  8%] Built target raw_logging_internal
+[  8%] Built target random_internal_randen_hwaes_impl
+[  8%] Built target random_internal_randen_slow
+[  8%] Built target boost_date_time
+[  8%] Built target boost_coroutine
+[ 11%] Built target libupb
+[ 13%] Built target saf
+[ 13%] Built target iamfdec_utils
+[ 13%] Building CXX object _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o
+[ 15%] Built target spatialaudio-static
+[ 15%] Built target test_libear_sanity
+[ 16%] Built target base
+[ 16%] Built target boost_filesystem
+[ 16%] Built target throw_delegate
+[ 16%] Built target bad_variant_access
+[ 16%] Built target debugging_internal
+[ 16%] Generating juce_binarydata_binary_data/JuceLibraryCode/BinaryData1.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData2.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData3.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData4.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData5.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData6.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData7.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData8.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData9.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData10.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData11.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData12.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData13.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData14.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData15.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData16.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData17.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData18.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData19.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData20.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData21.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData22.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData23.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData24.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData25.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData26.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData27.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData28.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData29.cpp, juce_binarydata_binary_data/JuceLibraryCode/BinaryData.h
+[ 16%] Built target bad_optional_access
+[ 17%] Built target crc_cpu_detect
+[ 17%] Built target cordz_functions
+[ 17%] Built target random_internal_randen_hwaes
+[ 17%] Built target log_internal_conditions
+[ 17%] Built target scoped_set_env
+[ 17%] Built target bad_any_cast_impl
+[ 17%] Built target saf_example_ambi_dec
+[ 17%] Built target strings_internal
+[ 17%] Built target string_view
+[ 17%] Built target boost_thread
+[ 17%] Built target malloc_internal
+[ 17%] Built target stacktrace
+[ 17%] Built target city
+[ 17%] Built target low_level_hash
+[ 17%] Built target demangle_internal
+[ 18%] Built target binary_data
+[ 18%] Built target random_internal_randen
+[ 18%] Built target crc_internal
+[ 18%] Built target graphcycles_internal
+[ 23%] Built target objects
+[ 24%] Built target strings
+[ 24%] Built target libzmq
+[ 24%] Built target libzmq-static
+[ 24%] Built target utf8_validity
+[ 24%] Built target log_internal_fnmatch
+[ 24%] Built target symbolize
+[ 24%] Built target hash
+[ 25%] Built target time
+[ 25%] Built target flags_commandlineflag
+[ 25%] Built target log_internal_proto
+[ 25%] Built target random_distributions
+[ 27%] Built target boost_serialization
+[ 27%] Built target random_internal_seed_material
+[ 28%] Built target str_format_internal
+[ 28%] Built target local_lat
+[ 29%] Built target remote_lat
+[ 29%] Built target local_thr
+[ 29%] Built target remote_thr
+[ 29%] Built target inproc_thr
+[ 29%] Built target inproc_lat
+[ 29%] Built target proxy_thr
+[ 29%] Built target benchmark_radix_tree
+[ 29%] Built target kernel_timeout_internal
+[ 29%] Built target flags_marshalling
+[ 29%] Built target examine_stack
+[ 29%] Built target crc32c
+[ 31%] Built target boost_log
+[ 31%] Built target flags_private_handle_accessor
+[ 31%] Built target log_internal_globals
+[ 31%] Built target log_entry
+[ 31%] Built target random_internal_pool_urbg
+[ 31%] Built target random_internal_distribution_test_util
+[ 31%] Built target crc_cord_state
+[ 31%] Built target failure_signal_handler
+[ 31%] Built target log_internal_format
+[ 32%] Built target log_sink
+[ 33%] Built target synchronization
+[ 33%] Built target random_seed_sequences
+[ 34%] Built target boost_wserialization
+[ 35%] Built target cord_internal
+[ 35%] Built target flags_program_name
+[ 35%] Built target cordz_handle
+[ 35%] Built target hashtablez_sampler
+[ 36%] Built target vlog_config_internal
+[ 36%] Built target cordz_info
+[ 36%] Built target boost_log_setup
+[ 36%] Built target flags_config
+[ 36%] Built target raw_hash_set
+[ 36%] Built target log_globals
+[ 36%] Building CXX object common/logger/tests/CMakeFiles/test_logger.dir/__/logger.cpp.o
+[ 36%] Building CXX object common/logger/tests/CMakeFiles/test_logger.dir/Logger_test.cpp.o
+[ 36%] Built target cordz_sample_token
+[ 36%] Built target cord
+[ 36%] Building CXX object common/logger/tests/CMakeFiles/test_logger.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 36%] Built target flags_internal
+[ 36%] Built target log_internal_log_sink_set
+[ 37%] Built target log_initialize
+[ 37%] Built target flags_reflection
+[ 37%] Built target log_internal_message
+[ 37%] Built target status
+[ 37%] Built target flags_usage_internal
+[ 37%] Built target log_flags
+[ 37%] Built target die_if_null
+[ 37%] Built target log_internal_check_op
+[ 37%] Built target statusor
+[ 37%] Built target flags_usage
+[ 37%] Built target protoc-gen-upbdefs
+[ 38%] Built target protoc-gen-upb
+[ 38%] Built target flags_parse
+[ 40%] Built target libprotobuf-lite
+[ 41%] Built target protoc-gen-upb_minitable
+[ 41%] Linking CXX shared library ../../../lib/libgmock_main.dylib
+[ 44%] Built target libprotobuf
+[ 44%] Built target gmock_main
+[ 50%] Built target libprotoc
+[ 50%] Built target protoc
+[ 51%] Built target proto-objects
+[ 51%] Built target test_iamf_sanity
+[ 53%] Built target test_processor_base
+[ 54%] Built target test_fio_processor
+[ 56%] Built target test_gain_processor
+[ 57%] Built target test_render_processor
+[ 58%] Built target test_ms_processor
+[ 58%] Building CXX object common/processors/tests/CMakeFiles/test_remapping_processor.dir/__/__/components/components.cpp.o
+[ 58%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 58%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 58%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 59%] Built target test_panner_3dpanning
+[ 59%] Building CXX object common/processors/tests/CMakeFiles/test_remapping_processor.dir/__/__/data_structures/data_structures.cpp.o
+[ 60%] Built target test_channelmonitor_processor
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/components/components.cpp.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/components/components.cpp.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/data_structures/data_structures.cpp.o
+[ 60%] Linking CXX executable test_logger
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_remapping_processor.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 60%] Built target test_logger
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/components/components.cpp.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/data_structures/data_structures.cpp.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 60%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/data_structures/data_structures.cpp.o
+[ 61%] Building CXX object common/processors/tests/CMakeFiles/test_remapping_processor.dir/__/__/logger/logger.cpp.o
+[ 61%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/logger/logger.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_remapping_processor.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/logger/logger.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_remapping_processor.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 62%] Linking CXX executable test_remapping_processor
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_loudness_proc.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/logger/logger.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_audioelementplugin_routing.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 62%] Linking CXX executable test_loudness_proc
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/components/components.cpp.o
+[ 62%] Linking CXX executable test_audioelementplugin_routing
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_ebu128_loudness.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 62%] Linking CXX executable test_ebu128_loudness
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/data_structures/data_structures.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/components/components.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 62%] Built target test_remapping_processor
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/processors/processors.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/logger/logger.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 62%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/components/components.cpp.o
+[ 62%] Building CXX object common/processors/tests/CMakeFiles/test_mp4_iamf_demuxer.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 63%] Built target test_audioelementplugin_routing
+[ 63%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/FileExportRepository_test.cpp.o
+[ 63%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/processors/processors.cpp.o
+[ 63%] Linking CXX executable test_mp4_iamf_demuxer
+[ 63%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 64%] Built target test_loudness_proc
+[ 64%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 64%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/MixPresentationRepository_test.cpp.o
+[ 64%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 64%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/components/components.cpp.o
+[ 64%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/MultiChannelGainRepository_test.cpp.o
+[ 65%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/logger/logger.cpp.o
+[ 66%] Built target test_ebu128_loudness
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/processors/processors.cpp.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_base_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 66%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/logger/logger.cpp.o
+[ 67%] Linking CXX executable test_base_repository
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/MSPlaybackRepository_test.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_audio_element_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 67%] Linking CXX executable test_audio_element_repository
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/logger/logger.cpp.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 67%] Built target test_mp4_iamf_demuxer
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 67%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/AudioElementSpatialLayoutRepository_test.cpp.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_room_setup_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 68%] Linking CXX executable test_room_setup_repository
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 68%] Built target test_base_repository
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 68%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 69%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 70%] Built target test_audio_element_repository
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/ActiveMixPresentationRepository_test.cpp.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/data_structures/data_structures.cpp.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 70%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 71%] Built target test_room_setup_repository
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/MixPresentationSoloMuteRepository_test.cpp.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/components/components.cpp.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 71%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/MixPresentationLoudnessRepository_test.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/processors/processors.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/data_structures/data_structures.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/components/components.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/components/components.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/processors/processors.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/components/components.cpp.o
+[ 72%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/processors/processors.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/logger/logger.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 73%] Linking CXX executable test_mix_presentation_repository
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/processors/processors.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/logger/logger.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/components/components.cpp.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 73%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/logger/logger.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_file_export_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 74%] Linking CXX executable test_file_export_repository
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_gain_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 74%] Linking CXX executable test_gain_repository
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/processors/processors.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/logger/logger.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_msplayback_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 74%] Linking CXX executable test_msplayback_repository
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 74%] Built target test_mix_presentation_repository
+[ 74%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/AudioElement_test.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 74%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/data_structures.cpp.o
+[ 74%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/components/components.cpp.o
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/logger/logger.cpp.o
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 75%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 75%] Built target test_file_export_repository
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/processors/processors.cpp.o
+[ 75%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 76%] Building CXX object common/data_repository/tests/CMakeFiles/test_audioelementspatiallayout_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 76%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 76%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 76%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 77%] Built target test_gain_repository
+[ 77%] Linking CXX executable test_audioelementspatiallayout_repository
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/RoomSetup_test.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/data_structures.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/logger/logger.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/MixPresentation_test.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 77%] Built target test_msplayback_repository
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/components/components.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/processors/processors.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_active_mp_repo.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 77%] Linking CXX executable test_active_mp_repo
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/data_structures.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/ChannelGains_test.cpp.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/data_structures.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 77%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 77%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 78%] Built target test_audioelementspatiallayout_repository
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/MSPlayback_test.cpp.o
+[ 78%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/components/components.cpp.o
+[ 78%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/logger/logger.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/data_structures.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 78%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 78%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_solo_mute_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 78%] Linking CXX executable test_mix_presentation_solo_mute_repository
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 78%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/processors/processors.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 78%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 79%] Built target test_active_mp_repo
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/AudioElementSpatialLayout_test.cpp.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/data_structures.cpp.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 79%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 79%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/logger/logger.cpp.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 79%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 80%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 80%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 80%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 81%] Building CXX object common/data_repository/tests/CMakeFiles/test_mix_presentation_loudness_repository.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 81%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 81%] Built target test_mix_presentation_solo_mute_repository
+[ 81%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 81%] Linking CXX executable test_mix_presentation_loudness_repository
+[ 81%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 81%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/ActiveMixPresentation_test.cpp.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/data_structures.cpp.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/components/components.cpp.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 82%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 83%] Built target test_mix_presentation_loudness_repository
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/processors/processors.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/MixPresentationSoloMute_test.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/data_structures.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/components/components.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/components/components.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/components/components.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/processors/processors.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/logger/logger.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 83%] Building CXX object common/data_structures/tests/CMakeFiles/test_audio_element.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/processors/processors.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/processors/processors.cpp.o
+[ 84%] Linking CXX executable test_audio_element
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/components/components.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/logger/logger.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_room_setup.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 84%] Linking CXX executable test_room_setup
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/processors/processors.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/components/components.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/logger/logger.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/logger/logger.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_channel_gains.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 84%] Linking CXX executable test_mix_presentation
+[ 84%] Built target test_audio_element
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 84%] Linking CXX executable test_channel_gains
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/MixPresentationLoudness_test.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/processors/processors.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/data_structures.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/logger/logger.cpp.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 84%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mute_solo_type.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 85%] Built target test_room_setup
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 85%] Linking CXX executable test_mute_solo_type
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/logger/logger.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/RendererFactory_test.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/substream_rdr.cpp.o
+[ 85%] Built target test_channel_gains
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/BedToBedRdr_test.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_audioElementSpatialLayout.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 85%] Built target test_mix_presentation
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/components/components.cpp.o
+[ 85%] Linking CXX executable test_audioElementSpatialLayout
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/substream_rdr.cpp.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/processors/processors.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/HOAToBedRdr_test.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 85%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/substream_rdr.cpp.o
+[ 85%] Built target test_mute_solo_type
+[ 85%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 86%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 87%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/components/components.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/logger/logger.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/processors/processors.cpp.o
+[ 88%] Built target test_audioElementSpatialLayout
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_active_mix_pres.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/AudioPanner_test.cpp.o
+[ 88%] Linking CXX executable test_active_mix_pres
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/substream_rdr.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/logger/logger.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/substream_rdr/substream_rdr.cpp.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_solo_mute.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 88%] Linking CXX executable test_mix_presentation_solo_mute
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 88%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/components/components.cpp.o
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 88%] Built target test_active_mix_pres
+[ 88%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/BinauralRdr_test.cpp.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/substream_rdr.cpp.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 89%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/processors/processors.cpp.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 89%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 91%] Built target RendererPlugin
+[ 91%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 91%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 91%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 91%] Built target test_mix_presentation_solo_mute
+[ 91%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 91%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 92%] Built target AudioElementPlugin
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/components/components.cpp.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/components/components.cpp.o
+[ 92%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/logger/logger.cpp.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/components/components.cpp.o
+[ 92%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o
+[ 92%] Building CXX object common/data_structures/tests/CMakeFiles/test_mix_presentation_loudness.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 92%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/data_structures/data_structures.cpp.o
+[ 92%] Linking CXX executable test_mix_presentation_loudness
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o
+[ 92%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_AU.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o
+[ 92%] Linking CXX CFBundle shared module "RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer.component/Contents/MacOS/Eclipsa Audio Renderer"
+[ 93%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/data_structures/data_structures.cpp.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX_utils.cpp.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_ARA.cpp.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Standalone.cpp.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_Unity.cpp.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.mm.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_1.mm.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AU_2.mm.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_AUv3.mm.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_LV2.mm.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST2.mm.o
+[ 93%] Building CXX object rendererplugin/CMakeFiles/RendererPlugin_VST3.dir/__/third_party/JUCE/modules/juce_audio_plugin_client/juce_audio_plugin_client_VST3.mm.o
+[ 93%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/data_structures/data_structures.cpp.o
+[ 93%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 93%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/processors/processors.cpp.o
+[ 93%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 93%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/processors/processors.cpp.o
+[ 93%] Linking CXX CFBundle shared module "RendererPlugin_artefacts/Release/VST3/Eclipsa Audio Renderer.vst3/Contents/MacOS/Eclipsa Audio Renderer"
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/processors/processors.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/components/components.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/logger/logger.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 94%] Built target test_mix_presentation_loudness
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/logger/logger.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/data_structures/data_structures.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/logger/logger.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_substream_rdr.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bed2bed_rdr.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 94%] Linking CXX executable test_substream_rdr
+[ 94%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/RendererProcessor_test.cpp.o
+[ 94%] Linking CXX executable test_bed2bed_rdr
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/processors/processors.cpp.o
+[ 94%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_hoa2bed_rdr.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 94%] Linking CXX executable test_hoa2bed_rdr
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/common/processors/processors.cpp.o
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/components/components.cpp.o
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/logger/logger.cpp.o
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/data_structures/data_structures.cpp.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[ 95%] Built target test_substream_rdr
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/processors/processors.cpp.o
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_audio_panner.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 95%] Built target test_bed2bed_rdr
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/RendererVersionConverter_test.cpp.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/common/processors/processors.cpp.o
+-- Replacing invalid signature with ad-hoc signature
+[ 95%] Linking CXX executable test_audio_panner
+-- Destination /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component exists, overwriting
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/_CodeSignature
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/_CodeSignature/CodeResources
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/MacOS
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/MacOS/Eclipsa Audio Renderer
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/libzmq.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party/obr
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party/obr/lib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party/obr/lib/obr.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party/iamftools
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party/iamftools/lib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/third_party/iamftools/lib/libiamf_renderer_encoder.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/libzmq.5.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Resources/libzmq.5.2.6.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/Info.plist
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/Components/Eclipsa Audio Renderer.component/Contents/PkgInfo
+[ 95%] Built target RendererPlugin_AU
+[ 95%] Built target AudioElementPlugin_AU
+[ 95%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 95%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 95%] Built target test_hoa2bed_rdr
+[ 96%] Built target AudioElementPlugin_VST3
+[ 96%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/AudioElementVersionConverter_test.cpp.o
+[ 96%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/common/processors/processors.cpp.o
+[ 96%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 96%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 96%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_utils/juce_audio_utils.mm.o
+[ 96%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/logger/logger.cpp.o
+[ 96%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 96%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 96%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+-- Replacing invalid signature with ad-hoc signature
+removing moduleinfo.json
+[ 96%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 96%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+-- Destination /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3 exists, overwriting
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/_CodeSignature
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/_CodeSignature/CodeResources
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/MacOS
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/MacOS/Eclipsa Audio Renderer
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/libzmq.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party/obr
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party/obr/lib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party/obr/lib/obr.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party/iamftools
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party/iamftools/lib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/third_party/iamftools/lib/libiamf_renderer_encoder.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/libzmq.5.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/moduleinfo.json
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Resources/libzmq.5.2.6.dylib
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/Info.plist
+-- Installing: /Users/joelm/Library/Audio/Plug-Ins/VST3/Eclipsa Audio Renderer.vst3/Contents/PkgInfo
+[ 97%] Built target RendererPlugin_VST3
+[ 97%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_ara.cpp.o
+[ 97%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 97%] Building CXX object common/substream_rdr/tests/CMakeFiles/test_bin_rdr.dir/__/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_processors/juce_audio_processors.mm.o
+[ 98%] Linking CXX executable test_bin_rdr
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_gui_extra/juce_gui_extra.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_gui_basics/juce_gui_basics.mm.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_graphics/juce_graphics.mm.o
+[ 98%] Built target test_audio_panner
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 98%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 98%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_events/juce_events.mm.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/common/components/components.cpp.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_core/juce_core.mm.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_data_structures/juce_data_structures.mm.o
+[ 99%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/common/data_structures/data_structures.cpp.o
+[ 99%] Built target test_bin_rdr
+[ 99%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_basics/juce_audio_basics.mm.o
+[ 99%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/common/substream_rdr/substream_rdr.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_formats/juce_audio_formats.mm.o
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/common/logger/logger.cpp.o
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/common/components/components.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_audio_devices/juce_audio_devices.mm.o
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/common/data_structures/data_structures.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/JUCE/modules/juce_dsp/juce_dsp.mm.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_processor.dir/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/common/substream_rdr/substream_rdr.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/common/components/components.cpp.o
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/common/logger/logger.cpp.o
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[100%] Linking CXX executable test_renderer_processor
+[100%] Building CXX object audioelementplugin/test/CMakeFiles/test_audioelement_version_converter.dir/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/common/data_structures/data_structures.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/common/substream_rdr/substream_rdr.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/common/logger/logger.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/LUFSMeter/src/EBU128LoudnessMeter.cpp.o
+[100%] Building CXX object rendererplugin/test/CMakeFiles/test_renderer_version_converter.dir/__/__/third_party/LUFSMeter/src/filters/SecondOrderIIRFilter.cpp.o
+[100%] Linking CXX executable test_audioelement_version_converter
+[100%] Linking CXX executable test_renderer_version_converter
+[100%] Built target test_audioelement_version_converter
+[100%] Built target test_renderer_version_converter
+[100%] Built target test_renderer_processor
