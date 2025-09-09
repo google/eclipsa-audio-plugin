@@ -189,8 +189,7 @@ TEST(test_renderer_processor, validate_file_checksum) {
   // attempt file export
   rendererProcessor.prepareToPlay(kSampleRate, kSamplesPerFrame);
   rendererProcessor.setNonRealtime(true);
-  // Copy the the sine wave audio to each buffer channel and process the
-  // frame.
+  // Copy the sine wave audio to each buffer channel and process the frame.
   juce::AudioBuffer<float> exportAudioBuffer(kNumChannels_, kSamplesPerFrame);
   juce::MidiBuffer exportMidiBuffer;
   for (int sampsProcd = 0; sampsProcd < kTotalSamples;
@@ -203,9 +202,9 @@ TEST(test_renderer_processor, validate_file_checksum) {
   }
   rendererProcessor.setNonRealtime(false);
 
-  // confirm that the  .iamf file was created
+  // confirm that the .iamf file was created
   juce::File iamfFile(path.string());
-  assert(iamfFile.existsAsFile());
+  ASSERT_TRUE(iamfFile.existsAsFile());
 
   std::unique_ptr<juce::FileInputStream> fileStream(
       iamfFile.createInputStream());
@@ -218,112 +217,33 @@ TEST(test_renderer_processor, validate_file_checksum) {
 
   // generate a checksum for the file
   juce::SHA256 newChecksum(fileData.getData(), fileData.getSize());
-  const juce::String newChecksumString = newChecksum.toHexString();
+  const juce::String kNewChecksumString = newChecksum.toHexString();
 
-  // Since Debug vs Release builds produce different checksums due to
-  // different optimization levels, try both checksums for resilience
-  std::string debugChecksumFileName = "HashSourceFile.debug.iamf.checksum";
-  std::string releaseChecksumFileName = "HashSourceFile.release.iamf.checksum";
-
-  std::cout << "DEBUG: Build details:" << std::endl;
-  std::cout << "DEBUG: NDEBUG defined: " <<
+  // Select the correct reference checksum file based on the build type
+  const char* kReferenceFile =
 #ifdef NDEBUG
-      "yes"
+      "HashSourceFileRelease.iamf";
 #else
-      "no"
+      "HashSourceFileDebug.iamf";
 #endif
-            << std::endl;
-  std::cout << "DEBUG: CMAKE_BUILD_TYPE_RELEASE defined: " <<
-#ifdef CMAKE_BUILD_TYPE_RELEASE
-      "yes"
-#else
-      "no"
-#endif
-            << std::endl;
-  std::cout << "DEBUG: FORCE_RELEASE_CHECKSUM defined: " <<
-#ifdef FORCE_RELEASE_CHECKSUM
-      "yes"
-#else
-      "no"
-#endif
-            << std::endl;
 
-  // Try both debug and release checksums
-  bool checksumMatched = false;
-  juce::String expectedChecksum;
+  const std::filesystem::path kReferenceFilePath =
+      std::filesystem::current_path().parent_path() /
+      "rendererplugin/test/testresources" / kReferenceFile;
 
-  // Helper function to get checksum path and content
-  auto getChecksumContent = [](const std::string& fileName) -> juce::String {
-    // determine the checksum path
-    std::filesystem::path checksumPath;
-    // check if 'rendererplugin/test' is in the current path
-    // if not, add it
-    if (std::filesystem::current_path().string().find("rendererplugin/test") !=
-        std::string::npos) {
-      checksumPath =
-          std::filesystem::current_path() / "testresources" / fileName;
-    } else {
-      checksumPath = std::filesystem::current_path() /
-                     "rendererplugin/test/testresources" / fileName;
-    }
+  const juce::File kReferenceChecksumFile(kReferenceFilePath.string());
+  ASSERT_TRUE(kReferenceChecksumFile.existsAsFile());
 
-    // remove the 'build' segment from the path
-    std::filesystem::path correctedChecksumPath;
-    for (const auto& part : checksumPath) {
-      if (part == "build") {
-        continue;  // Skip the 'build' segment
-      }
-      correctedChecksumPath /= part;
-    }
-    checksumPath = correctedChecksumPath;
+  juce::MemoryBlock referenceData;
+  kReferenceChecksumFile.loadFileAsData(referenceData);
 
-    juce::File existingChecksumFile(checksumPath.string());
-    if (!existingChecksumFile.existsAsFile()) {
-      std::cerr << "Checksum file not found: " << checksumPath.string()
-                << std::endl;
-      return "";
-    }
+  const juce::SHA256 kReferenceChecksum(referenceData.getData(),
+                                        referenceData.getSize());
+  const juce::String kReferenceChecksumString =
+      kReferenceChecksum.toHexString();
 
-    return existingChecksumFile.loadFileAsString().trimCharactersAtEnd("\n");
-  };
-
-  // Try debug checksum
-  juce::String debugChecksum = getChecksumContent(debugChecksumFileName);
-  if (debugChecksum == newChecksumString) {
-    checksumMatched = true;
-    expectedChecksum = debugChecksum;
-    std::cout << "DEBUG: Checksum matched debug build checksum" << std::endl;
-  }
-
-  // Try release checksum if debug didn't match
-  if (!checksumMatched) {
-    juce::String releaseChecksum = getChecksumContent(releaseChecksumFileName);
-    if (releaseChecksum == newChecksumString) {
-      checksumMatched = true;
-      expectedChecksum = releaseChecksum;
-      std::cout << "DEBUG: Checksum matched release build checksum"
-                << std::endl;
-    }
-  }
-
-  // If neither matched, we'll assert with better error message
-  if (!checksumMatched) {
-    expectedChecksum =
-        debugChecksum;  // Use debug checksum for the error message
-    std::cout << "DEBUG: Checksum didn't match either debug or release checksum"
-              << std::endl;
-    std::cout << "Generated: " << newChecksumString << std::endl;
-    std::cout << "Debug expected: " << debugChecksum << std::endl;
-    std::cout << "Release expected: "
-              << getChecksumContent(releaseChecksumFileName) << std::endl;
-  }
-
-  // Use this assertion to check if either checksum matched
-  ASSERT_TRUE(checksumMatched) << "Generated checksum doesn't match either "
-                                  "debug or release expected checksum";
-
-  // This maintains compatibility with existing test logic
-  ASSERT_EQ(expectedChecksum, newChecksumString);
+  // Compare the generated checksum with the reference checksum
+  EXPECT_EQ(kNewChecksumString, kReferenceChecksumString);
 }
 
 TEST(test_renderer_processor, validate_up_mixing) {

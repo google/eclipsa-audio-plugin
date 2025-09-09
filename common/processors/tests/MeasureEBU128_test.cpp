@@ -19,6 +19,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 
+#include <filesystem>
+
 #include "processors/file_output/FileWriter.h"
 #include "substream_rdr/surround_panner/MonoToSpeakerPanner.h"
 
@@ -145,15 +147,10 @@ TEST(test_ebu128_measurements, loudness_test) {
       {0, 0, -10.07, 0.50, 0.15, 0, Speakers::k3Point1Point2},
       {0, 0, -8.43, 0.60, 1.79, 0, Speakers::kExpl9Point1Point6}};
 
-  juce::File inputWavFile(
-      "../../../../common/processors/tests/test_resources/"
-      "loudness_test_drums.wav");
-  if (inputWavFile.exists() == false) {
-    // This file path works when running the tests locally
-    inputWavFile = juce::File(
-        "./common/processors/tests/test_resources/"
-        "loudness_test_drums.wav");
-  }
+  const std::filesystem::path kWavSrcPath =
+      std::filesystem::current_path().parent_path() /
+      "common/processors/tests/test_resources" / "loudness_test_drums.wav";
+  juce::File inputWavFile(kWavSrcPath.string());
 
   for (auto test : kLoudnessTestInfo) {
     MeasureEBU128::LoudnessStats loudness =

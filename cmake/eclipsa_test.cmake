@@ -17,22 +17,19 @@
 # test_source:  Test source file name.
 # test_libs:    Test link libraries as ';' separated list.
 function(eclipsa_add_test test_name test_source test_libs)
-    add_executable(${test_name} ${test_source})
-    target_compile_definitions(${test_name} 
-        PUBLIC
-            JUCE_WEB_BROWSER=0
-            JUCE_USE_CURL=0
-            JUCE_VST3_CAN_REPLACE_VST2=0
-            JUCE_SILENCE_XCODE_15_LINKER_WARNING)
-    target_link_options(${test_name}
-        PUBLIC
-            "-Wl"
-            "-ld_classic")
-            
+    # Construct the absolute path to the test source file
+    set(absolute_test_source "${CMAKE_CURRENT_SOURCE_DIR}/${test_source}")
+
+    # Append the absolute test source path to a global list of sources
+    get_property(test_sources GLOBAL PROPERTY ECLIPSA_TEST_SOURCES)
+    set_property(GLOBAL PROPERTY ECLIPSA_TEST_SOURCES "${test_sources};${absolute_test_source}")
+
+    # Append the test libraries to a global list of libraries
+    get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
+    set_property(GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS "${test_link_libs};${test_libs}")
+
     # Add codec libraries for all test targets if on macOS
     if(APPLE)
-        set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
-        target_link_directories(${test_name} PRIVATE ${VENDOR_LIB_PATH})
         # Append only if not already present in test_libs
         list(FIND test_libs "opus" opus_found)
         if(opus_found EQUAL -1)
@@ -46,32 +43,18 @@ function(eclipsa_add_test test_name test_source test_libs)
 
     # Add IAMF include directories if 'iamf' or 'iamfdec_utils' is requested
     if("${test_libs}" MATCHES "iamf" OR "${test_libs}" MATCHES "iamfdec_utils")
-        if(DEFINED LIBIAMF_INCLUDE_DIRS)
-             target_include_directories(${test_name} PRIVATE ${LIBIAMF_INCLUDE_DIRS})
-        else()
+        if(NOT DEFINED LIBIAMF_INCLUDE_DIRS)
              message(WARNING "LIBIAMF_INCLUDE_DIRS not defined, but required by ${test_name}")
         endif()
     endif()
-
-
-    target_link_libraries(${test_name}
-         PRIVATE
-            ${test_libs}
-        PUBLIC
-            juce::juce_recommended_config_flags
-            juce::juce_recommended_lto_flags
-            juce::juce_recommended_warning_flags
-            GTest::gtest_main)
-    gtest_discover_tests(${test_name} 
-    DISCOVERY_MODE PRE_TEST)
-
+    
     # If iamfdec_utils was requested, make sure iamf is also linked (dependency)
     if(TARGET iamf AND "${test_libs}" MATCHES "iamfdec_utils")
         # Check if iamf is already in the list to avoid duplicates
         list(FIND test_libs "iamf" iamf_already_linked)
         if(iamf_already_linked EQUAL -1)
             # Link iamf privately as it's a dependency of a private lib
-            target_link_libraries(${test_name} PRIVATE iamf)
+            list(APPEND test_libs iamf)
             message(STATUS "Also linking core 'iamf' library as dependency for ${test_name}")
         endif()
     endif()

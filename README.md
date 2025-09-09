@@ -42,7 +42,7 @@ cmake -B ./build -DBUILD_VST3=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
 
 To build all unit tests, set the flag ```INTERNAL_TEST```.
 ```
-cmake -B ./build -INTERNAL_TEST=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
+cmake -B ./build -DINTERNAL_TEST=ON -DCMAKE_BUILD_TYPE=Release -G Ninja
 ```
 
 To set the version of the compiled Eclipsa plugin, set the flag ```ECLIPSA_VERSION```
@@ -75,6 +75,38 @@ cmake --build cmake-build-install --target install --config Debug
 ```
 
 Alternatively, the plugin can be loaded into ProTools developer version and the debugger attached to it.
+
+### Running Unit Tests
+
+After compilation with unit testing enabled, the test runner executable will be located in the `build/` folder. To filter for specific tests, run the test executable through `ctest` with the test string e.g./ for rendering specific tests, `ctest -R rdr`.
+
+For convenient development in VSCode, a reference debug configuration is provided.
+
+```
+    "configurations": [
+        {
+            "name": "Run Filtered Tests",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/eclipsa_tests",
+            "args": [
+                "--gtest_filter=*${input:testFilter}*"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "testFilter",
+            "type": "promptString",
+            "description": "Enter test name or pattern to filter (e.g. TestSuite.TestName or TestSuite.*)"
+        }
+    ]
+```
 
 ### Loading Plugin to a DAW
 
