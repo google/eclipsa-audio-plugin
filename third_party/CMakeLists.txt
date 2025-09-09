@@ -19,10 +19,6 @@ set(BUILD_SHARED_LIBS OFF)
 
 # JUCE for plugin development
 add_subdirectory(JUCE)
-# Protobuf for IAMF serialization
-set(protobuf_BUILD_TESTS OFF)
-set(protobuf_BUILD_SHARED_LIBS OFF)
-add_subdirectory(protobuf)
 # IAMF for IAMF file export
 add_subdirectory(iamftools)
 # lib open binaural renderer for panning via ambisonics and binaural rendering.

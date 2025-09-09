@@ -22,7 +22,9 @@
 #include "obr/ambisonic_binaural_decoder/fft_manager.h"
 #include "obr/ambisonic_binaural_decoder/resampler.h"
 #include "obr/ambisonic_encoder/ambisonic_encoder.h"
+#include "obr/ambisonic_rotator/ambisonic_rotator.h"
 #include "obr/audio_buffer/audio_buffer.h"
+#include "obr/common/misc_math.h"
 #include "obr/peak_limiter/peak_limiter.h"
 #include "obr/renderer/audio_element_config.h"
 #include "obr/renderer/audio_element_type.h"
@@ -110,6 +112,29 @@ class ObrImpl {
   absl::Status UpdateObjectPosition(size_t audio_element_index, float azimuth,
                                     float elevation, float distance);
 
+  /*! \brief Enables or disables head tracking.
+   *
+   * \param enable_head_tracking True to enable head tracking, false to disable.
+   */
+  void EnableHeadTracking(bool enable_head_tracking);
+
+  /*!\brief Sets the head rotation.
+   * The head rotation expressed using quaternions is used to counter-rotate the
+   * intermediate Ambisonic bed in order to produce stable sound sources in
+   * binaural reproduction.
+   * Use the following reference frame:
+   * X - right
+   * Y - up
+   * Z - back (swap sign of z if using front facing Z coordinate)
+   *
+   * @param w
+   * @param x
+   * @param y
+   * @param z
+   * @return `absl::OkStatus()` if successful. A specific status on failure.
+   */
+  absl::Status SetHeadRotation(float w, float x, float y, float z);
+
   /*!\brief Returns a log message with the list of audio elements in a form of
    * an ASCII table.
    *
@@ -147,6 +172,9 @@ class ObrImpl {
   const int buffer_size_per_channel_;
   const int sampling_rate_;
 
+  bool head_tracking_enabled_;
+  WorldRotation world_rotation_;
+
   // Mutex to protect data accessed in different threads.
   mutable absl::Mutex mutex_;
 
@@ -156,6 +184,7 @@ class ObrImpl {
   Resampler resampler_;
   FftManager fft_manager_;
   std::unique_ptr<AudioBuffer> sh_hrirs_L_, sh_hrirs_R_;
+  std::unique_ptr<AmbisonicRotator> ambisonic_rotator_;
   std::unique_ptr<AmbisonicBinauralDecoder> ambisonic_binaural_decoder_;
   std::unique_ptr<PeakLimiter> peak_limiter_;
 };

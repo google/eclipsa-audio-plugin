@@ -25,11 +25,12 @@
 namespace IAMFExportHelper {
 void writeIASeqHdr(FileProfile profileVersion,
                    iamf_tools_cli_proto::UserMetadata& userMetadata);
-void writeLPCMConfigMD(const int samplesPerBlock, const int samplesProcessed,
-                       const int sampleRate, const int sampleSize,
+void writeLPCMConfigMD(const int samplesPerBlock, const int sampleRate,
+                       const int sampleSize,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
 void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
                        const int bitsPerSample, const int compressionLevel,
+                       const int sampleRate,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
 void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);

@@ -1,6 +1,6 @@
 - Compiled from: https://github.com/AOMediaCodec/iamf-tools.git
-- Commit: https://github.com/AOMediaCodec/iamf-tools/commit/93471884b25e8a5bb7ef43c1330aa90b37a574b0
-- Version: 1.0.0
+- Commit: https://github.com/AOMediaCodec/iamf-tools/commit/d7354b29d99c4d0198975568d4c23d5be0680f11
+- Version: 2.0.0
 
 ### Update notes
 - The commit hash on line 2 must be updated to reflect the commit used for compiling the .dylib file.
@@ -8,13 +8,31 @@
 ### Compile notes
 - Compiled for ARM OSX (Sonoma 14.4.1, clang 15.0.0).
 ### Steps taken to integrate library:
-1. In the `iamf-tools` repository, modified `iamf-tools/iamf/cli/build`. Replaced the declaration of a final binary target (`cc_binary`) with a shared library target (`cc_shared_library`) and removed sources from the modified target.
-2. Ran the Bazel build with `bazel build --copt="-g" --strip="never"  //iamf/cli:encoder_main --macos_minimum_os=14 --spawn_strategy=standalone --cxxopt="-std=c++20"`.
-3. Copied the resulting .dylib file to the repository, the header (`encoder_main_lib.h`) declaring the desired entry points into the library (`TestMain(...)`), and the protocol buffers used by the library.
-4. The .dylib file contains an internal reference to where it was built. This path must be updated for the library to be linkable/loadable on OSX. This path was updated via an OSX command `install_name_tool @rpath/third_party/iamftools/lib/lib_encoder_main.dylib /path/to/.dylib` to use a relative path internally. *A CMake command setting the RPath to the repository root was also added.*
-5. Added the `protobuf` library as a submodule to build the protoc compiler to generate files required by `iamf-tools`, and to provide other non-generated required headers.
-### Summary of steps taken to integrate library:
-- In the `iamf-tools` repo: replace the binary target with a shared library target in the iamf/cli/build file. Build the repo.
-- Copy the shared library, headerfile for library entrypoint, and .proto files over.
-- Update the internal path of the .dylib via the OSX command line utility.
-- Add protobufs as a submodule, as its CMake API is necessary for generating proto files at buildtime (and we need a couple headers). 
+1. Cloned the iamf-toosl repository. In the `iamf-tools` repository, modified `iamf-tools/iamf/include/iamf_tools`. Added the following declaration for a shared library containing all the information from the other libraries:
+
+# Shared library exporting all cc_libraries in this file
+cc_shared_library(
+    name = "iamf_tools",
+    deps = [
+        ":iamf_decoder_factory",
+        ":iamf_decoder_interface",
+        ":iamf_encoder_factory",
+        ":iamf_encoder_interface",
+        ":iamf_tools_api_types",
+        ":iamf_tools_encoder_api_types"
+    ],
+    visibility = ["//visibility:public"],
+)
+
+2. Ran the Bazel build with `bazel build --copt="-g" --strip="never"  //iamf/include/iamf_tools:iamf_tools --macos_minimum_os=14 --spawn_strategy=standalone --cxxopt="-std=c++20"`.
+3. Copied the resulting .dylib from `bazel-bin/iamf/include/iamf_tools/libiamf_tools.dylib` to `third_party/iamftools/lib/`.
+4. Copied the protobuf files from 'iamftools/iamf/cli/proto' to 'third_party/iamftools/iamf/cli/proto'
+5. Copied the headers from 'iamftools/iamf/include/iamf_tools' to 'third_party/iamftools/include/iamf_tools'
+6. Fixed the rpaths in the dylib:
+    - Add third_party to the reference path for local builds: "install_name_tool -add_rpath @rpath/third_party/iamftools/lib/  libiamf_tools.dylib"
+    - Add the dylib itself to the rpath: "install_name_tool -add_rpath @rpath/third_party/iamftools/lib/libiamf_tools.dylib  libiamf_tools.dylib"
+    - Finally, change the build path id: "install_name_tool -id @rpath/third_party/iamftools/lib/libiamf_tools.dylib libiamf_tools.dylib"
+7. Fixed the import paths in the proto files by removing the full path and just using the proto files name.
+    - For each proto file, on the lines "import iamf/cli/proto/name.proto" change to "import name.proto"
+    - Note: Technical debt here, we're unable to get the compiled proto files to be placed in iamf/cli/proto during the build unless there is a CMAKE file in the iamf/cli/proto directory, which then breaks the proto import paths. There must be some way to get the proto files to be built from the top level CMAKE and placed in iamf/cli/proto on output, but currently unable to find one, seems like protobuf always puts the files in the same directory path the CMAKE file is in. Maybe worth revisting when updating the library.
+8. Update the commit hash and version information at the top of this file, as it is used by CMAKE

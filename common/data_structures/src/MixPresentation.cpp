@@ -64,7 +64,7 @@ LanguageData::MixLanguages MixPresentation::stringToLanguage(
 }
 
 void MixPresentation::populateIamfMixPresentationMetadata(
-    const uint32_t mixPresentationId, const int sampleRate, const int duration,
+    const uint32_t mixPresentationId, const int sampleRate,
     iamf_tools_cli_proto::MixPresentationObuMetadata* mpMD,
     iamf_tools_cli_proto::UserMetadata& iamfMD,
     const MixPresentationLoudness mixPresentationLoudness,

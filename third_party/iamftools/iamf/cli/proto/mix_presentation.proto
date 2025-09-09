@@ -12,8 +12,8 @@ edition = "2023";
 
 package iamf_tools_cli_proto;
 
-import "iamf/cli/proto/obu_header.proto";
-import "iamf/cli/proto/param_definitions.proto";
+import "obu_header.proto";
+import "param_definitions.proto";
 
 option features.enum_type = CLOSED;
 option features.utf8_validation = NONE;

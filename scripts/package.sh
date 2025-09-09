@@ -483,7 +483,7 @@ copy_dylibs_to_plugin_resources() {
     # Define source and target paths for dylibs
     local dylib_sources=(
         "$build_dir/_deps/zeromq-build/lib/libzmq.5.2.6.dylib:Resources/"
-        "$build_dir/third_party/iamftools/lib/libiamf_renderer_encoder.dylib:Resources/third_party/iamftools/lib/"
+        "$build_dir/third_party/iamftools/lib/libiamf_tools.dylib:Resources/third_party/iamftools/lib/"
         "$build_dir/third_party/obr/lib/obr.dylib:Resources/third_party/obr/lib/"
     )
     
@@ -675,7 +675,7 @@ sign_plugin_dylibs() {
     
     # Sign all ZeroMQ and dependency libraries
     local dylibs=("libzmq.5.2.6.dylib" "libzmq.5.dylib" "libzmq.dylib" 
-                 "third_party/iamftools/lib/libiamf_renderer_encoder.dylib" 
+                 "third_party/iamftools/lib/libiamf_tools.dylib" 
                  "third_party/obr/lib/obr.dylib")
     
     for dylib in "${dylibs[@]}"; do

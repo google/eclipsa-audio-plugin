@@ -127,7 +127,7 @@ TEST(test_mix_presentation, headphone_rendering_mode_iamf) {
 
   // Populate IAMF metadata
   presentation.populateIamfMixPresentationMetadata(
-      mixPresentationId, sampleRate, duration, &mpMetadata, userMetadata,
+      mixPresentationId, sampleRate, &mpMetadata, userMetadata,
       mixPresentationLoudness, audioElementIDMap);
 
   // Access the submix and audio elements from the generated metadata

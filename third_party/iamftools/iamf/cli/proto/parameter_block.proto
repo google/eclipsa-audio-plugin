@@ -12,8 +12,8 @@ edition = "2023";
 
 package iamf_tools_cli_proto;
 
-import "iamf/cli/proto/obu_header.proto";
-import "iamf/cli/proto/parameter_data.proto";
+import "obu_header.proto";
+import "parameter_data.proto";
 
 message ParameterDataExtension {
   // `parameter_data_size` is ignored. The value in the bitstream is inferred

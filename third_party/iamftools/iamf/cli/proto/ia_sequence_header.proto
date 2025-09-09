@@ -12,7 +12,7 @@ edition = "2023";
 
 package iamf_tools_cli_proto;
 
-import "iamf/cli/proto/obu_header.proto";
+import "obu_header.proto";
 
 enum ProfileVersion {
   option features.enum_type = CLOSED;

@@ -14,8 +14,11 @@
 #include <cstdint>
 #include <limits>
 
+#include "Eigen/Core"
 #include "Eigen/Dense"
+#include "Eigen/Geometry"
 #include "absl/log/check.h"
+#include "constants.h"
 
 namespace obr {
 
@@ -143,6 +146,45 @@ static inline T IntegerPow(T base, int exp) {
   }
   return result;
 }
+
+class WorldRotation : public Eigen::Quaternion<float, Eigen::DontAlign> {
+ public:
+  // Inherits all constructors with 1-or-more arguments. Necessary because
+  // MSVC12 doesn't support inheriting constructors.
+  template <typename Arg1, typename... Args>
+  WorldRotation(const Arg1& arg1, Args&&... args)
+      : Quaternion(arg1, std::forward<Args>(args)...) {}
+
+  // Constructs an identity rotation.
+  WorldRotation() { this->setIdentity(); }
+
+  // Returns the shortest arc between two |WorldRotation|s in radians.
+  float AngularDifferenceRad(const WorldRotation& other) const {
+    const Quaternion difference = this->inverse() * other;
+    return static_cast<float>(Eigen::AngleAxisf(difference).angle());
+  }
+};
+
+class WorldPosition : public Eigen::Matrix<float, 3, 1, Eigen::DontAlign> {
+ public:
+  // Inherits all constructors with 1-or-more arguments. Necessary because
+  // MSVC12 doesn't support inheriting constructors.
+  template <typename Arg1, typename... Args>
+  WorldPosition(const Arg1& arg1, Args&&... args)
+      : Matrix(arg1, std::forward<Args>(args)...) {}
+
+  // Constructs a zero vector.
+  WorldPosition();
+
+  // Returns True if other |WorldPosition| differs by at least |kEpsilonFloat|.
+  bool operator!=(const WorldPosition& other) const {
+    return std::abs(this->x() - other.x()) > kEpsilonFloat ||
+           std::abs(this->y() - other.y()) > kEpsilonFloat ||
+           std::abs(this->z() - other.z()) > kEpsilonFloat;
+  }
+};
+
+typedef Eigen::AngleAxis<float> AngleAxisf;
 
 }  // namespace obr
 

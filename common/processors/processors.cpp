@@ -21,6 +21,7 @@
 #include "file_output/FileOutputProcessor_PremierePro.cpp"
 #include "file_output/WavFileOutputProcessor.cpp"
 #include "file_output/iamf_export_utils/IAMFExportUtil.cpp"
+#include "file_output/iamf_export_utils/IAMFFileWriter.cpp"
 #include "gain/GainEditor.cpp"
 #include "gain/GainProcessor.cpp"
 #include "gain/MSProcessor.cpp"

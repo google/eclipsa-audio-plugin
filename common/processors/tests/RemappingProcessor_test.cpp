@@ -16,7 +16,6 @@
 
 #include <gtest/gtest.h>
 
-#include "juce_core/system/juce_PlatformDefs.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 // Dummy processor to simulate a host processor.
@@ -26,11 +25,14 @@ class DummyHostProcessor final : public ProcessorBase {
     // Provide a dummy implementation
   }
 
-  // this remap table was validated through manual testing
-  const PassthroughRemapTable kRemapTable7Point1Point4{
-      {6, 8}, {7, 9}, {8, 10}, {9, 11}, {10, 6}, {11, 7}};
-  const PassthroughRemapTable kNoRemap{};
+  static const PassthroughRemapTable kRemapTable7Point1Point4;
+  static const PassthroughRemapTable kNoRemap;
 };
+
+// this remap table was validated through manual testing
+const PassthroughRemapTable DummyHostProcessor::kRemapTable7Point1Point4{
+    {6, 8}, {7, 9}, {8, 10}, {9, 11}, {10, 6}, {11, 7}};
+const PassthroughRemapTable DummyHostProcessor::kNoRemap{};
 
 std::pair<bool, bool> checkRemapTable(DummyHostProcessor& hostProcessor,
                                       const juce::AudioChannelSet& busLayout) {
@@ -48,15 +50,13 @@ std::pair<bool, bool> checkRemapTable(DummyHostProcessor& hostProcessor,
   const PassthroughRemapTable remapTable = remappingProcessor.getRemapTable();
   PassthroughRemapTable hostRemapTable;
   if (busLayout == juce::AudioChannelSet::create7point1point4()) {
-    hostRemapTable = hostProcessor.kRemapTable7Point1Point4;
+    hostRemapTable = DummyHostProcessor::kRemapTable7Point1Point4;
   } else {
-    hostRemapTable = hostProcessor.kNoRemap;
+    hostRemapTable = DummyHostProcessor::kNoRemap;
   }
 
-  // the remap tables may be out of order, so ensure each pair exists in the
-  // other
-  // table and that they are the same size
-  jassert(hostRemapTable.size() == remapTable.size());
+  // The remap tables may be out of order, so ensure each pair exists in the
+  // other table and that they are the same size
   bool sameSize = hostRemapTable.size() == remapTable.size();
   bool allMatched = true;
   for (size_t i = 0; i < remapTable.size(); ++i) {
@@ -77,7 +77,7 @@ std::pair<bool, bool> checkRemapTable(DummyHostProcessor& hostProcessor,
   return {sameSize, allMatched};
 }
 
-TEST(test_remapping_processor, test_rempapping_tables) {
+TEST(test_remapping_processor, test_remapping_tables) {
   const std::array<juce::AudioChannelSet, 6> channelSets = {
       juce::AudioChannelSet::create7point1point4(),
       juce::AudioChannelSet::create7point1(),
@@ -91,6 +91,7 @@ TEST(test_remapping_processor, test_rempapping_tables) {
     // Check the remap table for each channel set
     const auto [sameSize, allEqual] =
         checkRemapTable(hostProcessor, channelSet);
+
     EXPECT_TRUE(sameSize);
     EXPECT_TRUE(allEqual);
   }

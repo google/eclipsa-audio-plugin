@@ -1,17 +1,20 @@
-add_library(iamftools INTERFACE)
-target_compile_options(iamftools INTERFACE "-w") # Silence is golden
-target_include_directories(iamftools INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/iamf/include/iamf_tools")
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-add_library(iamftools_dylib SHARED IMPORTED)
-set_target_properties(iamftools_dylib PROPERTIES
-  IMPORTED_LOCATION         "${CMAKE_CURRENT_LIST_DIR}/lib/libiamf_renderer_encoder.dylib"
-  IMPORTED_LOCATION_DEBUG   "${CMAKE_CURRENT_LIST_DIR}/lib/libiamf_renderer_encoder.dylib"
-  IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/lib/libiamf_renderer_encoder.dylib"
-  IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_CURRENT_LIST_DIR}/lib/libiamf_renderer_encoder.dylib"
-  IMPORTED_SONAME "libiamf_renderer_encoder.dylib"
-  LINKER_LANGUAGE CXX)
-
-# Parse the commit hash
+add_subdirectory(iamf/cli/proto)
+# --------------- Commit Hash Handling ---------------
+# Parse the commit hash from the README.md file and generate a header file with it
 # Set the path to the README.md file
 set(README_FILE "${CMAKE_CURRENT_LIST_DIR}/README.md")
 
@@ -25,37 +28,19 @@ set(TEMPLATE_FILE "${CMAKE_CURRENT_LIST_DIR}/iamf/include/iamf_tools/commit_hash
 # Configure the header file
 configure_file(${TEMPLATE_FILE} ${HEADER_FILE} @ONLY)
 
-# Find required protobuf file generate fx
-include("${CMAKE_SOURCE_DIR}/third_party/protobuf/cmake/protobuf-generate.cmake")
-
-set(PROTO_FILES
-  "iamf/cli/proto/arbitrary_obu.proto"
-  "iamf/cli/proto/audio_element.proto"
-  "iamf/cli/proto/audio_frame.proto"
-  "iamf/cli/proto/codec_config.proto"
-  "iamf/cli/proto/encoder_control_metadata.proto"
-  "iamf/cli/proto/ia_sequence_header.proto"
-  "iamf/cli/proto/mix_presentation.proto"
-  "iamf/cli/proto/obu_header.proto"
-  "iamf/cli/proto/output_audio_format.proto"
-  "iamf/cli/proto/param_definitions.proto"
-  "iamf/cli/proto/parameter_block.proto"
-  "iamf/cli/proto/parameter_data.proto"
-  "iamf/cli/proto/temporal_delimiter.proto"
-  "iamf/cli/proto/test_vector_metadata.proto"
-  "iamf/cli/proto/user_metadata.proto"
+# -------------------- IAMF TOOLS --------------------
+add_library(iamftools INTERFACE)
+target_compile_options(iamftools INTERFACE "-w")
+target_include_directories(iamftools INTERFACE
+  "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/iamf/include/iamf_tools"
 )
 
-set(PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-# Generate protobuf files
-add_library(proto-objects OBJECT ${PROTO_FILES})
-target_include_directories(proto-objects PUBLIC "${CMAKE_CURRENT_BINARY_DIR}" "${PROTO_BINARY_DIR}/iamf/cli/proto")
-target_link_libraries(proto-objects PUBLIC protobuf::libprotobuf)
-protobuf_generate(
-  TARGET proto-objects
-  IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}"
-  PROTOC_OUT_DIR "${PROTO_BINARY_DIR}"
+add_library(iamftools_dylib SHARED IMPORTED)
+set_target_properties(iamftools_dylib PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_CURRENT_LIST_DIR}/lib/libiamf_tools.dylib"
+  IMPORTED_SONAME "libiamf_tools.dylib"
+  LINKER_LANGUAGE CXX
 )
 
 target_link_libraries(iamftools
@@ -63,7 +48,3 @@ target_link_libraries(iamftools
     iamftools_dylib
     proto-objects
 )
-
-if(CI_TEST OR INTERNAL_TEST)
-  eclipsa_add_test(test_iamf_sanity test/libiamf_test.cpp "iamftools")
-endif()
