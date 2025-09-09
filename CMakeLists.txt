@@ -43,12 +43,12 @@ if(NOT DEFINED ECLIPSA_PANNER_BUNDLE_ID)
 endif()
 
 # Enable Logic Pro specific optimizations for AU builds on macOS
-option(ECLIPSA_LOGIC_PRO_OPTIMIZE "Enable Logic Pro specific audio layout optimizations" ON)
+option(ECLIPSA_LOGIC_PRO_OPTIMIZE "Enable Logic Pro specific audio layout optimizations" OFF)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_RPATH "@loader_path/../Resources")
+set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
 set(PLUGIN_FORMATS "AU")
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
