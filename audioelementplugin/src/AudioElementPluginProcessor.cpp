@@ -33,13 +33,9 @@ int AudioElementPluginProcessor::instanceId_ = 0;
 
 AudioElementPluginProcessor::AudioElementPluginProcessor()
     // For Logic Pro optimized builds: use host-wide layout
-    : ProcessorBase(
-#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
-          ProcessorBase::getHostWideLayout(),
-#else
-          juce::AudioChannelSet::mono(),
-#endif
-          ProcessorBase::getHostWideLayout()),
+    : ProcessorBase(kIsLogicProBuild ? ProcessorBase::getHostWideLayout()
+                                     : juce::AudioChannelSet::mono(),
+                    ProcessorBase::getHostWideLayout()),
       persistentState_(kAudioElementSpatialPluginStateKey),
       audioElementSpatialLayoutRepository_(
           persistentState_.getOrCreateChildWithName(
@@ -96,50 +92,49 @@ void AudioElementPluginProcessor::releaseResources() {}
 
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
-  // Logic Pro optimized builds: use wide layout support
-  const auto in = layouts.getMainInputChannelSet();
-  const auto out = layouts.getMainOutputChannelSet();
-  if (in.isDisabled() || out.isDisabled()) return false;
-  return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
-#else
+  if (kIsLogicProBuild) {
+    // Logic Pro optimized builds: use wide layout support
+    const auto in = layouts.getMainInputChannelSet();
+    const auto out = layouts.getMainOutputChannelSet();
+    if (in.isDisabled() || out.isDisabled()) return false;
+    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
+  } else {
+    // prevent REAPER from downsizing the output channel set when
+    // the probing for smaller output channel sets (i.e STEREO)
+    // right after the desired/most complex layout has been assigned to the
+    // output bus
+    if (!allowDownSizing_ && lastOutputChannelSet_.size() >
+                                 layouts.getMainInputChannelSet().size()) {
+      return false;
+    }
 
-  // prevent REAPER from downsizing the output channel set when
-  // the probing for smaller output channel sets (i.e STEREO)
-  // right after the desired/most complex layout has been assigned to the output
-  // bus
-  if (!allowDownSizing_ &&
-      lastOutputChannelSet_.size() > layouts.getMainInputChannelSet().size()) {
+    if (layouts.getMainOutputChannelSet() != getHostWideLayout()) {
+      return false;
+    }
+
+    const std::vector<juce::AudioChannelSet> supportedInputChannelSets = {
+        juce::AudioChannelSet::mono(),
+        juce::AudioChannelSet::stereo(),
+        juce::AudioChannelSet::create5point1(),
+        juce::AudioChannelSet::create5point1point2(),
+        juce::AudioChannelSet::create5point1point4(),
+        juce::AudioChannelSet::create7point1(),
+        juce::AudioChannelSet::create7point1point2(),
+        juce::AudioChannelSet::create7point1point4(),
+        juce::AudioChannelSet::create9point1point6(),
+        juce::AudioChannelSet::ambisonic(1),
+        juce::AudioChannelSet::ambisonic(2),
+        juce::AudioChannelSet::ambisonic(3)};
+
+    if (std::find(supportedInputChannelSets.begin(),
+                  supportedInputChannelSets.end(),
+                  layouts.getMainInputChannelSet()) !=
+        supportedInputChannelSets.end()) {
+      return true;
+    }
+
     return false;
   }
-
-  if (layouts.getMainOutputChannelSet() != getHostWideLayout()) {
-    return false;
-  }
-
-  const std::vector<juce::AudioChannelSet> supportedInputChannelSets = {
-      juce::AudioChannelSet::mono(),
-      juce::AudioChannelSet::stereo(),
-      juce::AudioChannelSet::create5point1(),
-      juce::AudioChannelSet::create5point1point2(),
-      juce::AudioChannelSet::create5point1point4(),
-      juce::AudioChannelSet::create7point1(),
-      juce::AudioChannelSet::create7point1point2(),
-      juce::AudioChannelSet::create7point1point4(),
-      juce::AudioChannelSet::create9point1point6(),
-      juce::AudioChannelSet::ambisonic(1),
-      juce::AudioChannelSet::ambisonic(2),
-      juce::AudioChannelSet::ambisonic(3)};
-
-  if (std::find(supportedInputChannelSets.begin(),
-                supportedInputChannelSets.end(),
-                layouts.getMainInputChannelSet()) !=
-      supportedInputChannelSets.end()) {
-    return true;
-  }
-
-  return false;
-#endif
 }
 
 bool AudioElementPluginProcessor::applyBusLayouts(const BusesLayout& layouts) {

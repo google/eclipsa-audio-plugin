@@ -34,9 +34,9 @@ endif()
 
 target_compile_definitions(processors INTERFACE MUXER_PATH="${CMAKE_SOURCE_DIR}/external/FFmpeg/bin/ffmpeg")
 
-# Add Logic Pro optimization flag to processors module when enabled
-if(ECLIPSA_LOGIC_PRO_OPTIMIZE)
-    target_compile_definitions(processors INTERFACE ECLIPSA_LOGIC_PRO_OPTIMIZE=1)
+# Add DAW-specific build flags to processors module when enabled
+if(ECLIPSA_LOGIC_PRO_BUILD)
+    target_compile_definitions(processors INTERFACE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif()
 
 add_subdirectory(components/icons)

@@ -30,11 +30,8 @@
 RendererProcessor::RendererProcessor()
     // Logic Pro optimized builds: use host-wide layout
     : ProcessorBase(ProcessorBase::getHostWideLayout(),
-#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
-                    ProcessorBase::getHostWideLayout()),
-#else
-                    juce::AudioChannelSet::stereo()),
-#endif
+                    kIsLogicProBuild ? ProcessorBase::getHostWideLayout()
+                                     : juce::AudioChannelSet::stereo()),
       // Load persistent state. Initialize repositories from persistent state.
       persistentState_(kRendererStateKey),
       roomSetupRepository_(getTreeWithId(kRoomSetupKey)),
@@ -105,43 +102,43 @@ RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
-#ifdef ECLIPSA_LOGIC_PRO_OPTIMIZE
-  // Logic Pro optimized builds: use wide layout support
-  const auto in = layouts.getMainInputChannelSet();
-  const auto out = layouts.getMainOutputChannelSet();
-  if (in.isDisabled() || out.isDisabled()) return false;
-  return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
-#else
-  // Non-optimized builds: original working code for all DAWs
-  // Ensure the input channel set is wide enough for us
-  if (layouts.getMainInputChannelSet() != getHostWideLayout()) {
-    return false;
-  }
-
-  auto hostType = juce::PluginHostType();
-
-  if (hostType.isReaper()) {
-    return layouts.getMainOutputChannelSet() == outputChannelSet_;
-  }
-
-  // Ensure the output channel set it one of the channel sets we support
-  // rendering to
-  if (layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() ||
-      layouts.getMainOutputChannelSet() ==
-          juce::AudioChannelSet::create5point1() ||
-      layouts.getMainOutputChannelSet() ==
-          juce::AudioChannelSet::create5point1point2() ||
-      layouts.getMainOutputChannelSet() ==
-          juce::AudioChannelSet::create5point1point4() ||
-      layouts.getMainOutputChannelSet() ==
-          juce::AudioChannelSet::create7point1() ||
-      layouts.getMainOutputChannelSet() ==
-          juce::AudioChannelSet::create7point1point4()) {
-    return true;
+  if (kIsLogicProBuild) {
+    // Logic Pro optimized builds: use wide layout support
+    const auto in = layouts.getMainInputChannelSet();
+    const auto out = layouts.getMainOutputChannelSet();
+    if (in.isDisabled() || out.isDisabled()) return false;
+    return Speakers::isNamedBed(in) || Speakers::isSymmetricDiscrete(in);
   } else {
-    return false;
+    // Non-optimized builds: original working code for all DAWs
+    // Ensure the input channel set is wide enough for us
+    if (layouts.getMainInputChannelSet() != getHostWideLayout()) {
+      return false;
+    }
+
+    auto hostType = juce::PluginHostType();
+
+    if (hostType.isReaper()) {
+      return layouts.getMainOutputChannelSet() == outputChannelSet_;
+    }
+
+    // Ensure the output channel set it one of the channel sets we support
+    // rendering to
+    if (layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo() ||
+        layouts.getMainOutputChannelSet() ==
+            juce::AudioChannelSet::create5point1() ||
+        layouts.getMainOutputChannelSet() ==
+            juce::AudioChannelSet::create5point1point2() ||
+        layouts.getMainOutputChannelSet() ==
+            juce::AudioChannelSet::create5point1point4() ||
+        layouts.getMainOutputChannelSet() ==
+            juce::AudioChannelSet::create7point1() ||
+        layouts.getMainOutputChannelSet() ==
+            juce::AudioChannelSet::create7point1point4()) {
+      return true;
+    } else {
+      return false;
+    }
   }
-#endif
 }
 
 bool RendererProcessor::applyBusLayouts(const BusesLayout& layouts) {
