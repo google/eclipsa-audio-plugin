@@ -18,6 +18,16 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 
+// Build configuration for Logic Pro compatibility
+// When true, limits to 7.1.4 layout for Logic Pro compatibility
+// When false, uses Ambisonics layouts (order 3 for Premiere, order 5 for
+// others)
+#ifdef ECLIPSA_LOGIC_PRO_BUILD
+constexpr bool kIsLogicProBuild = true;
+#else
+constexpr bool kIsLogicProBuild = false;
+#endif
+
 class ProcessorBase : public juce::AudioProcessor {
  public:
   // This constructor is called by our internal processors
@@ -46,14 +56,14 @@ class ProcessorBase : public juce::AudioProcessor {
   // Static helper so it can be used inside member initializer lists of
   // derived processors (cannot rely on virtual functions there).
   static inline juce::AudioChannelSet getHostWideLayout() {
-    // Non-AU builds: original behavior for all DAWs
-    if (juce::PluginHostType().isPremiere()) {
-      return juce::AudioChannelSet::ambisonic(3);
-    } else if (juce::PluginHostType().isLogic() ||
-               juce::PluginHostType().isAUVal()) {
+    if (kIsLogicProBuild) {
       return juce::AudioChannelSet::create7point1point4();
     } else {
-      return juce::AudioChannelSet::ambisonic(5);
+      if (juce::PluginHostType().isPremiere()) {
+        return juce::AudioChannelSet::ambisonic(3);
+      } else {
+        return juce::AudioChannelSet::ambisonic(5);
+      }
     }
   }
 

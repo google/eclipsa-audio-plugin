@@ -44,6 +44,11 @@ target_compile_definitions(AudioElementPlugin
         JUCE_ENABLE_LIVE_CONSTANT_EDITOR=1
         JucePlugin_Category="Spatial")
 
+# Add DAW-specific build flags when enabled
+if(ECLIPSA_LOGIC_PRO_BUILD)
+    target_compile_definitions(AudioElementPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
+endif()
+
 target_link_options(AudioElementPlugin
     PUBLIC
         "-Wl"
