@@ -52,6 +52,11 @@ target_compile_definitions(RendererPlugin
         JucePlugin_IsSynth=1
         JucePlugin_Category="Synth")
 
+# Add DAW-specific build flags when enabled
+if(ECLIPSA_LOGIC_PRO_BUILD)
+    target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
+endif()
+
 target_link_options(RendererPlugin
     PUBLIC
         "-Wl"
