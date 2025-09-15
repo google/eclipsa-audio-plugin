@@ -12,9 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Set plugin code and name based on build type
+if(ECLIPSA_LOGIC_PRO_BUILD)
+    set(RENDERER_PLUGIN_CODE "Ercl")
+    set(RENDERER_PRODUCT_NAME "Eclipsa Audio Renderer for Logic Pro")
+else()
+    set(RENDERER_PLUGIN_CODE "Ecrd")
+    set(RENDERER_PRODUCT_NAME "Eclipsa Audio Renderer")
+endif()
+
 juce_add_plugin(RendererPlugin
     PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
-    PLUGIN_CODE "Ercl"
+    PLUGIN_CODE ${RENDERER_PLUGIN_CODE}
     BUNDLE_ID "${ECLIPSA_RENDERER_BUNDLE_ID}"
     COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
     NEEDS_MIDI_INPUT FALSE
@@ -23,7 +32,7 @@ juce_add_plugin(RendererPlugin
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
     FORMATS ${PLUGIN_FORMATS}
-    PRODUCT_NAME "Eclipsa Audio Renderer"
+    PRODUCT_NAME ${RENDERER_PRODUCT_NAME}
     AAX_CATEGORY "AAX_ePlugInCategory_SWGenerators")
 
 target_sources(RendererPlugin 

@@ -12,9 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Set plugin code and name based on build type
+if(ECLIPSA_LOGIC_PRO_BUILD)
+    set(AUDIO_ELEMENT_PLUGIN_CODE "Eacl")
+    set(AUDIO_ELEMENT_PRODUCT_NAME "Eclipsa Audio Element Plugin for Logic Pro")
+else()
+    set(AUDIO_ELEMENT_PLUGIN_CODE "Ecae")
+    set(AUDIO_ELEMENT_PRODUCT_NAME "Eclipsa Audio Element Plugin")
+endif()
+
 juce_add_plugin(AudioElementPlugin
     PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
-    PLUGIN_CODE "Eacl"
+    PLUGIN_CODE ${AUDIO_ELEMENT_PLUGIN_CODE}
     BUNDLE_ID "${ECLIPSA_PANNER_BUNDLE_ID}"
     COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
     NEEDS_MIDI_INPUT FALSE
@@ -23,7 +32,7 @@ juce_add_plugin(AudioElementPlugin
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
     FORMATS ${PLUGIN_FORMATS}
-    PRODUCT_NAME "Eclipsa Audio Element Plugin"
+    PRODUCT_NAME ${AUDIO_ELEMENT_PRODUCT_NAME}
     AAX_CATEGORY "AAX_ePlugInCategory_SoundField")
 
 target_sources(AudioElementPlugin 

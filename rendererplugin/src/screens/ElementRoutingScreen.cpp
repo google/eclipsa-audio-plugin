@@ -25,6 +25,7 @@
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/FileExport.h"
 #include "logger/logger.h"
+#include "processors/processor_base/ProcessorBase.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 ElementRoutingScreen::ElementRoutingScreen(
@@ -72,7 +73,6 @@ ElementRoutingScreen::ElementRoutingScreen(
     int idx = profileSelectionBox_.getSelectedIndex();
     currentProfile_ = static_cast<FileProfile>(idx);
     profileConfig.setProfile(currentProfile_);
-    updateAddAudioElementButton(getAudioElementNames(currentProfile_));
     fileExportRepository_->update(profileConfig);
     LOG_ANALYTICS(RendererProcessor::instanceId_,
                   "Profile changed to: " + std::to_string(idx));
@@ -82,6 +82,12 @@ ElementRoutingScreen::ElementRoutingScreen(
   profileSelectionBox_.setSelectedIndex(
       (int)profileConfig.getProfile(),
       juce::NotificationType::dontSendNotification);
+
+  // Initialize current profile
+  currentProfile_ = profileConfig.getProfile();
+
+  // Initialize channels in use
+  channelsInUse_ = 0;
 
   // Add the tooltip window. This can only ever be done once
   tooltipWindow_.setMillisecondsBeforeTipAppears(50);
@@ -98,7 +104,9 @@ ElementRoutingScreen::ElementRoutingScreen(
       "Base profile supports up to 2 audio elements with a maximum "
       "of 18 channels.\n\n"
       "Base Enhanced profile supports up to 28 audio elements with a "
-      "maximum of 28 channels.");
+      "maximum of 28 channels.\n\n"
+      "Available audio element layouts are filtered based on remaining "
+      "channel capacity and profile limitations.");
 
   // Update the local rendering with the current audio elements and panners
   updateAudioElementChannels();
@@ -312,14 +320,10 @@ void ElementRoutingScreen::updateAudioElementChannels() {
   remainingChannelsLabel_.setText(
       juce::String(remainingChannels) + " remaining channels",
       juce::NotificationType::dontSendNotification);
-  if (remainingChannels == 0 || remainingAudioElements == 0) {
-    addAudioElementButton_.disable();
-    LOG_ANALYTICS(RendererProcessor::instanceId_,
-                  "Add Audio Element button disabled: No remaining channels or "
-                  "element limit reached.");
-  } else {
-    addAudioElementButton_.enable();
-  }
+
+  // Update the add audio element button with filtered layouts
+  // This will also handle enabling/disabling the button appropriately
+  updateAddAudioElementButton(getAudioElementNames(currentProfile_));
 
   // Update the panner rows
   pannerRows_.clear();
@@ -483,8 +487,21 @@ juce::StringArray ElementRoutingScreen::getAudioElementNames(
                Speakers::kHOA2,
                Speakers::kHOA3};
   }
+
+  // Check remaining audio element count limit
+  juce::OwnedArray<AudioElement> audioElementArray;
+  audioElementRepository_->getAll(audioElementArray);
+  int remainingAudioElements =
+      FileProfileHelper::profileAudioElements(currentProfile_) -
+      audioElementArray.size();
+
+  // Add all layouts that fit within the audio element count limit
+  // Channel constraints will be handled later via disabled options
   for (auto layout : layouts) {
-    audioElementNames.add(layout.toString());
+    // Only add if there would be space for this new audio element
+    if (remainingAudioElements > 0) {
+      audioElementNames.add(layout.toString());
+    }
   }
 
   return audioElementNames;
@@ -494,6 +511,54 @@ void ElementRoutingScreen::updateAddAudioElementButton(
     const juce::StringArray& audioElementNames) {
   addAudioElementButton_.clear();
   addAudioElementButton_.addItemList(audioElementNames, 1);
+
+  // Get the host wide layout channel count constraint
+  int hostWideLayoutChannels = ProcessorBase::getHostWideLayout().size();
+
+  // Get available channels for new audio elements
+  int remainingChannels =
+      FileProfileHelper::profileChannels(currentProfile_) - channelsInUse_;
+
+  // Apply enabled/disabled state to each option based on constraints
+  for (int i = 0; i < audioElementNames.size(); i++) {
+    juce::String layoutName = audioElementNames[i];
+    auto layout = getAudioElementLayout(layoutName);
+    int layoutChannels = layout.getNumChannels();
+
+    // Disable layouts that exceed host wide layout or available channel
+    // constraints
+    bool enable = true;
+    if (hostWideLayoutChannels > 0 && layoutChannels > hostWideLayoutChannels) {
+      enable = false;
+    } else if (layoutChannels > remainingChannels) {
+      enable = false;
+    }
+
+    // Use SelectionButton setItemEnabled to disable incompatible options
+    // Item IDs start from 1 (as used in addItemList)
+    addAudioElementButton_.setItemEnabled(i + 1, enable);
+  }
+
+  // Enable/disable the entire button based on whether there are any enabled
+  // options
+  bool hasEnabledOptions = false;
+  for (int i = 0; i < audioElementNames.size(); i++) {
+    if (addAudioElementButton_.isItemEnabled(i + 1)) {
+      hasEnabledOptions = true;
+      break;
+    }
+  }
+
+  if (!hasEnabledOptions || audioElementNames.isEmpty()) {
+    addAudioElementButton_.disable();
+    LOG_ANALYTICS(RendererProcessor::instanceId_,
+                  "Add Audio Element button disabled: No compatible layouts "
+                  "available for host layout (" +
+                      juce::String(hostWideLayoutChannels).toStdString() +
+                      " channels).");
+  } else {
+    addAudioElementButton_.enable();
+  }
 }
 
 Speakers::AudioElementSpeakerLayout ElementRoutingScreen::getAudioElementLayout(

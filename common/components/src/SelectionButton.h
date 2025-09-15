@@ -131,4 +131,12 @@ class SelectionButton : public juce::Component, juce::ComboBox::Listener {
   void addItemList(const juce::StringArray& items, int startIndex) {
     selectionBox_.addItemList(items, startIndex);
   }
+
+  void setItemEnabled(int itemId, bool shouldBeEnabled) {
+    selectionBox_.setItemEnabled(itemId, shouldBeEnabled);
+  }
+
+  bool isItemEnabled(int itemId) const {
+    return selectionBox_.isItemEnabled(itemId);
+  }
 };
