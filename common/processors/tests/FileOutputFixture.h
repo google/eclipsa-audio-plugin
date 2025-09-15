@@ -648,14 +648,9 @@ class SharedTestFixture : public ::testing::Test {
 
     // As the test is run in the /build directory, the path needs to be adjusted
     // to point to the true location of the video source file.
-    std::filesystem::path correctedVideoSrcPath;
-    for (const auto& part : videoSourcePath) {
-      if (part == "build") {
-        continue;  // Skip the 'build' segment
-      }
-      correctedVideoSrcPath /= part;
-    }
-    videoSourcePath = correctedVideoSrcPath;
+    videoSourcePath = std::filesystem::current_path().parent_path() /
+                      "common/processors/tests/test_resources" /
+                      "SilentSampleVideo.mp4";
   }
 
   ~SharedTestFixture() override {
@@ -918,9 +913,7 @@ class SharedTestFixture : public ::testing::Test {
   juce::String videoPathStr;
   std::filesystem::path iamfOutPath;
   std::filesystem::path videoOutPath;
-  std::filesystem::path videoSourcePath =
-      (std::filesystem::current_path() /
-       "test_resources/SilentSampleVideo.mp4");
+  std::filesystem::path videoSourcePath;
 
   // File export data
   FileExport ex;
