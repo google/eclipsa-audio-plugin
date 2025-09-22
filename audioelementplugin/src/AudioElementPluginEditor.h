@@ -59,6 +59,11 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
                                 const juce::Identifier& property) override {
     if (property == AudioElementSpatialLayout::kPanningEnabled) {
       setMode();
+    } else if (property == AudioElementSpatialLayout::kName) {
+      if (!trackNameTextBox_.textEditorIsFocused()) {
+        trackNameTextBox_.setText(
+            audioElementSpatialLayoutRepository_->get().getName());
+      }
     }
   }
   void valueTreeChildAdded(juce::ValueTree& parentTree,
