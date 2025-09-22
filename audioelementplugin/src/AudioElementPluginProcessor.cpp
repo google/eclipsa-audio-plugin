@@ -45,7 +45,8 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
       firstOutputChannel(-1),
       outputChannelCount(1),
       syncClient_(&audioElementSpatialLayoutRepository_, 2134),
-      automationParametersTreeState(*this) {
+      automationParametersTreeState(*this),
+      trackName_("") {
   elevationListener_.setListeners(&automationParametersTreeState,
                                   &audioElementSpatialLayoutRepository_);
 
@@ -77,11 +78,18 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
     outputChannels.addChannel((juce::AudioChannelSet::ChannelType)i);
   }
 
-  // For now set a default name, later make this configurable
+  // Set a default name only if one doesn't already exist
   AudioElementSpatialLayout audioElementSpatialLayout =
       audioElementSpatialLayoutRepository_.get();
-  audioElementSpatialLayout.setName("Audio");
-  audioElementSpatialLayoutRepository_.update(audioElementSpatialLayout);
+  if (audioElementSpatialLayout.getName().isEmpty()) {
+    audioElementSpatialLayout.setName("Audio");
+    audioElementSpatialLayoutRepository_.update(audioElementSpatialLayout);
+    LOG_ANALYTICS(instanceId_, "Constructor: set default name 'Audio'");
+  } else {
+    LOG_ANALYTICS(instanceId_,
+                  "Constructor: existing name found: '" +
+                      audioElementSpatialLayout.getName().toStdString() + "'");
+  }
 
   // Register this instance of the Audio Element plugin with the renderer plugin
   audioElementSpatialLayoutRepository_.registerListener(this);
@@ -89,6 +97,15 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
 }
 
 void AudioElementPluginProcessor::releaseResources() {}
+
+void AudioElementPluginProcessor::updateTrackProperties(
+    const TrackProperties& properties) {
+  trackName_ = properties.name;
+  AudioElementSpatialLayout toUpdate =
+      audioElementSpatialLayoutRepository_.get();
+  toUpdate.setName(trackName_);
+  audioElementSpatialLayoutRepository_.update(toUpdate);
+}
 
 bool AudioElementPluginProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
@@ -274,6 +291,24 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
     repositoryAudioElementSpatialLayout.copyValuesFrom(tempRepository.get());
     audioElementSpatialLayoutRepository_.update(
         repositoryAudioElementSpatialLayout);
+
+    // Only sync trackName_ from loaded state if we haven't received a track
+    // name from the host yet
+    if (trackName_.isEmpty()) {
+      trackName_ = repositoryAudioElementSpatialLayout.getName();
+      LOG_ANALYTICS(instanceId_,
+                    "setStateInformation: synchronized trackName_ to '" +
+                        trackName_.toStdString() + "'");
+    } else {
+      // If we already have a track name from updateTrackProperties, update the
+      // loaded state with it
+      repositoryAudioElementSpatialLayout.setName(trackName_);
+      audioElementSpatialLayoutRepository_.update(
+          repositoryAudioElementSpatialLayout);
+      LOG_ANALYTICS(instanceId_,
+                    "setStateInformation: kept current trackName_ '" +
+                        trackName_.toStdString() + "' and updated repository");
+    }
 
     // Now set the current repository to the one in the persistent state
     // so that it will be written out properly. Essentially we are changing

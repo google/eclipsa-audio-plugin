@@ -90,6 +90,8 @@ class AudioElementPluginProcessor final : public ProcessorBase,
   AudioElementParameterTree automationParametersTreeState;
   void reinitializeAfterStateRestore() override;
 
+  void updateTrackProperties(const TrackProperties& properties) override;
+
   inline static const ::juce::Identifier
       kAudioElementSpatialLayoutRepositoryStateKey{
           "audio_element_spatial_layout_repository_state"};
@@ -127,5 +129,6 @@ class AudioElementPluginProcessor final : public ProcessorBase,
   SpeakerMonitorData monitorData_;
   AmbisonicsData ambisonicsData_;  // intiialized in SoundFieldProcessor
 
+  juce::String trackName_;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioElementPluginProcessor)
 };
