@@ -18,30 +18,21 @@
 #include <juce_video/juce_video.h>
 
 #include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <vector>
 
-#include "../common/logger/logger.h"
-#include "codec_config.pb.h"
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
-#include "data_structures/src/LanguageCodeMetaData.h"
 #include "data_structures/src/LoudnessExportData.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/MixPresentationLoudness.h"
-#include "google/protobuf/text_format.h"
-#include "ia_sequence_header.pb.h"
-#include "iamf/include/iamf_tools/encoder_main_lib.h"
 #include "processors/mix_monitoring/loudness_standards/MeasureEBU128.h"
 #include "processors/render/RenderProcessor.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 #include "substream_rdr/surround_panner/MonoToSpeakerPanner.h"
-#include "user_metadata.pb.h"
 
 void configureMixPresentations(
     const std::vector<juce::Uuid>& mixIds,

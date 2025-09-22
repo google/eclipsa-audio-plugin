@@ -12,714 +12,405 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "FileOutputFixture.h"
+#include <gtest/gtest.h>
 
-// Validate IAMF data has been initialized correctly with construction of
-// FileOutputProcessor
-TEST(test_fio_proc, init_iamf_metadata) {
-  TestFileExportRepository fileExportRepository;
-  TestAudioElementRepository audioElementRepository;
-  TestMixPresentationRepository mixPresentationRepository;
-  TestMixPresentationLoudnessRepository mixPresentationLoudnessRepository;
-  iamf_tools_cli_proto::UserMetadata iamfMD;
+#include <filesystem>
 
-  // Create instance of FIO processor
-  FileOutputProcessor fio_proc(fileExportRepository, audioElementRepository,
-                               mixPresentationRepository,
-                               mixPresentationLoudnessRepository);
+#include "FileOutputTestFixture.h"
+#include "juce_cryptography/juce_cryptography.h"
+#include "processors/tests/FileOutputTestUtils.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-  // Expect all MD to initially be cleared.
-  fio_proc.initIamfMetadata(iamfMD, "test.wav");
-  EXPECT_EQ(iamfMD.codec_config_metadata_size(), 0);
-  EXPECT_EQ(iamfMD.audio_element_metadata_size(), 0);
-  EXPECT_EQ(iamfMD.mix_presentation_metadata_size(), 0);
-  EXPECT_EQ(iamfMD.audio_frame_metadata_size(), 0);
-  EXPECT_EQ(iamfMD.ia_sequence_header_metadata_size(), 0);
+TEST_F(FileOutputTests, iamf_lpc_1ae_1mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE = addAudioElement(layout);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE});
 
-  EXPECT_TRUE(
-      iamfMD.test_vector_metadata().partition_mix_gain_parameter_blocks() ==
-      false);
-  EXPECT_TRUE(iamfMD.test_vector_metadata().file_name_prefix() == "test.wav");
-}
+    setTestExportOpts({AudioCodec::LPCM});
 
-// Validate IAMF metadata is updated correctly from the FileExportRepository.
-TEST(test_fio_proc, md_from_fexport_repo) {
-  TestFileExportRepository fileExportRepository;
-  TestAudioElementRepository audioElementRepository;
-  TestMixPresentationRepository mixPresentationRepository;
-  TestMixPresentationLoudnessRepository mixPresentationLoudnessRepository;
-  iamf_tools_cli_proto::UserMetadata iamfMD;
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-  // Select the FLAC audio codec for file export.
-  FileExport ex = fileExportRepository.get();
-  ex.setAudioCodec(AudioCodec::FLAC);
-  fileExportRepository.update(ex);
+    bounceAudio(fio_proc, audioElementRepository);
 
-  // Create instance of FIO processor
-  FileOutputProcessor fio_proc(fileExportRepository, audioElementRepository,
-                               mixPresentationRepository,
-                               mixPresentationLoudnessRepository);
-
-  // Update the IAMF metadata from the repository.
-  fio_proc.updateIamfMDFromRepository(fileExportRepository, iamfMD);
-
-  EXPECT_EQ(iamfMD.codec_config_metadata(0).codec_config().codec_id(),
-            iamf_tools_cli_proto::CodecId::CODEC_ID_FLAC);
-}
-
-// Validate IAMF metadata is updated correctly from the
-// AudioElementRepository
-TEST(test_fio_proc, md_from_ae_repo) {
-  TestFileExportRepository fileExportRepository;
-  TestAudioElementRepository audioElementRepository;
-  TestMixPresentationRepository mixPresentationRepository;
-  TestMixPresentationLoudnessRepository mixPresentationLoudnessRepository;
-  iamf_tools_cli_proto::UserMetadata iamfMD;
-  std::unordered_map<juce::Uuid, int> audioElementIDMap;
-
-  // Create some AudioElements to fill the repository with.
-  AudioElement ae1(juce::Uuid(), "Audio Element 1", "Description 1",
-                   Speakers::k5Point1, 0);
-  AudioElement ae2(juce::Uuid(), "Audio Element 2", "Description 2",
-                   Speakers::kStereo, 0);
-  audioElementRepository.add(ae1);
-  audioElementRepository.add(ae2);
-  EXPECT_TRUE(audioElementRepository.getItemCount() == 2);
-
-  // Set the file export repository to export an IAMF file
-  FileExport ex = fileExportRepository.get();
-  ex.setExportAudio(true);
-  ex.setAudioFileFormat(AudioFileFormat::IAMF);
-  ex.setExportFile(juce::File::getCurrentWorkingDirectory()
-                       .getChildFile("test.iamf")
-                       .getFullPathName());
-  ex.setExportFolder(
-      juce::File::getCurrentWorkingDirectory().getFullPathName());
-  fileExportRepository.update(ex);
-
-  // Create instance of FIO processor
-  FileOutputProcessor fio_proc(fileExportRepository, audioElementRepository,
-                               mixPresentationRepository,
-                               mixPresentationLoudnessRepository);
-
-  // Update the IAMF metadata from the repository.
-  fio_proc.setNonRealtime(true);
-  fio_proc.updateIamfMDFromRepository(audioElementRepository, iamfMD,
-                                      audioElementIDMap);
-
-  juce::Logger::outputDebugString(juce::String(iamfMD.DebugString()));
-
-  // Validate the related IAMF metadata fields updated.
-  auto ae1MD = iamfMD.audio_element_metadata(0);
-  auto ae2MD = iamfMD.audio_element_metadata(1);
-  EXPECT_TRUE(ae1MD.has_scalable_channel_layout_config());
-  EXPECT_EQ(ae1MD.num_substreams(), 4);
-  EXPECT_TRUE(ae2MD.has_scalable_channel_layout_config());
-  EXPECT_EQ(ae2MD.num_substreams(), 1);
-}
-
-TEST(test_channel_based, output_iamf_file) {
-  juce::ValueTree testState("test_state");
-
-  FileExportRepository fileExportRepository(
-      testState.getOrCreateChildWithName("file", nullptr));
-  AudioElementRepository audioElementRepository(
-      testState.getOrCreateChildWithName("element", nullptr));
-  MixPresentationRepository mixRepository(
-      testState.getOrCreateChildWithName("mix", nullptr));
-  MixPresentationLoudnessRepository mixPresentationLoudnessRepository(
-      testState.getOrCreateChildWithName("mixLoudness", nullptr));
-
-  iamf_tools_cli_proto::UserMetadata iamfMD;
-
-  // Set up an output filepath
-  juce::String iamfPathStr(juce::File::getCurrentWorkingDirectory()
-                               .getChildFile("test.iamf")
-                               .getFullPathName());
-  std::filesystem::path iamfPath(iamfPathStr.toStdString());
-  std::filesystem::remove(iamfPath);
-  FileExport ex = fileExportRepository.get();
-  ex.setExportFolder(
-      juce::File::getCurrentWorkingDirectory().getFullPathName());
-  ex.setExportFile(juce::File::getCurrentWorkingDirectory()
-                       .getChildFile("test")
-                       .getFullPathName());
-  ex.setExportAudio(true);
-  ex.setAudioFileFormat(AudioFileFormat::IAMF);
-  fileExportRepository.update(ex);
-
-  // Create some AudioElements to fill the repository with.
-  AudioElement ae1(juce::Uuid(), "Audio Element 1", "Description 1",
-                   Speakers::kStereo, 0);
-  AudioElement ae2(juce::Uuid(), "Audio Element 2", "Description 2",
-                   Speakers::k5Point1, 2);
-  audioElementRepository.add(ae2);
-  audioElementRepository.add(ae1);
-
-  // Create some MixPresentations to fill the repository with.
-  const juce::Uuid mixId = juce::Uuid();
-  MixPresentation mp1(mixId, "Mix Presentation 1", 1,
-                      LanguageData::MixLanguages::English, {});
-  MixPresentationLoudness mixLoudness = MixPresentationLoudness(mixId);
-  mp1.addAudioElement(ae2.getId(), 0, ae2.getName());
-  mp1.addAudioElement(ae1.getId(), 0, ae1.getName());
-
-  mixLoudness.replaceLargestLayout(Speakers::k5Point1);
-
-  mp1.addTagPair("artist", "Rockstars");
-  mp1.addTagPair("album", "Eclipsa");
-  mixRepository.add(mp1);
-  mixPresentationLoudnessRepository.add(mixLoudness);
-
-  // Create instance of FIO processor
-  FileOutputProcessor fio_proc(fileExportRepository, audioElementRepository,
-                               mixRepository,
-                               mixPresentationLoudnessRepository);
-
-  // Start a bounce
-  fio_proc.prepareToPlay(16000, 128);
-  fio_proc.setNonRealtime(true);
-
-  // Pass 8 channels worth of data for the two audio elements
-  juce::AudioBuffer<float> buffer(10, 10);
-  juce::MidiBuffer midiBuffer;
-  for (int i = 0; i < 10; ++i) {
-    for (int j = 0; j < 10; ++j) {
-      buffer.setSample(j, i, 0.5f);
-    }
-  }
-
-  for (int i = 0; i < 10; ++i) {
-    fio_proc.processBlock(buffer, midiBuffer);
-  }
-
-  // Complete the bounce
-  fio_proc.setNonRealtime(false);
-
-  // Validate the IAMF file was created.
-  EXPECT_TRUE(std::filesystem::exists(iamfPath));
-
-  // Clean up the IAMF file.
-  std::filesystem::remove(iamfPath);
-}
-
-TEST(test_ambisonics, output_iamf_file) {
-  juce::ValueTree testState("test_state");
-
-  FileExportRepository fileExportRepository(
-      testState.getOrCreateChildWithName("file", nullptr));
-  AudioElementRepository audioElementRepository(
-      testState.getOrCreateChildWithName("element", nullptr));
-  MixPresentationRepository mixRepository(
-      testState.getOrCreateChildWithName("mix", nullptr));
-  MixPresentationLoudnessRepository mixPresentationLoudnessRepository(
-      testState.getOrCreateChildWithName("mixLoudness", nullptr));
-
-  iamf_tools_cli_proto::UserMetadata iamfMD;
-
-  // Set up an output filepath
-  juce::String iamfPathStr(juce::File::getCurrentWorkingDirectory()
-                               .getChildFile("test.iamf")
-                               .getFullPathName());
-  std::filesystem::path iamfPath(iamfPathStr.toStdString());
-  std::filesystem::remove(iamfPath);
-  FileExport ex = fileExportRepository.get();
-  ex.setExportFolder(
-      juce::File::getCurrentWorkingDirectory().getFullPathName());
-  ex.setExportFile(juce::File::getCurrentWorkingDirectory()
-                       .getChildFile("test")
-                       .getFullPathName());
-  ex.setExportAudio(true);
-  ex.setAudioFileFormat(AudioFileFormat::IAMF);
-  fileExportRepository.update(ex);
-
-  // Create some AudioElements to fill the repository with.
-  AudioElement ae1(juce::Uuid(), "Audio Element 1", "Description 1",
-                   Speakers::kHOA2, 0);
-  AudioElement ae2(juce::Uuid(), "Audio Element 2", "Description 2",
-                   Speakers::k5Point1, 2);
-  audioElementRepository.add(ae2);
-  audioElementRepository.add(ae1);
-
-  // Create some MixPresentations to fill the repository with.
-  MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                      LanguageData::MixLanguages::English, {});
-  MixPresentationLoudness mixLoudness(mp1.getId());
-  mp1.addAudioElement(ae2.getId(), 0, ae2.getName());
-  mp1.addAudioElement(ae1.getId(), 0, ae1.getName());
-  // use Speakers::k5Point1 as the largest layout
-  mixLoudness.replaceLargestLayout(Speakers::k5Point1);
-  mixRepository.add(mp1);
-  mixPresentationLoudnessRepository.add(mixLoudness);
-
-  // Create instance of FIO processor
-  FileOutputProcessor fio_proc(fileExportRepository, audioElementRepository,
-                               mixRepository,
-                               mixPresentationLoudnessRepository);
-
-  // Start a bounce
-  fio_proc.prepareToPlay(16000, 128);
-  fio_proc.setNonRealtime(true);
-
-  // Pass 8 channels worth of data for the two audio elements
-  juce::AudioBuffer<float> buffer(10, 10);
-  juce::MidiBuffer midiBuffer;
-  for (int i = 0; i < 10; ++i) {
-    for (int j = 0; j < 10; ++j) {
-      buffer.setSample(j, i, 0.5f);
-    }
-  }
-
-  for (int i = 0; i < 10; ++i) {
-    fio_proc.processBlock(buffer, midiBuffer);
-  }
-
-  // Complete the bounce
-  fio_proc.setNonRealtime(false);
-
-  // Validate the IAMF file was created.
-  EXPECT_TRUE(std::filesystem::exists(iamfPath));
-
-  // Clean up the IAMF file.
-  std::filesystem::remove(iamfPath);
-}
-
-class FileOutputProcessorTest : public SharedTestFixture {};
-
-TEST_F(FileOutputProcessorTest, iamf_lpc_1ae_extl_1mp) {
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementExpandedLayouts) {
-    // Create an AudioElement with the current layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    audioElementRepository.add(ae);
-
-    // Add the audio element to the mix presentation.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1.f,
-                        LanguageData::MixLanguages::English, {});
-    // not updating the largest layout for explanded layouts
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    mixRepository.add(mp1);
-    mixPresentationLoudnessRepository.add(mixLoudness);
-
-    // NOTE: This data is currently set by the UI. Setting here for testing.
-    // Update the IAProfile header based on the number of audio
-    // elements and channels.
-    ex.setProfile(FileProfile::BASE_ENHANCED);
-    generateAndBounceAudio();
-    bounceExportConfig(ex, "IAMF file failed to be created for layout: " +
-                               aeLayout.toString() + " with LPCM encoding.");
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
 }
 
-// Test exporting an IAMF file with an Audio Element of one of the expanded
-// loudspeaker layouts as well as an element with a standard layout.
-TEST_F(FileOutputProcessorTest, iamf_lpc_2ae_extl_1mp) {
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementExpandedLayouts) {
-    // Create an AudioElement with the current layout and one with a stereo
-    // layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    AudioElement ae1(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                     Speakers::kStereo, 0);
-    audioElementRepository.add(ae);
-    audioElementRepository.add(ae1);
+TEST_F(FileOutputTests, iamf_lpc_1ae_1mp_expl) {
+  for (const Layout layout : kAudioElementExpandedLayouts) {
+    const juce::Uuid kAE = addAudioElement(layout);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE});
 
-    // Add the audio element to the mix presentation.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1.f,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics() &&
-        aeLayout.getExplBaseLayout().getNumChannels() > 2) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-    }
-    mixRepository.add(mp1);
-    mixPresentationLoudnessRepository.add(mixLoudness);
+    setTestExportOpts(
+        {AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
-    // NOTE: This data is currently set by the UI. Setting here for testing.
-    // Update the IAProfile header based on the number of audio
-    // elements and channels.
-    ex.setProfile(FileProfile::BASE_ENHANCED);
-    bounceExportConfig(
-        ex, "IAMF file failed to be created for Mix Presentation with AEs: " +
-                ae.getDescription() + " + " + ae1.getDescription() +
-                " with LPCM encoding.");
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
 }
 
-TEST_F(FileOutputProcessorTest, iamf_flac_1ae_1mp) {
-  ex.setAudioCodec(AudioCodec::FLAC);
-  fileExportRepository.update(ex);
+TEST_F(FileOutputTests, iamf_lpc_2ae_1mp) {
+  const Layout kLayout1 = Speakers::kStereo;
+  const Layout kLayout2 = Speakers::kHOA2;
+  const juce::Uuid kAE1 = addAudioElement(kLayout1);
+  const juce::Uuid kAE2 = addAudioElement(kLayout2);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementLayouts) {
-    // Create an AudioElement with the current layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    audioElementRepository.add(ae);
+  setTestExportOpts({AudioCodec::LPCM});
 
-    // Add the audio element to the mix presentation.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics()) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-    }
-    mixRepository.add(mp1);
-    mixPresentationLoudnessRepository.add(mixLoudness);
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-    generateAndBounceAudio();
+  bounceAudio(fio_proc, audioElementRepository);
 
-    EXPECT_NE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK"),
-              std::string::npos)
-        << getLoggedExportStatus();
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+}
 
-    EXPECT_TRUE(std::filesystem::exists(iamfOutPath))
-        << "IAMF file failed to be created for layout: " << aeLayout.toString()
-        << " with LPCM encoding.";
+TEST_F(FileOutputTests, iamf_lpc_2ae_expl_1mp) {
+  const Layout kLayout1 = Speakers::kStereo;
+  const Layout kLayout2 = Speakers::kExplLFE;
+  const juce::Uuid kAE1 = addAudioElement(kLayout1);
+  const juce::Uuid kAE2 = addAudioElement(kLayout2);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-    std::filesystem::remove(iamfOutPath);
+  setTestExportOpts({AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+}
+
+TEST_F(FileOutputTests, iamf_lpc_1ae_2mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE = addAudioElement(layout);
+    const juce::Uuid kMP1 = addMixPresentation();
+    const juce::Uuid kMP2 = addMixPresentation();
+    addAudioElementsToMix(kMP1, {kAE});
+    addAudioElementsToMix(kMP2, {kAE});
+
+    setTestExportOpts({AudioCodec::LPCM});
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
 }
 
-TEST_F(FileOutputProcessorTest, iamf_lpc_1ae_2mp) {
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementLayouts) {
-    // Create an AudioElement with the current layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    audioElementRepository.add(ae);
+TEST_F(FileOutputTests, iamf_lpc_2ae_2mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE1 = addAudioElement(layout);
+    const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+    const juce::Uuid kMP1 = addMixPresentation();
+    const juce::Uuid kMP2 = addMixPresentation();
+    addAudioElementsToMix(kMP1, {kAE1, kAE2});
+    addAudioElementsToMix(kMP2, {kAE1, kAE2});
 
-    // Add the audio element to the mix presentation.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1.f,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentation mp2(juce::Uuid(), "Mix Presentation 2", .5f,
-                        LanguageData::MixLanguages::English, {});
+    setTestExportOpts(
+        {AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    MixPresentationLoudness mixLoudness2(mp2.getId());
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    mp2.addAudioElement(ae.getId(), 0, ae.getName());
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics()) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-      mixLoudness2.replaceLargestLayout(aeLayout);
-    }
-    mixRepository.add(mp1);
-    mixRepository.add(mp2);
-    mixPresentationLoudnessRepository.add(mixLoudness);
-    mixPresentationLoudnessRepository.add(mixLoudness2);
-    generateAndBounceAudio();
+    bounceAudio(fio_proc, audioElementRepository);
 
-    EXPECT_NE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK"),
-              std::string::npos)
-        << getLoggedExportStatus();
-
-    EXPECT_TRUE(std::filesystem::exists(iamfOutPath))
-        << "IAMF file failed to be created for layout: " << aeLayout.toString()
-        << " with LPCM encoding.";
-
-    std::filesystem::remove(iamfOutPath);
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
 }
 
-TEST_F(FileOutputProcessorTest, iamf_opus_1ae_1mp) {
-  ex.setAudioCodec(AudioCodec::OPUS);
-  fileExportRepository.update(ex);
-
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementLayouts) {
-    // Create an AudioElement with the current layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    audioElementRepository.add(ae);
-
-    // Add the audio element to the mix presentation.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics()) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-    }
-    mixRepository.add(mp1);
-    mixPresentationLoudnessRepository.add(mixLoudness);
-    generateAndBounceAudio();
-
-    EXPECT_TRUE(getLoggedExportStatus().find(
-                    "IAMF export attempt completed with status: OK") !=
-                std::string::npos)
-        << getLoggedExportStatus();
-
-    EXPECT_TRUE(std::filesystem::exists(iamfOutPath))
-        << "IAMF file failed to be created for layout: " << aeLayout.toString()
-        << " with LPCM encoding.";
-
-    std::filesystem::remove(iamfOutPath);
-  }
-}
-
-TEST_F(FileOutputProcessorTest, iamf_lpc_2ae_1mp) {
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementLayouts) {
-    // Create an AudioElement with the current layout and one with a stereo
-    // layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    AudioElement ae1(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                     Speakers::kStereo, 0);
-    audioElementRepository.add(ae);
-    audioElementRepository.add(ae1);
-
-    // Add the audio element to the mix presentation.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1.f,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics() &&
-        aeLayout.getNumChannels() > 2) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-    }
-    mixRepository.add(mp1);
-    mixPresentationLoudnessRepository.add(mixLoudness);
-    // NOTE: This data is currently set by the UI. Setting here for testing.
-    // Update the IAProfile header based on the number of audio
-    // elements and channels.
-    ex.setProfile(FileProfile::BASE_ENHANCED);
-    fileExportRepository.update(ex);
-    bounceExportConfig(
-        ex, "IAMF file failed to be created for Mix Presentation with AEs: " +
-                ae.getDescription() + " + " + ae1.getDescription() +
-                " with LPCM encoding.");
-  }
-}
-
-TEST_F(FileOutputProcessorTest, iamf_lpc_2ae_2mp) {
-  // Iterate over all currently supported Audio Element types, and export an
-  // IAMF file.
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementLayouts) {
-    // Create an AudioElement with the current layout and one with a stereo
-    // layout.
-    audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    AudioElement ae1(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                     Speakers::kStereo, 0);
-    audioElementRepository.add(ae);
-    audioElementRepository.add(ae1);
-
-    // Add each audio element to both mix presentations.
-    mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1.f,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentation mp2(juce::Uuid(), "Mix Presentation 2", .5f,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    MixPresentationLoudness mixLoudness2(mp2.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-    mp1.addAudioElement(ae1.getId(), 0, ae1.getName());
-
-    mp2.addAudioElement(ae.getId(), 0, ae.getName());
-    mp2.addAudioElement(ae1.getId(), 0, ae1.getName());
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics() &&
-        aeLayout.getNumChannels() > 2) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-      mixLoudness2.replaceLargestLayout(aeLayout);
-    }
-    mixRepository.add(mp1);
-    mixRepository.add(mp2);
-    mixPresentationLoudnessRepository.add(mixLoudness);
-    mixPresentationLoudnessRepository.add(mixLoudness2);
-
-    // NOTE: This data is currently set by the UI. Setting here for testing.
-    // Update the IAProfile header based on the number of audio
-    // elements and channels.
-    ex.setProfile(FileProfile::BASE_ENHANCED);
-    bounceExportConfig(ex, "LPCM with AEs: " + ae.getDescription() + " + " +
-                               ae1.getDescription());
-  }
-}
-
-TEST_F(FileOutputProcessorTest, iamf_lpc_28ae_1mp) {
-  const Speakers::AudioElementSpeakerLayout kAudioElementLayout =
-      Speakers::kMono;
-
-  // Create the max number of elements supported by the Base-Enhanced IAProfile
-  // (28).
-  MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1.f,
-                      LanguageData::MixLanguages::English, {});
+TEST_F(FileOutputTests, iamf_lpc_28ae_1mp) {
+  std::vector<juce::Uuid> aeIds;
   for (int i = 0; i < 28; ++i) {
-    AudioElement ae(juce::Uuid(), "Audio Element " + juce::String(i),
-                    kAudioElementLayout.toString(), kAudioElementLayout, i);
-    audioElementRepository.add(ae);
-    mp1.addAudioElement(ae.getId(), 1.f, ae.getName());
+    aeIds.push_back(addAudioElement(Speakers::kMono));
   }
-  MixPresentationLoudness mixLoudness(mp1.getId());  // 28 mono elements
-  mixRepository.add(mp1);
-  mixPresentationLoudnessRepository.add(mixLoudness);
-  // NOTE: This data is currently set by the UI. Setting here for testing.
-  // Update the IAProfile header based on the number of audio elements and
-  // channels.
-  ex.setProfile(FileProfile::BASE_ENHANCED);
-  fileExportRepository.update(ex);
+  const juce::Uuid kMP1 = addMixPresentation();
+  addAudioElementsToMix(kMP1, aeIds);
 
-  generateAndBounceAudio();
+  setTestExportOpts({AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-  // Unless the IAProfile is invalid (possible given element combinations), we
-  // expect an output file.
-  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
+  bounceAudio(fio_proc, audioElementRepository);
 
-  std::filesystem::remove(iamfOutPath);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  std::filesystem::remove(iamfOutPath);  // Rm for next iteration
 }
 
-// Test muxing with an IAMF file with a single channel-based audio element.
-TEST_F(FileOutputProcessorTest, mux_iamf_1ae_cb) {
-  setup_1ae_cb();
+TEST_F(FileOutputTests, iamf_multi_codec_multi_sr_1ae_1mp) {
+  const juce::Uuid kAE = addAudioElement(Speakers::k7Point1Point4);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+  for (const AudioCodec codec :
+       {AudioCodec::LPCM, AudioCodec::FLAC, AudioCodec::OPUS}) {
+    for (const int sampleRate : {16e3, 44.1e3, 48e3, 96e3}) {
+      if (codec == AudioCodec::OPUS &&
+          (sampleRate == 44.1e3 || sampleRate == 96e3)) {
+        continue;  // Opus does not support 44.1kHz and 96kHz
+      }
+      setTestExportOpts({.codec = codec, .sampleRate = sampleRate});
 
-  // Configure video export settings.
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+      ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-  generateAndBounceAudio();
+      bounceAudio(fio_proc, audioElementRepository, sampleRate);
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
+      ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+      std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+    }
+  }
+}
 
-  // Validate the MP4 file was created.
+TEST_F(FileOutputTests, iamf_flac_1ae_1mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE = addAudioElement(layout);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE});
+
+    setTestExportOpts({AudioCodec::FLAC});
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+  }
+}
+
+TEST_F(FileOutputTests, iamf_opus_1ae_1mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE = addAudioElement(layout);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE});
+
+    setTestExportOpts({AudioCodec::OPUS});
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+  }
+}
+
+TEST_F(FileOutputTests, iamf_flac_2ae_1mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE1 = addAudioElement(layout);
+    const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE1, kAE2});
+
+    setTestExportOpts(
+        {AudioCodec::FLAC, .profile = FileProfile::BASE_ENHANCED});
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+  }
+}
+
+TEST_F(FileOutputTests, iamf_opus_2ae_1mp) {
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE1 = addAudioElement(layout);
+    const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE1, kAE2});
+
+    setTestExportOpts(
+        {AudioCodec::OPUS, .profile = FileProfile::BASE_ENHANCED});
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
+  }
+}
+
+TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+
+  bounceAudio(fio_proc, audioElementRepository);
+
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
-
-  // Clean up created files.
-  std::filesystem::remove(iamfOutPath);
-  std::filesystem::remove(videoOutPath);
 }
 
-// Test muxing with an IAMF file with a single scene-based audio element.
-TEST_F(FileOutputProcessorTest, mux_iamf_1ae_sb) {
-  setup_1ae_sb();
+TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  // Configure video export settings.
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+  setTestExportOpts({.codec = AudioCodec::FLAC, .exportVideo = true});
 
-  generateAndBounceAudio();
+  EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
+  bounceAudio(fio_proc, audioElementRepository);
 
-  // Validate the MP4 file was created.
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
-
-  // Clean up created files.
-  std::filesystem::remove(iamfOutPath);
-  std::filesystem::remove(videoOutPath);
 }
 
-// Test muxing with an IAMF file with a 2 channel-based audio elements.
-TEST_F(FileOutputProcessorTest, mux_iamf_2ae_cb) {
-  setup_2ae_cb();
+TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kHOA3);
+  const juce::Uuid kMP1 = addMixPresentation();
+  const juce::Uuid kMP2 = addMixPresentation();
+  addAudioElementsToMix(kMP1, {kAE1, kAE2});
+  addAudioElementsToMix(kMP2, {kAE1, kAE2});
 
-  // Configure video export settings.
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::BASE_ENHANCED);
-  fileExportRepository.update(ex);
+  setTestExportOpts({.codec = AudioCodec::OPUS, .exportVideo = true});
 
-  generateAndBounceAudio();
+  EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
+  bounceAudio(fio_proc, audioElementRepository);
 
-  // Validate the MP4 file was created.
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
-
-  // Clean up created files.
-  std::filesystem::remove(iamfOutPath);
-  std::filesystem::remove(videoOutPath);
 }
 
-// Test custom LPC settings
-TEST_F(FileOutputProcessorTest, iamf_lpc_custom_param) {
-  setup_1ae_51();
+// Codec param tests. These tests focus on testing advanced codec specific file
+// export configurations. As such, the configuration is kept local to the tests
+// rather than being done through the generic `setTestExportOpts` function.
+TEST_F(FileOutputTests, iamf_lpc_custom_param) {
+  const juce::Uuid kAE = addAudioElement(Speakers::k5Point1Point4);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
   auto config = fileExportRepository.get();
   config.setAudioCodec(AudioCodec::LPCM);
   for (int i = 16; i <= 32; i += 8) {
     config.setLPCMSampleSize(i);
-    bounceExportConfig(config, "Custom LPCM sample size: " + juce::String(i));
+    fileExportRepository.update(config);
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
 }
 
-// Test custom LPC settings
-TEST_F(FileOutputProcessorTest, iamf_opus_custom_param) {
-  setup_1ae_51();
+TEST_F(FileOutputTests, iamf_opus_custom_param) {
+  const juce::Uuid kAE = addAudioElement(Speakers::k5Point1Point4);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
   auto config = fileExportRepository.get();
   config.setAudioCodec(AudioCodec::OPUS);
-  for (int i = 6000; i < 256000; i = i + 1000) {
+  for (int i = 6000; i < 256000; i += 1000) {
     config.setOpusTotalBitrate(i);
-    bounceExportConfig(config, "Custom OPUC bitrate: " + juce::String(i));
+    fileExportRepository.update(config);
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
 }
 
-TEST_F(FileOutputProcessorTest, iamf_flac_custom_param) {
-  setup_1ae_51();
+TEST_F(FileOutputTests, iamf_flac_custom_param) {
+  const juce::Uuid kAE = addAudioElement(Speakers::k5Point1Point4);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
   auto config = fileExportRepository.get();
   config.setAudioCodec(AudioCodec::FLAC);
   for (int i = 0; i < 16; ++i) {
     config.setFlacCompressionLevel(i);
     fileExportRepository.update(config);
-    bounceExportConfig(config, "Custom OPUC bitrate: " + juce::String(i));
+
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    std::filesystem::remove(iamfOutPath);  // Rm for next iteration
   }
+}
+
+TEST_F(FileOutputTests, validate_file_checksum) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({AudioCodec::LPCM});
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  // Verify the file exists and generate checksum
+  juce::File iamfFile(iamfOutPath.string());
+  ASSERT_TRUE(iamfFile.existsAsFile());
+
+  std::unique_ptr<juce::FileInputStream> fileStream(
+      iamfFile.createInputStream());
+  juce::MemoryBlock fileData;
+  fileData.setSize(iamfFile.getSize());
+  fileStream->read(fileData.getData(), fileData.getSize());
+
+  // Generate checksum for the exported file
+  juce::SHA256 newChecksum(fileData.getData(), fileData.getSize());
+  const juce::String kNewChecksumString = newChecksum.toHexString();
+
+  // Select reference checksum file based on build type
+  const char* kReferenceFile =
+#ifdef NDEBUG
+      "HashSourceFileRelease.iamf";
+#else
+      "HashSourceFileDebug.iamf";
+#endif
+
+  const std::filesystem::path kReferenceFilePath =
+      std::filesystem::current_path().parent_path() /
+      "common/processors/tests/test_resources" / kReferenceFile;
+
+  const juce::File kReferenceChecksumFile(kReferenceFilePath.string());
+  ASSERT_TRUE(kReferenceChecksumFile.existsAsFile());
+
+  juce::MemoryBlock referenceData;
+  kReferenceChecksumFile.loadFileAsData(referenceData);
+
+  const juce::SHA256 kReferenceChecksum(referenceData.getData(),
+                                        referenceData.getSize());
+  const juce::String kReferenceChecksumString =
+      kReferenceChecksum.toHexString();
+
+  // Compare the checksums
+  EXPECT_EQ(kNewChecksumString, kReferenceChecksumString);
+
+  std::filesystem::remove(iamfOutPath);
 }

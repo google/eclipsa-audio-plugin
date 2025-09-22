@@ -176,9 +176,7 @@ void AudioElement::populateAmbisonicsConfig(
 }
 
 void AudioElement::populateIamfAudioFrameMetadata(
-    iamf_tools_cli_proto::AudioFrameObuMetadata* afMD, const int aeID,
-    const std::string& aeSourceAudio, int framesWritten) const {
-  afMD->set_wav_filename(aeSourceAudio);
+    iamf_tools_cli_proto::AudioFrameObuMetadata* afMD, const int aeID) const {
   afMD->set_audio_element_id(aeID);
   afMD->set_samples_to_trim_at_end(0);
   afMD->set_samples_to_trim_at_start(0);

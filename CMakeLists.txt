@@ -96,6 +96,6 @@ add_subdirectory(common)
 add_subdirectory(rendererplugin)
 add_subdirectory(audioelementplugin)
 
-if (INTERNAL_TEST)
+if (CI_TEST OR INTERNAL_TEST)
     eclipsa_build_tests()
 endif()

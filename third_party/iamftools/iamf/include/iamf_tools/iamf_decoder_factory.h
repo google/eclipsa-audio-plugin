@@ -18,22 +18,21 @@
 #include <memory>
 #include <unordered_set>
 
-#include "iamf/include/iamf_tools/iamf_decoder_interface.h"
+#include "iamf_decoder_interface.h"
 #include "iamf_tools_api_types.h"
 
 namespace iamf_tools {
 namespace api {
 
-/*!\brief Factory functions for creating IAMF decoders.*/
+/*!\brief Factory functions for creating IAMF decoders. */
 class IamfDecoderFactory {
  public:
   /*!\brief Settings for the `IamfDecoderInterface`. */
   struct Settings {
-    // Specifies the desired output layout. This layout will be used so long as
-    // it is present in the Descriptor OBUs that are provided. If not, after
-    // `IsDescriptorProcessingComplete` returns true, a default layout will have
-    // been selected and retrievable via `GetOutputLayout`.
-    OutputLayout requested_layout = OutputLayout::kItu2051_SoundSystemA_0_2_0;
+    // Specifies the desired output Mix Presentation ID and/or layout.
+    // The selected result will be retrievable after Descriptor OBUs have been
+    // processed.
+    RequestedMix requested_mix;
 
     // Specify a different ordering for the output samples.  Only specific
     // orderings are available, custom or granular control is not possible.

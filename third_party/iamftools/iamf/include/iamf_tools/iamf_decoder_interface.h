@@ -121,25 +121,10 @@ class IamfDecoderInterface {
    */
   virtual bool IsDescriptorProcessingComplete() const = 0;
 
-  /*!\brief Gets the layout that will be used to render the audio.
-   *
-   * The actual Layout used for rendering may not the same as requested when
-   * creating the IamfDecoder, if the requested Layout could not be used.
-   * This function allows verifying the actual Layout used after Descriptor OBU
-   * parsing is complete.
-   *
-   * This function can only be used after all Descriptor OBUs have been parsed,
-   * i.e. IsDescriptorProcessingComplete() returns true.
-   *
-   * \param output_layout Output param for the layout upon success.
-   * \return Ok status upon success. Other specific statuses on failure.
-   */
-  virtual IamfStatus GetOutputLayout(OutputLayout& output_layout) const = 0;
-
   /*!\brief Gets the number of output channels.
    *
-   * This function can only be used after all Descriptor OBUs have been parsed,
-   * i.e. IsDescriptorProcessingComplete() returns true.
+   * N.B.: This function can only be used after all Descriptor OBUs have been
+   * parsed, i.e. IsDescriptorProcessingComplete() returns true.
    *
    * \param output_num_channels Output param for the number of output channels
    * upon success.
@@ -148,20 +133,37 @@ class IamfDecoderInterface {
   virtual IamfStatus GetNumberOfOutputChannels(
       int& output_num_channels) const = 0;
 
+  /*!\brief Gets the output mix that will be used to render the audio.
+   *
+   * The actual Layout used for rendering may not be the same as requested when
+   * creating the IamfDecoder, if the requested ID was invalid or the Layout
+   * could not be used. This function allows verifying the actual Layout used
+   * after Descriptor OBU parsing is complete.
+   *
+   * N.B.: This function can only be used after all Descriptor OBUs have been
+   * parsed, i.e. IsDescriptorProcessingComplete() returns true.
+   *
+   * \param output_selected_mix Output param for the mix upon success.
+   * \return Ok status upon success. Other specific statuses on failure.
+   */
+  virtual IamfStatus GetOutputMix(SelectedMix& output_selected_mix) const = 0;
+
   /*!\brief Returns the current OutputSampleType.
    *
    * The value is either the values specified in the Settings or a default
    * which may vary based on content.
    *
-   * This function can only be used after all Descriptor OBUs have been parsed,
-   * i.e. IsDescriptorProcessingComplete() returns true.
+   * N.B.: This function can only be used after all Descriptor OBUs have been
+   * parsed, i.e. IsDescriptorProcessingComplete() returns true.
    */
   virtual OutputSampleType GetOutputSampleType() const = 0;
 
-  /*!\brief Gets the sample rate.
+  /*!\brief Gets the sample rate of the output audio.
    *
-   * This function can only be used after all Descriptor OBUs have been parsed,
-   * i.e. IsDescriptorProcessingComplete() returns true.
+   * The value is from the content of the IAMF bitstream.
+   *
+   * N.B.: This function can only be used after all Descriptor OBUs have been
+   * parsed, i.e. IsDescriptorProcessingComplete() returns true.
    *
    * \param output_sample_rate Output param for the sample rate upon success.
    * \return Ok status upon success. Other specific statuses on failure.
@@ -170,12 +172,13 @@ class IamfDecoderInterface {
 
   /*!\brief Gets the number of samples per frame.
    *
-   * This function can only be used after all Descriptor OBUs have been parsed,
-   * i.e. IsDescriptorProcessingComplete() returns true.
    *
    * Returns the number of samples per frame per channel of the output audio.
    * The total number of samples in a frame is the number of channels times
    * this number, the frame size.
+   *
+   * N.B.: This function can only be used after all Descriptor OBUs have been
+   * parsed, i.e. IsDescriptorProcessingComplete() returns true.
    *
    * \param output_frame_size Output param for the frame size upon success.
    * \return Ok status upon success. Other specific statuses on failure.
@@ -203,9 +206,7 @@ class IamfDecoderInterface {
   /*!\brief Resets the decoder with a new layout and a clean state.
    *
    * A clean state refers to a state in which descriptors OBUs have been parsed,
-   * but no other data has been parsed. If possible, the decoder will use the
-   * new layout for decoding. To confirm the actual layout that will be used,
-   * GetOutputLayout() should be called before continuing to decode.
+   * but no other data has been parsed.
    *
    * Useful for dynamic playback layout changes.
    *
@@ -218,14 +219,20 @@ class IamfDecoderInterface {
    *
    * return Ok status upon success. Other specific statuses on failure.
    */
-  virtual IamfStatus ResetWithNewLayout(OutputLayout output_layout) = 0;
+  virtual IamfStatus ResetWithNewMix(const RequestedMix& requested_mix,
+                                     SelectedMix& selected_mix) = 0;
 
   /*!\brief Signals to the decoder that no more data will be provided.
    *
    * Decode cannot be called after this method has been called, unless Reset()
    * is called first.
+   *
+   * User should call GetOutputTemporalUnit() until it returns no bytes after
+   * calling this function to get any remaining output.
+   *
+   * \return Ok status upon success. Other specific statuses on failure.
    */
-  virtual void SignalEndOfDecoding() = 0;
+  virtual IamfStatus SignalEndOfDecoding() = 0;
 };
 }  // namespace api
 }  // namespace iamf_tools

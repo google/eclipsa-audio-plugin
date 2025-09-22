@@ -17,17 +17,13 @@
 AmbisonicPanner::AmbisonicPanner(
     const Speakers::AudioElementSpeakerLayout pannedLayout,
     const int samplesPerBlock, const int sampleRate)
-    : encoder_(nullptr),
-      AudioPanner(pannedLayout, samplesPerBlock, sampleRate) {
+    : AudioPanner(pannedLayout, samplesPerBlock, sampleRate),
+      inputBufferPlanar_(1, kSamplesPerBlock_),
+      outputBufferPlanar_(pannedLayout.getNumChannels(), kSamplesPerBlock_),
+      encoder_(std::make_unique<obr::AmbisonicEncoder>(
+          1, (int)(std::sqrt(pannedLayout.getNumChannels()) - 1.0))) {
   // Create the encoder for encoding to the desired ambisonic order.
-  encoder_ = std::make_unique<obr::AmbisonicEncoder>(
-      1, std::sqrt(pannedLayout.getNumChannels()) - 1);
   int numSamplesOutPlanar = pannedLayout.getNumChannels() * kSamplesPerBlock_;
-
-  // Resize internal buffers for API calls.
-  inputBufferPlanar_ = obr::AudioBuffer(1, kSamplesPerBlock_);
-  outputBufferPlanar_ =
-      obr::AudioBuffer(pannedLayout.getNumChannels(), kSamplesPerBlock_);
 }
 
 AmbisonicPanner::~AmbisonicPanner() {}

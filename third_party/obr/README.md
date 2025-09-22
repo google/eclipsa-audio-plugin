@@ -1,5 +1,5 @@
 - Compiled from: https://github.com/google/obr
-- Commit: https://github.com/google/obr/commit/98a632670c366eeeaefec9eb5f44c5b799cac571
+- Commit: https://github.com/google/obr/commit/212982959ef5fe0de36f666c0450e11c711c58e8
 
 ### Compile notes
 - Compiled for ARM OSX (Sonoma 14.4.1, clang 15.0.0).
@@ -50,12 +50,12 @@
       )
 
 - Move the Abseil version forward to something compatible with this project:
-  - At current time of compile we're using abseil version 20240116.0
+  - At current time of compile we're using abseil version 20250512.1
   - Update the following in the obr/MODULE.bazel file to the necessary Abseil version
     
     bazel_dep(
         name = "abseil-cpp",
-        version = "20240116.0",
+        version = "20250512.1",
         repo_name = "com_google_absl",
     )
 
@@ -66,7 +66,7 @@
 - Rename the library to obr.dylib and copy to third_party/obr/lib
 
 - Update the dylib RPATH by running the following command:
-  install_name_tool -id "@rpath/third_party/obr/lib/obr.dylib" obr.dylib
+  install_name_tool -id "@rpath/third_party/obr/lib/libobr.dylib" libobr.dylib
 
 - Verify the RPATH was succesfully updated by running the following and ensuring the above path is returned:
   otool -l obr.dylib | grep obr.dylib

@@ -124,6 +124,15 @@ jobs:
           find rendererplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
           find audioelementplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
 
+      - name: Setup CMake 3.30.x
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: "3.30.x"
+      - name: Verify CMake
+        run: |
+          cmake --version
+          which cmake
+
       - name: Configure CMake
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "${{ env.GENERATOR }}" \

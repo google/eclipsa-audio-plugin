@@ -12,16 +12,16 @@ edition = "2023";
 
 package iamf_tools_cli_proto;
 
-import "iamf/cli/proto/arbitrary_obu.proto";
-import "iamf/cli/proto/audio_element.proto";
-import "iamf/cli/proto/audio_frame.proto";
-import "iamf/cli/proto/codec_config.proto";
-import "iamf/cli/proto/encoder_control_metadata.proto";
-import "iamf/cli/proto/ia_sequence_header.proto";
-import "iamf/cli/proto/mix_presentation.proto";
-import "iamf/cli/proto/parameter_block.proto";
-import "iamf/cli/proto/temporal_delimiter.proto";
-import "iamf/cli/proto/test_vector_metadata.proto";
+import "arbitrary_obu.proto";
+import "audio_element.proto";
+import "audio_frame.proto";
+import "codec_config.proto";
+import "encoder_control_metadata.proto";
+import "ia_sequence_header.proto";
+import "mix_presentation.proto";
+import "parameter_block.proto";
+import "temporal_delimiter.proto";
+import "test_vector_metadata.proto";
 
 message UserMetadata {
   reserved 1, 5;

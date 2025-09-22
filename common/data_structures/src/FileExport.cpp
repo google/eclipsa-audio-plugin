@@ -33,6 +33,7 @@ FileExport::FileExport()
       flac_compression_level_(8),
       opus_total_bitrate_(64000),
       lpcm_sample_size_(24),
+      sample_tally_(0),
       profile_(FileProfile::BASE) {}
 
 FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
@@ -62,7 +63,8 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
       profile_(profile),
       flac_compression_level_(flac_compression_level),
       opus_total_bitrate_(opus_total_bitrate),
-      lpcm_sample_size_(lpcm_sample_size) {}
+      lpcm_sample_size_(lpcm_sample_size),
+      sample_tally_(0) {}
 
 FileExport FileExport::fromTree(const juce::ValueTree tree) {
   return FileExport(
@@ -94,5 +96,6 @@ juce::ValueTree FileExport::toValueTree() const {
            {kProfile, static_cast<int>(profile_)},
            {kFlacCompressionLevel, flac_compression_level_},
            {kOpusTotalBitrate, opus_total_bitrate_},
-           {kLPCMSampleSize, lpcm_sample_size_}}};
+           {kLPCMSampleSize, lpcm_sample_size_},
+           {kSampleTally, static_cast<juce::int64>(sample_tally_)}}};
 }

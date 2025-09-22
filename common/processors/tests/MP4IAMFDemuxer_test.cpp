@@ -12,395 +12,224 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "FileOutputFixture.h"
+#include <gtest/gtest.h>
 
-// Demuxer-specific tests using the shared fixture
-class MP4IAMFDemuxerTest : public SharedTestFixture {};
+#include <filesystem>
 
-// Test muxing with an IAMF file with a single channel-based audio element
-TEST_F(MP4IAMFDemuxerTest, mux_iamf_1ae_cb) {
-  setup_1ae_cb();
+#include "FileOutputTestFixture.h"
+#include "processors/tests/FileOutputTestUtils.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-  // Configure video export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+using Layout = Speakers::AudioElementSpeakerLayout;
 
-  generateAndBounceAudio();
+class MP4IAMFDemuxerTest : public FileOutputTests {
+ public:
+  MP4IAMFDemuxerTest() : demuxer() {}
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
-
-  // Validate the MP4 file was created
-  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
-  EXPECT_TRUE(std::filesystem::exists(videoOutPath));
-
-  // Validate the muxed file integrity
   MP4IAMFDemuxer demuxer;
-  EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
-      videoPathStr, iamfPathStr, kSampleRate,
-      16,              // Bit depth
-      SOUND_SYSTEM_A,  // Sound system (stereo=0)
-      0.01f            // Tolerance (1%)
-      ))
-      << "IAMF integrity verification failed";
+};
 
-  // Clean up created files
-  std::filesystem::remove(iamfOutPath);
-  std::filesystem::remove(videoOutPath);
+TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_cb) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  ASSERT_FALSE(std::filesystem::exists(videoOutPath));
+
+  bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
+
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+
+  EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+      videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+      SOUND_SYSTEM_A, 0.01f));
 }
 
-// Test muxing with an IAMF file with a single scene-based audio element
-TEST_F(MP4IAMFDemuxerTest, mux_iamf_1ae_sb) {
-  setup_1ae_sb();
+TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_sb) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kHOA1);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
-  // Configure video export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
-  generateAndBounceAudio();
+  bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
-  // Validate the MP4 file was created
-  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
-  EXPECT_TRUE(std::filesystem::exists(videoOutPath));
-
-  // Validate the muxed file integrity
-  MP4IAMFDemuxer demuxer;
   EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
-      videoPathStr, iamfPathStr, kSampleRate,
-      16,              // Bit depth
-      SOUND_SYSTEM_A,  // Sound system (stereo=0)
-      0.01f            // Tolerance (1%)
-      ))
-      << "IAMF integrity verification failed";
-
-  // Clean up created files
-  std::filesystem::remove(iamfOutPath);
-  std::filesystem::remove(videoOutPath);
+      videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+      SOUND_SYSTEM_A, 0.01f));
 }
 
-// Test muxing with an IAMF file with 2 channel-based audio elements
-TEST_F(MP4IAMFDemuxerTest, mux_iamf_2ae_cb) {
-  setup_2ae_cb();
+TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_2ae_cb) {
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kExpl9Point1Point6Side);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  // Configure video export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::BASE_ENHANCED);
-  fileExportRepository.update(ex);
+  setTestExportOpts({.codec = AudioCodec::LPCM,
+                     .profile = FileProfile::BASE_ENHANCED,
+                     .exportVideo = true});
 
-  generateAndBounceAudio();
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  ASSERT_FALSE(std::filesystem::exists(videoOutPath));
 
-  EXPECT_TRUE(getLoggedExportStatus().find(
-                  "IAMF export attempt completed with status: OK") !=
-              std::string::npos)
-      << getLoggedExportStatus();
+  bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
-  // Validate the MP4 file was created
-  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
-  EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
-  // Validate the muxed file integrity
-  MP4IAMFDemuxer demuxer;
   EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
-      videoPathStr, iamfPathStr, kSampleRate,
-      16,              // Bit depth
-      SOUND_SYSTEM_A,  // Sound system (stereo=0)
-      0.01f            // Tolerance (1%)
-      ))
-      << "IAMF integrity verification failed";
-
-  // Clean up created files
-  std::filesystem::remove(iamfOutPath);
-  std::filesystem::remove(videoOutPath);
+      videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+      SOUND_SYSTEM_A, 0.01f));
 }
 
-// Complete end-to-end test with a single channel-based audio element
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_1ae_cb) {
-  // Set up a single channel-based audio element
-  setup_1ae_cb();  // Sets up stereo layout
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
-  // Configure export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
-  // Run end-to-end test
-  EXPECT_TRUE(runEndToEndTest()) << "End-to-end test failed";
+  bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
+
+  EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+      videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+      SOUND_SYSTEM_A, 0.01f));
 }
 
-// Complete end-to-end test with a single scene-based audio element
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_1ae_sb) {
-  // Set up a single scene-based audio element
-  setup_1ae_sb();
+  const juce::Uuid kAE = addAudioElement(Speakers::kHOA1);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
-  // Configure export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+  bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
-  // Run end-to-end test
-  EXPECT_TRUE(runEndToEndTest()) << "End-to-end test failed";
+  EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+      videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+      SOUND_SYSTEM_A, 0.01f));
 }
 
-// Complete end-to-end test with two channel-based audio elements
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_2ae_cb) {
-  // Set up two channel-based audio elements
-  setup_2ae_cb();
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kExplLFE);
+  const juce::Uuid kMP = addMixPresentation();
 
-  // Configure export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::BASE_ENHANCED);
-  fileExportRepository.update(ex);
+  addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  // Run end-to-end test
-  EXPECT_TRUE(runEndToEndTest()) << "End-to-end test failed";
+  setTestExportOpts({.codec = AudioCodec::LPCM,
+                     .exportVideo = true,
+                     .profile = FileProfile::BASE_ENHANCED});
+
+  bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
+
+  EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+      videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+      SOUND_SYSTEM_A, 0.01f));
 }
 
-// Test all speaker layouts with end-to-end verification
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_all_layouts) {
-  // Check if video source exists, skip video tests if not
-  if (!std::filesystem::exists(videoSourcePath)) {
-    std::cerr << "Video source not found: " << videoSourcePath.string()
-              << std::endl;
-    GTEST_SKIP() << "Skipping test as video source file not found";
-  }
+  for (const Layout layout : kAudioElementLayouts) {
+    const juce::Uuid kAE = addAudioElement(layout);
+    const juce::Uuid kMP = addMixPresentation();
+    addAudioElementsToMix(kMP, {kAE});
 
-  for (const Speakers::AudioElementSpeakerLayout aeLayout :
-       kAudioElementLayouts) {
-    // Create an AudioElement with the current layout
+    setTestExportOpts(
+        {.codec = AudioCodec::LPCM,
+         .exportVideo = true,
+         .profile = (layout == Speakers::kMono || layout == Speakers::kStereo ||
+                     layout == Speakers::kBinaural)
+                        ? FileProfile::SIMPLE
+                        : FileProfile::BASE_ENHANCED});
+
+    bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+
+    EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+        videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+        SOUND_SYSTEM_A, 0.01f))
+        << "Integrity failed for layout: " << layout.toString();
+
+    std::filesystem::remove(iamfOutPath);
+    std::filesystem::remove(videoOutPath);
+
     audioElementRepository.clear();
-    AudioElement ae(juce::Uuid(), "Audio Element", aeLayout.toString(),
-                    aeLayout, 0);
-    audioElementRepository.add(ae);
-
-    // Add the audio element to the mix presentation
     mixRepository.clear();
-    MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                        LanguageData::MixLanguages::English, {});
-    MixPresentationLoudness mixLoudness(mp1.getId());
-    mp1.addAudioElement(ae.getId(), 0, ae.getName());
-
-    if (aeLayout != Speakers::kBinaural && !aeLayout.isAmbisonics()) {
-      mixLoudness.replaceLargestLayout(aeLayout);
-    }
-
-    mixRepository.add(mp1);
-    mixPresentationLoudnessRepository.add(mixLoudness);
-
-    // Configure export settings
-    ex = fileExportRepository.get();
-    ex.setExportVideo(true);
-    ex.setVideoSource(videoSourcePath.string());
-    ex.setProfile(aeLayout == Speakers::kMono ||
-                          aeLayout == Speakers::kStereo ||
-                          aeLayout == Speakers::kBinaural
-                      ? FileProfile::SIMPLE
-                      : FileProfile::BASE_ENHANCED);
-    fileExportRepository.update(ex);
-
-    // Generate and verify
-    generateAndBounceAudio();
-
-    EXPECT_TRUE(std::filesystem::exists(iamfOutPath))
-        << "IAMF file wasn't created for layout: " << aeLayout.toString();
-    EXPECT_TRUE(std::filesystem::exists(videoOutPath))
-        << "MP4 file wasn't created for layout: " << aeLayout.toString();
-
-    // Verify IAMF integrity
-    MP4IAMFDemuxer demuxer;
-    bool integrityResult =
-        demuxer.verifyIAMFIntegrity(videoPathStr, iamfPathStr, kSampleRate,
-                                    16,              // Bit depth
-                                    SOUND_SYSTEM_A,  // Sound system (stereo=0)
-                                    0.01f            // Tolerance (1%)
-        );
-
-    EXPECT_TRUE(integrityResult)
-        << "IAMF integrity verification failed for layout: "
-        << aeLayout.toString();
-
-    // Clean up
-    std::filesystem::remove(iamfOutPath);
-    std::filesystem::remove(videoOutPath);
+    mixPresentationLoudnessRepository.clear();
   }
 }
 
-// Test various encoding formats (LPCM, FLAC, OPUS)
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_codecs) {
-  // Set up a single channel-based audio element (stereo for simplicity)
-  audioElementRepository.clear();
-  AudioElement ae(juce::Uuid(), "Audio Element", "Stereo", Speakers::kStereo,
-                  0);
-  audioElementRepository.add(ae);
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
-  // Add the audio element to the mix presentation
-  mixRepository.clear();
-  MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                      LanguageData::MixLanguages::English, {});
-  MixPresentationLoudness mixLoudness(mp1.getId());
-  mp1.addAudioElement(ae.getId(), 0, ae.getName());
-  mixRepository.add(mp1);
-  mixPresentationLoudnessRepository.add(mixLoudness);
+  for (const AudioCodec codec :
+       {AudioCodec::LPCM, AudioCodec::FLAC, AudioCodec::OPUS}) {
+    setTestExportOpts({.codec = codec, .exportVideo = true});
 
-  // Base export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
+    bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
-  // Test different codecs
-  std::vector<AudioCodec> codecs = {AudioCodec::LPCM, AudioCodec::FLAC,
-                                    AudioCodec::OPUS};
-  std::vector<std::string> codecNames = {"LPCM", "FLAC", "OPUS"};
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
-  for (size_t i = 0; i < codecs.size(); i++) {
-    // Set codec
-    ex.setAudioCodec(codecs[i]);
-    fileExportRepository.update(ex);
+    EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+        videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
+        SOUND_SYSTEM_A, 0.01f));
 
-    // Run the test
-    generateAndBounceAudio();
-
-    // Verify files were created
-    EXPECT_TRUE(std::filesystem::exists(iamfOutPath))
-        << "IAMF file wasn't created for codec: " << codecNames[i];
-    EXPECT_TRUE(std::filesystem::exists(videoOutPath))
-        << "MP4 file wasn't created for codec: " << codecNames[i];
-
-    // Verify integrity
-    MP4IAMFDemuxer demuxer;
-    bool integrityResult =
-        demuxer.verifyIAMFIntegrity(videoPathStr, iamfPathStr, kSampleRate,
-                                    16,              // Bit depth
-                                    SOUND_SYSTEM_A,  // Sound system (stereo=0)
-                                    0.01f            // Tolerance (1%)
-        );
-
-    EXPECT_TRUE(integrityResult)
-        << "IAMF integrity verification failed for codec: " << codecNames[i];
-
-    // Clean up
     std::filesystem::remove(iamfOutPath);
     std::filesystem::remove(videoOutPath);
   }
 }
 
-// Test different bit depths
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_bit_depths) {
-  // Set up a simple stereo audio element
-  audioElementRepository.clear();
-  AudioElement ae(juce::Uuid(), "Audio Element", "Stereo", Speakers::kStereo,
-                  0);
-  audioElementRepository.add(ae);
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
 
-  // Add the audio element to the mix presentation
-  mixRepository.clear();
-  MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                      LanguageData::MixLanguages::English, {});
-  MixPresentationLoudness mixLoudness(mp1.getId());
-  mp1.addAudioElement(ae.getId(), 0, ae.getName());
-  mixRepository.add(mp1);
-  mixPresentationLoudnessRepository.add(mixLoudness);
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
-  // Base export settings
-  ex = fileExportRepository.get();
-  ex.setExportVideo(true);
-  ex.setVideoSource(videoSourcePath.string());
-  ex.setProfile(FileProfile::SIMPLE);
-  fileExportRepository.update(ex);
+  for (int bitDepth : {16, 24, 32}) {
+    bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
-  // Test different bit depths (16, 24, 32)
-  std::vector<int> bitDepths = {16, 24, 32};
-  MP4IAMFDemuxer demuxer;
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
-  for (int bitDepth : bitDepths) {
-    // Generate files
-    generateAndBounceAudio();
+    EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
+        videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(),
+        bitDepth, SOUND_SYSTEM_A, 0.01f));
 
-    // Verify integrity with specified bit depth
-    bool integrityResult =
-        demuxer.verifyIAMFIntegrity(videoPathStr, iamfPathStr, kSampleRate,
-                                    bitDepth,        // Use specific bit depth
-                                    SOUND_SYSTEM_A,  // Sound system (stereo=0)
-                                    0.01f            // Tolerance (1%)
-        );
-
-    EXPECT_TRUE(integrityResult)
-        << "IAMF integrity verification failed for bit depth: " << bitDepth;
-
-    // Clean up
     std::filesystem::remove(iamfOutPath);
     std::filesystem::remove(videoOutPath);
   }
 }
 
-// Test different sample rates
 TEST_F(MP4IAMFDemuxerTest, e2e_iamf_sample_rates) {
-  // Set up a simple stereo audio element
-  audioElementRepository.clear();
-  AudioElement ae(juce::Uuid(), "Audio Element", "Stereo", Speakers::kStereo,
-                  0);
-  audioElementRepository.add(ae);
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+  for (int sr : {44100, 48000, 96000}) {
+    setTestExportOpts(
+        {.codec = AudioCodec::LPCM, .sampleRate = sr, .exportVideo = true});
 
-  // Add the audio element to the mix presentation
-  mixRepository.clear();
-  MixPresentation mp1(juce::Uuid(), "Mix Presentation 1", 1,
-                      LanguageData::MixLanguages::English, {});
-  MixPresentationLoudness mixLoudness(mp1.getId());
-  mp1.addAudioElement(ae.getId(), 0, ae.getName());
-  mixRepository.add(mp1);
-  mixPresentationLoudnessRepository.add(mixLoudness);
+    bounceAudio(fio_proc, audioElementRepository, sr);
 
-  // Test different sample rates
-  std::vector<int> sampleRates = {44100, 48000, 96000};
-  MP4IAMFDemuxer demuxer;
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+    ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
-  for (int sampleRate : sampleRates) {
-    // Configure export settings with specific sample rate
-    ex = fileExportRepository.get();
-    ex.setExportVideo(true);
-    ex.setVideoSource(videoSourcePath.string());
-    ex.setProfile(FileProfile::SIMPLE);
-    ex.setSampleRate(sampleRate);
-    fileExportRepository.update(ex);
+    EXPECT_TRUE(demuxer.verifyIAMFIntegrity(videoOutPath.string(),
+                                            iamfOutPath.string(), sr, 16,
+                                            SOUND_SYSTEM_A, 0.01f));
 
-    // Generate files
-    generateAndBounceAudio();
-
-    // Verify integrity with specified sample rate
-    bool integrityResult =
-        demuxer.verifyIAMFIntegrity(videoPathStr, iamfPathStr,
-                                    sampleRate,      // Use specific sample rate
-                                    16,              // Bit depth
-                                    SOUND_SYSTEM_A,  // Sound system (stereo=0)
-                                    0.01f            // Tolerance (1%)
-        );
-
-    EXPECT_TRUE(integrityResult)
-        << "IAMF integrity verification failed for sample rate: " << sampleRate;
-
-    // Clean up
     std::filesystem::remove(iamfOutPath);
     std::filesystem::remove(videoOutPath);
   }
