@@ -118,7 +118,7 @@ jobs:
           if [ -d "build" ]; then rm -rf build; fi
 
       - name: Setup CMake 3.30.x
-        uses: jwlawson/actions-setup-cmake@v5
+        uses: jwlawson/actions-setup-cmake@v1
         with:
           cmake-version: "3.30.x"
       - name: Verify CMake
