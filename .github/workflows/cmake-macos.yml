@@ -117,21 +117,13 @@ jobs:
           echo "CLEAN_BUILD is true, removing entire build directory."
           if [ -d "build" ]; then rm -rf build; fi
 
-      - name: Install CMake
+      - name: Setup CMake 3.30.x
+        uses: jwlawson/actions-setup-cmake@v5
+        with:
+          cmake-version: "3.30.x"
+      - name: Verify CMake
         run: |
-          # Check current cmake version
-          cmake --version || echo "No cmake found"
-          # Remove old cmake if present
-          brew uninstall --ignore-dependencies cmake || true
-          # Install specific CMake version that's compatible with our project
-          # CMake 3.29.x or 3.30.x should work well with Boost 1.82.0
-          brew install cmake@3.30 || brew install cmake
-          # Verify installation
           cmake --version
-          # Check if we have a compatible version
-          cmake_version=$(cmake --version | head -n1 | sed 's/cmake version //')
-          echo "Installed CMake version: $cmake_version"
-          # Ensure we're using the right cmake binary
           which cmake
 
       - name: Check Formatting
