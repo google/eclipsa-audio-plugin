@@ -29,7 +29,7 @@ class MessagingThread : public juce::Thread {
 
  private:
   void run() override;
-  juce::CriticalSection queueLock_;
+  juce::SpinLock queueLock_;
   std::vector<AudioElementUpdateData> dataQueue_;
   std::unique_ptr<AudioElementPublisher> publisher_;
 };

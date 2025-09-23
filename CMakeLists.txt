@@ -52,6 +52,7 @@ set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
 set(PLUGIN_FORMATS "AU")
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
+
 if(APPLE)
   # Add vendored libraries path (for CI/GitHub Actions)
   set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
