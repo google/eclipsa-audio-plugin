@@ -35,26 +35,27 @@ void MessagingThread::run() {
       std::make_unique<AudioElementPublisher>();
   while (!threadShouldExit()) {
     // Wait for data to be pushed to the queue
-    wait(-1);
+    wait(10);
 
     std::vector<AudioElementUpdateData> localDataQueue;
     {
-      juce::ScopedLock lock(queueLock_);
+      juce::SpinLock::ScopedLockType lock(queueLock_);
       localDataQueue.swap(dataQueue_);  // Swap to avoid holding the lock
     }
     // Process all data in the queue
-    while (!localDataQueue.empty()) {
-      AudioElementUpdateData data = localDataQueue.front();
-      localDataQueue.erase(localDataQueue.begin());
-
-      // Publish the data
-      localPublisher->publishData(data);
+    for (const auto& data : localDataQueue) {
+      if (localPublisher) {
+        localPublisher->publishData(data);
+      }
     }
   }
 }
 
 void MessagingThread::pushAudioElementUpdateData(
     const AudioElementUpdateData& data) {
-  dataQueue_.push_back(data);
+  {
+    juce::SpinLock::ScopedLockType lock(queueLock_);
+    dataQueue_.push_back(data);
+  }
   notify();
 }
