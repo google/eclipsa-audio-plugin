@@ -95,7 +95,11 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Release build detected. Copying Audio Element Resources for AU Plugin.")
-    set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AU/Eclipsa Audio Element Plugin.component")
+    if(ECLIPSA_LOGIC_PRO_BUILD)
+        set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AU/Eclipsa Audio Element Plugin for Logic Pro.component")
+    else()
+        set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AU/Eclipsa Audio Element Plugin.component")
+    endif()
     copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
 endif()
 

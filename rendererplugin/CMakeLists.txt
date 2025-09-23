@@ -110,7 +110,11 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Release build detected. Copying Renderer Resources for AU Plugin.")
-    set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer.component")
+    if(ECLIPSA_LOGIC_PRO_BUILD)
+        set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer for Logic Pro.component")
+    else()
+        set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer.component")
+    endif()
     copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
 endif()
 
