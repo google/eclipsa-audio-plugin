@@ -14,6 +14,7 @@
 
 #include "Panner3DProcessor.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "data_structures/src/AudioElementSpatialLayout.h"
@@ -52,7 +53,8 @@ Panner3DProcessor::~Panner3DProcessor() {
 }
 
 void Panner3DProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-  samplesPerBlock_ = samplesPerBlock;
+  // Use 32 samples - the maximum that avoids artifacts in underlying renderers
+  samplesPerBlock_ = std::min(samplesPerBlock, 32);
   sampleRate_ = sampleRate;
   initializePanning();
 }
@@ -102,32 +104,68 @@ void Panner3DProcessor::initializePanning() {
 
 void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                      juce::MidiBuffer&) {
-  // On each frame, lock and set the position of the panner, since it may have
-  // changed
+  const int hostBufferSize = buffer.getNumSamples();
+  const int rendererChunkSize =
+      samplesPerBlock_;  // Always 32 samples to avoid artifacts
+
   renderLock.enter();
 
-  // Check to see if this is set up for passthrough
-  // We still need to lock to check since the panner could get
-  // updated during playback
   if (surroundPanner_ != NULL) {
     surroundPanner_->setPosition(xPosition_, yPosition_, zPosition_);
 
-    // Perform the panning operation
-    surroundPanner_->process(buffer, outputBuffer_);
+    // Process in chunks only if absolutely necessary
+    if (hostBufferSize <= rendererChunkSize) {
+      // Simple case: host buffer fits in one chunk - most efficient
+      surroundPanner_->process(buffer, outputBuffer_);
 
-    // Manually copy the number of channels of the output layout from the
-    // output buffer to the input buffer to avoid resizing.
-    const int copyChannels =
-        std::min(outputBuffer_.getNumChannels(), buffer.getNumChannels());
-    for (int channel = 0; channel < copyChannels; ++channel) {
-      buffer.copyFrom(channel, 0, outputBuffer_, channel, 0,
-                      buffer.getNumSamples());
-    }
-    // If truncated, clear any remaining host channels (so stale data isn't
-    // left)
-    for (int channel = copyChannels; channel < buffer.getNumChannels();
-         ++channel) {
-      buffer.clear(channel, 0, buffer.getNumSamples());
+      const int copyChannels =
+          std::min(outputBuffer_.getNumChannels(), buffer.getNumChannels());
+      for (int channel = 0; channel < copyChannels; ++channel) {
+        buffer.copyFrom(channel, 0, outputBuffer_, channel, 0, hostBufferSize);
+      }
+      for (int channel = copyChannels; channel < buffer.getNumChannels();
+           ++channel) {
+        buffer.clear(channel, 0, hostBufferSize);
+      }
+    } else {
+      // Optimized chunked processing - reuse buffers and minimize operations
+      static thread_local juce::AudioBuffer<float> chunkInput;
+      if (chunkInput.getNumChannels() != buffer.getNumChannels() ||
+          chunkInput.getNumSamples() != rendererChunkSize) {
+        chunkInput.setSize(buffer.getNumChannels(), rendererChunkSize, false,
+                           false, true);
+      }
+
+      for (int processed = 0; processed < hostBufferSize;
+           processed += rendererChunkSize) {
+        const int chunkSize =
+            std::min(rendererChunkSize, hostBufferSize - processed);
+
+        // Copy and clear in one pass
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+          chunkInput.copyFrom(channel, 0, buffer, channel, processed,
+                              chunkSize);
+          if (chunkSize < rendererChunkSize) {
+            chunkInput.clear(channel, chunkSize, rendererChunkSize - chunkSize);
+          }
+        }
+
+        // Process chunk
+        surroundPanner_->process(chunkInput, outputBuffer_);
+
+        // Copy back efficiently
+        const int copyChannels =
+            std::min(outputBuffer_.getNumChannels(), buffer.getNumChannels());
+        for (int channel = 0; channel < copyChannels; ++channel) {
+          buffer.copyFrom(channel, processed, outputBuffer_, channel, 0,
+                          chunkSize);
+        }
+        // Clear any extra channels
+        for (int channel = copyChannels; channel < buffer.getNumChannels();
+             ++channel) {
+          buffer.clear(channel, processed, chunkSize);
+        }
+      }
     }
   }
 
