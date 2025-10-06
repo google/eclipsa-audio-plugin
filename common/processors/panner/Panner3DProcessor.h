@@ -105,6 +105,11 @@ class Panner3DProcessor final
   int yPosition_;
   int zPosition_;
 
+  // Position caching for optimization - avoid redundant renderer updates
+  int lastSetXPosition_ = -999;
+  int lastSetYPosition_ = -999;
+  int lastSetZPosition_ = -999;
+
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Panner3DProcessor)
 };
