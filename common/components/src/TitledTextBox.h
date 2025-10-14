@@ -15,151 +15,42 @@
  */
 
 #pragma once
-#include <sys/errno.h>
 
 #include "../components.h"
-#include "components/src/MainEditor.h"
-
-/*
-  Creates a titled text box object
-*/
-class TitledTextBoxLookAndFeel : public juce::LookAndFeel_V4 {
- public:
-  TitledTextBoxLookAndFeel() {
-    setColour(juce::TextEditor::backgroundColourId,
-              EclipsaColours::backgroundOffBlack);
-    setColour(juce::TextEditor::outlineColourId, EclipsaColours::tabTextGrey);
-    setColour(juce::TextEditor::textColourId, EclipsaColours::headingGrey);
-    setColour(juce::TextEditor::highlightColourId, EclipsaColours::headingGrey);
-  }
-
-  // Use custom paint instead
-  void drawTextEditorOutline(juce::Graphics& g, int width, int height,
-                             juce::TextEditor& textEditor) override {}
-};
-
-class DimmedTitledTextBoxLookAndFeel : public juce::LookAndFeel_V4 {
- public:
-  DimmedTitledTextBoxLookAndFeel() {
-    float alpha = 0.4f;
-    setColour(juce::TextEditor::backgroundColourId,
-              EclipsaColours::backgroundOffBlack);
-    setColour(juce::TextEditor::outlineColourId,
-              EclipsaColours::tabTextGrey.withAlpha(alpha));
-    setColour(juce::TextEditor::textColourId,
-              EclipsaColours::headingGrey.withAlpha(alpha));
-    setColour(juce::TextEditor::highlightColourId,
-              EclipsaColours::headingGrey.withAlpha(alpha));
-  }
-
-  // Use custom paint instead
-  void drawTextEditorOutline(juce::Graphics& g, int width, int height,
-                             juce::TextEditor& textEditor) override {}
-};
-
-class PaddedTextEditor : public juce::TextEditor, public juce::Timer {
-  juce::String title_;
-  bool isFocused_ = false;
-  bool caretVisible_ = false;
-
- public:
-  PaddedTextEditor(juce::String title) : title_(title), juce::TextEditor() {}
-
-  ~PaddedTextEditor() {
-    onFocusLost = nullptr;
-    onReturnKey = nullptr;
-  }
-
-  void setTitle(juce::String title) { title_ = title; }
-
-  void focusGained(FocusChangeType cause) override {
-    isFocused_ = true;
-    startTimer(500);
-    repaint();
-  }
-
-  void focusLost(FocusChangeType cause) override {
-    isFocused_ = false;
-    stopTimer();
-    repaint();
-    if (onFocusLost) {
-      onFocusLost();
-    }
-  }
-
-  void timerCallback() override {
-    if (isFocused_ && isAccessible() && !isReadOnly()) {
-      caretVisible_ = !caretVisible_;
-      repaint();
-    }
-  }
-
-  void paintOverChildren(juce::Graphics& g) override {
-    // Fill the background
-    g.fillAll(findColour(juce::TextEditor::backgroundColourId));
-
-    // Draw the outline and title
-    auto bounds = getLocalBounds();
-    auto cornerSize = 5.0f;
-    int titleBuffer = 20;
-    juce::Rectangle<int> boxBounds = bounds.withTrimmedTop(titleBuffer);
-    g.setColour(findColour(juce::TextEditor::outlineColourId));
-    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), cornerSize,
-                           1.0f);
-
-    // Draw the title information
-    boxBounds.removeFromLeft(10);
-    auto font = juce::Font("Roboto", 12.0f, juce::Font::plain);
-    int titleWidth = font.getStringWidth(title_);
-
-    auto titleBounds =
-        boxBounds.removeFromTop(15).removeFromLeft(titleWidth + 5);
-    g.setColour(findColour(juce::TextEditor::backgroundColourId));
-    g.fillRect(titleBounds.toFloat());
-    g.setColour(findColour(juce::TextEditor::outlineColourId));
-    g.setFont(font);
-    g.drawText(title_, titleBounds.removeFromTop(8),
-               juce::Justification::centred);
-
-    // Draw the text
-    auto textArea =
-        getLocalBounds().withTrimmedTop(titleBuffer).withTrimmedLeft(15);
-    g.setColour(findColour(juce::TextEditor::textColourId));
-    setFont(juce::Font("Roboto", 14.0f, juce::Font::plain));
-    g.setFont(getFont());
-    g.setColour(juce::Colour(221, 228, 227));
-    g.drawFittedText(getText(), textArea, juce::Justification::centredLeft, 1,
-                     1.0f);
-
-    // Draw the caret
-    if (isFocused_ && caretVisible_) {
-      juce::Rectangle<int> caret = textArea.withWidth(2);
-      caret.setHeight(getFont().getHeight() + 2);
-      getText().substring(0, getCaretPosition());
-      float pos =
-          getFont().getStringWidth(getText().substring(0, getCaretPosition()));
-
-      caret.setX(pos + 15);
-      caret.setY(caret.getY() + (textArea.getHeight() / 2) -
-                 (caret.getHeight() / 2));
-      g.fillRect(caret);
-    }
-  }
-};
 
 class TitledTextBox : public juce::Component {
-  PaddedTextEditor textEditor_;
-  TitledTextBoxLookAndFeel lookAndFeel_;
-  DimmedTitledTextBoxLookAndFeel dimmedLookAndFeel_;
+  juce::Label titleLabel_;
+  juce::TextEditor textEditor_;
+  juce::Colour outlineColour_;
 
  public:
-  TitledTextBox(juce::String title) : juce::Component(), textEditor_(title) {
-    setLookAndFeel(&lookAndFeel_);
-    textEditor_.setJustification(juce::Justification::bottomLeft);
+  TitledTextBox(juce::String title)
+      : juce::Component(), titleLabel_(title), textEditor_() {
+    // Set the outline colour to the enabled colour state
+    resetLookAndFeel();
+
+    // Configure the title label
+    auto font = juce::Font("Roboto", 12.0f, juce::Font::plain);
+    titleLabel_.setFont(font);
+    titleLabel_.setColour(juce::Label::backgroundColourId,
+                          EclipsaColours::backgroundOffBlack);
+
+    // Configure the text editor
+    textEditor_.setJustification(juce::Justification::topLeft);
+    titleLabel_.setText(title, juce::NotificationType::dontSendNotification);
+
+    textEditor_.setColour(juce::TextEditor::backgroundColourId,
+                          EclipsaColours::backgroundOffBlack);
+    textEditor_.setColour(juce::TextEditor::outlineColourId,
+                          EclipsaColours::backgroundOffBlack);
+    textEditor_.setColour(juce::TextEditor::focusedOutlineColourId,
+                          EclipsaColours::backgroundOffBlack);
+    textEditor_.setColour(juce::TextEditor::textColourId,
+                          EclipsaColours::headingGrey);
+    textEditor_.setFont(juce::Font("Roboto", 14.0f, juce::Font::plain));
   }
 
   ~TitledTextBox() override {
-    setLookAndFeel(nullptr);
     setOnReturnCallback(nullptr);
     setOnFocusLostCallback(nullptr);
   }
@@ -173,11 +64,48 @@ class TitledTextBox : public juce::Component {
   const juce::TextEditor* const getTextEditor() const { return &textEditor_; }
 
   void paint(juce::Graphics& g) override {
+    // This component is drawn by drawing an outline box
+    // Then drawing a label over the top left corner of the box with the title
+    // Then drawing a text box inside the outline
+
     auto bounds = getLocalBounds();
 
-    // Draw the text box
+    // Fill the background
+    g.fillAll(EclipsaColours::backgroundOffBlack);
+
+    // Draw the outline
+    auto cornerSize = 5.0f;
+    int titleBuffer = 20;  // Add some buffering space for where the title will
+                           // be higher then the outline
+    juce::Rectangle<int> boxBounds = bounds.withTrimmedTop(titleBuffer);
+    g.setColour(outlineColour_);
+    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), cornerSize,
+                           1.0f);
+
+    // Draw the label over the outline
+    // The label width requires some padding or it has issues with single
+    // character labels. The padding is roughly one character wide.
+    auto labelWidth =
+        titleLabel_.getFont().getStringWidth(titleLabel_.getText()) + 8;
+    auto labelHeight = titleLabel_.getFont().getHeight();
+    juce::Rectangle<int> labelBounds = juce::Rectangle<int>(
+        boxBounds.getX() + 10, (boxBounds.getY() - labelHeight / 2) + 3,
+        labelWidth, labelHeight);
+    titleLabel_.setBounds(labelBounds);
+    addAndMakeVisible(titleLabel_);
+
+    // Create bounds which encapusulate inside the outline
+    boxBounds.reduce(10, 5);
+
+    // Draw the text box centered inside the outline
     addAndMakeVisible(textEditor_);
-    textEditor_.setBounds(bounds);
+    textEditor_.setBounds(boxBounds);
+    // Add some leaway for text height as it doesn't account for characters like
+    // g which go below the line
+    auto textHeight = textEditor_.getFont().getHeight() + 6;
+    auto boxBoundsTrim = ((boxBounds.getHeight() - textHeight) / 2) - 1;
+    boxBounds.removeFromTop(boxBoundsTrim);
+    textEditor_.setBounds(boxBounds.removeFromTop(textHeight + 15));
     textEditor_.setMultiLine(false);
   }
 
@@ -202,9 +130,17 @@ class TitledTextBox : public juce::Component {
     textEditor_.setInputRestrictions(maxLength, allowedCharacters);
   }
 
-  void dimLookAndFeel() { setLookAndFeel(&dimmedLookAndFeel_); }
+  void updateOutlineColour(juce::Colour colour) {
+    outlineColour_ = colour;
+    titleLabel_.setColour(juce::Label::textColourId, outlineColour_);
+    repaint();
+  }
 
-  void resetLookAndFeel() { setLookAndFeel(&lookAndFeel_); }
+  void dimLookAndFeel() {
+    updateOutlineColour(EclipsaColours::tabTextGrey.withAlpha(0.4f));
+  }
+
+  void resetLookAndFeel() { updateOutlineColour(EclipsaColours::tabTextGrey); }
 
   bool textEditorIsFocused() { return textEditor_.hasKeyboardFocus(true); }
 
@@ -212,6 +148,5 @@ class TitledTextBox : public juce::Component {
     textEditor_.setAccessible(!isReadOnly);
     textEditor_.setReadOnly(isReadOnly);
     textEditor_.setCaretVisible(isReadOnly);
-    textEditor_.stopTimer();
   }
 };
