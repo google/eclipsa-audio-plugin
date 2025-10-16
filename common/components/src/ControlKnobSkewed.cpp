@@ -142,3 +142,12 @@ void ControlKnobSkewed::setValueUpdatedCallback(
 float ControlKnobSkewed::normalizeValue(const float& value) {
   return (value - min_) / (max_ - min_);
 }
+
+void ControlKnobSkewed::mouseDown(const juce::MouseEvent& event) {
+  if (event.mods.isAltDown() && isEnabled()) {
+    // Option-click resets control to 0,
+    juce::Slider::setValue(0);
+    return;
+  }
+  juce::Slider::mouseDown(event);
+}

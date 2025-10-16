@@ -38,4 +38,8 @@ class TitledLabel : public juce::Component {
     addAndMakeVisible(disabledTextBox_);
     disabledTextBox_.setBounds(bounds);
   }
+
+  void reduceTitleBuffer(int amount) {
+    disabledTextBox_.reduceTitleBuffer(amount);
+  }
 };

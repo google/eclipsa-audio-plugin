@@ -22,10 +22,11 @@ class TitledTextBox : public juce::Component {
   juce::Label titleLabel_;
   juce::TextEditor textEditor_;
   juce::Colour outlineColour_;
+  int titleBuffer_;
 
  public:
   TitledTextBox(juce::String title)
-      : juce::Component(), titleLabel_(title), textEditor_() {
+      : juce::Component(), titleLabel_(title), textEditor_(), titleBuffer_(20) {
     // Set the outline colour to the enabled colour state
     resetLookAndFeel();
 
@@ -75,9 +76,9 @@ class TitledTextBox : public juce::Component {
 
     // Draw the outline
     auto cornerSize = 5.0f;
-    int titleBuffer = 20;  // Add some buffering space for where the title will
-                           // be higher then the outline
-    juce::Rectangle<int> boxBounds = bounds.withTrimmedTop(titleBuffer);
+    // Add some buffering space for where the title will be higher then the
+    // outline
+    juce::Rectangle<int> boxBounds = bounds.withTrimmedTop(titleBuffer_);
     g.setColour(outlineColour_);
     g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), cornerSize,
                            1.0f);
@@ -149,4 +150,6 @@ class TitledTextBox : public juce::Component {
     textEditor_.setReadOnly(isReadOnly);
     textEditor_.setCaretVisible(isReadOnly);
   }
+
+  void reduceTitleBuffer(int amount) { titleBuffer_ -= amount; }
 };
