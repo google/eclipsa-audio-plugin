@@ -53,6 +53,43 @@ AudioElementSpeakerLayout::AudioElementSpeakerLayout(
   }
 }
 
+Speakers::AudioElementSpeakerLayout::AudioElementSpeakerLayout(
+    iamf_tools::api::OutputLayout layout)
+    : index_(kMono) {
+  switch (layout) {
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemA_0_2_0:
+      index_ = kStereo;
+      break;
+    case iamf_tools::api::OutputLayout::kIAMF_SoundSystemExtension_2_3_0:
+      index_ = k3Point1Point2;
+      break;
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemB_0_5_0:
+      index_ = k5Point1;
+      break;
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemC_2_5_0:
+      index_ = k5Point1Point2;
+      break;
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemD_4_5_0:
+      index_ = k5Point1Point4;
+      break;
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemI_0_7_0:
+      index_ = k7Point1;
+      break;
+    case iamf_tools::api::OutputLayout::kIAMF_SoundSystemExtension_2_7_0:
+      index_ = k7Point1Point2;
+      break;
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemJ_4_7_0:
+      index_ = k7Point1Point4;
+      break;
+    case iamf_tools::api::OutputLayout::kItu2051_SoundSystemH_9_10_3:
+      index_ = kExpl9Point1Point6;
+      break;
+    default:
+      index_ = kMono;
+      break;
+  }
+}
+
 BaseLayout AudioElementSpeakerLayout::getIamfLayout() const {
   switch (index_) {
     case kMono:
@@ -594,7 +631,8 @@ bool AudioElementSpeakerLayout::isExpandedLayout() const {
   return (index_ >= firstExpandedLayout) && (index_ <= lastExpandedLayout);
 }
 
-AudioElementSpeakerLayout AudioElementSpeakerLayout::getExplBaseLayout() const {
+Speakers::AudioElementSpeakerLayout
+Speakers::AudioElementSpeakerLayout::getExplBaseLayout() const {
   if (!isExpandedLayout()) {
     return AudioElementSpeakerLayout(index_);
   }
@@ -805,5 +843,33 @@ AudioElementSpeakerLayout::getITUChannelOrdering() const {
     default:
       return {};
       break;
+  }
+}
+
+// The inverse of the constructor that takes an OutputLayout
+iamf_tools::api::OutputLayout AudioElementSpeakerLayout::getIamfOutputLayout()
+    const {
+  using OutputLayout = iamf_tools::api::OutputLayout;
+  switch (index_) {
+    case kStereo:
+      return OutputLayout::kItu2051_SoundSystemA_0_2_0;
+    case k3Point1Point2:
+      return OutputLayout::kIAMF_SoundSystemExtension_2_3_0;
+    case k5Point1:
+      return OutputLayout::kItu2051_SoundSystemB_0_5_0;
+    case k5Point1Point2:
+      return OutputLayout::kItu2051_SoundSystemC_2_5_0;
+    case k5Point1Point4:
+      return OutputLayout::kItu2051_SoundSystemD_4_5_0;
+    case k7Point1:
+      return OutputLayout::kItu2051_SoundSystemI_0_7_0;
+    case k7Point1Point2:
+      return OutputLayout::kIAMF_SoundSystemExtension_2_7_0;
+    case k7Point1Point4:
+      return OutputLayout::kItu2051_SoundSystemJ_4_7_0;
+    case kExpl9Point1Point6:
+      return OutputLayout::kItu2051_SoundSystemH_9_10_3;
+    default:
+      return OutputLayout::kItu2051_SoundSystemA_0_2_0;
   }
 }
