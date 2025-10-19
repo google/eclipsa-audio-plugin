@@ -44,6 +44,7 @@ END_JUCE_MODULE_DECLARATION
 #include "src/RoundedRectangle.h"
 #include "src/SegmentedToggleButton.h"
 #include "src/SegmentedToggleImageButton.h"
+#include "src/TimeFormatSegmentSelector.h"
 #include "src/SliderLabelAttachment.h"
 #include "src/ambisonics_visualizers/VisualizerPair.h"
 #include "src/loudness_meter/LoudnessMeter.h"
