@@ -202,13 +202,13 @@ void SegmentedToggleButton::toggleButton(juce::Button* btn) {
       // Ensure only this button is selected; deselect all others
       for (const auto& button : buttons_) {
         bool toggleState = button.get() == btn ? true : false;
-        button->setToggleState(toggleState, false);  // false = don't trigger callback
+        button->setToggleState(toggleState,
+                               false);  // false = don't trigger callback
       }
       if (parentCallback_) {
         parentCallback_();
       }
-    }
-    else {
+    } else {
       btn->setToggleState(true, false);
     }
   } else {

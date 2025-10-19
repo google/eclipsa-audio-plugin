@@ -20,9 +20,9 @@
 #include "../RendererProcessor.h"
 #include "components/src/SelectionBox.h"
 #include "components/src/SliderButton.h"
+#include "components/src/TimeFormatSegmentSelector.h"
 #include "components/src/TitledLabel.h"
 #include "components/src/TitledTextBox.h"
-#include "components/src/TimeFormatSegmentSelector.h"
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
@@ -59,20 +59,20 @@ class FileExportScreen : public juce::Component,
 
  private:
   void configureCustomCodecParameter(AudioCodec format);
-  
+
   // Time format conversion methods
   juce::String timeToString(int timeInSeconds, TimeFormat format);
   int stringToTime(juce::String val, TimeFormat format);
-  
+
   // Format-specific conversion helpers
   juce::String secondsToHMS(int seconds);
   juce::String secondsToBarsBeats(int seconds);
   juce::String secondsToTimecode(int seconds);
-  
+
   int hmsToSeconds(const juce::String& val);
   int barsBeatsToSeconds(const juce::String& val);
   int timecodeToSeconds(const juce::String& val);
-  
+
   // Helper methods for timing info and format availability
   void updateTimingInfoFromHost();
   bool isTimeFormatAvailable(TimeFormat format);
@@ -98,12 +98,12 @@ class FileExportScreen : public juce::Component,
   juce::Label startTimerErrorLabel_;
   TimeFormatSegmentSelector startFormatSegments_;
   juce::Label startTimeFormatLabel_;
-  
+
   TitledTextBox endTimer_;
   juce::Label endTimerErrorLabel_;
   TimeFormatSegmentSelector endFormatSegments_;
   juce::Label endTimeFormatLabel_;
-  
+
   // Left side elements - Export format selectors
   SelectionBox formatSelector_;
   SelectionBox codecSelector_;
@@ -113,11 +113,11 @@ class FileExportScreen : public juce::Component,
   juce::Label customCodecParameterErrorLabel_;
   TitledLabel mixPresentations_;
   TitledLabel audioElements_;
-  
+
   // Time format state
   TimeFormat startTimeFormat_;
   TimeFormat endTimeFormat_;
-  
+
   // Cached timing information from host
   juce::Optional<double> cachedBpm_;
   juce::Optional<juce::AudioPlayHead::TimeSignature> cachedTimeSignature_;

@@ -16,10 +16,11 @@
 
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+
 #include "SegmentedToggleButton.h"
 
 class TimeFormatSegmentSelector : public juce::Component {
-public:
+ public:
   enum Format { HoursMinutesSeconds = 0, BarsBeats = 1, Timecode = 2 };
 
   static constexpr int kNumFormats = 3;
@@ -67,7 +68,7 @@ public:
 
   std::function<void(int)> onChange;
 
-private:
+ private:
   void handleSegmentChange() {
     if (updating_) return;
     auto state = segments_.getState();

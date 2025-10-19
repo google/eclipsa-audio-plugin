@@ -106,7 +106,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   startTimerErrorLabel_.setText("",
                                 juce::NotificationType::dontSendNotification);
   endTimerErrorLabel_.setText("", juce::NotificationType::dontSendNotification);
-  
+
   // Set the format hint labels
   startTimeFormatLabel_.setText(getFormatDescription(startTimeFormat_),
                                 juce::NotificationType::dontSendNotification);
@@ -176,34 +176,40 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
   updateTimingInfoFromHost();
 
-  startFormatSegments_.setFormatEnabled(TimeFormatSegmentSelector::Format::BarsBeats,
-                                        isTimeFormatAvailable(TimeFormat::BarsBeats));
-  startFormatSegments_.setFormatEnabled(TimeFormatSegmentSelector::Format::Timecode,
-                                        isTimeFormatAvailable(TimeFormat::Timecode));
+  startFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::BarsBeats,
+      isTimeFormatAvailable(TimeFormat::BarsBeats));
+  startFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::Timecode,
+      isTimeFormatAvailable(TimeFormat::Timecode));
   startFormatSegments_.onChange = [this](int idx) {
     auto newFormat = static_cast<TimeFormat>(idx);
     if (!isTimeFormatAvailable(newFormat)) return;
     startTimeFormat_ = newFormat;
     FileExport config = repository_->get();
     startTimer_.setText(timeToString(config.getStartTime(), startTimeFormat_));
-    startTimeFormatLabel_.setText(getFormatDescription(startTimeFormat_), juce::dontSendNotification);
+    startTimeFormatLabel_.setText(getFormatDescription(startTimeFormat_),
+                                  juce::dontSendNotification);
     repaint();
   };
   startFormatSegments_.setSelectedFormat(
       static_cast<TimeFormatSegmentSelector::Format>(
           static_cast<int>(startTimeFormat_)));
 
-  endFormatSegments_.setFormatEnabled(TimeFormatSegmentSelector::Format::BarsBeats,
-                                      isTimeFormatAvailable(TimeFormat::BarsBeats));
-  endFormatSegments_.setFormatEnabled(TimeFormatSegmentSelector::Format::Timecode,
-                                      isTimeFormatAvailable(TimeFormat::Timecode));
+  endFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::BarsBeats,
+      isTimeFormatAvailable(TimeFormat::BarsBeats));
+  endFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::Timecode,
+      isTimeFormatAvailable(TimeFormat::Timecode));
   endFormatSegments_.onChange = [this](int idx) {
     auto newFormat = static_cast<TimeFormat>(idx);
     if (!isTimeFormatAvailable(newFormat)) return;
     endTimeFormat_ = newFormat;
     FileExport config = repository_->get();
     endTimer_.setText(timeToString(config.getEndTime(), endTimeFormat_));
-    endTimeFormatLabel_.setText(getFormatDescription(endTimeFormat_), juce::dontSendNotification);
+    endTimeFormatLabel_.setText(getFormatDescription(endTimeFormat_),
+                                juce::dontSendNotification);
     repaint();
   };
   endFormatSegments_.setSelectedFormat(
@@ -421,37 +427,39 @@ void FileExportScreen::paint(juce::Graphics& g) {
   // Start time column (time box + selector + label as one unit)
   auto startColumn = leftSideBounds.removeFromTop(135);
   auto startColumnLeft = startColumn.removeFromLeft(componentWidth);
-  
+
   addAndMakeVisible(startTimer_);
   startTimer_.setBounds(startColumnLeft.removeFromTop(rowHeight));
-  
+
   startColumnLeft.removeFromTop(2);
   const int formatSelectorHeight = 32;  // Half of text box height
   addAndMakeVisible(startFormatSegments_);
-  startFormatSegments_.setBounds(startColumnLeft.removeFromTop(formatSelectorHeight));
-  
+  startFormatSegments_.setBounds(
+      startColumnLeft.removeFromTop(formatSelectorHeight));
+
   startColumnLeft.removeFromTop(2);
   addAndMakeVisible(startTimeFormatLabel_);
   startTimeFormatLabel_.setBounds(startColumnLeft.removeFromTop(15));
-  
+
   startColumnLeft.removeFromTop(2);
   addAndMakeVisible(startTimerErrorLabel_);
   startTimerErrorLabel_.setBounds(startColumnLeft);
 
   startColumn.removeFromLeft(rowPadding);
   auto endColumnLeft = startColumn.removeFromLeft(componentWidth);
-  
+
   addAndMakeVisible(endTimer_);
   endTimer_.setBounds(endColumnLeft.removeFromTop(rowHeight));
-  
+
   endColumnLeft.removeFromTop(2);
   addAndMakeVisible(endFormatSegments_);
-  endFormatSegments_.setBounds(endColumnLeft.removeFromTop(formatSelectorHeight));
-  
+  endFormatSegments_.setBounds(
+      endColumnLeft.removeFromTop(formatSelectorHeight));
+
   endColumnLeft.removeFromTop(2);
   addAndMakeVisible(endTimeFormatLabel_);
   endTimeFormatLabel_.setBounds(endColumnLeft.removeFromTop(15));
-  
+
   endColumnLeft.removeFromTop(2);
   addAndMakeVisible(endTimerErrorLabel_);
   endTimerErrorLabel_.setBounds(endColumnLeft);
@@ -635,7 +643,7 @@ juce::String FileExportScreen::secondsToBarsBeats(int timeInSeconds) {
 
   double bpm = *cachedBpm_;
   auto timeSig = *cachedTimeSignature_;
-  
+
   if (bpm <= 0.0) {
     return "1.1.000";  // Default fallback
   }
@@ -693,12 +701,12 @@ int FileExportScreen::hmsToSeconds(const juce::String& val) {
   int hours = parts[0].getIntValue();
   int minutes = parts[1].getIntValue();
   int seconds = parts[2].getIntValue();
-  
+
   // Validate ranges
   if (minutes > 59 || seconds > 59 || hours < 0 || minutes < 0 || seconds < 0) {
     return -1;
   }
-  
+
   return (hours * 3600 + minutes * 60 + seconds);
 }
 
@@ -726,17 +734,17 @@ int FileExportScreen::barsBeatsToSeconds(const juce::String& val) {
   auto timeSig = *cachedTimeSignature_;
   double beatsPerBar = timeSig.numerator;
   double secondsPerBeat = 60.0 / bpm;
-  
+
   // Validate ranges
-  if (bars < 1 || beat < 1 || beat > static_cast<int>(beatsPerBar) || 
+  if (bars < 1 || beat < 1 || beat > static_cast<int>(beatsPerBar) ||
       ticks < 0 || ticks >= 960 || bpm <= 0) {
     return -1;
   }
 
   // Convert to total beats
   double totalBeats = (bars - 1) * beatsPerBar +  // Bars start at 1
-                      (beat - 1) +                  // Beats start at 1
-                      (ticks / 960.0);              // 960 ticks per beat
+                      (beat - 1) +                // Beats start at 1
+                      (ticks / 960.0);            // 960 ticks per beat
 
   return static_cast<int>(totalBeats * secondsPerBeat);
 }
@@ -757,13 +765,13 @@ int FileExportScreen::timecodeToSeconds(const juce::String& val) {
   int minutes = parts[1].getIntValue();
   int seconds = parts[2].getIntValue();
   int frames = parts[3].getIntValue();
-  
+
   // Validate ranges (frames validation would require frame rate)
-  if (minutes > 59 || seconds > 59 || hours < 0 || minutes < 0 || 
-      seconds < 0 || frames < 0) {
+  if (minutes > 59 || seconds > 59 || hours < 0 || minutes < 0 || seconds < 0 ||
+      frames < 0) {
     return -1;
   }
-  
+
   // Note: Frames are ignored for now as we work with integer seconds
   // This means 00:00:05:00 and 00:00:05:29 both become 5 seconds
   // This is acceptable for the current use case but creates lossy conversion
@@ -772,17 +780,18 @@ int FileExportScreen::timecodeToSeconds(const juce::String& val) {
 
 void FileExportScreen::updateTimingInfoFromHost() {
   // Get the audio processor to access playhead information
-  auto* processor = dynamic_cast<juce::AudioProcessor*>(editor_.getAudioProcessor());
-  
+  auto* processor =
+      dynamic_cast<juce::AudioProcessor*>(editor_.getAudioProcessor());
+
   if (processor == nullptr) {
     cachedBpm_ = juce::nullopt;
     cachedTimeSignature_ = juce::nullopt;
     cachedFrameRate_ = juce::nullopt;
     return;
   }
-  
+
   auto* playHead = processor->getPlayHead();
-  
+
   if (playHead == nullptr) {
     // No playhead available - DAW doesn't provide timing info
     cachedBpm_ = juce::nullopt;
@@ -790,10 +799,10 @@ void FileExportScreen::updateTimingInfoFromHost() {
     cachedFrameRate_ = juce::nullopt;
     return;
   }
-  
+
   // Get position info from the playhead
   auto positionInfo = playHead->getPosition();
-  
+
   if (!positionInfo.hasValue()) {
     // Position info not available
     cachedBpm_ = juce::nullopt;
@@ -801,16 +810,16 @@ void FileExportScreen::updateTimingInfoFromHost() {
     cachedFrameRate_ = juce::nullopt;
     return;
   }
-  
+
   // Extract timing information from position info
   auto& pos = *positionInfo;
-  
+
   // Get BPM (tempo) - needed for bars/beats format
   cachedBpm_ = pos.getBpm();
-  
+
   // Get time signature - needed for bars/beats format
   cachedTimeSignature_ = pos.getTimeSignature();
-  
+
   // Get frame rate - needed for timecode format
   cachedFrameRate_ = pos.getFrameRate();
 }
