@@ -125,6 +125,7 @@ void SegmentedToggleButton::setToggleable(const juce::String& opt,
   for (const auto& button : buttons_) {
     if (button->getButtonText() == opt) {
       button->setClickingTogglesState(enable);
+      button->setEnabled(enable);
     }
   }
 }

@@ -64,19 +64,9 @@ class FileExportScreen : public juce::Component,
   juce::String timeToString(int timeInSeconds, TimeFormat format);
   int stringToTime(juce::String val, TimeFormat format);
 
-  // Format-specific conversion helpers
-  juce::String secondsToHMS(int seconds);
-  juce::String secondsToBarsBeats(int seconds);
-  juce::String secondsToTimecode(int seconds);
-
-  int hmsToSeconds(const juce::String& val);
-  int barsBeatsToSeconds(const juce::String& val);
-  int timecodeToSeconds(const juce::String& val);
-
   // Helper methods for timing info and format availability
   void updateTimingInfoFromHost();
   bool isTimeFormatAvailable(TimeFormat format);
-  juce::String getFormatDescription(TimeFormat format);
 
   bool validFileExportConfig(const FileExport& config);
 

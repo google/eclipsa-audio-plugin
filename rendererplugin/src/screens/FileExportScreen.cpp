@@ -18,6 +18,7 @@
 #include "components/src/EclipsaColours.h"
 #include "data_structures/src/FileExport.h"
 #include "data_structures/src/MixPresentation.h"
+#include "data_structures/src/TimeFormatConverter.h"
 
 FileExportScreen::FileExportScreen(MainEditor& editor,
                                    RepositoryCollection repos)
@@ -108,10 +109,14 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   endTimerErrorLabel_.setText("", juce::NotificationType::dontSendNotification);
 
   // Set the format hint labels
-  startTimeFormatLabel_.setText(getFormatDescription(startTimeFormat_),
-                                juce::NotificationType::dontSendNotification);
-  endTimeFormatLabel_.setText(getFormatDescription(endTimeFormat_),
-                              juce::NotificationType::dontSendNotification);
+  startTimeFormatLabel_.setText(
+      TimeFormatConverter::getFormatDescription(
+          static_cast<TimeFormatConverter::TimeFormat>(startTimeFormat_)),
+      juce::NotificationType::dontSendNotification);
+  endTimeFormatLabel_.setText(
+      TimeFormatConverter::getFormatDescription(
+          static_cast<TimeFormatConverter::TimeFormat>(endTimeFormat_)),
+      juce::NotificationType::dontSendNotification);
 
   // Set the checkbox colours
   exportAudioElementsToggle_.setColour(
@@ -188,8 +193,10 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     startTimeFormat_ = newFormat;
     FileExport config = repository_->get();
     startTimer_.setText(timeToString(config.getStartTime(), startTimeFormat_));
-    startTimeFormatLabel_.setText(getFormatDescription(startTimeFormat_),
-                                  juce::dontSendNotification);
+    startTimeFormatLabel_.setText(
+        TimeFormatConverter::getFormatDescription(
+            static_cast<TimeFormatConverter::TimeFormat>(startTimeFormat_)),
+        juce::dontSendNotification);
     repaint();
   };
   startFormatSegments_.setSelectedFormat(
@@ -208,8 +215,10 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     endTimeFormat_ = newFormat;
     FileExport config = repository_->get();
     endTimer_.setText(timeToString(config.getEndTime(), endTimeFormat_));
-    endTimeFormatLabel_.setText(getFormatDescription(endTimeFormat_),
-                                juce::dontSendNotification);
+    endTimeFormatLabel_.setText(
+        TimeFormatConverter::getFormatDescription(
+            static_cast<TimeFormatConverter::TimeFormat>(endTimeFormat_)),
+        juce::dontSendNotification);
     repaint();
   };
   endFormatSegments_.setSelectedFormat(
@@ -592,190 +601,43 @@ void FileExportScreen::paint(juce::Graphics& g) {
 
 juce::String FileExportScreen::timeToString(int timeInSeconds,
                                             TimeFormat format) {
+  auto converterFormat = static_cast<TimeFormatConverter::TimeFormat>(format);
+
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return secondsToHMS(timeInSeconds);
+      return TimeFormatConverter::secondsToHMS(timeInSeconds);
     case TimeFormat::BarsBeats:
-      return secondsToBarsBeats(timeInSeconds);
+      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue()) {
+        return TimeFormatConverter::secondsToBarsBeats(
+            timeInSeconds, *cachedBpm_, *cachedTimeSignature_);
+      }
+      return "1.1.000";  // Fallback
     case TimeFormat::Timecode:
-      return secondsToTimecode(timeInSeconds);
+      if (cachedFrameRate_.hasValue()) {
+        return TimeFormatConverter::secondsToTimecode(timeInSeconds,
+                                                      *cachedFrameRate_);
+      }
+      return "00:00:00:00";  // Fallback
     default:
-      return secondsToHMS(timeInSeconds);
+      return TimeFormatConverter::secondsToHMS(timeInSeconds);
   }
 }
 
 int FileExportScreen::stringToTime(juce::String val, TimeFormat format) {
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return hmsToSeconds(val);
+      return TimeFormatConverter::hmsToSeconds(val);
     case TimeFormat::BarsBeats:
-      return barsBeatsToSeconds(val);
+      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue()) {
+        return TimeFormatConverter::barsBeatsToSeconds(val, *cachedBpm_,
+                                                       *cachedTimeSignature_);
+      }
+      return -1;  // Cannot convert without tempo info
     case TimeFormat::Timecode:
-      return timecodeToSeconds(val);
+      return TimeFormatConverter::timecodeToSeconds(val);
     default:
-      return hmsToSeconds(val);
+      return TimeFormatConverter::hmsToSeconds(val);
   }
-}
-
-juce::String FileExportScreen::secondsToHMS(int timeInSeconds) {
-  int seconds = timeInSeconds;
-  int minutes = seconds / 60;
-  seconds = seconds % 60;
-  int hours = minutes / 60;
-  minutes = minutes % 60;
-
-  // Pad with zeros
-  juce::String hourString =
-      (hours < 10) ? "0" + juce::String(hours) : juce::String(hours);
-  juce::String minuteString =
-      (minutes < 10) ? "0" + juce::String(minutes) : juce::String(minutes);
-  juce::String secondString =
-      (seconds < 10) ? "0" + juce::String(seconds) : juce::String(seconds);
-
-  return hourString + ":" + minuteString + ":" + secondString;
-}
-
-juce::String FileExportScreen::secondsToBarsBeats(int timeInSeconds) {
-  // Check if timing information is available
-  if (!cachedBpm_.hasValue() || !cachedTimeSignature_.hasValue()) {
-    return "1.1.000";  // Default fallback
-  }
-
-  double bpm = *cachedBpm_;
-  auto timeSig = *cachedTimeSignature_;
-
-  if (bpm <= 0.0) {
-    return "1.1.000";  // Default fallback
-  }
-
-  // Calculate bars and beats from time in seconds
-  double beatsPerBar = timeSig.numerator;
-  double secondsPerBeat = 60.0 / bpm;
-  double totalBeats = timeInSeconds / secondsPerBeat;
-
-  int bars = static_cast<int>(totalBeats / beatsPerBar) + 1;  // Bars start at 1
-  double beatsInCurrentBar = std::fmod(totalBeats, beatsPerBar);
-  int beat = static_cast<int>(beatsInCurrentBar) + 1;  // Beats start at 1
-  int ticks = static_cast<int>(
-      (beatsInCurrentBar - std::floor(beatsInCurrentBar)) * 960.0);
-
-  // Format: BBB.B.TTT
-  return juce::String(bars) + "." + juce::String(beat) + "." +
-         juce::String(ticks).paddedLeft('0', 3);
-}
-
-juce::String FileExportScreen::secondsToTimecode(int timeInSeconds) {
-  // Check if frame rate is available
-  if (!cachedFrameRate_.hasValue()) {
-    return "00:00:00:00";  // Default fallback
-  }
-
-  auto frameRate = *cachedFrameRate_;
-  double effectiveRate = frameRate.getEffectiveRate();
-
-  int hours = timeInSeconds / 3600;
-  int minutes = (timeInSeconds % 3600) / 60;
-  int seconds = timeInSeconds % 60;
-  int frames = 0;  // For integer seconds, frames = 0
-
-  // Format: HH:MM:SS:FF
-  juce::String hourStr = juce::String(hours).paddedLeft('0', 2);
-  juce::String minStr = juce::String(minutes).paddedLeft('0', 2);
-  juce::String secStr = juce::String(seconds).paddedLeft('0', 2);
-  juce::String frameStr = juce::String(frames).paddedLeft('0', 2);
-
-  return hourStr + ":" + minStr + ":" + secStr + ":" + frameStr;
-}
-
-int FileExportScreen::hmsToSeconds(const juce::String& val) {
-  auto parts = juce::StringArray::fromTokens(val, ":", "");
-  if (parts.size() != 3) {
-    return -1;
-  }
-  if (!parts[0].containsOnly("0123456789") ||
-      !parts[1].containsOnly("0123456789") ||
-      !parts[2].containsOnly("0123456789")) {
-    return -1;
-  }
-
-  int hours = parts[0].getIntValue();
-  int minutes = parts[1].getIntValue();
-  int seconds = parts[2].getIntValue();
-
-  // Validate ranges
-  if (minutes > 59 || seconds > 59 || hours < 0 || minutes < 0 || seconds < 0) {
-    return -1;
-  }
-
-  return (hours * 3600 + minutes * 60 + seconds);
-}
-
-int FileExportScreen::barsBeatsToSeconds(const juce::String& val) {
-  auto parts = juce::StringArray::fromTokens(val, ".", "");
-  if (parts.size() != 3) {
-    return -1;
-  }
-  if (!parts[0].containsOnly("0123456789") ||
-      !parts[1].containsOnly("0123456789") ||
-      !parts[2].containsOnly("0123456789")) {
-    return -1;
-  }
-
-  // Check if timing information is available
-  if (!cachedBpm_.hasValue() || !cachedTimeSignature_.hasValue()) {
-    return -1;  // Cannot convert without tempo info
-  }
-
-  int bars = parts[0].getIntValue();
-  int beat = parts[1].getIntValue();
-  int ticks = parts[2].getIntValue();
-
-  double bpm = *cachedBpm_;
-  auto timeSig = *cachedTimeSignature_;
-  double beatsPerBar = timeSig.numerator;
-  double secondsPerBeat = 60.0 / bpm;
-
-  // Validate ranges
-  if (bars < 1 || beat < 1 || beat > static_cast<int>(beatsPerBar) ||
-      ticks < 0 || ticks >= 960 || bpm <= 0) {
-    return -1;
-  }
-
-  // Convert to total beats
-  double totalBeats = (bars - 1) * beatsPerBar +  // Bars start at 1
-                      (beat - 1) +                // Beats start at 1
-                      (ticks / 960.0);            // 960 ticks per beat
-
-  return static_cast<int>(totalBeats * secondsPerBeat);
-}
-
-int FileExportScreen::timecodeToSeconds(const juce::String& val) {
-  auto parts = juce::StringArray::fromTokens(val, ":", "");
-  if (parts.size() != 4) {
-    return -1;
-  }
-  if (!parts[0].containsOnly("0123456789") ||
-      !parts[1].containsOnly("0123456789") ||
-      !parts[2].containsOnly("0123456789") ||
-      !parts[3].containsOnly("0123456789")) {
-    return -1;
-  }
-
-  int hours = parts[0].getIntValue();
-  int minutes = parts[1].getIntValue();
-  int seconds = parts[2].getIntValue();
-  int frames = parts[3].getIntValue();
-
-  // Validate ranges (frames validation would require frame rate)
-  if (minutes > 59 || seconds > 59 || hours < 0 || minutes < 0 || seconds < 0 ||
-      frames < 0) {
-    return -1;
-  }
-
-  // Note: Frames are ignored for now as we work with integer seconds
-  // This means 00:00:05:00 and 00:00:05:29 both become 5 seconds
-  // This is acceptable for the current use case but creates lossy conversion
-  return (hours * 3600 + minutes * 60 + seconds);
 }
 
 void FileExportScreen::updateTimingInfoFromHost() {
@@ -839,19 +701,6 @@ bool FileExportScreen::isTimeFormatAvailable(TimeFormat format) {
 
     default:
       return true;
-  }
-}
-
-juce::String FileExportScreen::getFormatDescription(TimeFormat format) {
-  switch (format) {
-    case TimeFormat::HoursMinutesSeconds:
-      return "Format: Hours:Minutes:Seconds";
-    case TimeFormat::BarsBeats:
-      return "Format: Bars.Beats.Ticks";
-    case TimeFormat::Timecode:
-      return "Format: Timecode (HH:MM:SS:FF)";
-    default:
-      return "";
   }
 }
 
