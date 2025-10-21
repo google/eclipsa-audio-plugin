@@ -138,6 +138,17 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
                                   juce::NotificationType::dontSendNotification);
   codecSelector_.onChange([this] {
     FileExport config = repository_->get();
+    int selectedIndex = codecSelector_.getSelectedIndex();
+
+    // Only allow Opus (index 2) if sample rate is 48kHz
+    if (selectedIndex == 2 && config.getSampleRate() != 48000) {
+      // Revert to previous selection
+      codecSelector_.setSelectedIndex(
+          (int)config.getAudioCodec(),
+          juce::NotificationType::dontSendNotification);
+      return;
+    }
+
     config.setAudioCodec((AudioCodec)codecSelector_.getSelectedIndex());
     configureCustomCodecParameter(config.getAudioCodec());
     repository_->update(config);
@@ -639,6 +650,23 @@ void FileExportScreen::refreshFileExportComponents() {
   FileExport config = repository_->get();
   if (config.getSampleRate() > 0) {
     sampleRate_.setText(juce::String(config.getSampleRate()) + " Hz");
+  }
+
+  // Only allow Opus codec if sample rate is 48kHz
+  bool opusAllowed = (config.getSampleRate() == 48000);
+  const juce::ComboBox* comboBox = codecSelector_.getComboBox();
+  if (comboBox != nullptr) {
+    // OPUS is item ID 3 (LPCM=1, FLAC=2, OPUS=3)
+    const_cast<juce::ComboBox*>(comboBox)->setItemEnabled(3, opusAllowed);
+  }
+
+  // If Opus is currently selected but not allowed, switch to LPCM
+  if (!opusAllowed && config.getAudioCodec() == AudioCodec::OPUS) {
+    config.setAudioCodec(AudioCodec::LPCM);
+    codecSelector_.setSelectedIndex(
+        (int)AudioCodec::LPCM, juce::NotificationType::dontSendNotification);
+    configureCustomCodecParameter(AudioCodec::LPCM);
+    repository_->update(config);
   }
 
   if (config.getManualExport()) {

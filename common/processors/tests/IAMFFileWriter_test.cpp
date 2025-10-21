@@ -63,13 +63,3 @@ TEST_F(IAMFFileWriterTest, write_iamf) {
 
   EXPECT_TRUE(writer.close());
 }
-
-/**
-Possible tests:
-Metadata checks
-Metadata population from repository -- Can add a public populate metadata method
-  to make this testable
-Write frames with different codecs
-(Tests with different AE and MP configs can be handle by the FIOProc tests)
-
-*/

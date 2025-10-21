@@ -16,6 +16,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include <filesystem>
 #include <fstream>
 
 #include "IAMF_decoder.h"
@@ -42,6 +43,11 @@ static juce::AudioBuffer<float> generateSineWave(float frequency,
     buffer.setSample(0, i, sample);
   }
   return buffer;
+}
+
+static float sampleSine(const unsigned freq, const float n,
+                        const unsigned sampleRate) {
+  return 0.2f * std::sin(2 * M_PI * freq * n / (float)sampleRate);
 }
 
 static unsigned totalAudioChannels(
@@ -324,4 +330,37 @@ class MP4IAMFDemuxer {
     if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) return {};
     return buffer;
   }
+};
+
+// Debug utility for writing auto data out for offline analysis
+class WavFileWriter {
+ public:
+  WavFileWriter(const std::filesystem::path& filePath, int numChannels,
+                double sampleRate = 48000)
+      : numChannels_(numChannels) {
+    wavFormat_.reset(new juce::WavAudioFormat());
+    std::filesystem::remove(filePath);
+    juce::File file(filePath.string());
+    std::unique_ptr<juce::FileOutputStream> outputStream(
+        file.createOutputStream());
+    writer_.reset(wavFormat_->createWriterFor(outputStream.get(), sampleRate,
+                                              numChannels_, 16, {}, 0));
+    (void)outputStream.release();
+  }
+
+  ~WavFileWriter() { writer_->flush(); }
+
+  bool write(const juce::AudioBuffer<float>& buffer, int numSamples) {
+    if (!writer_ || buffer.getNumChannels() != numChannels_) {
+      return false;
+    }
+    return writer_->writeFromAudioSampleBuffer(buffer, 0, numSamples);
+  }
+
+  bool isOpen() const { return writer_ != nullptr; }
+
+ private:
+  const int numChannels_;
+  std::unique_ptr<juce::WavAudioFormat> wavFormat_;
+  std::unique_ptr<juce::AudioFormatWriter> writer_;
 };
