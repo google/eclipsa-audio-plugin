@@ -49,3 +49,4 @@ END_JUCE_MODULE_DECLARATION
 #include "src/RepositoryItem.h"
 #include "src/RoomSetup.h"
 #include "src/SpeakerMonitorData.h"
+#include "src/TimeFormatConverter.h"

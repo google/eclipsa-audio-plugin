@@ -25,3 +25,4 @@
 #include "src/MixPresentationSoloMute.cpp"
 #include "src/PlaybackMS.cpp"
 #include "src/RoomSetup.cpp"
+#include "src/TimeFormatConverter.cpp"

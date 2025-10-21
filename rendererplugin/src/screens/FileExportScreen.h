@@ -20,12 +20,20 @@
 #include "../RendererProcessor.h"
 #include "components/src/SelectionBox.h"
 #include "components/src/SliderButton.h"
+#include "components/src/TimeFormatSegmentSelector.h"
 #include "components/src/TitledLabel.h"
 #include "components/src/TitledTextBox.h"
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_structures/src/FileExport.h"
+
+// Time format options for export start/end times
+enum class TimeFormat {
+  HoursMinutesSeconds,  // 00:00:00 (HH:MM:SS)
+  BarsBeats,            // 1.1.000 (Bars.Beats.Ticks)
+  Timecode              // 00:00:00:00 (HH:MM:SS:FF)
+};
 
 class FileExportScreen : public juce::Component,
                          public juce::ValueTree::Listener {
@@ -51,11 +59,18 @@ class FileExportScreen : public juce::Component,
 
  private:
   void configureCustomCodecParameter(AudioCodec format);
-  juce::String timeToString(int timeInMs);
-  int stringToTime(juce::String val);
+
+  // Time format conversion methods
+  juce::String timeToString(int timeInSeconds, TimeFormat format);
+  int stringToTime(juce::String val, TimeFormat format);
+
+  // Helper methods for timing info and format availability
+  void updateTimingInfoFromHost();
+  bool isTimeFormatAvailable(TimeFormat format);
 
   bool validFileExportConfig(const FileExport& config);
 
+  MainEditor& editor_;
   FileExportRepository* repository_;
   AudioElementRepository* aeRepository_;
   MixPresentationRepository* mpRepository_;
@@ -68,11 +83,18 @@ class FileExportScreen : public juce::Component,
 
   HeaderBar headerBar_;
 
-  // Left side elements
+  // Left side elements - Time inputs (use TitledTextBox like other fields)
   TitledTextBox startTimer_;
   juce::Label startTimerErrorLabel_;
+  TimeFormatSegmentSelector startFormatSegments_;
+  juce::Label startTimeFormatLabel_;
+
   TitledTextBox endTimer_;
   juce::Label endTimerErrorLabel_;
+  TimeFormatSegmentSelector endFormatSegments_;
+  juce::Label endTimeFormatLabel_;
+
+  // Left side elements - Export format selectors
   SelectionBox formatSelector_;
   SelectionBox codecSelector_;
   SelectionBox bitDepthSelector_;
@@ -81,6 +103,15 @@ class FileExportScreen : public juce::Component,
   juce::Label customCodecParameterErrorLabel_;
   TitledLabel mixPresentations_;
   TitledLabel audioElements_;
+
+  // Time format state
+  TimeFormat startTimeFormat_;
+  TimeFormat endTimeFormat_;
+
+  // Cached timing information from host
+  juce::Optional<double> cachedBpm_;
+  juce::Optional<juce::AudioPlayHead::TimeSignature> cachedTimeSignature_;
+  juce::Optional<juce::AudioPlayHead::FrameRate> cachedFrameRate_;
 
   // Right side elements
   juce::Label exportAudioLabel_;
