@@ -17,7 +17,7 @@
 LoudnessStats::LoudnessStats(SpeakerMonitorData& data)
     : statsToDisp_("Loudness Standard"), rtData_(data) {
   statsToDisp_.setText("ITU-R BS.1770-4");
-  statsToDisp_.setReadOnly(true);
+  statsToDisp_.reduceTitleBuffer(kLabelOffset_);
   addAndMakeVisible(statsToDisp_);
 
   resetButton_.setImages(false, true, true, kResetImg_, 1.0f,
@@ -41,6 +41,10 @@ LoudnessStats::LoudnessStats(SpeakerMonitorData& data)
 
   range_.first.setText("Range", juce::dontSendNotification);
   configureLabels(range_);
+
+  target_.first.setText("Target-YouTube", juce::dontSendNotification);
+  configureLabels(target_);
+  target_.second.setText("-14.0", juce::dontSendNotification);
 
   startTimerHz(1);
 };
@@ -80,7 +84,9 @@ void LoudnessStats::paint(juce::Graphics& g) {
 
   // Draw measurement labels.
   botBounds.translate(0, offsetY * 3);
-  auto botLeftBounds = botBounds.removeFromLeft(botBounds.getWidth() * 0.55f);
+  botBounds.removeFromTop(kLabelOffset_);
+  auto botLeftBounds = botBounds.removeFromLeft(botBounds.getWidth() * 0.75f);
+
   auto botRightBounds = botBounds;
   int labelHeight = (botLeftBounds.getHeight() / 2) / kNumMeasurements_ - 3;
   momentary_.first.setBounds(botLeftBounds.removeFromTop(labelHeight));
@@ -96,6 +102,10 @@ void LoudnessStats::paint(juce::Graphics& g) {
   botLeftBounds.removeFromTop(kLabelOffset_);
 
   range_.first.setBounds(botLeftBounds.removeFromTop(labelHeight));
+  botLeftBounds.removeFromTop(kLabelOffset_);
+
+  target_.first.setBounds(botLeftBounds.removeFromTop(labelHeight));
+  botLeftBounds.removeFromTop(kLabelOffset_);
 
   // Update measurement values and draw.
   drawStatValues(labelHeight, botRightBounds);
@@ -103,7 +113,7 @@ void LoudnessStats::paint(juce::Graphics& g) {
   // Draw reset button.
   auto resetButtonBounds = getLocalBounds();
   resetButtonBounds.removeFromLeft(resetButtonBounds.getWidth() * 0.7f);
-  resetButtonBounds.setTop(range_.first.getBottom());
+  resetButtonBounds.setTop(range_.first.getBottom() + kLabelOffset_);
   resetButtonBounds.translate(15, 0);
   resetButtonBounds.setHeight(loudnessLabelBounds.getHeight() * 0.8f);
 
@@ -160,6 +170,9 @@ void LoudnessStats::drawStatValues(const int labelHeight,
                     : kInvalid_;
   range_.second.setText(measuredVal, juce::dontSendNotification);
   range_.second.setBounds(bounds.removeFromTop(labelHeight));
+  bounds.removeFromTop(kLabelOffset_);
+
+  target_.second.setBounds(bounds.removeFromTop(labelHeight));
 }
 
 void LoudnessStats::buttonClicked(juce::Button* btn) {

@@ -109,6 +109,15 @@ ControlKnob::ControlKnob(const double& min, const double& max,
 
 ControlKnob::~ControlKnob() { setLookAndFeel(nullptr); }
 
+void ControlKnob::mouseDown(const juce::MouseEvent& event) {
+  if (event.mods.isAltDown() && isEnabled()) {
+    // Option-click resets control to 0.
+    juce::Slider::setValue(0);
+    return;
+  }
+  juce::Slider::mouseDown(event);
+}
+
 void ControlKnob::setValue(float newValue) { juce::Slider::setValue(newValue); }
 
 void ControlKnob::setValueUpdatedCallback(std::function<void(int)> callback) {

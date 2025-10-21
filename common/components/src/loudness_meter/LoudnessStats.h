@@ -18,7 +18,7 @@
 #include <data_structures/src/SpeakerMonitorData.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "components/src/TitledTextBox.h"
+#include "components/src/TitledLabel.h"
 
 class LoudnessStats : public juce::Component,
                       juce::ImageButton::Listener,
@@ -46,10 +46,10 @@ class LoudnessStats : public juce::Component,
   const juce::String kInvalid_ = "--";
   const juce::Image kResetImg_ = IconStore::getInstance().getResetIcon();
 
-  TitledTextBox statsToDisp_;
+  TitledLabel statsToDisp_;
   juce::ImageButton resetButton_;
   // Loudness stats to display.
-  LabelWithVal momentary_, shortTerm_, integrated_, peak_, range_;
+  LabelWithVal momentary_, shortTerm_, integrated_, peak_, range_, target_;
   // Loudness stats source.
   SpeakerMonitorData& rtData_;
 };
