@@ -137,7 +137,8 @@ void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
   }
 
   codecConfig->set_num_samples_per_frame(samplesPerFrame);
-  codecConfig->set_audio_roll_distance(-4);
+  codecConfig->set_automatically_override_audio_roll_distance(true);
+  codecConfig->set_automatically_override_codec_delay(true);
 
   auto opusConfig = codecConfig->mutable_decoder_config_opus();
   opusConfig->set_input_sample_rate(sampleRate);
