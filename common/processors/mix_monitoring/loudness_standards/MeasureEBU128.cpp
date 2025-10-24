@@ -99,7 +99,7 @@ float MeasureEBU128::calculateTruePeakLevel(
     const double kUpsampledRate = kSampleRate_ * kUpsampleRatio_;
     const double kCutoffFreq = std::min(20e3, kUpsampledRate / 2.0 * 0.95);
     lpfFilter.setCoefficients(
-        juce::IIRCoefficients::makeLowPass(kSampleRate_, kCutoffFreq));
+        juce::IIRCoefficients::makeLowPass(kUpsampledRate, kCutoffFreq));
     lpfFilter.processSamples(upsampledBuffer_.getWritePointer(i),
                              upsampledBuffer_.getNumSamples());
   }
