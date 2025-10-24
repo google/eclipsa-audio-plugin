@@ -108,6 +108,10 @@ void IAMFDecoderSource::getNextAudioBlock(
   sampleCount_ += kNumRead;
   frameCount_ = sampleCount_ / streamData_.frameSize;
 
+  if (kNumRead < static_cast<size_t>(info.numSamples)) {
+    info.buffer->clear(info.startSample + kNumRead, info.numSamples - kNumRead);
+  }
+
   if (!finished_ && kNumRead == 0 && isPlaying_) {
     finished_ = true;
     if (onFinished_) onFinished_();

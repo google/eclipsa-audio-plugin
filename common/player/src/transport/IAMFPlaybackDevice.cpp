@@ -49,15 +49,13 @@ void IAMFPlaybackDevice::stop() { decoderSource_->stop(); }
 
 void IAMFPlaybackDevice::seekTo(const float position) {
   jassert(position >= 0 && position <= 1.0);
+  deviceManager_.closeAudioDevice();
   const bool wasPlaying = decoderSource_->isPlaying();
   decoderSource_->pause();
-  deviceManager_.removeAudioCallback(&sourcePlayer_);
-  sourcePlayer_.setSource(nullptr);
   const size_t kFrameIdx =
       static_cast<size_t>(position * decoderSource_->getStreamData().numFrames);
   decoderSource_->seek(kFrameIdx);
-  setPlayerSource();
-  deviceManager_.addAudioCallback(&sourcePlayer_);
+  deviceManager_.restartLastAudioDevice();
   if (wasPlaying) decoderSource_->play();
 }
 
