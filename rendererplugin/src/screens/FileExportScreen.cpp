@@ -519,7 +519,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
   endTimerErrorLabel_.setBounds(endColumnLeft);
 
   // Draw in the format and codec row
-  leftSideBounds.removeFromTop(columnPadding);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(formatSelector_);
   formatSelector_.setBounds(row.removeFromLeft(componentWidth));
@@ -528,7 +527,7 @@ void FileExportScreen::paint(juce::Graphics& g) {
   codecSelector_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the bit depth and sample rate row
-  leftSideBounds.removeFromTop(columnPadding);
+  leftSideBounds.removeFromTop(rowPadding / 2);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(bitDepthSelector_);
   bitDepthSelector_.setBounds(row.removeFromLeft(componentWidth));
@@ -537,19 +536,17 @@ void FileExportScreen::paint(juce::Graphics& g) {
   sampleRate_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the custom codec parameter
-  leftSideBounds.removeFromTop(columnPadding);
+  leftSideBounds.removeFromTop(rowPadding / 2);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(customCodecParameter_);
   customCodecParameter_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the custom codec parameter error label
-  leftSideBounds.removeFromTop(2);
-  row = leftSideBounds.removeFromTop(columnPadding - 2);
+  row = leftSideBounds.removeFromTop(rowPadding / 2);
   addAndMakeVisible(customCodecParameterErrorLabel_);
   customCodecParameterErrorLabel_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the mix presentation and Audio Elements row
-  leftSideBounds.removeFromTop(columnPadding);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(mixPresentations_);
   mixPresentations_.setBounds(row.removeFromLeft(componentWidth));
