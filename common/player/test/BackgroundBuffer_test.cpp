@@ -152,7 +152,8 @@ TEST(BackgroundBuffer, fill_seek_behind_ob) {
 // 7. Read through the entire IAMF file.
 TEST(BackgroundBuffer, whole_file) {
   auto decoder = IAMFFileReader::createIamfReader(
-      std::filesystem::current_path() / "Reference2x2.wav.iamf");
+      std::filesystem::current_path().parent_path() /
+      "common/player/test/test_resources/test.iamf");
   ASSERT_NE(decoder, nullptr);
 
   const unsigned kPadSecs = 3;
