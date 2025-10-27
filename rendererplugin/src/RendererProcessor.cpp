@@ -425,19 +425,14 @@ void RendererProcessor::valueTreeRedirected(
 void RendererProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
-  if (property == FileExport::kExportCompleted) {
-    return;
-  }
-  checkManualOfflineStartStop();
-
-  if (treeWhosePropertyHasChanged.getType() == RoomSetup::kTreeType &&
-      property == RoomSetup::kSpeakerLayout) {
+  if (property == FileExport::kManualExport) {
+    checkManualOfflineStartStop();
+  } else if (treeWhosePropertyHasChanged.getType() == RoomSetup::kTreeType &&
+             property == RoomSetup::kSpeakerLayout) {
     configureOutputBus();
-
     std::string mainBusInfo = "Main Bus Output Channels: " +
                               std::to_string(getMainBusNumOutputChannels()) +
                               "\n";
-
     LOG_ANALYTICS(instanceId_, mainBusInfo);
   }
 }

@@ -16,6 +16,7 @@
 
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_dsp/juce_dsp.h>
 #include <logger/logger.h>
 
 #include "EBU128LoudnessMeter.h"
@@ -64,6 +65,12 @@ class MeasureEBU128 {
 
   float calculateDigitalPeak(const juce::AudioBuffer<float>& buffer);
 
+  struct LPF {
+    juce::dsp::AudioBlock<float> block;
+    juce::dsp::ProcessorDuplicator<juce::dsp::FIR::Filter<float>,
+                                   juce::dsp::FIR::Coefficients<float>>
+        filter;
+  };
   // Playback information
   const double kSampleRate_;
   juce::AudioChannelSet playbackLayout_;
@@ -72,12 +79,13 @@ class MeasureEBU128 {
   Ebu128LoudnessMeter loudnessMeter_;
 
   // Resamplers for true peak calculation.
-  const int kUpsampleRatio_ = 4;  // Upsampling ratio for true peak calculation.
+  int upsampleRatio_ = 4;  // Upsampling ratio for true peak calculation.
   juce::AudioBuffer<float> upsampledBuffer_;  // Larger buffer to upsample into.
   std::vector<juce::Interpolators::Lagrange> perChannelResamplers_;
+  LPF lpf_;
 
-  // Internal copy of calculated loudness statistics to return when loudnesses'
-  // are queried between measurement periods.
+  // Internal copy of calculated loudness statistics to return when
+  // loudnesses' are queried between measurement periods.
   LoudnessStats loudnessStats_{-std::numeric_limits<float>::infinity(),
                                -std::numeric_limits<float>::infinity(),
                                -std::numeric_limits<float>::infinity(),
