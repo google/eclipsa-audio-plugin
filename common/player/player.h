@@ -16,8 +16,17 @@
 
 #pragma once
 
-#if 0
+// This module encapsulate the IAMF audio player. The `IAMFPlaybackDevice`
+// manages the physical playback device, as well as the layers that implement
+// everything from background decoding to resampling to populating the playback
+// device buffers.
+// The playback device responds to state changes via listening to the
+// `FilePlaybackRepository`. Currently, all updates are performed on the
+// Message/UI thread. This means that interacting with the decoder will
+// generate some latency. This is expected due to the nature of the decoder's
+// serial design.
 
+#if 0
 BEGIN_JUCE_MODULE_DECLARATION
 
       ID:               Audio Processors

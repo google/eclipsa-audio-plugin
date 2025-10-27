@@ -34,7 +34,7 @@ class ExportValidationComponent : public juce::Component,
         playbackDevice_("Playback Device"),
         layoutToDecode_("Mix Presentation Layout"),
         fpbr_(filePlaybackRepo) {
-    title_.setColour(juce::Label::textColourId, juce::Colour(221, 228, 227));
+    title_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
     title_.setJustificationType(juce::Justification::left);
     title_.setFont(juce::Font("Roboto", 22.0f, juce::Font::plain));
     addAndMakeVisible(title_);

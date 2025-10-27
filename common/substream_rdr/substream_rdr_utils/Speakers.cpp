@@ -14,8 +14,6 @@
 
 #include "Speakers.h"
 
-#include "iamf_tools_api_types.h"
-
 using namespace Speakers;
 
 AudioElementSpeakerLayout::AudioElementSpeakerLayout(

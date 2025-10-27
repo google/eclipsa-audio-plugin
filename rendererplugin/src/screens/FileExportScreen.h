@@ -69,7 +69,6 @@ class FileExportScreen : public juce::Component,
   bool isTimeFormatAvailable(TimeFormat format);
 
   bool validFileExportConfig(const FileExport& config);
-  bool loadFileForPlayback();
 
   MainEditor& editor_;
   FileExportRepository* repository_;
