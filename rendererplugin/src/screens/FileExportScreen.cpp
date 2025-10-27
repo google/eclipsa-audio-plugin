@@ -45,7 +45,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       audioOutputSelect_(
           "Select a file to export audio to",
           juce::File::getSpecialLocation(juce::File::userDesktopDirectory),
-          "*.iamf"),
+          "*.iamf;*.wav"),
       muxVideoSourceSelect_(
           "Select a video file to mux",
           juce::File::getSpecialLocation(juce::File::userDesktopDirectory),
