@@ -112,8 +112,8 @@ IAMFFileReader::StreamData IAMFPlaybackDevice::getStreamData() const {
 void IAMFPlaybackDevice::valueTreePropertyChanged(
     juce::ValueTree& tree, const juce::Identifier& property) {
   const FilePlayback fpb(fpbr_.get());
-  const PlaybackState kPrevState(
-      decoderSource_ ? decoderSource_->isPlaying() : false, fpb.getPlayState());
+  const PlaybackState kPrevState = {
+      decoderSource_ ? decoderSource_->isPlaying() : false, fpb.getPlayState()};
   if (property == FilePlayback::kPlayState) {
     switch (fpb.getPlayState()) {
       case FilePlayback::kPlay:
