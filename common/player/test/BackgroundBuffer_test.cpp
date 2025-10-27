@@ -469,7 +469,7 @@ TEST_F(BackgroundBufferTest, seek_and_validate) {
   // Seek to a position within the padding and validate samples
   size_t seekFrameIdx = 10;
   buffer.seek(seekFrameIdx);
-  EXPECT_EQ(buffer.readSamples(readBuffer, 0, kSData.frameSize),
+  ASSERT_EQ(buffer.readSamples(readBuffer, 0, kSData.frameSize),
             kSData.frameSize);
   for (int channel = 0; channel < kSData.numChannels; ++channel) {
     for (int i = 0; i < kSData.frameSize; ++i) {
@@ -487,7 +487,8 @@ TEST_F(BackgroundBufferTest, seek_and_validate) {
   // Seek to a position outside the padding and validate samples
   seekFrameIdx = 1000;
   buffer.seek(seekFrameIdx);
-  EXPECT_EQ(buffer.readSamples(readBuffer, 0, kSData.frameSize),
+  waitForData();
+  ASSERT_EQ(buffer.readSamples(readBuffer, 0, kSData.frameSize),
             kSData.frameSize);
   for (int channel = 0; channel < kSData.numChannels; ++channel) {
     for (int i = 0; i < kSData.frameSize; ++i) {
