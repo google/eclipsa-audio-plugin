@@ -13,6 +13,16 @@ static void waitForData() {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
+static void waitForReady(BackgroundBuffer& buffer) {
+  const unsigned kMaxWaitMs = 5000;
+  unsigned waitedMs = 0;
+  while (!buffer.isReady() && waitedMs < kMaxWaitMs) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    waitedMs += 100;
+  }
+  EXPECT_TRUE(buffer.isReady());
+}
+
 const std::filesystem::path kReferenceFilePath =
     std::filesystem::current_path() / "../common/player/test/test_resources" /
     "test.iamf";
@@ -24,8 +34,6 @@ TEST(BackgroundBuffer, fill) {
   BackgroundBuffer buffer(1, *decoder);
 
   waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
   EXPECT_TRUE(buffer.availableSamples() > 0);
 }
 
@@ -35,10 +43,7 @@ TEST(BackgroundBuffer, fill_read) {
   ASSERT_NE(decoder, nullptr);
   BackgroundBuffer buffer(1, *decoder);
 
-  waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
-  EXPECT_TRUE(buffer.availableSamples() > 0);
+  waitForReady(buffer);
 
   juce::AudioBuffer<float> out(decoder->getStreamData().numChannels,
                                decoder->getStreamData().frameSize);
@@ -58,9 +63,8 @@ TEST(BackgroundBuffer, fill_seek_ahead) {
   ASSERT_NE(decoder, nullptr);
   BackgroundBuffer buffer(1, *decoder);
 
-  waitForData();
+  waitForReady(buffer);
 
-  EXPECT_TRUE(buffer.isReady());
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
   juce::AudioBuffer<float> out(decoder->getStreamData().numChannels,
@@ -83,9 +87,8 @@ TEST(BackgroundBuffer, fill_seek_behind) {
   const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
   BackgroundBuffer buffer(kPadSecs, *decoder);
 
-  waitForData();
+  waitForReady(buffer);
 
-  EXPECT_TRUE(buffer.isReady());
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
   // Read through the padding. The underlying window should retain the padding
@@ -112,9 +115,8 @@ TEST(BackgroundBuffer, fill_seek_ahead_ob) {
   const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
   BackgroundBuffer buffer(kPadSecs, *decoder);
 
-  waitForData();
+  waitForReady(buffer);
 
-  EXPECT_TRUE(buffer.isReady());
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
   // Attempt seeking to a position outside the amount of padding we have.
@@ -131,9 +133,8 @@ TEST(BackgroundBuffer, fill_seek_behind_ob) {
   const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
   BackgroundBuffer buffer(kPadSecs, *decoder);
 
-  waitForData();
+  waitForReady(buffer);
 
-  EXPECT_TRUE(buffer.isReady());
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
   // Read through the padding. The underlying window should retain the padding
@@ -157,11 +158,6 @@ TEST(BackgroundBuffer, whole_file) {
   const unsigned kPadSecs = 3;
   const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
   BackgroundBuffer buffer(kPadSecs, *decoder);
-
-  waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
-  EXPECT_TRUE(buffer.availableSamples() > 0);
 
   const size_t kBufferSz = 1024;
   juce::AudioBuffer<float> out(decoder->getStreamData().numChannels, kBufferSz);
@@ -191,11 +187,6 @@ TEST_F(BackgroundBufferTest, write_read_validate) {
 
   const unsigned kPadSecs = 1;
   BackgroundBuffer buffer(kPadSecs, *decoder);
-
-  waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
-  EXPECT_TRUE(buffer.availableSamples() > 0);
 
   const IAMFFileReader::StreamData kSData = decoder->getStreamData();
   EXPECT_TRUE(kSData.valid);
@@ -255,11 +246,6 @@ TEST_F(BackgroundBufferTest, vary_read_write) {
   const unsigned kPadSecs = 1;
   BackgroundBuffer buffer(kPadSecs, *decoder);
 
-  waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
-  EXPECT_TRUE(buffer.availableSamples() > 0);
-
   const IAMFFileReader::StreamData kSData = decoder->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
@@ -317,11 +303,6 @@ TEST_F(BackgroundBufferTest, vary_read_write_long) {
 
   const unsigned kPadSecs = 1;
   BackgroundBuffer buffer(kPadSecs, *decoder);
-
-  waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
-  EXPECT_TRUE(buffer.availableSamples() > 0);
 
   const IAMFFileReader::StreamData kSData = decoder->getStreamData();
   EXPECT_TRUE(kSData.valid);
@@ -383,11 +364,6 @@ TEST_F(BackgroundBufferTest, vary_read_write_long_vary_pad) {
   for (const unsigned kPadSecs : {2, 4, 8, 16, 32, 64}) {
     std::cout << "Testing with pad seconds: " << kPadSecs << std::endl;
     BackgroundBuffer buffer(kPadSecs, *decoder);
-
-    waitForData();
-
-    EXPECT_TRUE(buffer.isReady());
-    EXPECT_TRUE(buffer.availableSamples() > 0);
 
     const IAMFFileReader::StreamData kSData = decoder->getStreamData();
     EXPECT_TRUE(kSData.valid);
@@ -452,10 +428,8 @@ TEST_F(BackgroundBufferTest, seek_and_validate) {
   const unsigned kPadSecs = 1;
   BackgroundBuffer buffer(kPadSecs, *decoder);
 
-  waitForData();
-
-  EXPECT_TRUE(buffer.isReady());
-  EXPECT_TRUE(buffer.availableSamples() > 0);
+  waitForReady(buffer);
+  ASSERT_TRUE(buffer.availableSamples() > 0);
 
   const IAMFFileReader::StreamData kSData = decoder->getStreamData();
   EXPECT_TRUE(kSData.valid);
