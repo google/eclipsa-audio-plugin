@@ -152,9 +152,6 @@ void IAMFPlaybackDevice::valueTreePropertyChanged(
 
 void IAMFPlaybackDevice::setRepoState(
     const FilePlayback::CurrentPlayerState state) {
-  if (state == FilePlayback::kStop) {
-    std::cout << "Stop hit!\n";
-  }
   auto fpb = fpbr_.get();
   fpb.setPlayState(state);
   fpbr_.update(fpb);
