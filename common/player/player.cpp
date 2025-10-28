@@ -12,18 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "data_structures.h"
+#include "player.h"
 
-#include "src/ActiveMixPresentation.cpp"
-#include "src/AudioElement.cpp"
-#include "src/AudioElementSpatialLayout.cpp"
-#include "src/ChannelGains.cpp"
-#include "src/FileExport.cpp"
-#include "src/FilePlayback.cpp"
-#include "src/LanguageCodeMetaData.cpp"
-#include "src/MixPresentation.cpp"
-#include "src/MixPresentationLoudness.cpp"
-#include "src/MixPresentationSoloMute.cpp"
-#include "src/PlaybackMS.cpp"
-#include "src/RoomSetup.cpp"
-#include "src/TimeFormatConverter.cpp"
+#include "src/transport/BackgroundBuffer.cpp"
+#include "src/transport/IAMFDecoderSource.cpp"
+#include "src/transport/IAMFPlaybackDevice.cpp"

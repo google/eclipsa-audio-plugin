@@ -91,7 +91,8 @@ class RendererProcessor final : public ProcessorBase,
             audioElementSpatialLayoutRepository_,
             msPlaybackRepository_,
             audioElementSubscriber_,
-            activeMixPresentationRepository_};
+            activeMixPresentationRepository_,
+            filePlaybackRepository_};
   }
 
   RoomSetupRepository& getRoomSetupRepository() { return roomSetupRepository_; }
@@ -163,6 +164,9 @@ class RendererProcessor final : public ProcessorBase,
 
   ActiveMixRepository activeMixPresentationRepository_;
   inline static const juce::Identifier kActiveMixKey{"active_mix"};
+
+  FilePlaybackRepository filePlaybackRepository_;
+  inline static const juce::Identifier kFilePlaybackKey{"file_playback"};
 
   SpeakerMonitorData monitorData_;
 

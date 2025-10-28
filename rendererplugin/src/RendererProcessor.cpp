@@ -20,6 +20,7 @@
 #include "RendererVersionConverter.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
 #include "data_structures/src/ActiveMixPresentation.h"
+#include "data_structures/src/FileExport.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
@@ -48,6 +49,7 @@ RendererProcessor::RendererProcessor()
       fileExportRepository_(getTreeWithId(kFileExportKey)),
       msPlaybackRepository_(getTreeWithId(kMSPlaybackKey)),
       activeMixPresentationRepository_(getTreeWithId(kActiveMixKey)),
+      filePlaybackRepository_(getTreeWithId(kFilePlaybackKey)),
       isRealtime_(true) {
   // Initialize Logger
   Logger::getInstance().init("EclipsaRenderer");
@@ -386,6 +388,12 @@ void RendererProcessor::updateRepositories() {
   if (mixPresMuteSolo.isValid()) {
     mixPresentationSoloMuteRepository_.setStateTree(mixPresMuteSolo);
   }
+
+  juce::ValueTree filePlayback =
+      persistentState_.getChildWithName(kFilePlaybackKey);
+  if (filePlayback.isValid()) {
+    filePlaybackRepository_.setStateTree(filePlayback);
+  }
 }
 
 juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
@@ -417,16 +425,14 @@ void RendererProcessor::valueTreeRedirected(
 void RendererProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
-  checkManualOfflineStartStop();
-
-  if (treeWhosePropertyHasChanged.getType() == RoomSetup::kTreeType &&
-      property == RoomSetup::kSpeakerLayout) {
+  if (property == FileExport::kManualExport) {
+    checkManualOfflineStartStop();
+  } else if (treeWhosePropertyHasChanged.getType() == RoomSetup::kTreeType &&
+             property == RoomSetup::kSpeakerLayout) {
     configureOutputBus();
-
     std::string mainBusInfo = "Main Bus Output Channels: " +
                               std::to_string(getMainBusNumOutputChannels()) +
                               "\n";
-
     LOG_ANALYTICS(instanceId_, mainBusInfo);
   }
 }

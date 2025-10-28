@@ -1,0 +1,172 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_gui_extra/juce_gui_extra.h>
+
+#include "AudioFilePlayer.h"
+#include "components/src/SelectionBox.h"
+#include "data_repository/implementation/FileExportRepository.h"
+#include "data_repository/implementation/FilePlaybackRepository.h"
+#include "data_structures/src/FilePlayback.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
+
+class ExportValidationComponent : public juce::Component,
+                                  juce::ValueTree::Listener {
+ public:
+  ExportValidationComponent(FilePlaybackRepository& filePlaybackRepo,
+                            FileExportRepository& fileExportRepo)
+      : title_("Export validation", "Export validation"),
+        audioPlayer_(filePlaybackRepo, fileExportRepo),
+        playbackDevice_("Playback Device"),
+        layoutToDecode_("Mix Presentation Layout"),
+        fpbr_(filePlaybackRepo) {
+    title_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
+    title_.setJustificationType(juce::Justification::left);
+    title_.setFont(juce::Font("Roboto", 22.0f, juce::Font::plain));
+    addAndMakeVisible(title_);
+
+    // Populate playback devices
+    populatePlaybackDevices();
+
+    // Setup playback device onChange handler
+    playbackDevice_.onChange([this]() {
+      const int selectedIndex = playbackDevice_.getSelectedIndex();
+      if (selectedIndex >= 0 && selectedIndex < deviceNames_.size()) {
+        auto fpb = fpbr_.get();
+        fpb.setPlaybackDevice(deviceNames_[selectedIndex]);
+        fpbr_.update(fpb);
+      }
+    });
+
+    // Populate layout options
+    for (const auto& layout : kLayouts) {
+      layoutToDecode_.addOption(layout.toString());
+    }
+
+    // Setup layout onChange handler
+    layoutToDecode_.onChange([this]() {
+      const int selectedIndex = layoutToDecode_.getSelectedIndex();
+      if (selectedIndex >= 0 && selectedIndex < kLayouts.size()) {
+        auto fpb = fpbr_.get();
+        fpb.setReqdDecodeLayout(kLayouts[selectedIndex]);
+        fpbr_.update(fpb);
+      }
+    });
+
+    addAndMakeVisible(audioPlayer_);
+    addAndMakeVisible(playbackDevice_);
+    addAndMakeVisible(layoutToDecode_);
+    fpbr_.registerListener(this);
+  }
+
+  ~ExportValidationComponent() { fpbr_.deregisterListener(this); }
+
+  void resized() override {
+    auto bounds = getLocalBounds();
+
+    const int kRowHeight = 65, kGap = 10;
+    title_.setBounds(bounds.removeFromTop(kRowHeight));
+    audioPlayer_.setBounds(bounds.removeFromTop(kRowHeight));
+    bounds.removeFromTop(kGap);
+
+    auto selectionBoxRow = bounds.removeFromTop(kRowHeight);
+    auto playbackDeviceBounds = selectionBoxRow.removeFromLeft(
+        selectionBoxRow.getWidth() / 2 - kGap / 2);
+    selectionBoxRow.removeFromLeft(kGap);
+    auto layoutToDecodeBounds = selectionBoxRow;
+    playbackDevice_.setBounds(playbackDeviceBounds);
+    layoutToDecode_.setBounds(layoutToDecodeBounds);
+  }
+
+ private:
+  void populatePlaybackDevices() {
+    // Initialize device manager temporarily to query devices
+    juce::AudioDeviceManager deviceManager;
+    deviceManager.initialiseWithDefaultDevices(0, 2);
+
+    // Get available device types
+    auto& deviceTypes = deviceManager.getAvailableDeviceTypes();
+
+    for (auto* deviceType : deviceTypes) {
+      deviceType->scanForDevices();
+      auto deviceNames =
+          deviceType->getDeviceNames(false);  // false = output devices
+
+      for (const auto& deviceName : deviceNames) {
+        playbackDevice_.addOption(deviceName);
+        deviceNames_.push_back(deviceName);
+      }
+    }
+
+    // Set default device if available
+    if (!deviceNames_.empty()) {
+      playbackDevice_.setSelectedIndex(0, juce::dontSendNotification);
+      auto fpb = fpbr_.get();
+      fpb.setPlaybackDevice(deviceNames_[0]);
+      fpbr_.update(fpb);
+    }
+  }
+
+  void valueTreePropertyChanged(juce::ValueTree& tree,
+                                const juce::Identifier& property) {
+    const FilePlayback::CurrentPlayerState kState = fpbr_.get().getPlayState();
+    // UI is visible but not interactive during buffering
+    if (kState == FilePlayback::kBuffering) {
+      audioPlayer_.setVisible(true);
+      playbackDevice_.setVisible(true);
+      layoutToDecode_.setVisible(true);
+      playbackDevice_.setInterceptsMouseClicks(false, false);
+      layoutToDecode_.setInterceptsMouseClicks(false, false);
+      audioPlayer_.setInterceptsMouseClicks(false, false);
+    }
+    // When a file gets selected or play/pause/stop/seek - remain visible
+    else if (property == FilePlayback::kPlaybackFile ||
+             property == FilePlayback::kPlayState) {
+      audioPlayer_.setVisible(true);
+      playbackDevice_.setVisible(true);
+      layoutToDecode_.setVisible(true);
+      playbackDevice_.setInterceptsMouseClicks(true, true);
+      layoutToDecode_.setInterceptsMouseClicks(true, true);
+      audioPlayer_.setInterceptsMouseClicks(true, true);
+    }
+    // Disabled/other states are irrelevant to the components
+    else {
+      audioPlayer_.setVisible(false);
+      playbackDevice_.setVisible(false);
+      layoutToDecode_.setVisible(false);
+    }
+  }
+
+  const std::array<Speakers::AudioElementSpeakerLayout, 10> kLayouts{
+      Speakers::kStereo,
+      Speakers::k3Point1Point2,
+      Speakers::k5Point1,
+      Speakers::k5Point1Point2,
+      Speakers::k5Point1Point4,
+      Speakers::k7Point1,
+      Speakers::k7Point1Point2,
+      Speakers::k7Point1Point4,
+      Speakers::kExpl9Point1Point6,
+      Speakers::kBinaural};
+
+  juce::Label title_;
+  AudioFilePlayer audioPlayer_;
+  SelectionBox playbackDevice_;
+  SelectionBox layoutToDecode_;
+  FilePlaybackRepository& fpbr_;
+  std::vector<juce::String> deviceNames_;
+};

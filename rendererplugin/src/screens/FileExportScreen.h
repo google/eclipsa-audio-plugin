@@ -17,7 +17,7 @@
 #pragma once
 #include <components/components.h>
 
-#include "../RendererProcessor.h"
+#include "components/src/ExportValidation.h"
 #include "components/src/SelectionBox.h"
 #include "components/src/SliderButton.h"
 #include "components/src/TimeFormatSegmentSelector.h"
@@ -74,6 +74,7 @@ class FileExportScreen : public juce::Component,
   FileExportRepository* repository_;
   AudioElementRepository* aeRepository_;
   MixPresentationRepository* mpRepository_;
+  FilePlaybackRepository* filePlaybackRepository_;
 
   /*
    * ==============================
@@ -84,6 +85,7 @@ class FileExportScreen : public juce::Component,
   HeaderBar headerBar_;
 
   // Left side elements - Time inputs (use TitledTextBox like other fields)
+  juce::Label exportParametersLabel_;
   TitledTextBox startTimer_;
   juce::Label startTimerErrorLabel_;
   TimeFormatSegmentSelector startFormatSegments_;
@@ -126,6 +128,9 @@ class FileExportScreen : public juce::Component,
   juce::ImageButton browseVideoButton_;
   TitledTextBox videoSource_;
   juce::ImageButton browseVideoSourceButton_;
+
+  // Player elements
+  ExportValidationComponent exportValidation_;
 
   // File selection elements
   juce::FileChooser audioOutputSelect_;

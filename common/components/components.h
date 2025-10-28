@@ -33,6 +33,7 @@ END_JUCE_MODULE_DECLARATION
 #endif
 
 #include "src/ChannelListComponent.h"
+#include "src/ColouredSlider.h"
 #include "src/DAWCompatibilityChecker.h"
 #include "src/DAWWarningBanner.h"
 #include "src/DialIndicator.h"

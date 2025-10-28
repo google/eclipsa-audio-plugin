@@ -39,6 +39,7 @@ END_JUCE_MODULE_DECLARATION
 #include "src/AudioElementSpatialLayout.h"
 #include "src/ChannelGains.h"
 #include "src/FileExport.h"
+#include "src/FilePlayback.h"
 #include "src/LanguageCodeMetaData.h"
 #include "src/LoudnessExportData.h"
 #include "src/MixPresentation.h"
