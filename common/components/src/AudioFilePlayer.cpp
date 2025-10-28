@@ -132,11 +132,19 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
 }
 
 AudioFilePlayer::~AudioFilePlayer() {
+  // Signal that we're being destroyed
+  isBeingDestroyed_ = true;
+
   fpbr_.deregisterListener(this);
   fer_.deregisterListener(this);
   FilePlayback fpb;
   fpb.setPlayState(FilePlayback::kDisabled);
   fpbr_.update(fpb);
+
+  // Ensure the background thread is joined before destruction
+  if (playbackEngineLoaderThread_.joinable()) {
+    playbackEngineLoaderThread_.join();
+  }
 }
 
 void AudioFilePlayer::paint(juce::Graphics& g) {
@@ -274,13 +282,18 @@ void AudioFilePlayer::attemptCreatePlaybackEngine() {
 
 void AudioFilePlayer::createPlaybackEngine(
     const std::filesystem::path iamfPath) {
+  // Join any existing thread before starting a new one
+  if (playbackEngineLoaderThread_.joinable()) {
+    playbackEngineLoaderThread_.join();
+  }
+
   auto playbackState = fpbr_.get();
   playbackState.setPlayState(FilePlayback::kBuffering);
   fpbr_.update(playbackState);
 
   const juce::String kDevice = fpbr_.get().getPlaybackDevice();
 
-  juce::Thread::launch([this, iamfPath, kDevice]() {
+  playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
     // DEBUG: Find a way to avoid using raw pointers here
     auto engine =
         new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_, deviceManager_);
@@ -293,6 +306,9 @@ void AudioFilePlayer::createPlaybackEngine(
 
 void AudioFilePlayer::onPlaybackEngineCreated(
     std::unique_ptr<IAMFPlaybackDevice> engine) {
+  if (isBeingDestroyed_) {
+    return;
+  }
   {
     std::lock_guard<std::mutex> lock(playbackEngineMutex_);
     playbackEngine_ = std::move(engine);

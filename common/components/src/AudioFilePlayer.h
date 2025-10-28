@@ -17,9 +17,11 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
+#include <atomic>
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <thread>
 
 #include "components/icons/svg/SvgIconComponent.h"
 #include "components/src/ColouredSlider.h"
@@ -69,4 +71,6 @@ class AudioFilePlayer : public juce::Component,
   juce::AudioDeviceManager deviceManager_;
   std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
   std::mutex playbackEngineMutex_;
+  std::thread playbackEngineLoaderThread_;
+  std::atomic_bool isBeingDestroyed_ = false;
 };
