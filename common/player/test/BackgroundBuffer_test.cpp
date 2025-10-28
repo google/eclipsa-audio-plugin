@@ -151,27 +151,28 @@ TEST(BackgroundBuffer, fill_seek_behind_ob) {
 
 // 7. Read through the entire IAMF file.
 TEST(BackgroundBuffer, whole_file) {
-  auto decoder = IAMFFileReader::createIamfReader(
-      std::filesystem::current_path().parent_path() /
-      "common/player/test/test_resources/test.iamf");
+  auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
 
   const unsigned kPadSecs = 3;
   const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
   BackgroundBuffer buffer(kPadSecs, *decoder);
 
+  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  const size_t kTotalSamples = kSData.numFrames * kSData.frameSize;
   const size_t kBufferSz = 1024;
-  juce::AudioBuffer<float> out(decoder->getStreamData().numChannels, kBufferSz);
-  int frames = 0;
-  while (frames < decoder->getStreamData().numFrames) {
-    if (buffer.availableSamples() >= kBufferSz) {
-      ASSERT_EQ(buffer.readSamples(out, 0, kBufferSz), kBufferSz);
-      ++frames;
+  juce::AudioBuffer<float> out(kSData.numChannels, kBufferSz);
+
+  size_t totalSamplesRead = 0;
+  while (totalSamplesRead < kTotalSamples) {
+    if (buffer.availableSamples()) {
+      size_t samplesRead = buffer.readSamples(out, 0, kBufferSz);
+      totalSamplesRead += samplesRead;
     } else {
       waitForData();
     }
   }
-  EXPECT_EQ(frames, decoder->getStreamData().numFrames);
+  EXPECT_EQ(totalSamplesRead, kTotalSamples);
 }
 
 // 8. Using the output test fixture, write an IAMF file. Read the IAMF file back
