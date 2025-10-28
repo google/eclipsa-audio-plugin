@@ -35,11 +35,9 @@ BackgroundBuffer::BackgroundBuffer(const unsigned paddingSeconds,
 BackgroundBuffer::~BackgroundBuffer() {
   stop_ = true;
   cv_.notify_all();
-  std::cout << "Joining decode thread..." << std::endl;
   if (decodeThread_.joinable()) {
     decodeThread_.join();
   }
-  std::cout << "Decode thread joined." << std::endl;
 }
 
 bool BackgroundBuffer::isReady() {

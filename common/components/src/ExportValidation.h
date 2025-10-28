@@ -163,10 +163,10 @@ class ExportValidationComponent : public juce::Component,
       Speakers::kExpl9Point1Point6,
       Speakers::kBinaural};
 
+  FilePlaybackRepository& fpbr_;
   juce::Label title_;
-  AudioFilePlayer audioPlayer_;
   SelectionBox playbackDevice_;
   SelectionBox layoutToDecode_;
-  FilePlaybackRepository& fpbr_;
+  AudioFilePlayer audioPlayer_;
   std::vector<juce::String> deviceNames_;
 };

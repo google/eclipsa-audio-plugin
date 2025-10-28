@@ -249,7 +249,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportPath_.onTextChanged([this] {
     FilePlayback config = filePlaybackRepository_->get();
     config.setPlaybackFile(exportPath_.getText());
-    config.setPlayState(FilePlayback::CurrentPlayerState::kStop);
     filePlaybackRepository_->update(config);
   });
 

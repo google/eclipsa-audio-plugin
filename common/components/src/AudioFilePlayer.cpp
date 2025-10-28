@@ -132,19 +132,19 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
 }
 
 AudioFilePlayer::~AudioFilePlayer() {
-  // Signal that we're being destroyed
+  // Signal that we're being destroyed. Join the background thread for safe
+  // cleanup.
   isBeingDestroyed_ = true;
-
-  fpbr_.deregisterListener(this);
-  fer_.deregisterListener(this);
-  FilePlayback fpb;
-  fpb.setPlayState(FilePlayback::kDisabled);
-  fpbr_.update(fpb);
-
-  // Ensure the background thread is joined before destruction
   if (playbackEngineLoaderThread_.joinable()) {
     playbackEngineLoaderThread_.join();
   }
+
+  fpbr_.deregisterListener(this);
+  fer_.deregisterListener(this);
+
+  FilePlayback fpb = fpbr_.get();
+  fpb.setPlayState(FilePlayback::kDisabled);
+  fpbr_.update(fpb);
 }
 
 void AudioFilePlayer::paint(juce::Graphics& g) {
@@ -259,13 +259,13 @@ void AudioFilePlayer::handleAsyncUpdate() {
 void AudioFilePlayer::updateButtonVisibility() {
   auto fpb = fpbr_.get();
   auto playState = fpb.getPlayState();
-  bool isPlaying = (playState == FilePlayback::kPlay);
-  bool isBuffering = (playState == FilePlayback::kBuffering);
+  const bool kPlaying = (playState == FilePlayback::kPlay);
+  const bool kBuffering = (playState == FilePlayback::kBuffering);
 
-  playButton_.setVisible(!isPlaying && !isBuffering);
-  pauseButton_.setVisible(isPlaying);
-  stopButton_.setVisible(!isBuffering);
-  if (spinner_) spinner_->setVisible(isBuffering);
+  playButton_.setVisible(!kPlaying && !kBuffering);
+  pauseButton_.setVisible(kPlaying);
+  stopButton_.setVisible(!kBuffering);
+  if (spinner_) spinner_->setVisible(kBuffering);
 }
 
 void AudioFilePlayer::attemptCreatePlaybackEngine() {
@@ -315,9 +315,7 @@ void AudioFilePlayer::onPlaybackEngineCreated(
   }
 
   // Update play state from buffering to ready
-  auto playbackState = fpbr_.get();
-  if (playbackState.getPlayState() == FilePlayback::kBuffering) {
-    playbackState.setPlayState(FilePlayback::kReady);
-    fpbr_.update(playbackState);
-  }
+  auto fpb = fpbr_.get();
+  fpb.setPlayState(FilePlayback::kReady);
+  fpbr_.update(fpb);
 }
