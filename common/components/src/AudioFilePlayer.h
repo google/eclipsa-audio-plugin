@@ -56,15 +56,17 @@ class AudioFilePlayer : public juce::Component,
   void attemptCreatePlaybackEngine();
   void onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice> engine);
 
+  // Components
   RoundImageButton playButton_, pauseButton_, stopButton_;
   ColouredSlider volumeSlider_{ColouredSlider::Circle};
   juce::Label timeLabel_;
   ColouredSlider playbackSlider_{ColouredSlider::FlatBar};
   SvgIconComponent volumeIcon_;
   std::unique_ptr<Spinner> spinner_;
+  // State
   FilePlaybackRepository& fpbr_;
   FileExportRepository& fer_;
+  juce::AudioDeviceManager deviceManager_;
   std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
   std::mutex playbackEngineMutex_;
-  juce::AudioDeviceManager deviceManager_;
 };

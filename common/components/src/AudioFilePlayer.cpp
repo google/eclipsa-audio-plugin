@@ -121,19 +121,22 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   addAndMakeVisible(volumeIcon_);
   addAndMakeVisible(*spinner_);
 
-  fpbr_.registerListener(this);
   if (fpbr_.get().getPlaybackFile().isNotEmpty()) {
     attemptCreatePlaybackEngine();
   }
   updateButtonVisibility();
   update();
   startTimerHz(30);
+  fpbr_.registerListener(this);
   fer_.registerListener(this);
 }
 
 AudioFilePlayer::~AudioFilePlayer() {
   fpbr_.deregisterListener(this);
   fer_.deregisterListener(this);
+  FilePlayback fpb;
+  fpb.setPlayState(FilePlayback::kDisabled);
+  fpbr_.update(fpb);
 }
 
 void AudioFilePlayer::paint(juce::Graphics& g) {
