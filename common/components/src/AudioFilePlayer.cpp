@@ -121,13 +121,13 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   addAndMakeVisible(volumeIcon_);
   addAndMakeVisible(*spinner_);
 
+  fpbr_.registerListener(this);
   if (fpbr_.get().getPlaybackFile().isNotEmpty()) {
     attemptCreatePlaybackEngine();
   }
   updateButtonVisibility();
   update();
   startTimerHz(30);
-  fpbr_.registerListener(this);
   fer_.registerListener(this);
 }
 
@@ -279,7 +279,8 @@ void AudioFilePlayer::createPlaybackEngine(
 
   juce::Thread::launch([this, iamfPath, kDevice]() {
     // DEBUG: Find a way to avoid using raw pointers here
-    auto engine = new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_);
+    auto engine =
+        new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_, deviceManager_);
 
     juce::MessageManager::callAsync([this, engine]() {
       onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));
@@ -294,10 +295,10 @@ void AudioFilePlayer::onPlaybackEngineCreated(
     playbackEngine_ = std::move(engine);
   }
 
-  // Update play state from buffering to stop
+  // Update play state from buffering to ready
   auto playbackState = fpbr_.get();
   if (playbackState.getPlayState() == FilePlayback::kBuffering) {
-    playbackState.setPlayState(FilePlayback::kStop);
+    playbackState.setPlayState(FilePlayback::kReady);
     fpbr_.update(playbackState);
   }
 }

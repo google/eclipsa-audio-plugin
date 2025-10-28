@@ -23,14 +23,13 @@
 
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
                                        const juce::String pbDeviceName,
-                                       FilePlaybackRepository& filePlaybackRepo)
-    : kPath_(iamfPath), fpbr_(filePlaybackRepo) {
+                                       FilePlaybackRepository& filePlaybackRepo,
+                                       juce::AudioDeviceManager& deviceManager)
+    : kPath_(iamfPath), fpbr_(filePlaybackRepo), deviceManager_(deviceManager) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
   FilePlayback fpb = fpbr_.get();
   configureDecodeLayout(fpb.getReqdDecodeLayout());
   configurePlaybackDevice(fpb.getPlaybackDevice());
-  fpb.setPlayState(FilePlayback::kReady);
-  fpbr_.update(fpb);
   fpbr_.registerListener(this);
 }
 
