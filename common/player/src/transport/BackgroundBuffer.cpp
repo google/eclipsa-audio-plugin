@@ -35,9 +35,11 @@ BackgroundBuffer::BackgroundBuffer(const unsigned paddingSeconds,
 BackgroundBuffer::~BackgroundBuffer() {
   stop_ = true;
   cv_.notify_all();
+  std::cout << "Joining decode thread..." << std::endl;
   if (decodeThread_.joinable()) {
     decodeThread_.join();
   }
+  std::cout << "Decode thread joined." << std::endl;
 }
 
 bool BackgroundBuffer::isReady() {
@@ -113,7 +115,7 @@ void BackgroundBuffer::decodeTask() {
     // On startup, this thread will hold the lock and write until the buffer is
     // full.
     const juce::SpinLock::ScopedLockType bl(bufferLock_);
-    while (pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
+    while (!stop_ && pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
       const size_t kSamplesDecoded = decoder_.readFrame(tempBuffer);
       if (kSamplesDecoded == 0) {
         eof_ = true;

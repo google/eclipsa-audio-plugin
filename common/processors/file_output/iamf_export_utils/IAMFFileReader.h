@@ -82,7 +82,7 @@ class IAMFFileReader {
   const std::filesystem::path kFilePath_;
   Settings settings_;
   std::unique_ptr<std::ifstream> fileStream_;
+  std::unique_ptr<char[]> tpuBuffer_;
   std::unique_ptr<Decoder> iamfDecoder_;
   StreamData streamData_;
-  std::unique_ptr<char[]> tpuBuffer_;
 };

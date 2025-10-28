@@ -86,13 +86,12 @@ void IAMFPlaybackDevice::configureDecodeLayout(
 
   const Speakers::AudioElementSpeakerLayout kLayout =
       fpbr_.get().getReqdDecodeLayout();
-  if (decoderSource_) {
-    decoderSource_->setLayout(kLayout);
-  } else {
+  if (!decoderSource_) {
     decoderSource_ = std::make_unique<IAMFDecoderSource>(kPath_);
+    decoderSource_->setOnFinishedCallback(
+        [this] { setRepoState(FilePlayback::kStop); });
   }
-  decoderSource_->setOnFinishedCallback(
-      [this] { setRepoState(FilePlayback::kStop); });
+  decoderSource_->setLayout(kLayout);
   setPlayerSource();
   deviceManager_.addAudioCallback(&sourcePlayer_);
 }
