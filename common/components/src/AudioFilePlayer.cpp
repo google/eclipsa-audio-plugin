@@ -201,6 +201,7 @@ void AudioFilePlayer::resized() {
 }
 
 void AudioFilePlayer::update() {
+  std::lock_guard<std::mutex> lock(playbackEngineMutex_);
   if (playbackEngine_) {
     const IAMFFileReader::StreamData kData = playbackEngine_->getStreamData();
     const float kDuration_s =
@@ -256,24 +257,47 @@ void AudioFilePlayer::updateButtonVisibility() {
   if (spinner_) spinner_->setVisible(isBuffering);
 }
 
+void AudioFilePlayer::attemptCreatePlaybackEngine() {
+  auto playbackState = fer_.get();
+  const std::filesystem::path kFileToLoad(
+      playbackState.getExportFile().toStdString());
+
+  if (kFileToLoad.empty() || kFileToLoad.extension() != ".iamf" ||
+      !std::filesystem::exists(kFileToLoad)) {
+    return;
+  }
+  createPlaybackEngine(kFileToLoad);
+}
+
 void AudioFilePlayer::createPlaybackEngine(
     const std::filesystem::path iamfPath) {
   auto playbackState = fpbr_.get();
   playbackState.setPlayState(FilePlayback::kBuffering);
   fpbr_.update(playbackState);
+
   const juce::String kDevice = fpbr_.get().getPlaybackDevice();
-  playbackEngine_ =
-      std::make_unique<IAMFPlaybackDevice>(iamfPath, kDevice, fpbr_);
+
+  juce::Thread::launch([this, iamfPath, kDevice]() {
+    // DEBUG: Find a way to avoid using raw pointers here
+    auto engine = new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_);
+
+    juce::MessageManager::callAsync([this, engine]() {
+      onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));
+    });
+  });
 }
 
-void AudioFilePlayer::attemptCreatePlaybackEngine() {
-  auto playbackState = fer_.get();
-  const std::filesystem::path kFileToLoad(
-      playbackState.getExportFile().toStdString());
-  if (kFileToLoad.empty() || kFileToLoad.extension() != ".iamf" ||
-      !std::filesystem::exists(kFileToLoad)) {
-    return;
+void AudioFilePlayer::onPlaybackEngineCreated(
+    std::unique_ptr<IAMFPlaybackDevice> engine) {
+  {
+    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
+    playbackEngine_ = std::move(engine);
   }
 
-  createPlaybackEngine(kFileToLoad);
+  // Update play state from buffering to stop
+  auto playbackState = fpbr_.get();
+  if (playbackState.getPlayState() == FilePlayback::kBuffering) {
+    playbackState.setPlayState(FilePlayback::kStop);
+    fpbr_.update(playbackState);
+  }
 }

@@ -19,6 +19,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
 
 #include "components/icons/svg/SvgIconComponent.h"
 #include "components/src/ColouredSlider.h"
@@ -53,6 +54,7 @@ class AudioFilePlayer : public juce::Component,
   void updateButtonVisibility();
   void createPlaybackEngine(const std::filesystem::path iamfPath);
   void attemptCreatePlaybackEngine();
+  void onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice> engine);
 
   RoundImageButton playButton_, pauseButton_, stopButton_;
   ColouredSlider volumeSlider_{ColouredSlider::Circle};
@@ -63,4 +65,5 @@ class AudioFilePlayer : public juce::Component,
   FilePlaybackRepository& fpbr_;
   FileExportRepository& fer_;
   std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
+  std::mutex playbackEngineMutex_;
 };
