@@ -35,10 +35,9 @@ class ExportValidationComponent : public juce::Component,
         audioPlayer_(filePlaybackRepo, fileExportRepo),
         playbackDevice_("Playback Device"),
         layoutToDecode_("Mix Presentation Layout"),
-        decodeToolTip_(
-            SvgMap::kHelp,
-            "Select the speaker layout to decode the IAMF stream to. "
-            "The decoder will use the selected layout to render the audio."),
+        decodeToolTip_(SvgMap::kHelp,
+                       "The decoder will decode the Mix Presentation which "
+                       "best matches the requested layout."),
         fpbr_(filePlaybackRepo) {
     title_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
     title_.setJustificationType(juce::Justification::left);
@@ -73,7 +72,11 @@ class ExportValidationComponent : public juce::Component,
       }
     });
 
+    // Setup the Mix Presentation Layout tooltip
     decodeToolTip_.setInterceptsMouseClicks(true, true);
+    // Add tooltip window to enable tooltip display
+    tooltipWindow_.setMillisecondsBeforeTipAppears(500);
+    addAndMakeVisible(tooltipWindow_);
 
     addAndMakeVisible(audioPlayer_);
     addAndMakeVisible(playbackDevice_);
@@ -223,4 +226,5 @@ class ExportValidationComponent : public juce::Component,
   SVGToolTip decodeToolTip_;
   AudioFilePlayer audioPlayer_;
   std::vector<juce::String> deviceNames_;
+  juce::TooltipWindow tooltipWindow_{this};
 };
