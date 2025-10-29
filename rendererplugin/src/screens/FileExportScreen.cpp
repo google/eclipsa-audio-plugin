@@ -25,7 +25,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
                                    RepositoryCollection repos)
     : editor_(editor),
       headerBar_("Export options", editor),
-      exportParametersLabel_("ExportParamsLbl", "Export Parameters"),
+      exportParametersLabel_("ExportParamsLbl", "Export parameters"),
       startTimer_("Start"),
       endTimer_("End"),
       formatSelector_("Format"),

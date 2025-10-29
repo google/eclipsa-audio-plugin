@@ -161,7 +161,7 @@ class ExportValidationComponent : public juce::Component,
       Speakers::k7Point1Point2,
       Speakers::k7Point1Point4,
       Speakers::kExpl9Point1Point6,
-      Speakers::kBinaural};
+  };
 
   FilePlaybackRepository& fpbr_;
   juce::Label title_;
