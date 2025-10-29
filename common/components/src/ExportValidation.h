@@ -73,6 +73,8 @@ class ExportValidationComponent : public juce::Component,
       }
     });
 
+    decodeToolTip_.setInterceptsMouseClicks(true, true);
+
     addAndMakeVisible(audioPlayer_);
     addAndMakeVisible(playbackDevice_);
     addAndMakeVisible(layoutToDecode_);
@@ -95,23 +97,26 @@ class ExportValidationComponent : public juce::Component,
     juce::FlexBox flexBox;
     flexBox.flexDirection = juce::FlexBox::Direction::row;
     flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+    flexBox.alignItems = juce::FlexBox::AlignItems::center;
 
     const float kHalfGap = kGap / 2.0f;
-    // const float kTooltipWidth = 24.0f;
+    const float kDropdownWidth = 178.0f;
+    const float kTooltipWidth = 24.0f;
     flexBox.items.add(
         juce::FlexItem(playbackDevice_)
-            .withFlex(3)
+            .withMinWidth(kDropdownWidth)
+            .withHeight(kRowHeight)
             .withMargin(juce::FlexItem::Margin(0, kHalfGap, 0, 0)));
     flexBox.items.add(
         juce::FlexItem(layoutToDecode_)
-            .withFlex(3)
+            .withMinWidth(kDropdownWidth)
+            .withHeight(kRowHeight)
             .withMargin(juce::FlexItem::Margin(0, kHalfGap, 0, kHalfGap)));
-    flexBox.items.add(
-        juce::FlexItem(decodeToolTip_)
-            .withFlex(1)
-            .withMargin(juce::FlexItem::Margin(0, 0, 0, kHalfGap)));
-
+    flexBox.items.add(juce::FlexItem(decodeToolTip_)
+                          .withMinWidth(kTooltipWidth)
+                          .withHeight(kRowHeight)
+                          .withMargin(juce::FlexItem::Margin(
+                              kTooltipWidth, kHalfGap, 0, kHalfGap)));
     flexBox.performLayout(selectionBoxRow);
   }
 
@@ -126,9 +131,9 @@ class ExportValidationComponent : public juce::Component,
     }
 
     void resized() override {
-      // Center the icon and constrain it to a reasonable size
-      int iconSize = 24;
       auto bounds = getLocalBounds();
+      // Scale icon to a percentage of available space
+      int iconSize = juce::jmin(bounds.getWidth(), bounds.getHeight());
       auto iconBounds = juce::Rectangle<int>(iconSize, iconSize);
       iconBounds = iconBounds.withCentre(bounds.getCentre());
       iconComponent_.setBounds(iconBounds);
