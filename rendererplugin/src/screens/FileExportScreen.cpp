@@ -25,7 +25,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
                                    RepositoryCollection repos)
     : editor_(editor),
       headerBar_("Export options", editor),
-      exportParametersLabel_("ExportParamsLbl", "Export Parameters"),
+      exportParametersLabel_("ExportParamsLbl", "Export parameters"),
       startTimer_("Start"),
       endTimer_("End"),
       formatSelector_("Format"),
@@ -249,7 +249,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportPath_.onTextChanged([this] {
     FilePlayback config = filePlaybackRepository_->get();
     config.setPlaybackFile(exportPath_.getText());
-    config.setPlayState(FilePlayback::CurrentPlayerState::kStop);
     filePlaybackRepository_->update(config);
   });
 

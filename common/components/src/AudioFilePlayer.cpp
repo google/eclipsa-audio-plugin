@@ -132,8 +132,19 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
 }
 
 AudioFilePlayer::~AudioFilePlayer() {
+  // Signal that we're being destroyed. Join the background thread for safe
+  // cleanup.
+  isBeingDestroyed_ = true;
+  if (playbackEngineLoaderThread_.joinable()) {
+    playbackEngineLoaderThread_.join();
+  }
+
   fpbr_.deregisterListener(this);
   fer_.deregisterListener(this);
+
+  FilePlayback fpb = fpbr_.get();
+  fpb.setPlayState(FilePlayback::kDisabled);
+  fpbr_.update(fpb);
 }
 
 void AudioFilePlayer::paint(juce::Graphics& g) {
@@ -201,6 +212,7 @@ void AudioFilePlayer::resized() {
 }
 
 void AudioFilePlayer::update() {
+  std::lock_guard<std::mutex> lock(playbackEngineMutex_);
   if (playbackEngine_) {
     const IAMFFileReader::StreamData kData = playbackEngine_->getStreamData();
     const float kDuration_s =
@@ -247,33 +259,67 @@ void AudioFilePlayer::handleAsyncUpdate() {
 void AudioFilePlayer::updateButtonVisibility() {
   auto fpb = fpbr_.get();
   auto playState = fpb.getPlayState();
-  bool isPlaying = (playState == FilePlayback::kPlay);
-  bool isBuffering = (playState == FilePlayback::kBuffering);
+  const bool kPlaying = (playState == FilePlayback::kPlay);
+  const bool kBuffering = (playState == FilePlayback::kBuffering);
 
-  playButton_.setVisible(!isPlaying && !isBuffering);
-  pauseButton_.setVisible(isPlaying);
-  stopButton_.setVisible(!isBuffering);
-  if (spinner_) spinner_->setVisible(isBuffering);
-}
-
-void AudioFilePlayer::createPlaybackEngine(
-    const std::filesystem::path iamfPath) {
-  auto playbackState = fpbr_.get();
-  playbackState.setPlayState(FilePlayback::kBuffering);
-  fpbr_.update(playbackState);
-  const juce::String kDevice = fpbr_.get().getPlaybackDevice();
-  playbackEngine_ =
-      std::make_unique<IAMFPlaybackDevice>(iamfPath, kDevice, fpbr_);
+  playButton_.setVisible(!kPlaying && !kBuffering);
+  pauseButton_.setVisible(kPlaying);
+  stopButton_.setVisible(!kBuffering);
+  if (spinner_) spinner_->setVisible(kBuffering);
 }
 
 void AudioFilePlayer::attemptCreatePlaybackEngine() {
   auto playbackState = fer_.get();
   const std::filesystem::path kFileToLoad(
       playbackState.getExportFile().toStdString());
+
   if (kFileToLoad.empty() || kFileToLoad.extension() != ".iamf" ||
       !std::filesystem::exists(kFileToLoad)) {
     return;
   }
-
   createPlaybackEngine(kFileToLoad);
+}
+
+void AudioFilePlayer::createPlaybackEngine(
+    const std::filesystem::path iamfPath) {
+  // Join any existing thread before starting a new one
+  if (playbackEngineLoaderThread_.joinable()) {
+    playbackEngineLoaderThread_.join();
+  }
+
+  auto playbackState = fpbr_.get();
+  playbackState.setPlayState(FilePlayback::kBuffering);
+  fpbr_.update(playbackState);
+
+  const juce::String kDevice = fpbr_.get().getPlaybackDevice();
+
+  if (playbackEngine_) {
+    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
+    playbackEngine_->stop();
+  }
+
+  playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
+    auto engine =
+        new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_, deviceManager_);
+
+    juce::MessageManager::callAsync([this, engine]() {
+      onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));
+    });
+  });
+}
+
+void AudioFilePlayer::onPlaybackEngineCreated(
+    std::unique_ptr<IAMFPlaybackDevice> engine) {
+  if (isBeingDestroyed_) {
+    return;
+  }
+  {
+    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
+    playbackEngine_ = std::move(engine);
+  }
+
+  // Update play state from buffering to ready
+  auto fpb = fpbr_.get();
+  fpb.setPlayState(FilePlayback::kReady);
+  fpbr_.update(fpb);
 }

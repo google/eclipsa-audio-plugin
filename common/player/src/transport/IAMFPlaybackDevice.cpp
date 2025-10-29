@@ -23,14 +23,13 @@
 
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
                                        const juce::String pbDeviceName,
-                                       FilePlaybackRepository& filePlaybackRepo)
-    : kPath_(iamfPath), fpbr_(filePlaybackRepo) {
+                                       FilePlaybackRepository& filePlaybackRepo,
+                                       juce::AudioDeviceManager& deviceManager)
+    : kPath_(iamfPath), fpbr_(filePlaybackRepo), deviceManager_(deviceManager) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
   FilePlayback fpb = fpbr_.get();
   configureDecodeLayout(fpb.getReqdDecodeLayout());
   configurePlaybackDevice(fpb.getPlaybackDevice());
-  fpb.setPlayState(FilePlayback::kReady);
-  fpbr_.update(fpb);
   fpbr_.registerListener(this);
 }
 
@@ -87,13 +86,12 @@ void IAMFPlaybackDevice::configureDecodeLayout(
 
   const Speakers::AudioElementSpeakerLayout kLayout =
       fpbr_.get().getReqdDecodeLayout();
-  if (decoderSource_) {
-    decoderSource_->setLayout(kLayout);
-  } else {
+  if (!decoderSource_) {
     decoderSource_ = std::make_unique<IAMFDecoderSource>(kPath_);
+    decoderSource_->setOnFinishedCallback(
+        [this] { setRepoState(FilePlayback::kStop); });
   }
-  decoderSource_->setOnFinishedCallback(
-      [this] { setRepoState(FilePlayback::kStop); });
+  decoderSource_->setLayout(kLayout);
   setPlayerSource();
   deviceManager_.addAudioCallback(&sourcePlayer_);
 }
@@ -154,11 +152,9 @@ void IAMFPlaybackDevice::valueTreePropertyChanged(
 
 void IAMFPlaybackDevice::setRepoState(
     const FilePlayback::CurrentPlayerState state) {
-  juce::MessageManager::callAsync([this, state] {
-    auto fpb = fpbr_.get();
-    fpb.setPlayState(state);
-    fpbr_.update(fpb);
-  });
+  auto fpb = fpbr_.get();
+  fpb.setPlayState(state);
+  fpbr_.update(fpb);
 }
 
 void IAMFPlaybackDevice::setPlayerSource() {

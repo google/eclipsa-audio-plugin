@@ -868,7 +868,7 @@ iamf_tools::api::OutputLayout AudioElementSpeakerLayout::getIamfOutputLayout()
     case k7Point1Point4:
       return OutputLayout::kItu2051_SoundSystemJ_4_7_0;
     case kExpl9Point1Point6:
-      return OutputLayout::kItu2051_SoundSystemH_9_10_3;
+      return OutputLayout::kIAMF_SoundSystemExtension_6_9_0;
     default:
       return OutputLayout::kItu2051_SoundSystemA_0_2_0;
   }

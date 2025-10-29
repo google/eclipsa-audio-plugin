@@ -18,6 +18,8 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include "AudioFilePlayer.h"
+#include "components/icons/svg/SvgIconComponent.h"
+#include "components/icons/svg/SvgIconLookup.h"
 #include "components/src/SelectionBox.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
@@ -33,6 +35,9 @@ class ExportValidationComponent : public juce::Component,
         audioPlayer_(filePlaybackRepo, fileExportRepo),
         playbackDevice_("Playback Device"),
         layoutToDecode_("Mix Presentation Layout"),
+        decodeToolTip_(SvgMap::kHelp,
+                       "The decoder will decode the Mix Presentation which "
+                       "best matches the requested layout."),
         fpbr_(filePlaybackRepo) {
     title_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
     title_.setJustificationType(juce::Justification::left);
@@ -67,9 +72,16 @@ class ExportValidationComponent : public juce::Component,
       }
     });
 
+    // Setup the Mix Presentation Layout tooltip
+    decodeToolTip_.setInterceptsMouseClicks(true, true);
+    // Add tooltip window to enable tooltip display
+    tooltipWindow_.setMillisecondsBeforeTipAppears(500);
+    addAndMakeVisible(tooltipWindow_);
+
     addAndMakeVisible(audioPlayer_);
     addAndMakeVisible(playbackDevice_);
     addAndMakeVisible(layoutToDecode_);
+    addAndMakeVisible(decodeToolTip_);
     fpbr_.registerListener(this);
   }
 
@@ -84,15 +96,56 @@ class ExportValidationComponent : public juce::Component,
     bounds.removeFromTop(kGap);
 
     auto selectionBoxRow = bounds.removeFromTop(kRowHeight);
-    auto playbackDeviceBounds = selectionBoxRow.removeFromLeft(
-        selectionBoxRow.getWidth() / 2 - kGap / 2);
-    selectionBoxRow.removeFromLeft(kGap);
-    auto layoutToDecodeBounds = selectionBoxRow;
-    playbackDevice_.setBounds(playbackDeviceBounds);
-    layoutToDecode_.setBounds(layoutToDecodeBounds);
+
+    juce::FlexBox flexBox;
+    flexBox.flexDirection = juce::FlexBox::Direction::row;
+    flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    flexBox.alignItems = juce::FlexBox::AlignItems::center;
+
+    const float kHalfGap = kGap / 2.0f;
+    const float kDropdownWidth = 178.0f;
+    const float kTooltipWidth = 24.0f;
+    flexBox.items.add(
+        juce::FlexItem(playbackDevice_)
+            .withMinWidth(kDropdownWidth)
+            .withHeight(kRowHeight)
+            .withMargin(juce::FlexItem::Margin(0, kHalfGap, 0, 0)));
+    flexBox.items.add(
+        juce::FlexItem(layoutToDecode_)
+            .withMinWidth(kDropdownWidth)
+            .withHeight(kRowHeight)
+            .withMargin(juce::FlexItem::Margin(0, kHalfGap, 0, kHalfGap)));
+    flexBox.items.add(juce::FlexItem(decodeToolTip_)
+                          .withMinWidth(kTooltipWidth)
+                          .withHeight(kRowHeight)
+                          .withMargin(juce::FlexItem::Margin(
+                              kTooltipWidth, kHalfGap, 0, kHalfGap)));
+    flexBox.performLayout(selectionBoxRow);
   }
 
  private:
+  class SVGToolTip : public juce::Component,
+                     public juce::SettableTooltipClient {
+   public:
+    SVGToolTip(const SvgMap::Icon icon, const juce::String& tooltipText)
+        : iconComponent_(icon) {
+      setTooltip(tooltipText);
+      addAndMakeVisible(iconComponent_);
+    }
+
+    void resized() override {
+      auto bounds = getLocalBounds();
+      // Scale icon to a percentage of available space
+      int iconSize = juce::jmin(bounds.getWidth(), bounds.getHeight());
+      auto iconBounds = juce::Rectangle<int>(iconSize, iconSize);
+      iconBounds = iconBounds.withCentre(bounds.getCentre());
+      iconComponent_.setBounds(iconBounds);
+    }
+
+   private:
+    SvgIconComponent iconComponent_;
+  };
+
   void populatePlaybackDevices() {
     // Initialize device manager temporarily to query devices
     juce::AudioDeviceManager deviceManager;
@@ -129,6 +182,7 @@ class ExportValidationComponent : public juce::Component,
       audioPlayer_.setVisible(true);
       playbackDevice_.setVisible(true);
       layoutToDecode_.setVisible(true);
+      decodeToolTip_.setVisible(true);
       playbackDevice_.setInterceptsMouseClicks(false, false);
       layoutToDecode_.setInterceptsMouseClicks(false, false);
       audioPlayer_.setInterceptsMouseClicks(false, false);
@@ -139,6 +193,7 @@ class ExportValidationComponent : public juce::Component,
       audioPlayer_.setVisible(true);
       playbackDevice_.setVisible(true);
       layoutToDecode_.setVisible(true);
+      decodeToolTip_.setVisible(true);
       playbackDevice_.setInterceptsMouseClicks(true, true);
       layoutToDecode_.setInterceptsMouseClicks(true, true);
       audioPlayer_.setInterceptsMouseClicks(true, true);
@@ -148,10 +203,11 @@ class ExportValidationComponent : public juce::Component,
       audioPlayer_.setVisible(false);
       playbackDevice_.setVisible(false);
       layoutToDecode_.setVisible(false);
+      decodeToolTip_.setVisible(false);
     }
   }
 
-  const std::array<Speakers::AudioElementSpeakerLayout, 10> kLayouts{
+  const std::array<Speakers::AudioElementSpeakerLayout, 9> kLayouts{
       Speakers::kStereo,
       Speakers::k3Point1Point2,
       Speakers::k5Point1,
@@ -161,12 +217,14 @@ class ExportValidationComponent : public juce::Component,
       Speakers::k7Point1Point2,
       Speakers::k7Point1Point4,
       Speakers::kExpl9Point1Point6,
-      Speakers::kBinaural};
+  };
 
+  FilePlaybackRepository& fpbr_;
   juce::Label title_;
-  AudioFilePlayer audioPlayer_;
   SelectionBox playbackDevice_;
   SelectionBox layoutToDecode_;
-  FilePlaybackRepository& fpbr_;
+  SVGToolTip decodeToolTip_;
+  AudioFilePlayer audioPlayer_;
   std::vector<juce::String> deviceNames_;
+  juce::TooltipWindow tooltipWindow_{this};
 };

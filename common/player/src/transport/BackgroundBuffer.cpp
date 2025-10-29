@@ -113,7 +113,7 @@ void BackgroundBuffer::decodeTask() {
     // On startup, this thread will hold the lock and write until the buffer is
     // full.
     const juce::SpinLock::ScopedLockType bl(bufferLock_);
-    while (pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
+    while (!stop_ && pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
       const size_t kSamplesDecoded = decoder_.readFrame(tempBuffer);
       if (kSamplesDecoded == 0) {
         eof_ = true;
