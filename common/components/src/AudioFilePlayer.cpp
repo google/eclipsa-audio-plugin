@@ -293,6 +293,11 @@ void AudioFilePlayer::createPlaybackEngine(
 
   const juce::String kDevice = fpbr_.get().getPlaybackDevice();
 
+  if (playbackEngine_) {
+    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
+    playbackEngine_->stop();
+  }
+
   playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
     auto engine =
         new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_, deviceManager_);
