@@ -294,7 +294,6 @@ void AudioFilePlayer::createPlaybackEngine(
   const juce::String kDevice = fpbr_.get().getPlaybackDevice();
 
   playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
-    // DEBUG: Find a way to avoid using raw pointers here
     auto engine =
         new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_, deviceManager_);
 
