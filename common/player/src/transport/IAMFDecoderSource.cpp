@@ -72,7 +72,9 @@ void IAMFDecoderSource::setLayout(
   LOG_INFO(0, "IAMFDecoderSource: Changing layout to " +
                   layout.toString().toStdString());
 
-  // Recreate decoder with new settings
+  // Destroy the buffer so it can't access the decoder during reconfiguration
+  // Reconfigure the decoder with new settings
+  buffer_.reset();
   decoder_->resetLayout(layout);
   streamData_ = decoder_->getStreamData();
 
