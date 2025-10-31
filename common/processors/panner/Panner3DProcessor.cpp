@@ -122,7 +122,7 @@ void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     const int currentX = xPosition_;
     const int currentY = yPosition_;
     const int currentZ = zPosition_;
-    
+
     // Only update position if it has changed - avoid redundant renderer updates
     // This significantly reduces CPU load during automation with many callbacks
     if (currentX != lastSetXPosition_ || currentY != lastSetYPosition_ ||
