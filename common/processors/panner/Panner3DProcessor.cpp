@@ -103,6 +103,10 @@ void Panner3DProcessor::initializePanning() {
         outputLayout_, samplesPerBlock_, sampleRate_);
   }
 
+  lastSetXPosition_ = -999;
+  lastSetYPosition_ = -999;
+  lastSetZPosition_ = -999;
+
   outputBuffer_.setSize(outputLayout_.getNumChannels(), samplesPerBlock_);
   renderLock.exit();
   hostProcessor_->suspendProcessing(false);
@@ -115,14 +119,18 @@ void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   renderLock.enter();
 
   if (surroundPanner_ != NULL) {
+    const int currentX = xPosition_;
+    const int currentY = yPosition_;
+    const int currentZ = zPosition_;
+    
     // Only update position if it has changed - avoid redundant renderer updates
     // This significantly reduces CPU load during automation with many callbacks
-    if (xPosition_ != lastSetXPosition_ || yPosition_ != lastSetYPosition_ ||
-        zPosition_ != lastSetZPosition_) {
-      surroundPanner_->setPosition(xPosition_, yPosition_, zPosition_);
-      lastSetXPosition_ = xPosition_;
-      lastSetYPosition_ = yPosition_;
-      lastSetZPosition_ = zPosition_;
+    if (currentX != lastSetXPosition_ || currentY != lastSetYPosition_ ||
+        currentZ != lastSetZPosition_) {
+      surroundPanner_->setPosition(currentX, currentY, currentZ);
+      lastSetXPosition_ = currentX;
+      lastSetYPosition_ = currentY;
+      lastSetZPosition_ = currentZ;
     }
 
     if (kIsAUBuild) {
