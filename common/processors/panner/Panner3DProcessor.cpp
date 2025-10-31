@@ -102,6 +102,9 @@ void Panner3DProcessor::initializePanning() {
     surroundPanner_ = std::make_unique<MonoToSpeakerPanner>(
         outputLayout_, samplesPerBlock_, sampleRate_);
   }
+  if (surroundPanner_) {
+    surroundPanner_->setPosition(xPosition_, yPosition_, zPosition_);
+  }
 
   outputBuffer_.setSize(outputLayout_.getNumChannels(), samplesPerBlock_);
   renderLock.exit();
