@@ -52,8 +52,7 @@ class AudioFilePlayer : public juce::Component,
  private:
   class Spinner;
 
-  void updateButtonAccessibility();
-  void updateButtonVisibility();
+  void updateComponentVisibility();
   void createPlaybackEngine(const std::filesystem::path iamfPath);
   void attemptCreatePlaybackEngine();
   void onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice> engine);
@@ -65,6 +64,8 @@ class AudioFilePlayer : public juce::Component,
   ColouredSlider playbackSlider_{ColouredSlider::FlatBar};
   SvgIconComponent volumeIcon_;
   std::unique_ptr<Spinner> spinner_;
+  juce::Label fileSelectLabel_{"fileSelectLabel",
+                               "Invalid IAMF file selected for playback"};
   // State
   FilePlaybackRepository& fpbr_;
   FileExportRepository& fer_;

@@ -36,14 +36,7 @@
 
 class FilePlayback final : public RepositoryItemBase {
  public:
-  enum CurrentPlayerState {
-    kDisabled,
-    kBuffering,
-    kReady,
-    kPlay,
-    kPause,
-    kStop
-  };
+  enum CurrentPlayerState { kDisabled, kBuffering, kPlay, kPause, kStop };
 
   FilePlayback();
   FilePlayback(int volume, CurrentPlayerState playState,

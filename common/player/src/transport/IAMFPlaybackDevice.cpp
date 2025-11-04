@@ -21,15 +21,41 @@
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
+std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
+    const std::filesystem::path iamfPath, const juce::String pbDeviceName,
+    FilePlaybackRepository& filePlaybackRepo,
+    juce::AudioDeviceManager& deviceManager) {
+  // Attempt to create the IAMFFileReader first. Being unable to create the
+  // reader for any reason invalidates the playback device.
+  auto reader = IAMFFileReader::createIamfReader(iamfPath);
+  if (!reader) {
+    LOG_ERROR(0, "IAMFPlaybackDevice: Failed to create IAMF reader");
+    return nullptr;
+  }
+
+  auto device = std::unique_ptr<IAMFPlaybackDevice>(new IAMFPlaybackDevice(
+      iamfPath, pbDeviceName, filePlaybackRepo, deviceManager));
+
+  // Create the decoder source with the reader
+  device->decoderSource_ =
+      std::make_unique<IAMFDecoderSource>(std::move(reader));
+  device->decoderSource_->setOnFinishedCallback(
+      [device = device.get()] { device->setRepoState(FilePlayback::kStop); });
+
+  // Complete initialization
+  FilePlayback fpb = filePlaybackRepo.get();
+  device->configureDecodeLayout(fpb.getReqdDecodeLayout());
+  device->configurePlaybackDevice(fpb.getPlaybackDevice());
+
+  return device;
+}
+
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
                                        const juce::String pbDeviceName,
                                        FilePlaybackRepository& filePlaybackRepo,
                                        juce::AudioDeviceManager& deviceManager)
     : kPath_(iamfPath), fpbr_(filePlaybackRepo), deviceManager_(deviceManager) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
-  FilePlayback fpb = fpbr_.get();
-  configureDecodeLayout(fpb.getReqdDecodeLayout());
-  configurePlaybackDevice(fpb.getPlaybackDevice());
   fpbr_.registerListener(this);
 }
 
@@ -86,12 +112,9 @@ void IAMFPlaybackDevice::configureDecodeLayout(
 
   const Speakers::AudioElementSpeakerLayout kLayout =
       fpbr_.get().getReqdDecodeLayout();
-  if (!decoderSource_) {
-    decoderSource_ = std::make_unique<IAMFDecoderSource>(kPath_);
-    decoderSource_->setOnFinishedCallback(
-        [this] { setRepoState(FilePlayback::kStop); });
+  if (decoderSource_) {
+    decoderSource_->setLayout(kLayout);
   }
-  decoderSource_->setLayout(kLayout);
   setPlayerSource();
   deviceManager_.addAudioCallback(&sourcePlayer_);
 }
@@ -140,8 +163,7 @@ void IAMFPlaybackDevice::valueTreePropertyChanged(
   } else if (property == FilePlayback::kSeekPosition) {
     setRepoState(FilePlayback::kBuffering);
     seekTo(fpb.getSeekPosition());
-    if (kPrevState.state == FilePlayback::kStop ||
-        kPrevState.state == FilePlayback::kReady) {
+    if (kPrevState.state == FilePlayback::kStop) {
       setRepoState(FilePlayback::kPause);
     } else {
       setRepoState(kPrevState.state);
