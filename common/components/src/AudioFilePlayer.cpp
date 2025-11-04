@@ -91,15 +91,15 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
     fpbr_.update(fpb);
   };
 
-  juce::Colour textColour = juce::Colour(221, 228, 227);
   timeLabel_.setColour(juce::Label::ColourIds::backgroundColourId,
                        juce::Colours::transparentBlack);
-  timeLabel_.setColour(juce::Label::textColourId, textColour);
+  timeLabel_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
   timeLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
 
   fileSelectLabel_.setColour(juce::Label::ColourIds::backgroundColourId,
                              juce::Colours::transparentBlack);
-  fileSelectLabel_.setColour(juce::Label::textColourId, textColour);
+  fileSelectLabel_.setColour(juce::Label::textColourId,
+                             EclipsaColours::headingGrey);
   fileSelectLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
   fileSelectLabel_.setJustificationType(juce::Justification::centred);
 
@@ -131,7 +131,7 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   if (fpbr_.get().getPlaybackFile().isNotEmpty()) {
     attemptCreatePlaybackEngine();
   }
-  updateButtonVisibility();
+  updateComponentVisibility();
   update();
   startTimerHz(30);
   fpbr_.registerListener(this);
@@ -150,7 +150,7 @@ AudioFilePlayer::~AudioFilePlayer() {
   fer_.deregisterListener(this);
 
   FilePlayback fpb = fpbr_.get();
-  fpb.setPlayState(FilePlayback::kDisabled);
+  fpb.setPlayState(FilePlayback::kStop);
   fpbr_.update(fpb);
 }
 
@@ -263,11 +263,11 @@ void AudioFilePlayer::valueTreePropertyChanged(
 }
 
 void AudioFilePlayer::handleAsyncUpdate() {
-  updateButtonVisibility();
+  updateComponentVisibility();
   resized();
 }
 
-void AudioFilePlayer::updateButtonVisibility() {
+void AudioFilePlayer::updateComponentVisibility() {
   auto fpb = fpbr_.get();
   auto playState = fpb.getPlayState();
   const bool kPlaying = (playState == FilePlayback::kPlay);
@@ -278,10 +278,10 @@ void AudioFilePlayer::updateButtonVisibility() {
   playButton_.setVisible(!kPlaying && !kBuffering && !kDisabled);
   pauseButton_.setVisible(kPlaying && !kDisabled);
   stopButton_.setVisible(!kBuffering && !kDisabled);
-  timeLabel_.setVisible(!kDisabled && !kBuffering);
-  playbackSlider_.setVisible(!kDisabled && !kBuffering);
-  volumeIcon_.setVisible(!kDisabled && !kBuffering);
-  volumeSlider_.setVisible(!kDisabled && !kBuffering);
+  timeLabel_.setVisible(!kDisabled);
+  playbackSlider_.setVisible(!kDisabled);
+  volumeIcon_.setVisible(!kDisabled);
+  volumeSlider_.setVisible(!kDisabled);
   if (spinner_) spinner_->setVisible(kBuffering);
 }
 
