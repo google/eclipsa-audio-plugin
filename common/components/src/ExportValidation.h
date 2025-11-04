@@ -200,10 +200,10 @@ class ExportValidationComponent : public juce::Component,
     }
     // Disabled/other states are irrelevant to the components
     else {
-      audioPlayer_.setVisible(false);
-      playbackDevice_.setVisible(false);
-      layoutToDecode_.setVisible(false);
-      decodeToolTip_.setVisible(false);
+      audioPlayer_.setVisible(true);
+      playbackDevice_.setVisible(true);
+      layoutToDecode_.setVisible(true);
+      decodeToolTip_.setVisible(true);
     }
   }
 
