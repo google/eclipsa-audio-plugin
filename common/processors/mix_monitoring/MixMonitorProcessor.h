@@ -28,7 +28,7 @@ class MixMonitorProcessor : public ProcessorBase,
 
   MixMonitorProcessor(RoomSetupRepository& repo, SpeakerMonitorData& data);
 
-  ~MixMonitorProcessor() = default;
+  ~MixMonitorProcessor() { roomSetupRepo_.deregisterListener(this); }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 

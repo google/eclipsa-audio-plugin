@@ -100,7 +100,11 @@ RendererProcessor::RendererProcessor()
   roomSetupRepository_.registerListener(this);
 }
 
-RendererProcessor::~RendererProcessor() { audioProcessors_.clear(); }
+RendererProcessor::~RendererProcessor() {
+  audioProcessors_.clear();
+  fileExportRepository_.deregisterListener(this);
+  roomSetupRepository_.deregisterListener(this);
+}
 
 bool RendererProcessor::isBusesLayoutSupported(
     const BusesLayout& layouts) const {
