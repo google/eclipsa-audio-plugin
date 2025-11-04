@@ -415,6 +415,14 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       exportVideoFolder_.setEnabled(true);
       browseVideoButton_.setEnabled(true);
       browseVideoSourceButton_.setEnabled(true);
+
+      if (!config.getExportCompleted()) {
+        // Normally this is handled by the file export processor
+        // But in manual button cases where the processor is destroyed we need
+        // to flag it here
+        config.setExportCompleted(true);
+        repository_->update(config);
+      }
     }
     repaint();
   };

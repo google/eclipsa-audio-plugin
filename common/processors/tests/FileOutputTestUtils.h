@@ -24,6 +24,7 @@
 #include "data_structures/src/FileExport.h"
 #include "dep_wavwriter.h"
 #include "processors/file_output/FileOutputProcessor.h"
+#include "processors/file_output/FileOutputProcessor_PremierePro.h"
 
 extern "C" {
 #include "mp4iamfpar.h"
@@ -99,6 +100,49 @@ static inline void bounceAudio(FileOutputProcessor& fio_proc,
     fio_proc.processBlock(audioBuffer, dummyMidiBuffer);
   }
   fio_proc.setNonRealtime(false);
+}
+
+// Helper used by multiple tests to render a short bounce using the premiere pro
+// file output processor.
+static inline void bouncePremiereProAudio(
+    FileExportRepository& fileExportRepository,
+    AudioElementRepository& audioElementRepository,
+    MixPresentationRepository& mixPresentationRepository,
+    MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
+    unsigned sampleRate = 48e3, unsigned frameSize = 128) {
+  // First, premiere pro starts a manual export
+  auto fileExport = fileExportRepository.get();
+  fileExport.setManualExport(true);
+  fileExportRepository.update(fileExport);
+
+  // Premiere pro reconstructs the file output processor each time, rather then
+  // using an existing instance
+  PremiereProFileOutputProcessor fio_proc_pp(
+      fileExportRepository, audioElementRepository, mixPresentationRepository,
+      mixPresentationLoudnessRepository);
+
+  const unsigned kNumChannels = totalAudioChannels(audioElementRepository);
+  const auto kSineTone = generateSineWave(440.0f, sampleRate, frameSize);
+
+  // Premiere pro calls prepare to play, and set non-realtime correctly once
+  fio_proc_pp.prepareToPlay(sampleRate, frameSize);
+  fio_proc_pp.setNonRealtime(true);
+
+  juce::AudioBuffer<float> audioBuffer(kNumChannels, frameSize);
+  juce::MidiBuffer dummyMidiBuffer;
+  for (int block = 0; block < 8; ++block) {
+    for (unsigned i = 0; i < kNumChannels; ++i) {
+      audioBuffer.copyFrom(i, 0, kSineTone, 0, 0, frameSize);
+    }
+    fio_proc_pp.processBlock(audioBuffer, dummyMidiBuffer);
+
+    // Premiere pro calls set non-realtime incorrectly on each frame
+    fio_proc_pp.setNonRealtime(false);
+  }
+
+  // Premiere pro completes by destroying the file output processor
+  // Since it's a local instance, this happens automatically when this function
+  // returns
 }
 
 class MP4IAMFDemuxer {
