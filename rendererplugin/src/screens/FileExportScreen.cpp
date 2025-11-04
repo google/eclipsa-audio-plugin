@@ -36,11 +36,11 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       mixPresentations_("Mix presentations"),
       audioElements_("Audio elements"),
       exportAudioLabel_("ExportAudioLbl", "Export audio"),
-      exportPath_("Save audio to ..."),
+      exportPath_("Save audio to ...", ".iamf"),
       exportAudioElementsLabel_("ExportAudioElementsLbl",
                                 "Export audio elements as WAV"),
       muxVidoeLabel_("MuxVideoLbl", "Mux video"),
-      exportVideoFolder_("Save video to ..."),
+      exportVideoFolder_("Save video to ...", ".mp4"),
       videoSource_("Video source"),
       audioOutputSelect_(
           "Select a file to export audio to",
@@ -245,11 +245,21 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       static_cast<TimeFormatSegmentSelector::Format>(
           static_cast<int>(endTimeFormat_)));
 
-  // Configure the exportPath text to update the player file
-  exportPath_.onTextChanged([this] {
-    FilePlayback config = filePlaybackRepository_->get();
-    config.setPlaybackFile(exportPath_.getText());
-    filePlaybackRepository_->update(config);
+  // Set the initial text from repository
+  exportPath_.setText(config.getExportFile());
+
+  // Configure repository update on enter/tab/focus lost
+  exportPath_.onValueCommitted([this] {
+    FileExport config = repository_->get();
+    config.setExportFile(exportPath_.getText());
+    config.setExportFolder(juce::File(exportPath_.getText())
+                               .getParentDirectory()
+                               .getFullPathName());
+    repository_->update(config);
+
+    FilePlayback playbackConfig = filePlaybackRepository_->get();
+    playbackConfig.setPlaybackFile(exportPath_.getText());
+    filePlaybackRepository_->update(playbackConfig);
   });
 
   // Configure the export audio file selection button
@@ -258,15 +268,29 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
         juce::FileBrowserComponent::saveMode |
             juce::FileBrowserComponent::canSelectFiles,
         [this](const auto& file) {
-          exportPath_.setText(file.getResult().getFullPathName());
+          juce::String fullPath = file.getResult().getFullPathName();
+          exportPath_.setText(fullPath);
           FileExport config = repository_->get();
-          config.setExportFile(file.getResult().getFullPathName());
+          config.setExportFile(fullPath);
           config.setExportFolder(
               file.getResult().getParentDirectory().getFullPathName());
           repository_->update(config);
+
+          FilePlayback playbackConfig = filePlaybackRepository_->get();
+          playbackConfig.setPlaybackFile(exportPath_.getText());
+          filePlaybackRepository_->update(playbackConfig);
         });
   };
-  exportPath_.setText(config.getExportFile());
+
+  // Set the initial text from repository
+  exportVideoFolder_.setText(config.getVideoExportFolder());
+
+  // Configure repository update on enter/tab/focus lost
+  exportVideoFolder_.onValueCommitted([this] {
+    FileExport config = repository_->get();
+    config.setVideoExportFolder(exportVideoFolder_.getText());
+    repository_->update(config);
+  });
 
   // Configure the export video folder
   browseVideoButton_.onClick = [this] {
@@ -274,13 +298,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
         juce::FileBrowserComponent::saveMode |
             juce::FileBrowserComponent::canSelectFiles,
         [this](const auto& file) {
-          exportVideoFolder_.setText(file.getResult().getFullPathName());
+          juce::String fullPath = file.getResult().getFullPathName();
+          exportVideoFolder_.setText(fullPath);
           FileExport config = repository_->get();
-          config.setVideoExportFolder(file.getResult().getFullPathName());
+          config.setVideoExportFolder(fullPath);
           repository_->update(config);
         });
   };
-  exportVideoFolder_.setText(config.getVideoExportFolder());
 
   // Configure the video source file
   browseVideoSourceButton_.onClick = [this] {
