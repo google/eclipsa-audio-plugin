@@ -17,11 +17,8 @@
 #include "logger/logger.h"
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 
-IAMFDecoderSource::IAMFDecoderSource(const std::filesystem::path iamfPath)
-    : iamfPath_(iamfPath),
-      settings_(IAMFFileReader::kDefaultReaderSettings),
-      decoder_(IAMFFileReader::createIamfReader(iamfPath, settings_)),
-      isPlaying_(false) {
+IAMFDecoderSource::IAMFDecoderSource(std::unique_ptr<IAMFFileReader> reader)
+    : decoder_(std::move(reader)), isPlaying_(false) {
   streamData_ = decoder_->getStreamData();
 }
 
