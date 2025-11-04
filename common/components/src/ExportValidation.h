@@ -178,7 +178,8 @@ class ExportValidationComponent : public juce::Component,
                                 const juce::Identifier& property) {
     const FilePlayback::CurrentPlayerState kState = fpbr_.get().getPlayState();
     // UI is visible but not interactive during buffering
-    if (kState == FilePlayback::kBuffering) {
+    if (kState == FilePlayback::kBuffering ||
+        kState == FilePlayback::kDisabled) {
       audioPlayer_.setVisible(true);
       playbackDevice_.setVisible(true);
       layoutToDecode_.setVisible(true);

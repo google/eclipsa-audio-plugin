@@ -65,6 +65,9 @@ class AudioFilePlayer : public juce::Component,
   ColouredSlider playbackSlider_{ColouredSlider::FlatBar};
   SvgIconComponent volumeIcon_;
   std::unique_ptr<Spinner> spinner_;
+  juce::Label fileSelectLabel_{"fileSelectLabel",
+                               "Please select a valid IAMF file "
+                               "to play."};
   // State
   FilePlaybackRepository& fpbr_;
   FileExportRepository& fer_;
