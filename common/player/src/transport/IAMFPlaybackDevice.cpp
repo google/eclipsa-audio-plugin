@@ -33,29 +33,31 @@ std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
     return nullptr;
   }
 
-  auto device = std::unique_ptr<IAMFPlaybackDevice>(new IAMFPlaybackDevice(
-      iamfPath, pbDeviceName, filePlaybackRepo, deviceManager));
-
-  // Create the decoder source with the reader
-  device->decoderSource_ =
-      std::make_unique<IAMFDecoderSource>(std::move(reader));
-  device->decoderSource_->setOnFinishedCallback(
-      [device = device.get()] { device->setRepoState(FilePlayback::kStop); });
+  auto device = std::unique_ptr<IAMFPlaybackDevice>(
+      new IAMFPlaybackDevice(iamfPath, pbDeviceName, filePlaybackRepo,
+                             deviceManager, std::move(reader)));
 
   // Complete initialization
   FilePlayback fpb = filePlaybackRepo.get();
   device->configureDecodeLayout(fpb.getReqdDecodeLayout());
   device->configurePlaybackDevice(fpb.getPlaybackDevice());
-
   return device;
 }
 
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
                                        const juce::String pbDeviceName,
                                        FilePlaybackRepository& filePlaybackRepo,
-                                       juce::AudioDeviceManager& deviceManager)
-    : kPath_(iamfPath), fpbr_(filePlaybackRepo), deviceManager_(deviceManager) {
+                                       juce::AudioDeviceManager& deviceManager,
+                                       std::unique_ptr<IAMFFileReader> reader)
+    : kPath_(iamfPath),
+      fpbr_(filePlaybackRepo),
+      deviceManager_(deviceManager),
+      decoderSource_(std::make_unique<IAMFDecoderSource>(std::move(reader))) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
+
+  decoderSource_->setOnFinishedCallback(
+      [this] { setRepoState(FilePlayback::kStop); });
+
   fpbr_.registerListener(this);
 }
 

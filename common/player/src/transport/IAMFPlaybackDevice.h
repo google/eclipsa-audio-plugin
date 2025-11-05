@@ -43,7 +43,8 @@ class IAMFPlaybackDevice : private juce::ValueTree::Listener {
   IAMFPlaybackDevice(const std::filesystem::path iamfPath,
                      const juce::String pbDeviceName,
                      FilePlaybackRepository& filePlaybackRepo,
-                     juce::AudioDeviceManager& deviceManager);
+                     juce::AudioDeviceManager& deviceManager,
+                     std::unique_ptr<IAMFFileReader> reader);
 
   struct PlaybackState {
     bool wasPlaying;

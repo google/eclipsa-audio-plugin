@@ -256,7 +256,6 @@ void AudioFilePlayer::update() {
     timeLabel_.setText("00:00 / 00:00", juce::dontSendNotification);
     playbackSlider_.setValue(0, juce::dontSendNotification);
   }
-  // repaint();
 }
 
 void AudioFilePlayer::timerCallback() { update(); }
