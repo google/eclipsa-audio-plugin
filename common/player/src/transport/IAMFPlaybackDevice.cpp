@@ -52,38 +52,38 @@ IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
     : kPath_(iamfPath),
       fpbr_(filePlaybackRepo),
       deviceManager_(deviceManager),
-      decoderSource_(std::make_unique<IAMFDecoderSource>(std::move(reader))) {
+      decoderSource_(std::move(reader)) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
 
-  decoderSource_->setOnFinishedCallback(
+  decoderSource_.setOnFinishedCallback(
       [this] { setRepoState(FilePlayback::kStop); });
 
   fpbr_.registerListener(this);
 }
 
 IAMFPlaybackDevice::~IAMFPlaybackDevice() {
-  decoderSource_->stop();
+  decoderSource_.stop();
   deviceManager_.removeAudioCallback(&sourcePlayer_);
   sourcePlayer_.setSource(nullptr);
   fpbr_.deregisterListener(this);
 }
 
-void IAMFPlaybackDevice::play() { decoderSource_->play(); }
+void IAMFPlaybackDevice::play() { decoderSource_.play(); }
 
-void IAMFPlaybackDevice::pause() { decoderSource_->pause(); }
+void IAMFPlaybackDevice::pause() { decoderSource_.pause(); }
 
-void IAMFPlaybackDevice::stop() { decoderSource_->stop(); }
+void IAMFPlaybackDevice::stop() { decoderSource_.stop(); }
 
 void IAMFPlaybackDevice::seekTo(const float position) {
   jassert(position >= 0 && position <= 1.0);
   deviceManager_.closeAudioDevice();
-  const bool wasPlaying = decoderSource_->isPlaying();
-  decoderSource_->pause();
+  const bool wasPlaying = decoderSource_.isPlaying();
+  decoderSource_.pause();
   const size_t kFrameIdx =
-      static_cast<size_t>(position * decoderSource_->getStreamData().numFrames);
-  decoderSource_->seek(kFrameIdx);
+      static_cast<size_t>(position * decoderSource_.getStreamData().numFrames);
+  decoderSource_.seek(kFrameIdx);
   deviceManager_.restartLastAudioDevice();
-  if (wasPlaying) decoderSource_->play();
+  if (wasPlaying) decoderSource_.play();
 }
 
 void IAMFPlaybackDevice::configurePlaybackDevice(
@@ -91,12 +91,12 @@ void IAMFPlaybackDevice::configurePlaybackDevice(
   const bool kFirstSetup = deviceManager_.getCurrentAudioDevice() == nullptr;
 
   if (!kFirstSetup) {
-    decoderSource_->pause();
+    decoderSource_.pause();
     deviceManager_.removeAudioCallback(&sourcePlayer_);
     sourcePlayer_.setSource(nullptr);
   }
 
-  const IAMFFileReader::StreamData kData = decoderSource_->getStreamData();
+  const IAMFFileReader::StreamData kData = decoderSource_.getStreamData();
   const juce::AudioDeviceManager::AudioDeviceSetup kAppliedSetup =
       setupAudioDevice(deviceName, kData, kFirstSetup);
   updateResampler(kData.sampleRate,
@@ -114,9 +114,7 @@ void IAMFPlaybackDevice::configureDecodeLayout(
 
   const Speakers::AudioElementSpeakerLayout kLayout =
       fpbr_.get().getReqdDecodeLayout();
-  if (decoderSource_) {
-    decoderSource_->setLayout(kLayout);
-  }
+  decoderSource_.setLayout(kLayout);
   setPlayerSource();
   deviceManager_.addAudioCallback(&sourcePlayer_);
 }
@@ -126,17 +124,14 @@ void IAMFPlaybackDevice::setVolume(const float volume) {
 }
 
 IAMFFileReader::StreamData IAMFPlaybackDevice::getStreamData() const {
-  if (decoderSource_) {
-    return decoderSource_->getStreamData();
-  }
-  return {};
+  return decoderSource_.getStreamData();
 }
 
 void IAMFPlaybackDevice::valueTreePropertyChanged(
     juce::ValueTree& tree, const juce::Identifier& property) {
   const FilePlayback fpb(fpbr_.get());
-  const PlaybackState kPrevState = {
-      decoderSource_ ? decoderSource_->isPlaying() : false, fpb.getPlayState()};
+  const PlaybackState kPrevState = {decoderSource_.isPlaying(),
+                                    fpb.getPlayState()};
   if (property == FilePlayback::kPlayState) {
     switch (fpb.getPlayState()) {
       case FilePlayback::kPlay:
@@ -157,7 +152,7 @@ void IAMFPlaybackDevice::valueTreePropertyChanged(
     setRepoState(FilePlayback::kBuffering);
     configurePlaybackDevice(fpb.getPlaybackDevice());
     setRepoState(kPrevState.state);
-    if (kPrevState.wasPlaying) decoderSource_->play();
+    if (kPrevState.wasPlaying) decoderSource_.play();
   } else if (property == FilePlayback::kReqdDecodeLayout) {
     setRepoState(FilePlayback::kBuffering);
     configureDecodeLayout(fpb.getReqdDecodeLayout());
@@ -170,7 +165,7 @@ void IAMFPlaybackDevice::valueTreePropertyChanged(
     } else {
       setRepoState(kPrevState.state);
     }
-    if (kPrevState.wasPlaying) decoderSource_->play();
+    if (kPrevState.wasPlaying) decoderSource_.play();
   }
 }
 
@@ -186,14 +181,14 @@ void IAMFPlaybackDevice::setPlayerSource() {
   if (resampler_) {
     source = resampler_.get();
   } else {
-    source = decoderSource_.get();
+    source = &decoderSource_;
   }
   sourcePlayer_.setSource(source);
 }
 
 IAMFPlaybackDevice::PlaybackState IAMFPlaybackDevice::capturePbState() const {
   const FilePlayback::CurrentPlayerState kState = fpbr_.get().getPlayState();
-  return {decoderSource_->isPlaying(), kState};
+  return {decoderSource_.isPlaying(), kState};
 }
 
 juce::AudioDeviceManager::AudioDeviceSetup IAMFPlaybackDevice::setupAudioDevice(
@@ -244,7 +239,7 @@ void IAMFPlaybackDevice::updateResampler(unsigned sourceSampleRate,
         static_cast<double>(sourceSampleRate) / deviceSampleRate;
     if (!resampler_ || resampler_->getResamplingRatio() != requiredRatio) {
       resampler_ = std::make_unique<juce::ResamplingAudioSource>(
-          decoderSource_.get(), false, numChannels);
+          &decoderSource_, false, numChannels);
       resampler_->setResamplingRatio(requiredRatio);
       LOG_INFO(0, "IAMFPlaybackEngine: Configured resampler (" +
                       std::to_string(sourceSampleRate) + " Hz -> " +

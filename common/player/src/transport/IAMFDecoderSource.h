@@ -62,7 +62,7 @@ class IAMFDecoderSource : public juce::AudioSource {
     return isPlaying_;
   }
 
-  IAMFFileReader::StreamData getStreamData() {
+  IAMFFileReader::StreamData getStreamData() const {
     IAMFFileReader::StreamData data = streamData_;
     data.currentFrameIdx = frameCount_;
     return data;

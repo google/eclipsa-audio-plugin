@@ -66,7 +66,7 @@ class IAMFPlaybackDevice : private juce::ValueTree::Listener {
   const std::filesystem::path kPath_;
   juce::AudioDeviceManager& deviceManager_;
   FilePlaybackRepository& fpbr_;
-  std::unique_ptr<IAMFDecoderSource> decoderSource_;
+  IAMFDecoderSource decoderSource_;
   std::unique_ptr<juce::ResamplingAudioSource> resampler_;
   juce::AudioSourcePlayer sourcePlayer_;
 };
