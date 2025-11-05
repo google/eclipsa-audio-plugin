@@ -98,8 +98,7 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
 
   fileSelectLabel_.setColour(juce::Label::ColourIds::backgroundColourId,
                              juce::Colours::transparentBlack);
-  fileSelectLabel_.setColour(juce::Label::textColourId,
-                             EclipsaColours::headingGrey);
+  fileSelectLabel_.setColour(juce::Label::textColourId, EclipsaColours::red);
   fileSelectLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
   fileSelectLabel_.setJustificationType(juce::Justification::centred);
 
