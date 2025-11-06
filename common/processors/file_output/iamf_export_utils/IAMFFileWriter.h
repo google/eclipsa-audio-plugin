@@ -48,7 +48,7 @@ class IAMFFileWriter {
       MixPresentationRepository& mixPresentationRepository,
       MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
       int samplesPerFrame, int sampleRate);
-  ~IAMFFileWriter(){};
+  ~IAMFFileWriter() {};
 
   bool open(const std::string& filename);
   bool close();
