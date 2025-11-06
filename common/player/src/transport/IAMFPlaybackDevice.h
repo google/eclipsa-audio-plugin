@@ -23,10 +23,11 @@
 
 class IAMFPlaybackDevice : private juce::ValueTree::Listener {
  public:
-  IAMFPlaybackDevice(const std::filesystem::path iamfPath,
-                     const juce::String pbDeviceName,
-                     FilePlaybackRepository& filePlaybackRepo,
-                     juce::AudioDeviceManager& deviceManager);
+  static std::unique_ptr<IAMFPlaybackDevice> create(
+      const std::filesystem::path iamfPath, const juce::String pbDeviceName,
+      FilePlaybackRepository& filePlaybackRepo,
+      juce::AudioDeviceManager& deviceManager);
+
   ~IAMFPlaybackDevice();
 
   void play();
@@ -39,6 +40,12 @@ class IAMFPlaybackDevice : private juce::ValueTree::Listener {
   IAMFFileReader::StreamData getStreamData() const;
 
  private:
+  IAMFPlaybackDevice(const std::filesystem::path iamfPath,
+                     const juce::String pbDeviceName,
+                     FilePlaybackRepository& filePlaybackRepo,
+                     juce::AudioDeviceManager& deviceManager,
+                     std::unique_ptr<IAMFFileReader> reader);
+
   struct PlaybackState {
     bool wasPlaying;
     FilePlayback::CurrentPlayerState state;
@@ -59,7 +66,7 @@ class IAMFPlaybackDevice : private juce::ValueTree::Listener {
   const std::filesystem::path kPath_;
   juce::AudioDeviceManager& deviceManager_;
   FilePlaybackRepository& fpbr_;
-  std::unique_ptr<IAMFDecoderSource> decoderSource_;
+  IAMFDecoderSource decoderSource_;
   std::unique_ptr<juce::ResamplingAudioSource> resampler_;
   juce::AudioSourcePlayer sourcePlayer_;
 };

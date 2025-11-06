@@ -19,7 +19,7 @@
 FilePlayback::FilePlayback()
     : RepositoryItemBase({}),
       volume_(0),
-      playState_(CurrentPlayerState::kDisabled),
+      playState_(CurrentPlayerState::kStop),
       playbackFile_(""),
       seekPosition_(0.0f),
       reqdDecodeLayout_(),

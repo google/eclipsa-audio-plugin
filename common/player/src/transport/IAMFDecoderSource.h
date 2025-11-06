@@ -30,7 +30,7 @@
  */
 class IAMFDecoderSource : public juce::AudioSource {
  public:
-  explicit IAMFDecoderSource(const std::filesystem::path iamfPath);
+  explicit IAMFDecoderSource(std::unique_ptr<IAMFFileReader> reader);
 
   void play();
   void pause();
@@ -62,7 +62,7 @@ class IAMFDecoderSource : public juce::AudioSource {
     return isPlaying_;
   }
 
-  IAMFFileReader::StreamData getStreamData() {
+  IAMFFileReader::StreamData getStreamData() const {
     IAMFFileReader::StreamData data = streamData_;
     data.currentFrameIdx = frameCount_;
     return data;
@@ -72,8 +72,6 @@ class IAMFDecoderSource : public juce::AudioSource {
   void recreateDecoder();
 
   static constexpr unsigned kPadSecs_ = 5;
-  const std::filesystem::path iamfPath_;
-  IAMFFileReader::Settings settings_;
   std::unique_ptr<IAMFFileReader> decoder_;
   IAMFFileReader::StreamData streamData_;
   std::unique_ptr<BackgroundBuffer> buffer_;

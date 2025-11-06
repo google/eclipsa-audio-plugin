@@ -27,7 +27,8 @@ TEST_F(IAMFDecoderSourceTest, decode_all_samples) {
       std::filesystem::current_path() / "source_test.iamf";
   createIAMFFile2AE2MP(kTestFilePath);
 
-  auto source = IAMFDecoderSource(kTestFilePath);
+  auto reader = IAMFFileReader::createIamfReader(kTestFilePath);
+  auto source = IAMFDecoderSource(std::move(reader));
 
   // Configuration
   std::atomic_bool done = false;

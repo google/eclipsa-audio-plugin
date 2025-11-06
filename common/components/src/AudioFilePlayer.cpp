@@ -91,11 +91,16 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
     fpbr_.update(fpb);
   };
 
-  juce::Colour textColour = juce::Colour(221, 228, 227);
   timeLabel_.setColour(juce::Label::ColourIds::backgroundColourId,
                        juce::Colours::transparentBlack);
-  timeLabel_.setColour(juce::Label::textColourId, textColour);
+  timeLabel_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
   timeLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
+
+  fileSelectLabel_.setColour(juce::Label::ColourIds::backgroundColourId,
+                             juce::Colours::transparentBlack);
+  fileSelectLabel_.setColour(juce::Label::textColourId, EclipsaColours::red);
+  fileSelectLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
+  fileSelectLabel_.setJustificationType(juce::Justification::centred);
 
   playbackSlider_.setRange(0.0, 1.0);
   playbackSlider_.setValue(0.0);
@@ -119,16 +124,16 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   addAndMakeVisible(stopButton_);
   addAndMakeVisible(timeLabel_);
   addAndMakeVisible(volumeIcon_);
+  addAndMakeVisible(fileSelectLabel_);
   addAndMakeVisible(*spinner_);
 
+  fpbr_.registerListener(this);
+  fer_.registerListener(this);
   if (fpbr_.get().getPlaybackFile().isNotEmpty()) {
     attemptCreatePlaybackEngine();
   }
-  updateButtonVisibility();
-  update();
+  updateComponentVisibility();
   startTimerHz(30);
-  fpbr_.registerListener(this);
-  fer_.registerListener(this);
 }
 
 AudioFilePlayer::~AudioFilePlayer() {
@@ -143,7 +148,7 @@ AudioFilePlayer::~AudioFilePlayer() {
   fer_.deregisterListener(this);
 
   FilePlayback fpb = fpbr_.get();
-  fpb.setPlayState(FilePlayback::kDisabled);
+  fpb.setPlayState(FilePlayback::kStop);
   fpbr_.update(fpb);
 }
 
@@ -168,6 +173,17 @@ void AudioFilePlayer::resized() {
   auto fpb = fpbr_.get();
   bool isBuffering = (fpb.getPlayState() == FilePlayback::kBuffering);
 
+  // Only render the warning label if we get to a disabled state
+  if (fpb.getPlayState() == FilePlayback::kDisabled) {
+    flexBox.items.add(juce::FlexItem(fileSelectLabel_)
+                          .withFlex(1)
+                          .withHeight(kButtonSz)
+                          .withMargin(juce::FlexItem::Margin(0, 5, 0, 5)));
+    flexBox.performLayout(bounds);
+    return;
+  }
+
+  // Render the spinner when buffering
   if (isBuffering) {
     flexBox.items.add(
         juce::FlexItem(*spinner_)
@@ -175,7 +191,9 @@ void AudioFilePlayer::resized() {
             .withHeight(kButtonSz)
             .withMargin(juce::FlexItem::Margin(0, kGap + kButtonSz / 2.0f, 0,
                                                kGap + kButtonSz / 2.0f)));
-  } else {
+  }
+  // Render the play/stop buttons otherwise
+  else {
     if (playButton_.isVisible()) {
       flexBox.items.add(juce::FlexItem(playButton_)
                             .withWidth(kButtonSz)
@@ -192,6 +210,7 @@ void AudioFilePlayer::resized() {
                           .withHeight(kButtonSz)
                           .withMargin(juce::FlexItem::Margin(0, kGap, 0, 0)));
   }
+  // Render the time label, playback slider and volume controls
   flexBox.items.add(juce::FlexItem(timeLabel_)
                         .withFlex(1)
                         .withHeight(kButtonSz)
@@ -234,6 +253,7 @@ void AudioFilePlayer::update() {
     playbackEngine_->setVolume(volumeSlider_.getValue());
   } else {
     timeLabel_.setText("00:00 / 00:00", juce::dontSendNotification);
+    playbackSlider_.setValue(0, juce::dontSendNotification);
   }
 }
 
@@ -252,19 +272,24 @@ void AudioFilePlayer::valueTreePropertyChanged(
 }
 
 void AudioFilePlayer::handleAsyncUpdate() {
-  updateButtonVisibility();
+  updateComponentVisibility();
   resized();
 }
 
-void AudioFilePlayer::updateButtonVisibility() {
+void AudioFilePlayer::updateComponentVisibility() {
   auto fpb = fpbr_.get();
   auto playState = fpb.getPlayState();
   const bool kPlaying = (playState == FilePlayback::kPlay);
   const bool kBuffering = (playState == FilePlayback::kBuffering);
-
-  playButton_.setVisible(!kPlaying && !kBuffering);
-  pauseButton_.setVisible(kPlaying);
-  stopButton_.setVisible(!kBuffering);
+  const bool kDisabled = (playState == FilePlayback::kDisabled);
+  fileSelectLabel_.setVisible(kDisabled);
+  playButton_.setVisible(!kPlaying && !kBuffering && !kDisabled);
+  pauseButton_.setVisible(kPlaying && !kDisabled);
+  stopButton_.setVisible(!kBuffering && !kDisabled);
+  timeLabel_.setVisible(!kDisabled);
+  playbackSlider_.setVisible(!kDisabled);
+  volumeIcon_.setVisible(!kDisabled);
+  volumeSlider_.setVisible(!kDisabled);
   if (spinner_) spinner_->setVisible(kBuffering);
 }
 
@@ -300,9 +325,9 @@ void AudioFilePlayer::createPlaybackEngine(
 
   playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
     auto engine =
-        new IAMFPlaybackDevice(iamfPath, kDevice, fpbr_, deviceManager_);
+        IAMFPlaybackDevice::create(iamfPath, kDevice, fpbr_, deviceManager_);
 
-    juce::MessageManager::callAsync([this, engine]() {
+    juce::MessageManager::callAsync([this, engine = engine.release()]() {
       onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));
     });
   });
@@ -312,14 +337,20 @@ void AudioFilePlayer::onPlaybackEngineCreated(
     std::unique_ptr<IAMFPlaybackDevice> engine) {
   if (isBeingDestroyed_) {
     return;
+  } else if (!engine) {
+    // Failed to create playback engine - reset state to disabled
+    playbackEngine_ = nullptr;
+    auto fpb = fpbr_.get();
+    fpb.setPlayState(FilePlayback::kDisabled);
+    fpbr_.update(fpb);
+  } else {
+    {
+      std::lock_guard<std::mutex> lock(playbackEngineMutex_);
+      playbackEngine_ = std::move(engine);
+    }
+    // Update play state from buffering to ready
+    auto fpb = fpbr_.get();
+    fpb.setPlayState(FilePlayback::kStop);
+    fpbr_.update(fpb);
   }
-  {
-    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
-    playbackEngine_ = std::move(engine);
-  }
-
-  // Update play state from buffering to ready
-  auto fpb = fpbr_.get();
-  fpb.setPlayState(FilePlayback::kReady);
-  fpbr_.update(fpb);
 }
