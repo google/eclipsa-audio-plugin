@@ -18,7 +18,13 @@
 
 #include "TitledTextBox.h"
 
-// Automatically appends a default file extension to the `TitledTextBox` value
+// Appends a default file extension only when appropriate:
+//  * If the previous user text was empty and the user types the first
+//  character(s), append immediately.
+//  * Once user text is non-empty, allow free editing; append extension only
+//  upon commit if missing.
+//  * If the user clears the field back to empty, the next typed character will
+//  trigger immediate append again.
 class FilePickerTextBox : public TitledTextBox {
  public:
   FilePickerTextBox(const juce::String title,
@@ -27,10 +33,7 @@ class FilePickerTextBox : public TitledTextBox {
         defaultExtension_(defaultExtension),
         userText_(""),
         isUpdating_(false) {
-    // Override the text change callback to handle extension appending
     TitledTextBox::onTextChanged([this]() { handleTextChange(); });
-
-    // Set up callbacks for committing the value
     setOnReturnCallback([this]() { commitValue(); });
     setOnFocusLostCallback([this]() { commitValue(); });
   }
@@ -39,10 +42,15 @@ class FilePickerTextBox : public TitledTextBox {
 
   juce::String getText() { return TitledTextBox::getText(); }
 
+  // Programmatic set should mirror committed behavior: append if non-empty &
+  // missing.
   void setText(juce::String text) {
+    if (!text.isEmpty() && !text.endsWithIgnoreCase(defaultExtension_)) {
+      text += defaultExtension_;
+    }
     isUpdating_ = true;
     userText_ = stripExtension(text);
-    TitledTextBox::setText(appendExtension(userText_));
+    TitledTextBox::setText(text);
     isUpdating_ = false;
   }
 
@@ -51,36 +59,27 @@ class FilePickerTextBox : public TitledTextBox {
   }
 
  private:
-  juce::String appendExtension(const juce::String& text) {
-    // Only append extension if there's user text
-    if (text.isEmpty()) {
-      return text;
-    }
-    return text + defaultExtension_;
-  }
-
   void handleTextChange() {
     if (isUpdating_) return;
-
     isUpdating_ = true;
 
-    // Get the current text from the editor
+    // Capture previous user text length before updating.
+    juce::String previousUserText = userText_;
     juce::String currentText = TitledTextBox::getText();
-
-    // Strip the extension to get the user text
     userText_ = stripExtension(currentText);
 
-    // Update the text editor with the extension appended
-    const juce::TextEditor* editor = getTextEditor();
-    if (editor != nullptr) {
-      int caretPosition = editor->getCaretPosition();
-      juce::String newText = appendExtension(userText_);
+    bool wasEmptyBefore = previousUserText.isEmpty();
+    bool isNowNonEmpty = userText_.isNotEmpty();
 
-      // Only update if different to avoid cursor jumping
-      if (currentText != newText) {
-        TitledTextBox::setText(newText);
-
-        // Restore caret position (but not beyond user text length)
+    // Only auto-append if transitioning from empty -> non-empty.
+    if (wasEmptyBefore && isNowNonEmpty &&
+        !currentText.endsWithIgnoreCase(defaultExtension_)) {
+      const juce::TextEditor* editor = getTextEditor();
+      int caretPosition = editor ? editor->getCaretPosition() : -1;
+      juce::String newText = userText_ + defaultExtension_;
+      TitledTextBox::setText(newText);
+      if (editor) {
+        // Keep caret within user portion (before extension).
         const_cast<juce::TextEditor*>(editor)->setCaretPosition(
             juce::jmin(caretPosition, userText_.length()));
       }
@@ -90,14 +89,15 @@ class FilePickerTextBox : public TitledTextBox {
   }
 
   void commitValue() {
-    // Call the user-provided callback when value is committed
-    if (onValueCommittedCallback_) {
-      onValueCommittedCallback_();
+    juce::String current = TitledTextBox::getText();
+    juce::String bare = stripExtension(current);
+    if (bare.isNotEmpty() && !current.endsWithIgnoreCase(defaultExtension_)) {
+      TitledTextBox::setText(bare + defaultExtension_);
     }
+    if (onValueCommittedCallback_) onValueCommittedCallback_();
   }
 
-  juce::String stripExtension(const juce::String& text) {
-    // If the text ends with the default extension, remove it
+  juce::String stripExtension(const juce::String& text) const {
     if (text.endsWithIgnoreCase(defaultExtension_)) {
       return text.substring(0, text.length() - defaultExtension_.length());
     }
