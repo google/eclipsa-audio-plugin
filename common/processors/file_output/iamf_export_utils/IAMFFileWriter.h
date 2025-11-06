@@ -48,13 +48,13 @@ class IAMFFileWriter {
       MixPresentationRepository& mixPresentationRepository,
       MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
       int samplesPerFrame, int sampleRate);
-  ~IAMFFileWriter() {};
+  ~IAMFFileWriter(){};
 
   bool open(const std::string& filename);
   bool close();
   bool writeFrame(const juce::AudioBuffer<float>& buffer);
 
- private:
+ protected:
   void populateCodecInformationFromRepository(
       FileExportRepository& fileExportRepository,
       iamf_tools_cli_proto::UserMetadata& iamfMD);
