@@ -34,8 +34,8 @@ class DAWWarningBanner : public juce::Component, public juce::Button::Listener {
     m_isDAWSupported = DAWCompatibilityChecker::isDAWSupported();
 
     bool iconLoaded = false;
-    if (IconStore::getInstance().getcloseIcon().isValid()) {
-      juce::Image closeIcon = IconStore::getInstance().getcloseIcon();
+    if (IconStore::getInstance().getCloseIcon().isValid()) {
+      juce::Image closeIcon = IconStore::getInstance().getCloseIcon();
       const int buttonSize = 18;
       closeIcon = closeIcon.rescaled(buttonSize, buttonSize,
                                      juce::Graphics::highResamplingQuality);
@@ -48,7 +48,7 @@ class DAWWarningBanner : public juce::Component, public juce::Button::Listener {
     } else {
       LOG_ERROR(0,
                 "DAW Banner CONSTRUCTOR: "
-                "IconStore::getInstance().getcloseIcon() is not valid.");
+                "IconStore::getInstance().getCloseIcon() is not valid.");
     }
 
     // If icon loading failed, create a text button as fallback

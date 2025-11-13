@@ -15,7 +15,11 @@
  */
 
 #pragma once
-#include <sys/errno.h>
+#ifdef _WIN32
+    #include <errno.h>
+#else
+    #include <sys/errno.h>
+#endif
 
 #include "../components.h"
 #include "components/src/EclipsaColours.h"

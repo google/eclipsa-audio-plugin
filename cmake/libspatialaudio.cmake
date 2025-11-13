@@ -17,6 +17,8 @@
 # we should move back to the original
 message(STATUS "Fetching LibSpatialAudio")
 include(FetchContent)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 FetchContent_Declare(
   libspatialaudio
   GIT_REPOSITORY "https://github.com/WithACX/libspatialaudio.git"
@@ -27,7 +29,18 @@ set(spatialaudio_SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/libspatialaudio-src")
 set(spatialaudio_BUILD_DIR "${CMAKE_BINARY_DIR}/_deps/libspatialaudio-build")
 
 add_library(libspatialaudio INTERFACE)
-target_compile_options(libspatialaudio INTERFACE "-w") # Silence is golden
-target_link_libraries(libspatialaudio 
-INTERFACE 
-${spatialaudio_BUILD_DIR}/libspatialaudio.a)
+
+# Platform-specific compiler options
+if(WIN32)
+    if(MSVC)
+        target_compile_options(libspatialaudio INTERFACE /w)
+    endif()
+elseif(APPLE)
+    target_compile_options(libspatialaudio INTERFACE "-w")
+else()
+    # Linux and other Unix-like systems
+    target_compile_options(libspatialaudio INTERFACE "-w")
+endif()
+
+# Link to the CMake target - CMake handles platform-specific library names
+target_link_libraries(libspatialaudio INTERFACE spatialaudio-static)

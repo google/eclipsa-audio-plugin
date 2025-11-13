@@ -50,7 +50,7 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
 
   ~AudioElementPluginSyncClient() override {}
 
-  bool disconnectClient() {
+  void disconnectClient() {
     juce::ScopedLock lock(rendererAudioElementsLock_);
     listeners_.clear();
     terminationRequested_ = true;
@@ -91,6 +91,8 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
     }
   }
 
+  //EJ 10/31
+
   void tryConnect() {  // Start a thread here to try and perform the connection
     connectionThread_ = std::thread([this] {
       // Try and connect, checking to see if deletion
@@ -119,6 +121,7 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
                         // while we are trying to connect. I don't think this
                         // will happen in practice, but better safe
     connectionThread_.join();
+
     connected_ = false;
     if (!terminationRequested_) tryConnect();
   }

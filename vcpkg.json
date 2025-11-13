@@ -1,0 +1,12 @@
+{
+  "name": "eclipsa-audio-plugin",
+  "version": "0.0.1",
+  "description": "IAMF spatial audio plugins for AAX, VST3, and AU formats",
+  "dependencies": [
+    "zlib",
+    "bzip2",
+    "liblzma",
+    "zstd"
+  ],
+  "builtin-baseline": "0d9d4684352ba8de70bdf251c6fc9a3c464fa12b"
+}

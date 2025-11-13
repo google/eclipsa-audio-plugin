@@ -12,20 +12,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.29.0)
+cmake_minimum_required(VERSION 3.30.0)
+
+# Disable vcpkg automatic DLL copying (applocal) - it fails without dumpbin in PATH
+set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
+
+# Disable vcpkg from finding Boost and Protobuf (provided by libiamf)
+set(CMAKE_DISABLE_FIND_PACKAGE_Boost ON CACHE BOOL "" FORCE)
+set(CMAKE_DISABLE_FIND_PACKAGE_Protobuf ON CACHE BOOL "" FORCE)
+
+# Clear any cached Protobuf references
+unset(Protobuf_INCLUDE_DIRS CACHE)
+unset(Protobuf_LIBRARIES CACHE)
+unset(Protobuf_DIR CACHE)
+unset(Protobuf_FOUND CACHE)
+unset(Protobuf_PROTOC_EXECUTABLE CACHE)
+
+cmake_policy(SET CMP0167 NEW)
+cmake_policy(SET CMP0077 NEW)
+cmake_policy(SET CMP0169 OLD)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Configure release or debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(BUILD_LIB_DIR "Debug")
+else()
+    set(BUILD_LIB_DIR "Release")
+endif()
+
+
+# Windows vcpkg setup
+if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    # Try environment variable first (respects user's existing setup)
+    if(DEFINED ENV{VCPKG_ROOT})
+        set(VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "Path to vcpkg root")
+    endif()
+
+    # Configure vcpkg if VCPKG_ROOT is set
+    if(DEFINED VCPKG_ROOT)
+        set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg toolchain file")
+
+        # Validate toolchain file exists
+        if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+            message(FATAL_ERROR "vcpkg toolchain file not found at: ${CMAKE_TOOLCHAIN_FILE}")
+        endif()
+
+        # Set default triplet if not specified
+        if(NOT DEFINED VCPKG_TARGET_TRIPLET)
+            set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg target triplet")
+        endif()
+
+        message(WARNING "vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+        message(WARNING "vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
+    else()
+        message(WARNING "vcpkg not configured. Please either:")
+        message(WARNING "  1. Set VCPKG_ROOT environment variable, or")
+        message(WARNING "  2. Pass -DVCPKG_ROOT=<path> to CMake")
+        message(WARNING "Build will continue without vcpkg - dependencies must be installed manually")
+    endif()
+endif()
 
 if(NOT DEFINED ECLIPSA_VERSION)
     set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
 endif()
-# Set the version information here so it can be used for determining
-# the configuration version
-add_compile_definitions(ECLIPSA_VERSION="${ECLIPSA_VERSION}")
 
 project(Eclipsa LANGUAGES C CXX VERSION ${ECLIPSA_VERSION})
+
+add_compile_definitions(ECLIPSA_VERSION="${ECLIPSA_VERSION}")
 
 # Make company name configurable via command line with a default value
 if(NOT DEFINED ECLIPSA_COMPANY_NAME)
     set(ECLIPSA_COMPANY_NAME "Eclipsa Project" CACHE STRING "Company name for Eclipsa project")
+endif()
+
+if(WIN32 AND NOT CMAKE_RC_COMPILER)
+    find_program(CMAKE_RC_COMPILER rc.exe
+            HINTS "C:/Program Files (x86)/Windows Kits/10/bin/*/x64")
 endif()
 
 # Make manufacturer code configurable via command line with a default value
@@ -49,24 +111,33 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
-set(PLUGIN_FORMATS "AU")
+
+# Set default plugin formats per platform
+if(APPLE)
+    set(PLUGIN_FORMATS "AU")
+elseif(WIN32)
+    set(PLUGIN_FORMATS "Standalone")
+else()
+    set(PLUGIN_FORMATS "")
+endif()
+
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
 
 if(APPLE)
-  # Add vendored libraries path (for CI/GitHub Actions)
-  set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
-  link_directories(${VENDOR_LIB_PATH})
+    # Add vendored libraries path (for CI/GitHub Actions)
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
+    link_directories(${VENDOR_LIB_PATH})
 endif()
 
 if(CI_TEST OR INTERNAL_TEST)
     message(STATUS "Unit tests enabled")
-    include(FetchContent)    
+    include(FetchContent)
     FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY
-        https://github.com/google/googletest.git
-        GIT_TAG v1.14.0)
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.14.0
+    )
     FetchContent_MakeAvailable(GoogleTest)
     enable_testing()
     include(GoogleTest)
@@ -75,17 +146,31 @@ if(CI_TEST OR INTERNAL_TEST)
 endif()
 
 add_subdirectory(third_party)
+
+# ZLIB configuration for Windows builds
+if(WIN32)
+    find_package(ZLIB REQUIRED)
+    message(STATUS "ZLIB found at: ${ZLIB_LIBRARIES}")
+    # Fix link targets that request 'z'
+    link_libraries(ZLIB::ZLIB)
+endif()
+
 include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 
 if(BUILD_AAX)
-    set(AAX_SDK_VER "2-7-0" CACHE STRING "Default AAX SDK Version")
+    set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
     list(APPEND PLUGIN_FORMATS "AAX")
-    find_path(AAX_SDK_PATH NAMES "aax-sdk-${AAX_SDK_VER}" HINTS "/opt" "/usr/local")
-    if(${AAX_SDK_PATH} STREQUAL AAX_SDK_PATH-NOTFOUND)
-        message(FATAL_ERROR "Could not find AAX_SDK at hinted locations")
+
+    # Allow team members to specify their own AAX SDK path
+    if(NOT DEFINED AAX_SDK_ROOT)
+        set(AAX_SDK_ROOT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE PATH "Path to AAX SDK")
+    endif()
+
+    if(EXISTS "${AAX_SDK_ROOT}")
+        message(STATUS "Using AAX SDK at ${AAX_SDK_ROOT}")
+        juce_set_aax_sdk_path("${AAX_SDK_ROOT}")
     else()
-        message(STATUS "AAX SDK found at " ${AAX_SDK_PATH})
-        juce_set_aax_sdk_path("${AAX_SDK_PATH}/aax-sdk-${AAX_SDK_VER}")
+        message(FATAL_ERROR "AAX SDK not found at ${AAX_SDK_ROOT}. Set AAX_SDK_ROOT to the correct path.")
     endif()
 endif()
 

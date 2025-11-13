@@ -40,7 +40,7 @@ struct AudioElementUpdateData {
     y = 0;
     z = 0;
     loudness = 0;
-    memcpy(uuid.begin(), juce::Uuid().getRawData(), 16);
+    memcpy(uuid.data(), juce::Uuid().getRawData(), 16);
     strcpy(name, "");
   }
 };
@@ -179,7 +179,8 @@ class AudioElementSubscriber {
     listenerThread.join();
   };
 
-  AudioElementUpdateData getData(
+  // AudioElementUpdateData getData(
+  void getData(
       std::function<void(AudioElementUpdateData)> callback) const {
     // Read the data map
     juce::ScopedReadLock readLock(dataMapLock);

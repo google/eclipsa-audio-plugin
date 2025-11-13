@@ -72,7 +72,7 @@ void ChannelMonitorProcessor::valueTreeChildAdded(
     const juce::var mixPresentationSoloMuteId =
         childWhichHasBeenAdded[MixPresentationSoloMute::kId];
     MixPresentationSoloMute mixPresentationSoloMute(
-        juce::Uuid(static_cast<juce::String>(mixPresentationSoloMuteId)));
+        juce::Uuid(mixPresentationSoloMuteId.toString()));
 
     mixPresentationSoloMuteRepository_->updateOrAdd(mixPresentationSoloMute);
   }
@@ -109,7 +109,7 @@ void ChannelMonitorProcessor::valueTreeChildRemoved(
     // if a mix presentation is removed, remove it from the mpSM repository
     // this includes removing the audio elements
     MixPresentationSoloMute mixPresentationSoloMute(
-        juce::Uuid(static_cast<juce::String>(mixPresentationSoloMuteId)));
+        juce::Uuid(mixPresentationSoloMuteId.toString()));
 
     mixPresentationSoloMuteRepository_->remove(mixPresentationSoloMute);
   } else if (parentTree.getType() == MixPresentation::kTreeType &&

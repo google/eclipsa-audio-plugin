@@ -12,17 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-message(STATUS "Fetching pffft")
-include(FetchContent)
-FetchContent_Declare(
-  pffft
-  GIT_REPOSITORY "https://github.com/marton78/pffft.git"
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
-)
-FetchContent_GetProperties(pffft)
-if(NOT pffft_POPULATED)
-  FetchContent_Populate(pffft)
-  # Manually include the necessary parts of pffft
-  add_library(pffft STATIC ${pffft_SOURCE_DIR}/pffft.c)
-  target_include_directories(pffft PUBLIC ${pffft_SOURCE_DIR})
+message(STATUS "Using prebuilt pffft from obr build")
+
+if (WIN32)
+  # Fetch pffft from source on Windows too
+  include(FetchContent)
+  FetchContent_Declare(
+          pffft
+          GIT_REPOSITORY "https://github.com/marton78/pffft.git"
+          SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
+  )
+  FetchContent_GetProperties(pffft)
+  if(NOT pffft_POPULATED)
+    FetchContent_Populate(pffft)
+    add_library(pffft STATIC IMPORTED)
+    set_target_properties(pffft PROPERTIES
+            IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/third_party/Windows/pffft.lib"
+    )
+    target_include_directories(pffft INTERFACE ${pffft_SOURCE_DIR})
+  endif()
+else()
+
+  # macOS/Linux - fetch and build from source
+  include(FetchContent)
+  FetchContent_Declare(
+          pffft
+          GIT_REPOSITORY "https://github.com/marton78/pffft.git"
+          SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
+  )
+  FetchContent_GetProperties(pffft)
+  if(NOT pffft_POPULATED)
+    FetchContent_Populate(pffft)
+    add_library(pffft STATIC ${pffft_SOURCE_DIR}/pffft.c)
+    target_include_directories(pffft PUBLIC ${pffft_SOURCE_DIR})
+  endif()
 endif()
