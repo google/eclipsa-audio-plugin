@@ -18,6 +18,7 @@
 #include <components/components.h>
 
 #include "components/src/ExportValidation.h"
+#include "components/src/FilePickerTextBox.h"
 #include "components/src/SelectionBox.h"
 #include "components/src/SliderButton.h"
 #include "components/src/TimeFormatSegmentSelector.h"
@@ -118,13 +119,13 @@ class FileExportScreen : public juce::Component,
   // Right side elements
   juce::Label exportAudioLabel_;
   SliderButton enableFileExport_;
-  TitledTextBox exportPath_;
+  FilePickerTextBox exportPath_;
   juce::ImageButton browseButton_;
   juce::ToggleButton exportAudioElementsToggle_;
   juce::Label exportAudioElementsLabel_;
   juce::Label muxVidoeLabel_;
   SliderButton muxVideoToggle_;
-  TitledTextBox exportVideoFolder_;
+  FilePickerTextBox exportVideoFolder_;
   juce::ImageButton browseVideoButton_;
   TitledTextBox videoSource_;
   juce::ImageButton browseVideoSourceButton_;
