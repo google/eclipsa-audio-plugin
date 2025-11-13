@@ -20,8 +20,10 @@
 #include <juce_core/juce_core.h>
 
 #include <filesystem>
+#include <memory>
 
 #include "processors/file_output/FileWriter.h"
+#include "processors/tests/FileOutputTestUtils.h"
 #include "substream_rdr/surround_panner/MonoToSpeakerPanner.h"
 
 // Enable to generate panned files to get the loudness information with FFMPEG
@@ -158,13 +160,48 @@ TEST(test_ebu128_measurements, loudness_test) {
     // Check the measured loudness against pre-recorded values
     std::cout << loudness.loudnessIntegrated << " " << loudness.loudnessTruePeak
               << " " << loudness.loudnessRange << std::endl;
-    EXPECT_NEAR(loudness.loudnessIntegrated, test.loudnessIntegrated, 0.1);
-    EXPECT_NEAR(loudness.loudnessTruePeak, test.loudnessTruePeak, 0.1);
+    ASSERT_NEAR(loudness.loudnessIntegrated, test.loudnessIntegrated, 0.1);
+    ASSERT_NEAR(loudness.loudnessTruePeak, test.loudnessTruePeak, 0.1)
+        << "Failed for layout: " << test.speakerLayout.toString();
 
     // Note: It's unclear to me why the error here is still so large in
     // comparison to FFMPEG. The calculation looks
     // correct, perhaps FFMPEG calculates the gating differently because it has
-    // access to the entire file? --Branden
-    EXPECT_NEAR(loudness.loudnessRange, test.loudnessRange, 1);
+    // access to the entire file?
+    ASSERT_NEAR(loudness.loudnessRange, test.loudnessRange, 1);
+  }
+}
+
+TEST(test_ebu128_measurements, true_peak_vary_sr) {
+  for (const auto sr : {16e3, 24e3, 44.1e3, 48e3, 96e3}) {
+    const std::string kFname = "tp_" + std::to_string((int)sr) + ".wav";
+    const std::filesystem::path kRefWavPath =
+        std::filesystem::current_path() / kFname;
+    auto sineWave = generateSineWave(440, sr, sr);
+    sineWave.applyGain(0.5f);
+    std::unique_ptr<WavFileWriter> writer =
+        std::make_unique<WavFileWriter>(kRefWavPath, 1, sr);
+    writer->write(sineWave, sineWave.getNumSamples());
+    writer.reset();
+
+    // Measure true peak level. We expect these to be the same regardless of
+    // sample rate. Comparing against offline FFmpeg computed EBU values.
+    juce::AudioFormatManager formatManager;
+    formatManager.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader(
+        formatManager.createReaderFor(juce::File(kRefWavPath.string())));
+    ASSERT_NE(reader, nullptr)
+        << "Failed to create reader for the file: " << kRefWavPath.string();
+
+    juce::AudioBuffer<float> buffer(sineWave.getNumChannels(),
+                                    sineWave.getNumSamples());
+    reader->read(&buffer, 0, buffer.getNumSamples(), 0, true, true);
+
+    MeasureEBU128 loudness(sr);
+    auto stats =
+        loudness.measureLoudness(juce::AudioChannelSet::mono(), buffer);
+    std::cout << "Sample Rate: " << sr
+              << " True Peak: " << stats.loudnessTruePeak << std::endl;
+    ASSERT_NEAR(stats.loudnessTruePeak, -26, 0.1f);
   }
 }

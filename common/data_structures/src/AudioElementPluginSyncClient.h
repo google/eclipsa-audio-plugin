@@ -107,7 +107,7 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
           return;
         }
         rendererAudioElementsLock_.exit();
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
       };
     });
   }

@@ -73,6 +73,8 @@ class ControlKnob : public juce::Slider {
 
   void resetLookAndFeel() { setLookAndFeel(&lookAndFeel_); }
 
+  void mouseDown(const juce::MouseEvent& event) override;
+
  private:
   const double startAngle_ = 9 * juce::MathConstants<double>::pi / 8;
   const double endAngle_ = 23 * juce::MathConstants<double>::pi / 8;

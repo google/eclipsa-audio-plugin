@@ -46,8 +46,11 @@ class SegmentedToggleButton : public juce::Component {
   void toggleOn(const juce::String& opt);
   bool getOption(const juce::String& opt) const;
   void setOption(const juce::String& opt, const bool state);
-  std::vector<std::pair<juce::String, bool>> getState();
-  std::vector<juce::String> getToggled();
+  std::vector<std::pair<juce::String, bool>> getState() const;
+  std::vector<juce::String> getToggled() const;
+  void setEnabledForOption(const juce::String& opt, bool enabled);
+  bool isOptionEnabled(const juce::String& opt) const;
+  int getSelectedIndex() const;
 
   void onChange(std::function<void()> func) { parentCallback_ = func; }
 

@@ -34,14 +34,15 @@ void STBLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& btn,
                                     bool shouldDrawButtonAsHighlighted,
                                     bool shouldDrawButtonAsDown) {
   auto bounds = btn.getLocalBounds();
-  // If the button is toggled on, shift text right.
-  int offset = 0;
-  if (btn.getToggleState()) {
-    offset = 10;
+  auto colourId = btn.getToggleState() ? juce::TextButton::textColourOnId
+                                       : juce::TextButton::textColourOffId;
+  auto colour = btn.findColour(colourId);
+  if (!btn.isEnabled()) {
+    colour = colour.withAlpha(0.35f);
   }
-  g.drawFittedText(btn.getButtonText(), bounds.getX() + offset, bounds.getY(),
-                   bounds.getWidth(), bounds.getHeight(),
-                   juce::Justification::centred, 1, 0.2f);
+  g.setColour(colour);
+  g.drawFittedText(btn.getButtonText(), bounds, juce::Justification::centred, 1,
+                   0.2f);
 }
 
 void STBLookAndFeel::drawButtonBackground(juce::Graphics& g,
@@ -50,7 +51,9 @@ void STBLookAndFeel::drawButtonBackground(juce::Graphics& g,
                                           bool isMouseOverButton,
                                           bool isButtonDown) {
   juce::Colour backColour = backgroundColour;
-  if (!button.isToggleable()) {
+  if (!button.isEnabled()) {
+    backColour = backgroundColour.withAlpha(0.35f);
+  } else if (!button.isToggleable()) {
     backColour = EclipsaColours::ambisonicsFillGrey;
   } else if (isMouseOverButton || button.getToggleState()) {
     backColour = findColour(juce::TextButton::buttonOnColourId);
@@ -90,15 +93,6 @@ void STBLookAndFeel::drawButtonBackground(juce::Graphics& g,
     g.setColour(button.findColour(juce::TextButton::ColourIds::textColourOnId));
     g.drawRect(buttonBounds, 1.0f);
   }
-
-  // If the button is toggled on draw a checkmark.
-  if (button.getToggleState()) {
-    g.drawImageWithin(
-        IconStore::getInstance().getCheckmarkIcon(), buttonBounds.getX() + 10,
-        buttonBounds.getY(), buttonBounds.getWidth(), buttonBounds.getHeight(),
-        juce::RectanglePlacement::xLeft | juce::RectanglePlacement::yMid |
-            juce::RectanglePlacement::onlyReduceInSize);
-  }
 }
 
 SegmentedToggleButton::SegmentedToggleButton(
@@ -131,6 +125,7 @@ void SegmentedToggleButton::setToggleable(const juce::String& opt,
   for (const auto& button : buttons_) {
     if (button->getButtonText() == opt) {
       button->setClickingTogglesState(enable);
+      button->setEnabled(enable);
     }
   }
 }
@@ -149,6 +144,7 @@ bool SegmentedToggleButton::getOption(const juce::String& opt) const {
       return button->getToggleState();
     }
   }
+  return false;
 }
 
 void SegmentedToggleButton::setOption(const juce::String& opt,
@@ -160,7 +156,7 @@ void SegmentedToggleButton::setOption(const juce::String& opt,
   }
 }
 
-std::vector<juce::String> SegmentedToggleButton::getToggled() {
+std::vector<juce::String> SegmentedToggleButton::getToggled() const {
   std::vector<juce::String> selected;
   for (const auto& button : buttons_) {
     if (button->getToggleState()) {
@@ -170,7 +166,8 @@ std::vector<juce::String> SegmentedToggleButton::getToggled() {
   return selected;
 }
 
-std::vector<std::pair<juce::String, bool>> SegmentedToggleButton::getState() {
+std::vector<std::pair<juce::String, bool>> SegmentedToggleButton::getState()
+    const {
   std::vector<std::pair<juce::String, bool>> state;
   for (const auto& button : buttons_) {
     state.push_back({button->getButtonText(), button->getToggleState()});
@@ -201,11 +198,54 @@ void SegmentedToggleButton::configureButtons() {
 
 void SegmentedToggleButton::toggleButton(juce::Button* btn) {
   // Set toggle states if singular toggle.
-  if (kSingularToggle_ && btn->getToggleState()) {
-    for (const auto& button : buttons_) {
-      bool toggleState = button.get() == btn ? true : false;
-      button->setToggleState(toggleState, true);
+  if (kSingularToggle_) {
+    if (btn->getToggleState()) {
+      // Ensure only this button is selected; deselect all others
+      for (const auto& button : buttons_) {
+        bool toggleState = button.get() == btn ? true : false;
+        button->setToggleState(toggleState,
+                               false);  // false = don't trigger callback
+      }
+      if (parentCallback_) {
+        parentCallback_();
+      }
+    } else {
+      btn->setToggleState(true, false);
+    }
+  } else {
+    // Non-singular mode: normal toggle behavior
+    if (parentCallback_) {
+      parentCallback_();
     }
   }
-  parentCallback_();
+}
+
+void SegmentedToggleButton::setEnabledForOption(const juce::String& opt,
+                                                bool enabled) {
+  for (const auto& button : buttons_) {
+    if (button->getButtonText() == opt) {
+      button->setEnabled(enabled);
+      if (!enabled && button->getToggleState()) {
+        button->setToggleState(false, true);
+      }
+    }
+  }
+}
+
+bool SegmentedToggleButton::isOptionEnabled(const juce::String& opt) const {
+  for (const auto& button : buttons_) {
+    if (button->getButtonText() == opt) {
+      return button->isEnabled();
+    }
+  }
+  return false;
+}
+
+int SegmentedToggleButton::getSelectedIndex() const {
+  for (size_t i = 0; i < buttons_.size(); ++i) {
+    if (buttons_[i]->getToggleState()) {
+      return static_cast<int>(i);
+    }
+  }
+  return -1;
 }

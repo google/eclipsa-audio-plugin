@@ -33,7 +33,7 @@ MeasureEBU128::LoudnessStats MeasureEBU128::measureLoudness(
   if (buffer.getNumChannels() != currPlaybackLayout.size() ||
       playbackLayout_ != currPlaybackLayout ||
       upsampledBuffer_.getNumSamples() <
-          buffer.getNumSamples() * kUpsampleRatio_) {
+          buffer.getNumSamples() * upsampleRatio_) {
     reset(currPlaybackLayout, buffer);
     LOG_INFO(
         0, "measureLoudness: Mismatch between provided layout and buffer size");
@@ -60,6 +60,7 @@ MeasureEBU128::LoudnessStats MeasureEBU128::measureLoudness(
 void MeasureEBU128::reset(const juce::AudioChannelSet& currPlaybackLayout,
                           const juce::AudioBuffer<float>& buffer) {
   playbackLayout_ = currPlaybackLayout;
+  upsampleRatio_ = 192e3 / kSampleRate_;  // ITU 1770-5 Annex 2.
   loudnessMeter_.prepareToPlay(kSampleRate_, playbackLayout_.size(),
                                buffer.getNumSamples(), 1);
 
@@ -69,7 +70,18 @@ void MeasureEBU128::reset(const juce::AudioChannelSet& currPlaybackLayout,
     perChannelResamplers_.emplace_back(juce::Interpolators::Lagrange());
   }
   upsampledBuffer_.setSize(numChannels,
-                           buffer.getNumSamples() * kUpsampleRatio_);
+                           buffer.getNumSamples() * upsampleRatio_);
+
+  lpf_.block = juce::dsp::AudioBlock<float>(upsampledBuffer_);
+  lpf_.filter.state =
+      juce::dsp::FilterDesign<float>::designFIRLowpassWindowMethod(
+          20e3, upsampleRatio_ * kSampleRate_, 49,
+          juce::dsp::WindowingFunction<float>::hann);
+  juce::dsp::ProcessSpec spec{upsampleRatio_ * kSampleRate_,
+                              (unsigned)upsampledBuffer_.getNumSamples(),
+                              (unsigned)upsampledBuffer_.getNumChannels()};
+  lpf_.filter.prepare(spec);
+  lpf_.filter.reset();
 
   loudnessStats_ = {-std::numeric_limits<float>::infinity(),
                     -std::numeric_limits<float>::infinity(),
@@ -82,29 +94,25 @@ void MeasureEBU128::reset(const juce::AudioChannelSet& currPlaybackLayout,
 // ITU 1770-5 Annex 2.
 float MeasureEBU128::calculateTruePeakLevel(
     const juce::AudioBuffer<float>& buffer) {
-  // 4x oversample buffer (Using windowed sinc resampling, removes LPF stage).
+  // Upsample buffer. LPF.
   for (int i = 0; i < buffer.getNumChannels(); ++i) {
     // Skip LFE channel.
     if (playbackLayout_.getTypeOfChannel(i) == juce::AudioChannelSet::LFE) {
       upsampledBuffer_.clear(i, 0, upsampledBuffer_.getNumSamples());
       continue;
     }
-    perChannelResamplers_[i].process(1.0f / kUpsampleRatio_,
-                                     buffer.getReadPointer(i),
-                                     upsampledBuffer_.getWritePointer(i),
-                                     buffer.getNumSamples() * kUpsampleRatio_);
-
-    // LPF.
-    juce::IIRFilter lpfFilter;
-    lpfFilter.setCoefficients(
-        juce::IIRCoefficients::makeLowPass(kSampleRate_, 20e3));
-    lpfFilter.processSamples(upsampledBuffer_.getWritePointer(i),
-                             upsampledBuffer_.getNumSamples());
+    perChannelResamplers_[i].process(
+        1.0f / upsampleRatio_, buffer.getReadPointer(i),
+        upsampledBuffer_.getWritePointer(i), upsampledBuffer_.getNumSamples());
   }
 
+  // LPF.
+  juce::dsp::ProcessContextReplacing<float> ctx(lpf_.block);
+  lpf_.filter.process(ctx);
+
   // Max absolute value over all channels.
-  float truePeak = upsampledBuffer_.getMagnitude(
-      0, buffer.getNumSamples() * kUpsampleRatio_);
+  float truePeak =
+      upsampledBuffer_.getMagnitude(0, upsampledBuffer_.getNumSamples());
 
   // Convert to dB TP
   float truePeakdB = 20.0f * std::log10(truePeak);

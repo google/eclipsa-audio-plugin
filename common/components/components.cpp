@@ -15,6 +15,7 @@
 #include "components.h"
 
 #include "src/AEStripComponent.cpp"
+#include "src/AudioFilePlayer.cpp"
 #include "src/ChannelListComponent.cpp"
 #include "src/ControlKnob.cpp"
 #include "src/ControlKnobSkewed.cpp"

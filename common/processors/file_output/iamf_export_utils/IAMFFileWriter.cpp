@@ -152,8 +152,7 @@ bool IAMFFileWriter::open(const std::string& filename) {
   // writing
   int totalChannels = 0;
   for (const auto& audioElement : audioElementInformation_) {
-    totalChannels = std::max(
-        totalChannels, audioElement.firstChannel + audioElement.numChannels);
+    totalChannels += audioElement.numChannels;
   }
   doubleBuffer_.setSize(totalChannels, samplesPerFrame_, false, false, true);
 
