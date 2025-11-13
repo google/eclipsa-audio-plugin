@@ -66,10 +66,10 @@ if(NOT libiamf_POPULATED)
     message(STATUS "Using Windows codec libraries for IAMF")
     set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows")
     file(COPY
-            "${VENDOR_LIB_PATH}/fdk-aac.lib"
-            "${VENDOR_LIB_PATH}/FLAC.lib"
-            "${VENDOR_LIB_PATH}/opus.lib"
-            "${VENDOR_LIB_PATH}/ogg.lib"
+            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/fdk-aac.lib"
+            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/FLAC.lib"
+            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/opus.lib"
+            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/ogg.lib"
             DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
     )
     link_directories("${VENDOR_LIB_PATH}")
