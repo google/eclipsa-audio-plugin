@@ -64,7 +64,14 @@ if(NOT libiamf_POPULATED)
   # --- Windows vendor handling
   if(WIN32)
     message(STATUS "Using Windows codec libraries for IAMF")
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows")
+
+    # Determine which configuration folder to use
+    if(CMAKE_BUILD_TYPE MATCHES "Debug")
+      set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Debug")
+    else()
+      set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Release")
+    endif()
+
     file(COPY
             "${VENDOR_LIB_PATH}/fdk-aac.lib"
             "${VENDOR_LIB_PATH}/FLAC.lib"
