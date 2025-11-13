@@ -308,9 +308,11 @@ void AudioFilePlayer::attemptCreatePlaybackEngine() {
 void AudioFilePlayer::createPlaybackEngine(
     const std::filesystem::path iamfPath) {
   // Join any existing thread before starting a new one
+  isBeingDestroyed_ = true;
   if (playbackEngineLoaderThread_.joinable()) {
     playbackEngineLoaderThread_.join();
   }
+  isBeingDestroyed_ = false;
 
   auto playbackState = fpbr_.get();
   playbackState.setPlayState(FilePlayback::kBuffering);
@@ -324,8 +326,8 @@ void AudioFilePlayer::createPlaybackEngine(
   }
 
   playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
-    auto engine =
-        IAMFPlaybackDevice::create(iamfPath, kDevice, fpbr_, deviceManager_);
+    auto engine = IAMFPlaybackDevice::create(
+        iamfPath, kDevice, isBeingDestroyed_, fpbr_, deviceManager_);
 
     juce::MessageManager::callAsync([this, engine = engine.release()]() {
       onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));

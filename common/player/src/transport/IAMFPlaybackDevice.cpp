@@ -23,12 +23,17 @@
 
 std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
     const std::filesystem::path iamfPath, const juce::String pbDeviceName,
+    std::atomic_bool& abortConstruction,
     FilePlaybackRepository& filePlaybackRepo,
     juce::AudioDeviceManager& deviceManager) {
   // Attempt to create the IAMFFileReader first. Being unable to create the
   // reader for any reason invalidates the playback device.
-  auto reader = IAMFFileReader::createIamfReader(iamfPath);
-  if (!reader) {
+  // While attempting to index the file during construction, we acknowledge that
+  // due to the potential size of IAMF files we may need to abort before
+  // indexing can complete
+  auto reader = IAMFFileReader::createIamfReader(
+      iamfPath, IAMFFileReader::kDefaultReaderSettings, abortConstruction);
+  if (!reader || abortConstruction) {
     LOG_ERROR(0, "IAMFPlaybackDevice: Failed to create IAMF reader");
     return nullptr;
   }

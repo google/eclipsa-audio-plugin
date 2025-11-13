@@ -25,6 +25,7 @@ class IAMFPlaybackDevice : private juce::ValueTree::Listener {
  public:
   static std::unique_ptr<IAMFPlaybackDevice> create(
       const std::filesystem::path iamfPath, const juce::String pbDeviceName,
+      std::atomic_bool& abortConstruction,
       FilePlaybackRepository& filePlaybackRepo,
       juce::AudioDeviceManager& deviceManager);
 

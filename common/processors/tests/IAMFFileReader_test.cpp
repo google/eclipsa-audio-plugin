@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 
+#include <atomic>
 #include <filesystem>
 #include <memory>
 
@@ -29,6 +30,8 @@ class IAMFFileReaderTest : public FileOutputTests {};
 
 const std::filesystem::path kReferenceFilePath =
     std::filesystem::current_path() / "test_reader.iamf";
+
+std::atomic_bool abortConstructionFlag(false);
 
 TEST_F(IAMFFileReaderTest, open_iamf) {
   createBasicIAMFFile(kReferenceFilePath);
@@ -53,8 +56,8 @@ TEST_F(IAMFFileReaderTest, open_iamf_different_playback) {
           {.output_layout =
                iamf_tools::api::OutputLayout::kItu2051_SoundSystemB_0_5_0},
   };
-  std::unique_ptr<IAMFFileReader> reader =
-      IAMFFileReader::createIamfReader(kReferenceFilePath, kSettings);
+  std::unique_ptr<IAMFFileReader> reader = IAMFFileReader::createIamfReader(
+      kReferenceFilePath, kSettings, abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
 
   const IAMFFileReader::StreamData kSData = reader->getStreamData();
@@ -74,7 +77,8 @@ TEST_F(IAMFFileReaderTest, multi_mix) {
           .requested_mix =
               {.output_layout =
                    iamf_tools::api::OutputLayout::kItu2051_SoundSystemB_0_5_0},
-      });
+      },
+      abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
 
   const IAMFFileReader::StreamData kSData = reader->getStreamData();
@@ -106,9 +110,11 @@ TEST_F(IAMFFileReaderTest, multi_mix) {
 TEST_F(IAMFFileReaderTest, multi_mix_2) {
   createIAMFFile2AE2MP(kReferenceFilePath);
   std::unique_ptr<IAMFFileReader> reader = IAMFFileReader::createIamfReader(
-      kReferenceFilePath, {
-                              .requested_mix = {.mix_presentation_id = 0},
-                          });
+      kReferenceFilePath,
+      {
+          .requested_mix = {.mix_presentation_id = 0},
+      },
+      abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
 
   const IAMFFileReader::StreamData kSData = reader->getStreamData();
@@ -153,7 +159,8 @@ TEST_F(IAMFFileReaderTest, swap_mix) {
       .requested_mix = {
           .output_layout =
               iamf_tools::api::OutputLayout::kItu2051_SoundSystemB_0_5_0}};
-  reader = IAMFFileReader::createIamfReader(kReferenceFilePath, kSettings);
+  reader = IAMFFileReader::createIamfReader(kReferenceFilePath, kSettings,
+                                            abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
 
   const IAMFFileReader::StreamData kSData2 = reader->getStreamData();
@@ -185,7 +192,8 @@ TEST_F(IAMFFileReaderTest, swap_reset_mix) {
       .requested_mix = {
           .output_layout =
               iamf_tools::api::OutputLayout::kItu2051_SoundSystemB_0_5_0}};
-  reader = IAMFFileReader::createIamfReader(kReferenceFilePath, kSettings);
+  reader = IAMFFileReader::createIamfReader(kReferenceFilePath, kSettings,
+                                            abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
 
   const IAMFFileReader::StreamData kSData2 = reader->getStreamData();
@@ -317,4 +325,15 @@ TEST_F(IAMFFileReaderTest, reset_layout) {
   juce::AudioBuffer<float> buffer(kNewData.numChannels, kNewData.frameSize);
   size_t samplesRead = reader->readFrame(buffer);
   EXPECT_EQ(samplesRead, kNewData.frameSize);
+}
+
+// Test aborting construction during file indexing
+TEST_F(IAMFFileReaderTest, abort_indexing) {
+  createIAMFFile30SecStereo(kReferenceFilePath);
+  std::atomic_bool earlyAbortFlag(true);
+  std::unique_ptr<IAMFFileReader> reader = IAMFFileReader::createIamfReader(
+      kReferenceFilePath, IAMFFileReader::kDefaultReaderSettings,
+      earlyAbortFlag);
+
+  ASSERT_EQ(reader, nullptr);
 }
