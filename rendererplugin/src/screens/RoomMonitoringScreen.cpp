@@ -17,6 +17,7 @@
 #include <components/components.h>
 #include <substream_rdr/substream_rdr.h>
 
+#include "../RendererProcessor.h"
 #include "data_structures/src/FileExport.h"
 
 RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,

@@ -76,7 +76,7 @@ AudioElementPluginEditor::AudioElementPluginEditor(
           &p.getRepositories().audioElementSpatialLayoutRepository_),
       syncClient_(&p.getSyncClient()),
       spkrData_(&p.getRepositories().monitorData_),
-      trackNameTextBox_("Track name"),
+      trackNameTextBox_("Track Name"),
       outputModeTypeLabel_("Output Mode"),
       audioElementSelectionBox_("Audio Element"),
       positionSelectionScreen_(audioElementSpatialLayoutRepository_,
@@ -168,8 +168,6 @@ AudioElementPluginEditor::AudioElementPluginEditor(
   Speakers::AudioElementSpeakerLayout inputLayout =
       Speakers::AudioElementSpeakerLayout(
           p.getBusesLayout().getMainInputChannelSet());
-
-  outputModeTypeLabel_.setEnabled(false);
 
   // Configure the audio element selection box
   setAudioElementSelection();

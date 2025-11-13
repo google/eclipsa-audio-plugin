@@ -173,9 +173,13 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_codecs) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE});
 
-  for (const AudioCodec codec :
-       {AudioCodec::LPCM, AudioCodec::FLAC, AudioCodec::OPUS}) {
-    setTestExportOpts({.codec = codec, .exportVideo = true});
+  for (const AudioCodec codec : {
+           AudioCodec::LPCM,
+           AudioCodec::FLAC,
+           AudioCodec::OPUS,
+       }) {
+    setTestExportOpts(
+        {.codec = codec, .exportVideo = true, .sampleRate = (int)48e3});
 
     bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 

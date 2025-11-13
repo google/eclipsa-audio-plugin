@@ -32,7 +32,9 @@ WavFileOutputProcessor::WavFileOutputProcessor(
   fileExportRepository_.registerListener(this);
 }
 
-WavFileOutputProcessor::~WavFileOutputProcessor() {}
+WavFileOutputProcessor::~WavFileOutputProcessor() {
+  fileExportRepository_.deregisterListener(this);
+}
 
 //==============================================================================
 void WavFileOutputProcessor::prepareToPlay(double sampleRate,

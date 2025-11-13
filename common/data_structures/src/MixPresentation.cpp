@@ -178,6 +178,9 @@ void MixPresentation::writeMixPresentationLayout(
               mixPresentationLoudness.getLargestLayout());
   writeLoudnessInfo(*layout2->mutable_loudness(), mixPresentationLoudness,
                     mixPresentationLoudness.getLargestLayout());
+
+  // For multiple layouts, write the larger layout before stereo
+  submix.mutable_layouts()->SwapElements(0, 1);
 }
 
 void MixPresentation::writeLayout(

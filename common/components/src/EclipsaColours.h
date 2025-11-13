@@ -63,4 +63,5 @@ const static juce::Colour roomviewIsoTransparentWall =
     EclipsaColours::roomviewLightWall.brighter().withAlpha(0.06f);
 const static juce::Colour speakerOutline = juce::Colour(147, 143, 153);
 const static juce::Colour speakerSilentFill = juce::Colour(85, 92, 91);
+const static juce::Colour playerBlue = juce::Colour(96, 156, 247);
 }  // namespace EclipsaColours

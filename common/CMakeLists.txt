@@ -15,17 +15,13 @@
 # -------------------------------
 
 juce_add_modules(
-        components
-        data_repository
-        data_structures
-        logger
-        processors
-        substream_rdr
-)
-
-target_include_directories(substream_rdr INTERFACE
-        "${CMAKE_SOURCE_DIR}/third_party/libiamf/code/include"
-)
+    components
+    data_repository
+    data_structures
+    logger
+    player
+    processors
+    substream_rdr)
 
 # -------------------------------
 #  Optional test targets
@@ -37,17 +33,13 @@ if(CI_TEST OR INTERNAL_TEST)
     add_subdirectory(logger/tests)
     add_subdirectory(data_structures/tests)
     add_subdirectory(substream_rdr/tests)
+    add_subdirectory(player/test)
+    
 endif()
 
 # -------------------------------
 #  Platform-specific processor defs
 # -------------------------------
-
-if(WIN32)
-    target_compile_definitions(processors INTERFACE MUXER_PATH="${CMAKE_SOURCE_DIR}/external/FFmpeg/bin/ffmpeg.exe")
-else()
-    target_compile_definitions(processors INTERFACE MUXER_PATH="${CMAKE_SOURCE_DIR}/external/FFmpeg/bin/ffmpeg")
-endif()
 
 # DAW-specific build flags
 if(ECLIPSA_LOGIC_PRO_BUILD)
@@ -60,6 +52,7 @@ endif()
 
 add_subdirectory(components/icons)
 target_link_libraries(components INTERFACE binary_data)
+
 # Link components against Eigen (for AmbisonicsVisualizer)
 target_link_libraries(components INTERFACE Eigen)
 
@@ -82,6 +75,7 @@ target_include_directories(substream_rdr INTERFACE
         "${spatialaudio_SOURCE_DIR}/source"
         "${spatialaudio_SOURCE_DIR}/source/kiss_fft"
         "${CMAKE_BINARY_DIR}/_deps/libspatialaudio-build"
+        "${CMAKE_SOURCE_DIR}/third_party/libiamf/code/include"
 )
 
 # -------------------------------
@@ -123,11 +117,13 @@ target_link_libraries(processors INTERFACE
 target_include_directories(substream_rdr INTERFACE ${OBR_INCLUDE_DIRS})
 target_include_directories(processors INTERFACE ${OBR_INCLUDE_DIRS})
 
+target_link_libraries(player INTERFACE processors substream_rdr)
+
 # -------------------------------
 #  Components and Logging
 # -------------------------------
 
-target_link_libraries(components INTERFACE binary_data libear substream_rdr processors)
+target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
 
 if(WIN32)
     message(STATUS "Linking logger against Boost via CMake targets")
@@ -155,4 +151,4 @@ else()
 endif()
 
 get_target_property(SUBSTREAM_INCLUDES substream_rdr INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "≡ƒöì substream_rdr include paths: ${SUBSTREAM_INCLUDES}")
+message(STATUS "substream_rdr include paths: ${SUBSTREAM_INCLUDES}")
