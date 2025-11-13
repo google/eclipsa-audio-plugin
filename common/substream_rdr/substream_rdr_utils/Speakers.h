@@ -22,6 +22,7 @@
 #include "audio_element.pb.h"
 #include "audio_frame.pb.h"
 #include "ear/ear.hpp"
+#include "iamf_tools_api_types.h"
 #include "mix_presentation.pb.h"
 
 using BaseLayout = iamf_tools_cli_proto::LoudspeakerLayout;
@@ -58,6 +59,8 @@ class AudioElementSpeakerLayout {
   constexpr AudioElementSpeakerLayout() : index_(0) {}
   constexpr explicit AudioElementSpeakerLayout(int index) : index_(index) {}
   explicit AudioElementSpeakerLayout(ChannelSet fromChannelSet);
+  explicit AudioElementSpeakerLayout(
+      const iamf_tools::api::OutputLayout layout);
   constexpr operator int() const { return index_; }
 
   BaseLayout getIamfLayout() const;
@@ -71,6 +74,7 @@ class AudioElementSpeakerLayout {
   std::vector<juce::String> getSpeakerLabels() const;
   std::string getItuString() const;
   const juce::Array<ChannelType> getITUChannelOrdering() const;
+  iamf_tools::api::OutputLayout getIamfOutputLayout() const;
 
   /**
    * @brief Checks whether this layout is an expanded loudspeaker layout, and

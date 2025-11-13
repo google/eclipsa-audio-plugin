@@ -36,6 +36,7 @@ END_JUCE_MODULE_DECLARATION
 #include "implementation/AudioElementRepository.h"
 #include "implementation/AudioElementSpatialLayoutRepository.h"
 #include "implementation/FileExportRepository.h"
+#include "implementation/FilePlaybackRepository.h"
 #include "implementation/MSPlaybackRepository.h"
 #include "implementation/MixPresentationLoudnessRepository.h"
 #include "implementation/MixPresentationRepository.h"

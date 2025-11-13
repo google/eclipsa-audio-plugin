@@ -21,7 +21,6 @@ class GainControlTextEditor : public juce::Component {
   GainControlTextEditor(const std::function<void()>& callback)
       : callback_(callback), titledTextBox_("Gain") {
     addAndMakeVisible(titledTextBox_);
-    setLookAndFeel(&lookAndFeel_);
 
     addAndMakeVisible(dBLabel_);
     dBLabel_.setText("dB", juce::dontSendNotification);
@@ -55,6 +54,5 @@ class GainControlTextEditor : public juce::Component {
  private:
   std::function<void()> callback_;
   TitledTextBox titledTextBox_;
-  TitledTextBoxLookAndFeel lookAndFeel_;
   juce::Label dBLabel_;
 };

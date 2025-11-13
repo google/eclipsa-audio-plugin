@@ -13,6 +13,7 @@
 # limitations under the License.
 
 eclipsa_add_test(test_fio_processor FileOutputProcessor_test.cpp "processors;iamf")
+eclipsa_add_test(test_fio_processor FileOutputProcessor_PremierePro_test.cpp "processors;iamf")
 eclipsa_add_test(test_processor_base ProcessorBase_test.cpp "processors;juce::juce_audio_utils")
 eclipsa_add_test(test_render_processor Render_test.cpp "processors;juce::juce_audio_utils;iamf")
 eclipsa_add_test(test_libear_sanity libear_test.cpp "libear")
@@ -26,3 +27,4 @@ eclipsa_add_test(test_loudness_proc LoudnessExportProcessor_test.cpp "processors
 eclipsa_add_test(test_ebu128_loudness MeasureEBU128_test.cpp "processors;lufs_meter")
 eclipsa_add_test(test_mp4_iamf_demuxer MP4IAMFDemuxer_test.cpp "processors;iamf;iamfdec_utils")
 eclipsa_add_test(test_iamf_writer IAMFFileWriter_test.cpp "processors;iamf")
+eclipsa_add_test(test_iamf_reader IAMFFileReader_test.cpp "processors;iamf")

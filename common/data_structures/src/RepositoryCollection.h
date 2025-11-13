@@ -33,4 +33,5 @@ struct RepositoryCollection {
   MSPlaybackRepository& playbackMSRepo_;
   AudioElementSubscriber& audioElementSubscriber_;
   ActiveMixRepository& activeMPRepo_;
+  FilePlaybackRepository& playbackRepo_;
 };

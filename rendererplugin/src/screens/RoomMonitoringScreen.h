@@ -16,7 +16,6 @@
 
 #pragma once
 #include "FileExportScreen.h"
-#include "components/src/Icons.h"
 #include "components/src/ImageTextButton.h"
 
 class RoomMonitoringScreen : public juce::Component,

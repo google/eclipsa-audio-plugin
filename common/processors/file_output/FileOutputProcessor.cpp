@@ -121,6 +121,8 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
 
   // Set the sample tally in the configuration for FLAC encoding
   config.setSampleTally(sampleTally_);
+  // Reset the export completed flag used by validation components
+  config.setExportCompleted(false);
   fileExportRepository_.update(config);
 
   juce::String exportFilename = config.getExportFile();
@@ -176,6 +178,10 @@ void FileOutputProcessor::closeFileExport(FileExport& config) {
     }
   }
   iamfWavFileWriters_.clear();
+
+  auto fe = fileExportRepository_.get();
+  fe.setExportCompleted(true);
+  fileExportRepository_.update(fe);
 }
 
 bool FileOutputProcessor::shouldBufferBeWritten(

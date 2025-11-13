@@ -54,6 +54,8 @@ class ControlKnobSkewed : public juce::Slider {
 
   void setValueUpdatedCallback(std::function<void(int)> callback);
 
+  void mouseDown(const juce::MouseEvent& event) override;
+
  private:
   float normalizeValue(const float& value);
   const double startAngle_ = 9 * juce::MathConstants<double>::pi / 8;

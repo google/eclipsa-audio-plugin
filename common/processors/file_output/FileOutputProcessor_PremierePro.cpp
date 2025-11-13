@@ -89,4 +89,6 @@ void PremiereProFileOutputProcessor::processBlock(
   for (auto& writer : iamfWavFileWriters_) {
     writer->write(buffer);
   }
+
+  iamfFileWriter_->writeFrame(buffer);
 }
