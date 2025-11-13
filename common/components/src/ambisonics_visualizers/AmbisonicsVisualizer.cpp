@@ -410,7 +410,7 @@ AmbisonicsVisualizer::CartesianPoint3D::polarToCartesian(const float& r,
   return {r * sin(theta), r * cos(theta)};
 }
 
-float AmbisonicsVisualizer::CartesianPoint3D::calculateSurfacePosition(
+void AmbisonicsVisualizer::CartesianPoint3D::calculateSurfacePosition(
     const std::pair<float, float>& point, const VisualizerView& view) {
   switch (view) {
     // for the left & right view, we must solve for y

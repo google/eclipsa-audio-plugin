@@ -76,7 +76,7 @@ struct MixPresentationAudioElement : public RepositoryItemBase {
   }
 
   juce::Uuid getId() const { return id_; }
-  uint getReferenceId() const { return referenceId_; }
+  unsigned int getReferenceId() const { return referenceId_; }
   bool isBinaural() const { return isBinaural_; }
   void setBinaural(bool binaural) { isBinaural_ = binaural; }
 

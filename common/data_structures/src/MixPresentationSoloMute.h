@@ -67,7 +67,7 @@ struct AudioElementSoloMute : public RepositoryItemBase {
 
   juce::String getName() const { return name_; }
   juce::Uuid getId() const { return id_; }
-  uint getReferenceId() const { return referenceId_; }
+  unsigned int getReferenceId() const { return referenceId_; }
 
   inline static const juce::Identifier kTreeType{"audio_element_solo_mute"};
   inline static const juce::Identifier kReferenceId{"reference_id"};

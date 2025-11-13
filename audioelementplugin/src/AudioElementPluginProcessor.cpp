@@ -14,7 +14,11 @@
 
 #include "AudioElementPluginProcessor.h"
 
-#include <unistd.h>
+#ifdef _WIN32
+  // Windows doesn't need unistd.h - functionality is in io.h if needed
+#else
+  #include <unistd.h>
+#endif
 
 #include <memory>
 

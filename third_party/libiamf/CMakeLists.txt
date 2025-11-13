@@ -14,116 +14,143 @@
 
 message(STATUS "Fetching LibIAMF")
 
-include(FetchContent) # Ensure FetchContent is included
+include(FetchContent)
 
 FetchContent_Declare(
-  libiamf
-  GIT_REPOSITORY https://github.com/AOMediaCodec/libiamf.git
-  GIT_TAG 48b8b5dc06971e14826d114fd032dab285f4c944
+        libiamf
+        GIT_REPOSITORY https://github.com/AOMediaCodec/libiamf.git
+        GIT_TAG 48b8b5dc06971e14826d114fd032dab285f4c944
 )
 
-# Set options for libiamf before making it available
 set(CODEC_CAP ON CACHE BOOL "Codec capability check" FORCE)
 set(MULTICHANNEL_BINAURALIZER OFF CACHE BOOL "Enable multichannel binaural rendering" FORCE)
 set(HOA_BINAURALIZER OFF CACHE BOOL "Enable HOA binaural rendering" FORCE)
 
-# Make libiamf available
+# Fetch but don't build yet - we need to patch first
 FetchContent_GetProperties(libiamf)
 if(NOT libiamf_POPULATED)
   FetchContent_Populate(libiamf)
-  
-  # Handle macOS-specific library issues BEFORE adding the subdirectory
+
+  # --- PATCH: Fix libiamf's CMakeLists.txt to remove GCC-only flags and m library on Windows
+  if(MSVC)
+    file(READ "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" LIBIAMF_CMAKE_CONTENT)
+    string(REPLACE "-O3" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
+    string(REPLACE "-Werror=unused-variable" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
+    string(REGEX REPLACE "target_link_libraries\\([^)]*[ \t\n]+m[ \t\n)]+[^)]*\\)" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
+    string(REPLACE " m)" ")" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
+    string(REPLACE " m " " " LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
+    file(WRITE "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" "${LIBIAMF_CMAKE_CONTENT}")
+    message(STATUS "Patched libiamf CMakeLists.txt to remove GCC-only flags and m library")
+  endif()
+
+  # --- macOS vendor handling
   if(APPLE)
-    # Path to our vendored libraries
     set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
-    
-    # Remove incompatible bundled libraries
     file(REMOVE
-      "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libopus.a"
-      "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libfdk-aac.a"
-      "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libFLAC.a"
+            "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libopus.a"
+            "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libfdk-aac.a"
+            "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libFLAC.a"
     )
-    
-    # Copy our vendored libraries to the expected location
-    file(COPY 
-      "${VENDOR_LIB_PATH}/libopus.a"
-      "${VENDOR_LIB_PATH}/libFLAC.a"
-      "${VENDOR_LIB_PATH}/libfdk-aac.a"
-      "${VENDOR_LIB_PATH}/libogg.a"
-      DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+    file(COPY
+            "${VENDOR_LIB_PATH}/libopus.a"
+            "${VENDOR_LIB_PATH}/libFLAC.a"
+            "${VENDOR_LIB_PATH}/libfdk-aac.a"
+            "${VENDOR_LIB_PATH}/libogg.a"
+            DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
     )
-    
-    # Add the library path to the linker
     link_directories("${VENDOR_LIB_PATH}")
   endif()
-  
-  # Add the subdirectory to create the iamf target
+
+  # --- Windows vendor handling
+  if(WIN32)
+    message(STATUS "Using Windows codec libraries for IAMF")
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows")
+    file(COPY
+            "${VENDOR_LIB_PATH}/fdk-aac.lib"
+            "${VENDOR_LIB_PATH}/FLAC.lib"
+            "${VENDOR_LIB_PATH}/opus.lib"
+            "${VENDOR_LIB_PATH}/ogg.lib"
+            DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+    )
+    link_directories("${VENDOR_LIB_PATH}")
+  endif()
+
+
+  # --- Protobuf / Abseil injection (for Windows builds)
+  if(WIN32)
+    message(STATUS "Using Protobuf and Abseil targets from FetchContent")
+  endif()
+
+  # --- NOW build libiamf (after patching)
   add_subdirectory(${libiamf_SOURCE_DIR}/code ${libiamf_BINARY_DIR})
+
+  # --- PATCH: Remove Linux-only 'm' linkage (no libm on Windows)
+  if (WIN32 AND TARGET iamf)
+    message(STATUS "Patching libiamf: removing Linux-only 'm' linkage")
+    get_target_property(_iamf_libs iamf INTERFACE_LINK_LIBRARIES)
+    if (_iamf_libs)
+      list(REMOVE_ITEM _iamf_libs m)
+      set_target_properties(iamf PROPERTIES INTERFACE_LINK_LIBRARIES "${_iamf_libs}")
+    endif()
+  endif()
+
+  # --- Windows codec linking (after target exists)
+  if(WIN32 AND TARGET iamf)
+    target_link_libraries(iamf
+            "${VENDOR_LIB_PATH}/fdk-aac.lib"
+            "${VENDOR_LIB_PATH}/FLAC.lib"
+            "${VENDOR_LIB_PATH}/opus.lib"
+            "${VENDOR_LIB_PATH}/ogg.lib"
+    )
+  endif()
 endif()
 
+# --- Extra linking for ogg
 if(TARGET iamf)
   target_link_libraries(iamf ogg)
 endif()
 
-# --- Define LIBIAMF_INCLUDE_DIRS ---
-# Include directories needed for compiling against libiamf AND iamfdec_utils
+# --- Include dirs (for iamfdec_utils)
 set(LIBIAMF_INCLUDE_DIRS
-  ${libiamf_SOURCE_DIR}/code/include
-  ${libiamf_SOURCE_DIR}/code/src/common
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/arch
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/arch/arm
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/arch/x86
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/aac
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/flac
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/opus
-  ${libiamf_SOURCE_DIR}/code/src/iamf_dec/pcm
-  ${libiamf_SOURCE_DIR}/code/dep_external/include/wav
-  ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/include
-  CACHE INTERNAL "LIBIAMF include directories"
+        ${libiamf_SOURCE_DIR}/code/include
+        ${libiamf_SOURCE_DIR}/code/src/common
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/arch
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/arch/arm
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/arch/x86
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/aac
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/flac
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/opus
+        ${libiamf_SOURCE_DIR}/code/src/iamf_dec/pcm
+        ${libiamf_SOURCE_DIR}/code/dep_external/include/wav
+        ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/include
+        CACHE INTERNAL "LIBIAMF include directories"
 )
-# Force update the cache variable if it changed
-set(LIBIAMF_INCLUDE_DIRS ${LIBIAMF_INCLUDE_DIRS} CACHE INTERNAL "LIBIAMF include directories" FORCE)
 
-
-# --- Build iamfdec_utils library WITHOUT main() ---
-# Check if the source directory for the utils exists
+# --- Build iamfdec_utils (no main)
 if(EXISTS "${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src")
-  # Explicitly list source files, EXCLUDING the one with the main function (test_iamfdec.c)
   set(IAMFDEC_UTIL_SOURCES
-      ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/dmemory.c
-      ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/iamf_header.c
-      ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/mp4demux.c
-      ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/mp4iamfpar.c
-      ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/vlogging_iamfmp4_sr.c
+          ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/dmemory.c
+          ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/iamf_header.c
+          ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/mp4demux.c
+          ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/mp4iamfpar.c
+          ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/vlogging_iamfmp4_sr.c
   )
 
   if(IAMFDEC_UTIL_SOURCES)
-    # Create a STATIC library containing only the utility functions
     add_library(iamfdec_utils STATIC ${IAMFDEC_UTIL_SOURCES})
-
-    # Add necessary include directories for compiling and using this library
     target_include_directories(iamfdec_utils PUBLIC
-        ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/include # Public headers for utils
-        $<TARGET_PROPERTY:iamf,INTERFACE_INCLUDE_DIRECTORIES> # Include dirs from core iamf
+            ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/include
+            $<TARGET_PROPERTY:iamf,INTERFACE_INCLUDE_DIRECTORIES>
     )
-    # Add internal include directories if needed by the sources themselves
-    target_include_directories(iamfdec_utils PRIVATE
-        ${LIBIAMF_INCLUDE_DIRS} # Includes internal iamf headers
-    )
-
-    # Link iamfdec_utils against the core iamf library
+    target_include_directories(iamfdec_utils PRIVATE ${LIBIAMF_INCLUDE_DIRS})
     if(TARGET iamf)
       target_link_libraries(iamfdec_utils PUBLIC iamf)
     else()
       message(WARNING "Core 'iamf' target not found for linking iamfdec_utils.")
     endif()
     message(STATUS "Created iamfdec_utils library (without main).")
-  else()
-     message(WARNING "Could not find source files for iamfdec_utils library.")
   endif()
-else()
-    message(WARNING "Path for iamfdec utility sources does not exist: ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src")
 endif()
 
 message(STATUS "LIBIAMF source directory: ${libiamf_SOURCE_DIR}")

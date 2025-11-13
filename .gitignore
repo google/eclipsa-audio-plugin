@@ -1,3 +1,5 @@
+#Previous Mac Ignores
+
 # IDE files
 /.vscode
 /.cache
@@ -17,3 +19,16 @@
 /scripts/wraptool_helper.sh
 
 .DS_Store
+
+#Windows-specific ignores
+
+#Build artefacts
+cmake-build*/
+[Bb]in/
+obj/
+
+#IDE Config
+.vs/
+.idea/
+CMakeSettings.json
+

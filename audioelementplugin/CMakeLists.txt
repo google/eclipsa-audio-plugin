@@ -22,21 +22,21 @@ else()
 endif()
 
 juce_add_plugin(AudioElementPlugin
-    PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
-    PLUGIN_CODE ${AUDIO_ELEMENT_PLUGIN_CODE}
-    BUNDLE_ID "${ECLIPSA_PANNER_BUNDLE_ID}"
-    COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
-    NEEDS_MIDI_INPUT FALSE
-    NEEDS_MIDI_OUTPUT FALSE
-    IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+        PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
+        PLUGIN_CODE ${AUDIO_ELEMENT_PLUGIN_CODE}
+        BUNDLE_ID "${ECLIPSA_PANNER_BUNDLE_ID}"
+        COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
+        NEEDS_MIDI_INPUT FALSE
+        NEEDS_MIDI_OUTPUT FALSE
+        IS_MIDI_EFFECT FALSE
+        EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
-    FORMATS ${PLUGIN_FORMATS}
-    PRODUCT_NAME ${AUDIO_ELEMENT_PRODUCT_NAME}
-    AAX_CATEGORY "AAX_ePlugInCategory_SoundField")
+        FORMATS ${PLUGIN_FORMATS}
+        PRODUCT_NAME ${AUDIO_ELEMENT_PRODUCT_NAME}
+        AAX_CATEGORY "AAX_ePlugInCategory_SoundField")
 
-target_sources(AudioElementPlugin 
-    PRIVATE
+target_sources(AudioElementPlugin
+        PRIVATE
         src/AudioElementPluginProcessor.cpp
         src/AudioElementPluginEditor.cpp
         src/AudioElementVersionConverter.cpp
@@ -45,7 +45,7 @@ target_sources(AudioElementPlugin
         src/screens/TrackMonitorScreen.cpp)
 
 target_compile_definitions(AudioElementPlugin
-    PUBLIC
+        PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
@@ -58,14 +58,21 @@ if(ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(AudioElementPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif()
 
-target_link_options(AudioElementPlugin
-    PUBLIC
-        "-Wl"
-        "-ld_classic")
+# Platform-specific settings
+if(APPLE)
+    target_link_options(AudioElementPlugin
+            PUBLIC
+            "-Wl"
+            "-ld_classic")
+elseif(WIN32)
+    # MSVC flags for math constants
+    target_compile_definitions(AudioElementPlugin PRIVATE _USE_MATH_DEFINES)
+endif()
 
+target_include_directories(AudioElementPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
 target_link_libraries(AudioElementPlugin
-    PRIVATE
+        PRIVATE
         substream_rdr
         processors
         components
@@ -76,33 +83,52 @@ target_link_libraries(AudioElementPlugin
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
+# Platform-specific Boost linking
+if(WIN32)
+    # Windows: Boost headers only (lockfree is header-only)
+    target_include_directories(AudioElementPlugin PRIVATE ${Boost_INCLUDE_DIRS})
+else()
+    # macOS: Modern CMake target
+    target_link_libraries(AudioElementPlugin PRIVATE Boost::lockfree)
+endif()
+
+# Windows-specific: Link ZLIB
+if(WIN32)
+    find_package(ZLIB REQUIRED)
+    if(ZLIB_FOUND)
+        message(STATUS "Linking AudioElementPlugin against ZLIB: ${ZLIB_LIBRARIES}")
+        target_link_libraries(AudioElementPlugin PRIVATE ZLIB::ZLIB)
+        if(TARGET AudioElementPlugin_VST3)
+            target_link_libraries(AudioElementPlugin_VST3 PRIVATE ZLIB::ZLIB)
+        endif()
+    else()
+        message(FATAL_ERROR "ZLIB not found for AudioElementPlugin")
+    endif()
+endif()
+
 if(CI_TEST OR INTERNAL_TEST)
     add_subdirectory(test)
 endif()
 
 # Copy resources for each plugin format
-if(BUILD_AAX)
-    message(STATUS "AAX build. Setting up AudioElementplugin path and copying resources.")
-    set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AAX/Eclipsa Audio Element Plugin.aaxplugin")
-    copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
+if(BUILD_AAX AND TARGET AudioElementPlugin_AAX)
+    message(STATUS "AAX build detected. Setting up audio element plugin path and copying resources.")
+    set(AUDIO_ELEMENT_AAX_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Element Plugin.aaxplugin")
+    copy_resources(AudioElementPlugin_AAX "${AUDIO_ELEMENT_AAX_PATH}")
 endif()
 
-if(BUILD_VST3)
-    message(STATUS "VST3 build. Setting up AudioElementplugin path and copying resources.")
-    set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/VST3/Eclipsa Audio Element Plugin.vst3")
-    copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
+if(BUILD_VST3 AND TARGET AudioElementPlugin_VST3)
+    message(STATUS "VST3 build detected. Setting up Audio Element plugin path and copying resources.")
+    set(AUDIO_ELEMENT_VST3_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Element Plugin.vst3")
+    copy_resources(AudioElementPlugin_VST3 "${AUDIO_ELEMENT_VST3_PATH}")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    message(STATUS "Release build detected. Copying Audio Element Resources for AU Plugin.")
-    if(ECLIPSA_LOGIC_PRO_BUILD)
-        set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AU/Eclipsa Audio Element Plugin for Logic Pro.component")
-    else()
-        set(AUDIO_PLUGIN_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/Release/AU/Eclipsa Audio Element Plugin.component")
-    endif()
-    copy_resources(AudioElementPlugin ${AUDIO_PLUGIN_PATH})
+if(TARGET AudioElementPlugin_Standalone)
+    message(STATUS "Standalone build detected. Setting up Audio Element plugin path and copying resources.")
+    set(AUDIO_ELEMENT_STANDALONE_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/Standalone")
+    copy_resources(AudioElementPlugin_Standalone "${AUDIO_ELEMENT_STANDALONE_PATH}")
 endif()
 
 if(NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
-    message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for AudioElementPlugin.")
+    message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for Audio Element Plugin.")
 endif()

@@ -43,5 +43,5 @@ Point2D toWindow(const Mat4& transformMat, const WindowData& windowData,
 constexpr Mat4 getRearViewTransform();
 constexpr Mat4 getSideViewTransform();
 constexpr Mat4 getTopViewTransform();
-constexpr Mat4 getIsoViewTransform();
+ Mat4 getIsoViewTransform();
 }  // namespace Coordinates

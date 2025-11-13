@@ -22,21 +22,21 @@ else()
 endif()
 
 juce_add_plugin(RendererPlugin
-    PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
-    PLUGIN_CODE ${RENDERER_PLUGIN_CODE}
-    BUNDLE_ID "${ECLIPSA_RENDERER_BUNDLE_ID}"
-    COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
-    NEEDS_MIDI_INPUT FALSE
-    NEEDS_MIDI_OUTPUT FALSE
-    IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+        PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
+        PLUGIN_CODE ${RENDERER_PLUGIN_CODE}
+        BUNDLE_ID "${ECLIPSA_RENDERER_BUNDLE_ID}"
+        COMPANY_NAME "${ECLIPSA_COMPANY_NAME}"
+        NEEDS_MIDI_INPUT FALSE
+        NEEDS_MIDI_OUTPUT FALSE
+        IS_MIDI_EFFECT FALSE
+        EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
-    FORMATS ${PLUGIN_FORMATS}
-    PRODUCT_NAME ${RENDERER_PRODUCT_NAME}
-    AAX_CATEGORY "AAX_ePlugInCategory_SWGenerators")
+        FORMATS ${PLUGIN_FORMATS}
+        PRODUCT_NAME ${RENDERER_PRODUCT_NAME}
+        AAX_CATEGORY "AAX_ePlugInCategory_SWGenerators")
 
-target_sources(RendererPlugin 
-    PRIVATE
+target_sources(RendererPlugin
+        PRIVATE
         src/RendererProcessor.cpp
         src/RendererEditor.cpp
         src/RendererVersionConverter.cpp
@@ -44,7 +44,7 @@ target_sources(RendererPlugin
         src/screens/FileExportScreen.cpp
         src/screens/PresentationMonitorScreen.cpp
         src/screens/RoomMonitoringScreen.cpp
-        src/screens/EditPresentationScreen.cpp        
+        src/screens/EditPresentationScreen.cpp
         src/screens/mix_tabs/PresentationTab.cpp
         src/screens/mix_tabs/PresentationEditorTab.cpp
         src/screens/mix_tabs/MixPresentationViewPort.cpp
@@ -52,7 +52,7 @@ target_sources(RendererPlugin
         src/screens/MixPresentationTagScreen.cpp)
 
 target_compile_definitions(RendererPlugin
-    PUBLIC
+        PUBLIC
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
@@ -66,15 +66,21 @@ if(ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif()
 
-target_link_options(RendererPlugin
-    PUBLIC
-        "-Wl"
-        "-ld_classic")
+# Platform-specific settings
+if(APPLE)
+    target_link_options(RendererPlugin
+            PUBLIC
+            "-Wl"
+            "-ld_classic")
+elseif(WIN32)
+    # MSVC flags for math constants
+    target_compile_definitions(RendererPlugin PRIVATE _USE_MATH_DEFINES)
+endif()
 
 target_include_directories(RendererPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
 target_link_libraries(RendererPlugin
-    PRIVATE
+        PRIVATE
         binary_data
         substream_rdr
         processors
@@ -82,40 +88,58 @@ target_link_libraries(RendererPlugin
         logger
         data_repository
         data_structures
-        Boost::lockfree
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
         libzmq)
 
+# Platform-specific Boost linking
+if(WIN32)
+    # Windows: Boost headers only (lockfree is header-only)
+    target_include_directories(RendererPlugin PRIVATE ${Boost_INCLUDE_DIRS})
+else()
+    # macOS: Modern CMake target
+    target_link_libraries(RendererPlugin PRIVATE Boost::lockfree)
+endif()
+
+# Windows-specific: Link ZLIB
+if(WIN32)
+    find_package(ZLIB REQUIRED)
+    if(ZLIB_FOUND)
+        message(STATUS "Linking RendererPlugin against ZLIB: ${ZLIB_LIBRARIES}")
+        target_link_libraries(RendererPlugin PRIVATE ZLIB::ZLIB)
+        if(TARGET RendererPlugin_VST3)
+            target_link_libraries(RendererPlugin_VST3 PRIVATE ZLIB::ZLIB)
+        endif()
+    else()
+        message(FATAL_ERROR "ZLIB not found for RendererPlugin")
+    endif()
+endif()
+
 if(CI_TEST OR INTERNAL_TEST)
     target_link_libraries(RendererPlugin
-        PRIVATE        
+            PRIVATE
             juce::juce_cryptography)
     add_subdirectory(test)
 endif()
 
 # Copy resources for each plugin format
-if(BUILD_AAX)
+if(BUILD_AAX AND TARGET RendererPlugin_AAX)
     message(STATUS "AAX build detected. Setting up renderer plugin path and copying resources.")
-    set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AAX/Eclipsa Audio Renderer.aaxplugin")
-    copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
+    set(RENDERER_AAX_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Renderer.aaxplugin")
+    copy_resources(RendererPlugin_AAX "${RENDERER_AAX_PATH}")
 endif()
 
-if(BUILD_VST3)
+if(BUILD_VST3 AND TARGET RendererPlugin_VST3)
     message(STATUS "VST3 build detected. Setting up renderer plugin path and copying resources.")
-    set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/VST3/Eclipsa Audio Renderer.vst3")
-    copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
+    set(RENDERER_VST3_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Renderer.vst3")
+    copy_resources(RendererPlugin_VST3 "${RENDERER_VST3_PATH}")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    message(STATUS "Release build detected. Copying Renderer Resources for AU Plugin.")
-    if(ECLIPSA_LOGIC_PRO_BUILD)
-        set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer for Logic Pro.component")
-    else()
-        set(RENDERER_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer.component")
-    endif()
-    copy_resources(RendererPlugin ${RENDERER_PLUGIN_PATH})
+if(TARGET RendererPlugin_Standalone)
+    message(STATUS "Standalone build detected. Setting up renderer plugin path and copying resources.")
+    set(RENDERER_STANDALONE_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/Standalone")
+    copy_resources(RendererPlugin_Standalone "${RENDERER_STANDALONE_PATH}")
 endif()
 
 if(NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")

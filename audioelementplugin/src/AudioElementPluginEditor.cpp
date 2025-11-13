@@ -13,8 +13,13 @@
 // limitations under the License.
 
 #include "AudioElementPluginEditor.h"
+#include <iostream>
 
-#include <unistd.h>
+#ifdef _WIN32
+  // Windows doesn't need unistd.h - functionality is in io.h if needed
+#else
+  #include <unistd.h>
+#endif
 
 #include "AudioElementPluginProcessor.h"
 #include "components/src/EclipsaColours.h"
