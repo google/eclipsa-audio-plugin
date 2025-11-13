@@ -18,6 +18,15 @@ set(BOOST_COMPONENTS log log_setup thread filesystem math)
 message(STATUS "Fetching Boost")
 include(FetchContent)
 set(BOOST_ENABLE_CMAKE ON)
+
+if(MSVC)
+    # Tell Boost to NOT use static runtime (this makes it use /MD or /MDd)
+    set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "Use static MSVC runtime")
+
+    # Explicitly tell Boost to use shared (dynamic) runtime linking
+    set(BOOST_RUNTIME_LINK "shared" CACHE STRING "Boost runtime link type")
+endif()
+
 FetchContent_Declare(
         Boost
         USES_TERMINAL_DOWNLOAD TRUE
