@@ -33,6 +33,7 @@ END_JUCE_MODULE_DECLARATION
 #endif
 
 #include "src/ChannelListComponent.h"
+#include "src/ColouredSlider.h"
 #include "src/DAWCompatibilityChecker.h"
 #include "src/DAWWarningBanner.h"
 #include "src/DialIndicator.h"
@@ -45,6 +46,7 @@ END_JUCE_MODULE_DECLARATION
 #include "src/SegmentedToggleButton.h"
 #include "src/SegmentedToggleImageButton.h"
 #include "src/SliderLabelAttachment.h"
+#include "src/TimeFormatSegmentSelector.h"
 #include "src/ambisonics_visualizers/VisualizerPair.h"
 #include "src/loudness_meter/LoudnessMeter.h"
 #include "src/loudness_meter/LoudnessScale.h"

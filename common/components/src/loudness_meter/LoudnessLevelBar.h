@@ -66,6 +66,6 @@ class LoudnessLevelBar : public juce::Component, public juce::Timer {
   const int kRedEnd_ = 1;
 
   int barWidth_ = 0;
-  float loudness_ = 0.0f;
+  float loudness_ = -60.0f;
   ResidualPeak resPeak_;
 };

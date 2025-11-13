@@ -16,12 +16,16 @@
 
 #include "../RendererProcessor.h"
 #include "components/src/EclipsaColours.h"
+#include "components/src/ExportValidation.h"
 #include "data_structures/src/FileExport.h"
 #include "data_structures/src/MixPresentation.h"
+#include "data_structures/src/TimeFormatConverter.h"
 
 FileExportScreen::FileExportScreen(MainEditor& editor,
                                    RepositoryCollection repos)
-    : headerBar_("Export options", editor),
+    : editor_(editor),
+      headerBar_("Export options", editor),
+      exportParametersLabel_("ExportParamsLbl", "Export parameters"),
       startTimer_("Start"),
       endTimer_("End"),
       formatSelector_("Format"),
@@ -32,11 +36,11 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       mixPresentations_("Mix presentations"),
       audioElements_("Audio elements"),
       exportAudioLabel_("ExportAudioLbl", "Export audio"),
-      exportPath_("Save audio to ..."),
+      exportPath_("Save audio to ...", ".iamf"),
       exportAudioElementsLabel_("ExportAudioElementsLbl",
                                 "Export audio elements as WAV"),
       muxVidoeLabel_("MuxVideoLbl", "Mux video"),
-      exportVideoFolder_("Save video to ..."),
+      exportVideoFolder_("Save video to ...", ".mp4"),
       videoSource_("Video source"),
       audioOutputSelect_(
           "Select a file to export audio to",
@@ -51,40 +55,58 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           juce::File::getSpecialLocation(juce::File::userDesktopDirectory),
           "*.mp4;*.mov"),
       exportButton_("Start Export"),
+      exportValidation_(repos.playbackRepo_, repos.fioRepo_),
       repository_(&repos.fioRepo_),
       aeRepository_(&repos.aeRepo_),
-      mpRepository_(&repos.mpRepo_) {
+      mpRepository_(&repos.mpRepo_),
+      startTimeFormat_(TimeFormat::HoursMinutesSeconds),
+      endTimeFormat_(TimeFormat::HoursMinutesSeconds),
+      filePlaybackRepository_(&repos.playbackRepo_) {
   // Setup listeners to know when to redraw the screen
   aeRepository_->registerListener(this);
   mpRepository_->registerListener(this);
   repository_->registerListener(this);
+
+  // Initialize timing information from host
+  updateTimingInfoFromHost();
 
   // Fetch the current configuration for setting up the screen
   FileExport config = repository_->get();
 
   // Set the label colours and fonts
   juce::Colour textColour = juce::Colour(221, 228, 227);
+  exportParametersLabel_.setColour(juce::Label::textColourId, textColour);
   exportAudioElementsLabel_.setColour(juce::Label::textColourId, textColour);
   exportAudioLabel_.setColour(juce::Label::textColourId, textColour);
   muxVidoeLabel_.setColour(juce::Label::textColourId, textColour);
+
   startTimerErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
                                   EclipsaColours::red);
   endTimerErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
                                 EclipsaColours::red);
+  startTimeFormatLabel_.setColour(juce::Label::textColourId,
+                                  EclipsaColours::tabTextGrey);
+  endTimeFormatLabel_.setColour(juce::Label::textColourId,
+                                EclipsaColours::tabTextGrey);
   customCodecParameterErrorLabel_.setColour(
       juce::Label::ColourIds::textColourId, EclipsaColours::red);
   exportButton_.setColour(juce::TextButton::textColourOffId,
                           EclipsaColours::green);
 
   juce::Font textFont = juce::Font("Roboto", 22.0f, juce::Font::plain);
-  exportAudioElementsLabel_.setFont(
-      juce::Font("Roboto", 16.0f, juce::Font::plain));
+  juce::Font labelFont = juce::Font("Roboto", 18.0f, juce::Font::plain);
+  juce::Font smallLabelFont = juce::Font("Roboto", 16.0f, juce::Font::plain);
+  juce::Font errorFont = juce::Font("Roboto", 12.0f, juce::Font::plain);
+  exportParametersLabel_.setFont(textFont);
+  exportAudioElementsLabel_.setFont(labelFont);
   exportAudioLabel_.setFont(textFont);
   muxVidoeLabel_.setFont(textFont);
-  startTimerErrorLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
-  endTimerErrorLabel_.setFont(juce::Font("Roboto", 12.0f, juce::Font::plain));
+  startTimerErrorLabel_.setFont(errorFont);
+  endTimerErrorLabel_.setFont(errorFont);
   startTimerErrorLabel_.setJustificationType(juce::Justification::topLeft);
   endTimerErrorLabel_.setJustificationType(juce::Justification::topLeft);
+  startTimeFormatLabel_.setFont(juce::Font("Roboto", 11.0f, juce::Font::plain));
+  endTimeFormatLabel_.setFont(juce::Font("Roboto", 11.0f, juce::Font::plain));
   customCodecParameterErrorLabel_.setFont(
       juce::Font("Roboto", 12.0f, juce::Font::plain));
   customCodecParameterErrorLabel_.setJustificationType(
@@ -94,6 +116,16 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   startTimerErrorLabel_.setText("",
                                 juce::NotificationType::dontSendNotification);
   endTimerErrorLabel_.setText("", juce::NotificationType::dontSendNotification);
+
+  // Set the format hint labels
+  startTimeFormatLabel_.setText(
+      TimeFormatConverter::getFormatDescription(
+          static_cast<TimeFormatConverter::TimeFormat>(startTimeFormat_)),
+      juce::NotificationType::dontSendNotification);
+  endTimeFormatLabel_.setText(
+      TimeFormatConverter::getFormatDescription(
+          static_cast<TimeFormatConverter::TimeFormat>(endTimeFormat_)),
+      juce::NotificationType::dontSendNotification);
 
   // Set the checkbox colours
   exportAudioElementsToggle_.setColour(
@@ -138,6 +170,17 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
                                   juce::NotificationType::dontSendNotification);
   codecSelector_.onChange([this] {
     FileExport config = repository_->get();
+    int selectedIndex = codecSelector_.getSelectedIndex();
+
+    // Only allow Opus (index 2) if sample rate is 48kHz
+    if (selectedIndex == 2 && config.getSampleRate() != 48000) {
+      // Revert to previous selection
+      codecSelector_.setSelectedIndex(
+          (int)config.getAudioCodec(),
+          juce::NotificationType::dontSendNotification);
+      return;
+    }
+
     config.setAudioCodec((AudioCodec)codecSelector_.getSelectedIndex());
     configureCustomCodecParameter(config.getAudioCodec());
     repository_->update(config);
@@ -156,21 +199,98 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     repository_->update(config);
   });
 
+  updateTimingInfoFromHost();
+
+  startFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::BarsBeats,
+      isTimeFormatAvailable(TimeFormat::BarsBeats));
+  startFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::Timecode,
+      isTimeFormatAvailable(TimeFormat::Timecode));
+  startFormatSegments_.onChange = [this](int idx) {
+    auto newFormat = static_cast<TimeFormat>(idx);
+    if (!isTimeFormatAvailable(newFormat)) return;
+    startTimeFormat_ = newFormat;
+    FileExport config = repository_->get();
+    startTimer_.setText(timeToString(config.getStartTime(), startTimeFormat_));
+    startTimeFormatLabel_.setText(
+        TimeFormatConverter::getFormatDescription(
+            static_cast<TimeFormatConverter::TimeFormat>(startTimeFormat_)),
+        juce::dontSendNotification);
+    repaint();
+  };
+  startFormatSegments_.setSelectedFormat(
+      static_cast<TimeFormatSegmentSelector::Format>(
+          static_cast<int>(startTimeFormat_)));
+
+  endFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::BarsBeats,
+      isTimeFormatAvailable(TimeFormat::BarsBeats));
+  endFormatSegments_.setFormatEnabled(
+      TimeFormatSegmentSelector::Format::Timecode,
+      isTimeFormatAvailable(TimeFormat::Timecode));
+  endFormatSegments_.onChange = [this](int idx) {
+    auto newFormat = static_cast<TimeFormat>(idx);
+    if (!isTimeFormatAvailable(newFormat)) return;
+    endTimeFormat_ = newFormat;
+    FileExport config = repository_->get();
+    endTimer_.setText(timeToString(config.getEndTime(), endTimeFormat_));
+    endTimeFormatLabel_.setText(
+        TimeFormatConverter::getFormatDescription(
+            static_cast<TimeFormatConverter::TimeFormat>(endTimeFormat_)),
+        juce::dontSendNotification);
+    repaint();
+  };
+  endFormatSegments_.setSelectedFormat(
+      static_cast<TimeFormatSegmentSelector::Format>(
+          static_cast<int>(endTimeFormat_)));
+
+  // Set the initial text from repository
+  exportPath_.setText(config.getExportFile());
+
+  // Configure repository update on enter/tab/focus lost
+  exportPath_.onValueCommitted([this] {
+    FileExport config = repository_->get();
+    config.setExportFile(exportPath_.getText());
+    config.setExportFolder(juce::File(exportPath_.getText())
+                               .getParentDirectory()
+                               .getFullPathName());
+    repository_->update(config);
+
+    FilePlayback playbackConfig = filePlaybackRepository_->get();
+    playbackConfig.setPlaybackFile(exportPath_.getText());
+    filePlaybackRepository_->update(playbackConfig);
+  });
+
   // Configure the export audio file selection button
   browseButton_.onClick = [this] {
     audioOutputSelect_.launchAsync(
         juce::FileBrowserComponent::saveMode |
             juce::FileBrowserComponent::canSelectFiles,
         [this](const auto& file) {
-          exportPath_.setText(file.getResult().getFullPathName());
+          juce::String fullPath = file.getResult().getFullPathName();
+          exportPath_.setText(fullPath);
           FileExport config = repository_->get();
-          config.setExportFile(file.getResult().getFullPathName());
+          config.setExportFile(fullPath);
           config.setExportFolder(
               file.getResult().getParentDirectory().getFullPathName());
           repository_->update(config);
+
+          FilePlayback playbackConfig = filePlaybackRepository_->get();
+          playbackConfig.setPlaybackFile(exportPath_.getText());
+          filePlaybackRepository_->update(playbackConfig);
         });
   };
-  exportPath_.setText(config.getExportFile());
+
+  // Set the initial text from repository
+  exportVideoFolder_.setText(config.getVideoExportFolder());
+
+  // Configure repository update on enter/tab/focus lost
+  exportVideoFolder_.onValueCommitted([this] {
+    FileExport config = repository_->get();
+    config.setVideoExportFolder(exportVideoFolder_.getText());
+    repository_->update(config);
+  });
 
   // Configure the export video folder
   browseVideoButton_.onClick = [this] {
@@ -178,13 +298,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
         juce::FileBrowserComponent::saveMode |
             juce::FileBrowserComponent::canSelectFiles,
         [this](const auto& file) {
-          exportVideoFolder_.setText(file.getResult().getFullPathName());
+          juce::String fullPath = file.getResult().getFullPathName();
+          exportVideoFolder_.setText(fullPath);
           FileExport config = repository_->get();
-          config.setVideoExportFolder(file.getResult().getFullPathName());
+          config.setVideoExportFolder(fullPath);
           repository_->update(config);
         });
   };
-  exportVideoFolder_.setText(config.getVideoExportFolder());
 
   // Configure the video source file
   browseVideoSourceButton_.onClick = [this] {
@@ -227,32 +347,56 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   };
 
   // Set the start and end time
-  startTimer_.setText(timeToString(config.getStartTime()));
+  startTimer_.setText(timeToString(config.getStartTime(), startTimeFormat_));
   startTimer_.onTextChanged([this] {
-    int startTime = stringToTime(startTimer_.getText());
+    int startTime = stringToTime(startTimer_.getText(), startTimeFormat_);
     if (startTime < 0) {
+      juce::String errorMsg = "Invalid time format. Expected: ";
+      switch (startTimeFormat_) {
+        case TimeFormat::HoursMinutesSeconds:
+          errorMsg += "HH:MM:SS";
+          break;
+        case TimeFormat::BarsBeats:
+          errorMsg += "Bars.Beats.Ticks";
+          break;
+        case TimeFormat::Timecode:
+          errorMsg += "HH:MM:SS:FF";
+          break;
+      }
       startTimerErrorLabel_.setText(
-          "Invalid time format", juce::NotificationType::dontSendNotification);
+          errorMsg, juce::NotificationType::dontSendNotification);
       return;
     }
     startTimerErrorLabel_.setText("",
                                   juce::NotificationType::dontSendNotification);
     FileExport config = repository_->get();
-    config.setStartTime(stringToTime(startTimer_.getText()));
+    config.setStartTime(stringToTime(startTimer_.getText(), startTimeFormat_));
     repository_->update(config);
   });
-  endTimer_.setText(timeToString(config.getEndTime()));
+  endTimer_.setText(timeToString(config.getEndTime(), endTimeFormat_));
   endTimer_.onTextChanged([this] {
-    int endTime = stringToTime(endTimer_.getText());
+    int endTime = stringToTime(endTimer_.getText(), endTimeFormat_);
     if (endTime < 0) {
-      endTimerErrorLabel_.setText("Invalid time format",
+      juce::String errorMsg = "Invalid time format. Expected: ";
+      switch (endTimeFormat_) {
+        case TimeFormat::HoursMinutesSeconds:
+          errorMsg += "HH:MM:SS";
+          break;
+        case TimeFormat::BarsBeats:
+          errorMsg += "Bars.Beats.Ticks";
+          break;
+        case TimeFormat::Timecode:
+          errorMsg += "HH:MM:SS:FF";
+          break;
+      }
+      endTimerErrorLabel_.setText(errorMsg,
                                   juce::NotificationType::dontSendNotification);
       return;
     }
     endTimerErrorLabel_.setText("",
                                 juce::NotificationType::dontSendNotification);
     FileExport config = repository_->get();
-    config.setEndTime(stringToTime(endTimer_.getText()));
+    config.setEndTime(stringToTime(endTimer_.getText(), endTimeFormat_));
     repository_->update(config);
   });
 
@@ -295,6 +439,14 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       exportVideoFolder_.setEnabled(true);
       browseVideoButton_.setEnabled(true);
       browseVideoSourceButton_.setEnabled(true);
+
+      if (!config.getExportCompleted()) {
+        // Normally this is handled by the file export processor
+        // But in manual button cases where the processor is destroyed we need
+        // to flag it here
+        config.setExportCompleted(true);
+        repository_->update(config);
+      }
     }
     repaint();
   };
@@ -302,6 +454,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
   // Redraw the non-configurable components
   refreshComponents();
+
+  addAndMakeVisible(exportValidation_);
 
   addAndMakeVisible(warningLabel_);
   warningLabel_.setColour(juce::Label::ColourIds::textColourId,
@@ -330,36 +484,72 @@ void FileExportScreen::paint(juce::Graphics& g) {
   // Add some padding
   bounds.removeFromTop(25);
 
+  int mainColumnPadding = 50;
+  int mainColumnWidth = 400;
+
   /* ================================
-   *  Draw in the left side selectors
+   *  Draw in the Export Parameters content
    * ================================
    */
   int rowHeight = 65;
   int rowPadding = 25;
   int columnPadding = 25;
   int componentWidth = 175;
-  auto leftSideBounds = bounds.removeFromLeft(450);
-  leftSideBounds.removeFromLeft(rowHeight);
+  auto leftSideBounds = bounds.removeFromLeft(mainColumnWidth);
+  leftSideBounds.removeFromLeft(30);
 
-  // Draw in the start and end row
+  // Draw in the title label
   auto row = leftSideBounds.removeFromTop(rowHeight);
+  addAndMakeVisible(exportParametersLabel_);
+  exportParametersLabel_.setBounds(row);
+
+  // Start time column (time box + selector + label as one unit)
+  auto startColumn = leftSideBounds.removeFromTop(135);
+  auto startColumnLeft = startColumn.removeFromLeft(componentWidth);
+  // Draw in the start and end row
   addAndMakeVisible(startTimer_);
   startTimer_.setBounds(row.removeFromLeft(componentWidth));
   row.removeFromLeft(rowPadding);
   addAndMakeVisible(endTimer_);
   endTimer_.setBounds(row.removeFromLeft(componentWidth));
 
-  // Add the error labels
-  leftSideBounds.removeFromTop(2);
-  row = leftSideBounds.removeFromTop(columnPadding - 2);
+  addAndMakeVisible(startTimer_);
+  startTimer_.setBounds(startColumnLeft.removeFromTop(rowHeight));
+
+  startColumnLeft.removeFromTop(2);
+  const int formatSelectorHeight = 32;  // Half of text box height
+  addAndMakeVisible(startFormatSegments_);
+  startFormatSegments_.setBounds(
+      startColumnLeft.removeFromTop(formatSelectorHeight));
+
+  startColumnLeft.removeFromTop(2);
+  addAndMakeVisible(startTimeFormatLabel_);
+  startTimeFormatLabel_.setBounds(startColumnLeft.removeFromTop(15));
+
+  startColumnLeft.removeFromTop(2);
   addAndMakeVisible(startTimerErrorLabel_);
-  startTimerErrorLabel_.setBounds(row.removeFromLeft(componentWidth));
-  row.removeFromLeft(rowPadding);
+  startTimerErrorLabel_.setBounds(startColumnLeft);
+
+  startColumn.removeFromLeft(rowPadding);
+  auto endColumnLeft = startColumn.removeFromLeft(componentWidth);
+
+  addAndMakeVisible(endTimer_);
+  endTimer_.setBounds(endColumnLeft.removeFromTop(rowHeight));
+
+  endColumnLeft.removeFromTop(2);
+  addAndMakeVisible(endFormatSegments_);
+  endFormatSegments_.setBounds(
+      endColumnLeft.removeFromTop(formatSelectorHeight));
+
+  endColumnLeft.removeFromTop(2);
+  addAndMakeVisible(endTimeFormatLabel_);
+  endTimeFormatLabel_.setBounds(endColumnLeft.removeFromTop(15));
+
+  endColumnLeft.removeFromTop(2);
   addAndMakeVisible(endTimerErrorLabel_);
-  endTimerErrorLabel_.setBounds(row.removeFromLeft(componentWidth));
+  endTimerErrorLabel_.setBounds(endColumnLeft);
 
   // Draw in the format and codec row
-  leftSideBounds.removeFromTop(columnPadding);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(formatSelector_);
   formatSelector_.setBounds(row.removeFromLeft(componentWidth));
@@ -368,7 +558,7 @@ void FileExportScreen::paint(juce::Graphics& g) {
   codecSelector_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the bit depth and sample rate row
-  leftSideBounds.removeFromTop(columnPadding);
+  leftSideBounds.removeFromTop(rowPadding / 2);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(bitDepthSelector_);
   bitDepthSelector_.setBounds(row.removeFromLeft(componentWidth));
@@ -377,19 +567,17 @@ void FileExportScreen::paint(juce::Graphics& g) {
   sampleRate_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the custom codec parameter
-  leftSideBounds.removeFromTop(columnPadding);
+  leftSideBounds.removeFromTop(rowPadding / 2);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(customCodecParameter_);
   customCodecParameter_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the custom codec parameter error label
-  leftSideBounds.removeFromTop(2);
-  row = leftSideBounds.removeFromTop(columnPadding - 2);
+  row = leftSideBounds.removeFromTop(rowPadding / 2);
   addAndMakeVisible(customCodecParameterErrorLabel_);
   customCodecParameterErrorLabel_.setBounds(row.removeFromLeft(componentWidth));
 
   // Draw in the mix presentation and Audio Elements row
-  leftSideBounds.removeFromTop(columnPadding);
   row = leftSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(mixPresentations_);
   mixPresentations_.setBounds(row.removeFromLeft(componentWidth));
@@ -398,32 +586,33 @@ void FileExportScreen::paint(juce::Graphics& g) {
   audioElements_.setBounds(row.removeFromLeft(componentWidth));
 
   /* ==============================================
-   *  Draw in the right side file selection options
+   *  Draw in the Export Audio content
    * ==============================================
    */
   rowHeight = 65;
   rowPadding = 25;
   columnPadding = 25;
-  componentWidth = 400;
+  componentWidth = 350;
 
   // Add some padding
-  bounds.removeFromLeft(150);
+  bounds.removeFromLeft(mainColumnPadding);
+  auto rightSideBounds = bounds.removeFromLeft(mainColumnWidth);
 
   // Add the export audio components
-  row = bounds.removeFromTop(rowHeight);
+  row = rightSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(exportAudioLabel_);
   exportAudioLabel_.setBounds(row.removeFromLeft(150));
   addAndMakeVisible(enableFileExport_);
   enableFileExport_.setBounds(row.removeFromLeft(85).reduced(15));
 
-  row = bounds.removeFromTop(rowHeight);
+  row = rightSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(exportPath_);
   exportPath_.setBounds(row.removeFromLeft(componentWidth));
   addAndMakeVisible(browseButton_);
   browseButton_.setBounds(
-      row.removeFromLeft(75).withTrimmedTop(10).reduced(20));
+      row.removeFromLeft(75).withTrimmedTop(10).reduced(15));
 
-  row = bounds.removeFromTop(rowHeight);
+  row = rightSideBounds.removeFromTop(rowHeight);
   addAndMakeVisible(exportAudioElementsToggle_);
   exportAudioElementsToggle_.setBounds(row.removeFromLeft(50));
   addAndMakeVisible(exportAudioElementsLabel_);
@@ -432,26 +621,26 @@ void FileExportScreen::paint(juce::Graphics& g) {
   // Only draw video export options if the audio export is enabled.
   if (enableFileExport_.getToggleState()) {
     // Add the mux video components
-    bounds.removeFromTop(columnPadding);
-    row = bounds.removeFromTop(rowHeight);
+    rightSideBounds.removeFromTop(columnPadding);
+    row = rightSideBounds.removeFromTop(rowHeight);
     addAndMakeVisible(muxVidoeLabel_);
     muxVidoeLabel_.setBounds(row.removeFromLeft(130));
     addAndMakeVisible(muxVideoToggle_);
     muxVideoToggle_.setBounds(row.removeFromLeft(85).reduced(15));
 
-    row = bounds.removeFromTop(rowHeight);
+    row = rightSideBounds.removeFromTop(rowHeight);
     addAndMakeVisible(videoSource_);
     videoSource_.setBounds(row.removeFromLeft(componentWidth));
     addAndMakeVisible(browseVideoSourceButton_);
     browseVideoSourceButton_.setBounds(
-        row.removeFromLeft(75).withTrimmedTop(10).reduced(20));
+        row.removeFromLeft(75).withTrimmedTop(10).reduced(15));
 
-    row = bounds.removeFromTop(rowHeight);
+    row = rightSideBounds.removeFromTop(rowHeight);
     addAndMakeVisible(exportVideoFolder_);
     exportVideoFolder_.setBounds(row.removeFromLeft(componentWidth));
     addAndMakeVisible(browseVideoButton_);
     browseVideoButton_.setBounds(
-        row.removeFromLeft(75).withTrimmedTop(10).reduced(20));
+        row.removeFromLeft(75).withTrimmedTop(10).reduced(15));
   }
   // Hide video export/mux options.
   else {
@@ -466,8 +655,8 @@ void FileExportScreen::paint(juce::Graphics& g) {
 
   // Draw in the manual export button
   if (juce::PluginHostType().isPremiere()) {
-    bounds.removeFromTop(columnPadding);
-    row = bounds.removeFromTop(rowHeight * 0.75f);
+    rightSideBounds.removeFromTop(columnPadding);
+    row = rightSideBounds.removeFromTop(rowHeight * 0.75f);
     const auto rowReference = row;
     addAndMakeVisible(exportButton_);
     exportButton_.setBounds(row.removeFromLeft(125));
@@ -476,47 +665,126 @@ void FileExportScreen::paint(juce::Graphics& g) {
     warningLabel_.setBounds(labelBounds);
   } else {
 #if JUCE_DEBUG
-    bounds.removeFromTop(columnPadding);
-    row = bounds.removeFromTop(rowHeight);
+    rightSideBounds.removeFromTop(columnPadding);
+    row = rightSideBounds.removeFromTop(rowHeight);
     addAndMakeVisible(exportButton_);
     exportButton_.setBounds(row.removeFromLeft(200));
 #endif
   }
+
+  /* ==============================================
+   *  Draw in the Export Validation content
+   * ==============================================
+   */
+
+  bounds.removeFromLeft(mainColumnPadding);
+  auto validationBounds = bounds.removeFromLeft(mainColumnWidth);
+  exportValidation_.setBounds(validationBounds);
 };
 
-juce::String FileExportScreen::timeToString(int timeInSeconds) {
-  int seconds = timeInSeconds;
-  int minutes = seconds / 60;
-  seconds = seconds % 60;
-  int hours = minutes / 60;
-  minutes = minutes % 60;
+juce::String FileExportScreen::timeToString(int timeInSeconds,
+                                            TimeFormat format) {
+  auto converterFormat = static_cast<TimeFormatConverter::TimeFormat>(format);
 
-  // Pad the hours with a 0 if necessary
-  juce::String hourString =
-      (hours < 10) ? "0" + juce::String(hours) : juce::String(hours);
-  juce::String minuteString =
-      (minutes < 10) ? "0" + juce::String(minutes) : juce::String(minutes);
-  juce::String secondString =
-      (seconds < 10) ? "0" + juce::String(seconds) : juce::String(seconds);
-
-  return hourString + ":" + minuteString + ":" + secondString;
+  switch (format) {
+    case TimeFormat::HoursMinutesSeconds:
+      return TimeFormatConverter::secondsToHMS(timeInSeconds);
+    case TimeFormat::BarsBeats:
+      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue()) {
+        return TimeFormatConverter::secondsToBarsBeats(
+            timeInSeconds, *cachedBpm_, *cachedTimeSignature_);
+      }
+      return "1.1.000";  // Fallback
+    case TimeFormat::Timecode:
+      if (cachedFrameRate_.hasValue()) {
+        return TimeFormatConverter::secondsToTimecode(timeInSeconds,
+                                                      *cachedFrameRate_);
+      }
+      return "00:00:00:00";  // Fallback
+    default:
+      return TimeFormatConverter::secondsToHMS(timeInSeconds);
+  }
 }
 
-int FileExportScreen::stringToTime(juce::String val) {
-  auto parts = juce::StringArray::fromTokens(val, ":", "");
-  if (parts.size() != 3) {
-    return -1;
+int FileExportScreen::stringToTime(juce::String val, TimeFormat format) {
+  switch (format) {
+    case TimeFormat::HoursMinutesSeconds:
+      return TimeFormatConverter::hmsToSeconds(val);
+    case TimeFormat::BarsBeats:
+      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue()) {
+        return TimeFormatConverter::barsBeatsToSeconds(val, *cachedBpm_,
+                                                       *cachedTimeSignature_);
+      }
+      return -1;  // Cannot convert without tempo info
+    case TimeFormat::Timecode:
+      return TimeFormatConverter::timecodeToSeconds(val);
+    default:
+      return TimeFormatConverter::hmsToSeconds(val);
   }
-  if (!parts[0].containsOnly("0123456789") ||
-      !parts[1].containsOnly("0123456789") ||
-      !parts[2].containsOnly("0123456789")) {
-    return -1;
+}
+
+void FileExportScreen::updateTimingInfoFromHost() {
+  // Get the audio processor to access playhead information
+  auto* processor =
+      dynamic_cast<juce::AudioProcessor*>(editor_.getAudioProcessor());
+
+  if (processor == nullptr) {
+    cachedBpm_ = juce::nullopt;
+    cachedTimeSignature_ = juce::nullopt;
+    cachedFrameRate_ = juce::nullopt;
+    return;
   }
 
-  int hours = parts[0].getIntValue();
-  int minutes = parts[1].getIntValue();
-  int seconds = parts[2].getIntValue();
-  return (hours * 3600 + minutes * 60 + seconds);
+  auto* playHead = processor->getPlayHead();
+
+  if (playHead == nullptr) {
+    // No playhead available - DAW doesn't provide timing info
+    cachedBpm_ = juce::nullopt;
+    cachedTimeSignature_ = juce::nullopt;
+    cachedFrameRate_ = juce::nullopt;
+    return;
+  }
+
+  // Get position info from the playhead
+  auto positionInfo = playHead->getPosition();
+
+  if (!positionInfo.hasValue()) {
+    // Position info not available
+    cachedBpm_ = juce::nullopt;
+    cachedTimeSignature_ = juce::nullopt;
+    cachedFrameRate_ = juce::nullopt;
+    return;
+  }
+
+  // Extract timing information from position info
+  auto& pos = *positionInfo;
+
+  // Get BPM (tempo) - needed for bars/beats format
+  cachedBpm_ = pos.getBpm();
+
+  // Get time signature - needed for bars/beats format
+  cachedTimeSignature_ = pos.getTimeSignature();
+
+  // Get frame rate - needed for timecode format
+  cachedFrameRate_ = pos.getFrameRate();
+}
+
+bool FileExportScreen::isTimeFormatAvailable(TimeFormat format) {
+  switch (format) {
+    case TimeFormat::HoursMinutesSeconds:
+      return true;  // Always available
+
+    case TimeFormat::BarsBeats:
+      // Requires tempo and time signature
+      return cachedBpm_.hasValue() && cachedTimeSignature_.hasValue();
+
+    case TimeFormat::Timecode:
+      // Requires frame rate
+      return cachedFrameRate_.hasValue();
+
+    default:
+      return true;
+  }
 }
 
 void FileExportScreen::refreshComponents() {
@@ -639,6 +907,23 @@ void FileExportScreen::refreshFileExportComponents() {
   FileExport config = repository_->get();
   if (config.getSampleRate() > 0) {
     sampleRate_.setText(juce::String(config.getSampleRate()) + " Hz");
+  }
+
+  // Only allow Opus codec if sample rate is 48kHz
+  bool opusAllowed = (config.getSampleRate() == 48000);
+  const juce::ComboBox* comboBox = codecSelector_.getComboBox();
+  if (comboBox != nullptr) {
+    // OPUS is item ID 3 (LPCM=1, FLAC=2, OPUS=3)
+    const_cast<juce::ComboBox*>(comboBox)->setItemEnabled(3, opusAllowed);
+  }
+
+  // If Opus is currently selected but not allowed, switch to LPCM
+  if (!opusAllowed && config.getAudioCodec() == AudioCodec::OPUS) {
+    config.setAudioCodec(AudioCodec::LPCM);
+    codecSelector_.setSelectedIndex(
+        (int)AudioCodec::LPCM, juce::NotificationType::dontSendNotification);
+    configureCustomCodecParameter(AudioCodec::LPCM);
+    repository_->update(config);
   }
 
   if (config.getManualExport()) {

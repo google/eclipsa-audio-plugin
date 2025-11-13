@@ -99,7 +99,8 @@ ControlKnob::ControlKnob(const double& min, const double& max,
       defaultNormalizedValue_((defaultValue - min) / (max - min)),
       lookAndFeel_(defaultNormalizedValue_),
       dimmedLookAndFeel_(defaultNormalizedValue_),
-      juce::Slider(juce::Slider::Rotary, juce::Slider::NoTextBox) {
+      juce::Slider(juce::Slider::RotaryHorizontalVerticalDrag,
+                   juce::Slider::NoTextBox) {
   setLookAndFeel(&lookAndFeel_);
   setRotaryParameters(startAngle_, endAngle_, true);
   juce::Slider::setRange(min_, max_, 1.f);
@@ -107,6 +108,15 @@ ControlKnob::ControlKnob(const double& min, const double& max,
 }
 
 ControlKnob::~ControlKnob() { setLookAndFeel(nullptr); }
+
+void ControlKnob::mouseDown(const juce::MouseEvent& event) {
+  if (event.mods.isAltDown() && isEnabled()) {
+    // Option-click resets control to 0.
+    juce::Slider::setValue(0);
+    return;
+  }
+  juce::Slider::mouseDown(event);
+}
 
 void ControlKnob::setValue(float newValue) { juce::Slider::setValue(newValue); }
 
