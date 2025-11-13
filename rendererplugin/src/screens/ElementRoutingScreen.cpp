@@ -294,8 +294,8 @@ void ElementRoutingScreen::updateAudioElementChannels() {
   }
 
   // Validate the profile selection and revert if necessary
-  FileProfile minimumProfile = FileProfileHelper::minimumProfile(
-      totalChannels, audioElementArray.size());
+  FileProfile minimumProfile =
+      FileProfileHelper::minimumProfile(totalChannels, audioElementArray);
   if (minimumProfile > currentProfile_) {
     LOG_ANALYTICS(RendererProcessor::instanceId_,
                   "Profile downgraded to: " +

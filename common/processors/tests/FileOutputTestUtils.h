@@ -77,7 +77,7 @@ static FileProfile profileFromAEs(
 
   // Otherwise layout is determined by channel and element count
   return FileProfileHelper::minimumProfile(
-      totalAudioChannels(audioElementRepository), audioElements.size());
+      totalAudioChannels(audioElementRepository), audioElements);
 }
 
 // Helper used by multiple tests to render a short non-realtime bounce.

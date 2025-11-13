@@ -94,22 +94,14 @@ void IAMFFileWriter::populateAudioElementMetadataFromRepository(
         audioElements[i]->getChannelCount(),
         audioElements[i]->getChannelConfig().getIamfChannelLabels());
     audioElementInformation_.emplace_back(aeMetadata);
-
-    // Check if this audio element is an extended audio element
-    if (audioElements[i]->getChannelConfig().isExpandedLayout()) {
-      isExtendedAudioElementPresent = true;
-    }
   }
 
   // Finally, write out the minimum profile level required for the audio
   // elements
-  if (isExtendedAudioElementPresent || audioElements.size() > 2) {
-    IAMFExportHelper::writeIASeqHdr(FileProfile::BASE_ENHANCED, iamfMD);
-  } else if (audioElements.size() == 2) {
-    IAMFExportHelper::writeIASeqHdr(FileProfile::BASE, iamfMD);
-  } else {
-    IAMFExportHelper::writeIASeqHdr(FileProfile::SIMPLE, iamfMD);
-  }
+  IAMFExportHelper::writeIASeqHdr(
+      FileProfileHelper::minimumProfile(iamfMD.audio_element_metadata_size(),
+                                        audioElements),
+      iamfMD);
 }
 
 void IAMFFileWriter::populateMixPresentationMetadataFromRepository(
