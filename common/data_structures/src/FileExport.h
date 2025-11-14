@@ -17,6 +17,7 @@
 #pragma once
 #include <juce_data_structures/juce_data_structures.h>
 
+#include "data_structures/src/AudioElement.h"
 #include "data_structures/src/RepositoryItem.h"
 
 enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
@@ -67,10 +68,17 @@ class FileProfileHelper {
 
   // Helper function to determine the minimum profile for a given number of
   // channels and audio elements
-  static FileProfile minimumProfile(int numChannels, int numAudioElements) {
-    if (numChannels <= 16 && numAudioElements <= 1) {
+  static FileProfile minimumProfile(
+      int numChannels, juce::OwnedArray<AudioElement>& audioElements) {
+    for (int i = 0; i < audioElements.size(); ++i) {
+      // Check if this audio element is an extended audio element
+      if (audioElements[i]->getChannelConfig().isExpandedLayout()) {
+        return BASE_ENHANCED;
+      }
+    }
+    if (numChannels <= 16 && audioElements.size() <= 1) {
       return SIMPLE;
-    } else if (numChannels <= 18 && numAudioElements <= 2) {
+    } else if (numChannels <= 18 && audioElements.size() <= 2) {
       return BASE;
     } else {
       return BASE_ENHANCED;
