@@ -65,21 +65,30 @@ if(NOT libiamf_POPULATED)
   if(WIN32)
     message(STATUS "Using Windows codec libraries for IAMF")
 
-    # Determine which configuration folder to use
-    if(CMAKE_BUILD_TYPE MATCHES "Debug")
-      set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Debug")
-    else()
-      set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Release")
+    set(VENDOR_LIB_PATH_DEBUG "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Debug")
+    set(VENDOR_LIB_PATH_RELEASE "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Release")
+
+    # Copy Debug libraries if they exist
+    if(EXISTS "${VENDOR_LIB_PATH_DEBUG}/fdk-aac.lib")
+      file(COPY
+              "${VENDOR_LIB_PATH_DEBUG}/fdk-aac.lib"
+              "${VENDOR_LIB_PATH_DEBUG}/FLAC.lib"
+              "${VENDOR_LIB_PATH_DEBUG}/opus.lib"
+              "${VENDOR_LIB_PATH_DEBUG}/ogg.lib"
+              DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+      )
     endif()
 
-    file(COPY
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/fdk-aac.lib"
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/FLAC.lib"
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/opus.lib"
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/ogg.lib"
-            DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
-    )
-    link_directories("${VENDOR_LIB_PATH}")
+    # Copy Release libraries if they exist
+    if(EXISTS "${VENDOR_LIB_PATH_RELEASE}/fdk-aac.lib")
+      file(COPY
+              "${VENDOR_LIB_PATH_RELEASE}/fdk-aac.lib"
+              "${VENDOR_LIB_PATH_RELEASE}/FLAC.lib"
+              "${VENDOR_LIB_PATH_RELEASE}/opus.lib"
+              "${VENDOR_LIB_PATH_RELEASE}/ogg.lib"
+              DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+      )
+    endif()
   endif()
 
 
