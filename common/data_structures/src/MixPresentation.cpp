@@ -73,6 +73,7 @@ void MixPresentation::populateIamfMixPresentationMetadata(
 
   mpMD->set_mix_presentation_id(mixPresentationId);
   // Indicate annotation language for this mix presentation.
+  mpMD->set_count_label(1);
   mpMD->add_annotations_language(
       LanguageData::getLanguageCode(mixPresentationLanguage_));
   // Write mix presentation name.
