@@ -22,12 +22,13 @@ target_include_directories(obr INTERFACE
 
 )
 
-# # Platform-specific static linking
+# Platform-specific static linking
 if (WIN32)
-    # Built static library (.lib)
     target_link_libraries(obr INTERFACE
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Windows/${BUILD_LIB_DIR}/obr.lib"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Windows/${BUILD_LIB_DIR}/pffft.lib"
+            $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/lib/Windows/Debug/obr.lib>
+            $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/lib/Windows/Release/obr.lib>
+            $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/lib/Windows/Debug/pffft.lib>
+            $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/lib/Windows/Release/pffft.lib>
             Eigen
     )
 else()

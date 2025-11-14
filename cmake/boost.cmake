@@ -20,11 +20,10 @@ include(FetchContent)
 set(BOOST_ENABLE_CMAKE ON)
 
 if(MSVC)
-    # Tell Boost to NOT use static runtime (this makes it use /MD or /MDd)
-    set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "Use static MSVC runtime")
+    set(Boost_USE_STATIC_RUNTIME OFF)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    add_definitions(-DBOOST_ALL_NO_LIB)
 
-    # Explicitly tell Boost to use shared (dynamic) runtime linking
-    set(BOOST_RUNTIME_LINK "shared" CACHE STRING "Boost runtime link type")
 endif()
 
 FetchContent_Declare(

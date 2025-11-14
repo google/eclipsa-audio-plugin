@@ -57,9 +57,8 @@ function(copy_resources target plugin_path)
         set(LIBCURL_DLL     "${CMAKE_SOURCE_DIR}/third_party/libcurl/lib/Windows/${CMAKE_BUILD_TYPE}/libcurl-x64.dll")  
         set(IAMF_TOOLS_DLL  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/${CMAKE_BUILD_TYPE}/iamf_tools.dll")
         set(OPENSVC_DECODER "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/${CMAKE_BUILD_TYPE}/OpenSVCDecoder.dll")
-        set(ZMQ_DLL         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${CMAKE_BUILD_TYPE}/libzmq-v143-mt-4_3_6.dll")
-
-        # Detect plugin format from target name
+        string(TOLOWER "${CMAKE_CFG_INTDIR}" ZMQ_CFG)
+        set(ZMQ_DLL "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${ZMQ_CFG}/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
         if("${target}" MATCHES ".*_VST3$")
             set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x86_64-win")
         elseif("${target}" MATCHES ".*_AAX$")
