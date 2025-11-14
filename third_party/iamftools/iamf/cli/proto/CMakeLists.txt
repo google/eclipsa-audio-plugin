@@ -19,8 +19,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ---- MSVC runtime consistency ----
 if(MSVC)
-    # Force dynamic runtime (MultiThreadedDLL) for all dependencies
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "" FORCE)
+
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+            "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+            CACHE STRING "" FORCE)
+
     set(ABSL_USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
     set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
 endif()
