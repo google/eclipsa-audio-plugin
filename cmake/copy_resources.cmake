@@ -42,23 +42,14 @@ function(copy_resources target plugin_path)
         message(STATUS "Copying Windows runtime DLLs for ${target}")
 
         # Set DLL paths
-        set(ABSEIL_DLL      "${CMAKE_SOURCE_DIR}/third_party/abseil-cpp/lib/Windows/${CMAKE_BUILD_TYPE}/abseil_dll.dll")
-        set(AVCODEC_DLL     "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/avcodec-60.dll")
-        set(AVDEVICE_DLL    "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/avdevice-60.dll")
-        set(AVFILTER_DLL    "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/avfilter-9.dll")
-        set(AVFORMAT_DLL    "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/avformat-60.dll")
-        set(AVUTIL_DLL      "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/avutil-58.dll")
-        set(POSTPROC_DLL    "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/postproc-57.dll")
-        set(SWRESAMPLE_DLL  "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/swresample-4.dll")
-        set(SWSCALE_DLL     "${CMAKE_SOURCE_DIR}/third_party/FFmpeg/lib/Windows/${CMAKE_BUILD_TYPE}/swscale-7.dll")
         set(GPAC_DLL        "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libgpac.dll")
         set(CRYPTOMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libcryptoMD.dll")
         set(LIBSSLMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libsslMD.dll")  
-        set(LIBCURL_DLL     "${CMAKE_SOURCE_DIR}/third_party/libcurl/lib/Windows/${CMAKE_BUILD_TYPE}/libcurl-x64.dll")  
         set(IAMF_TOOLS_DLL  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/${CMAKE_BUILD_TYPE}/iamf_tools.dll")
         set(OPENSVC_DECODER "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/${CMAKE_BUILD_TYPE}/OpenSVCDecoder.dll")
         string(TOLOWER "${CMAKE_CFG_INTDIR}" ZMQ_CFG)
         set(ZMQ_DLL "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${ZMQ_CFG}/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
+        
         if("${target}" MATCHES ".*_VST3$")
             set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x86_64-win")
         elseif("${target}" MATCHES ".*_AAX$")
@@ -73,21 +64,10 @@ function(copy_resources target plugin_path)
         # Single POST_BUILD command per target
         add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${PLUGIN_BINARY_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ABSEIL_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${AVCODEC_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${AVDEVICE_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${AVFILTER_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${AVFORMAT_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${AVUTIL_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${POSTPROC_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SWRESAMPLE_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SWSCALE_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBCURL_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENSVC_DECODER} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMENT "Copied DLLs to ${PLUGIN_BINARY_DIR}"
         )
