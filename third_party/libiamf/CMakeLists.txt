@@ -65,8 +65,8 @@ if(NOT libiamf_POPULATED)
   if(WIN32)
     message(STATUS "Using Windows codec libraries for IAMF")
 
-    set(VENDOR_LIB_PATH_DEBUG "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Debug")
-    set(VENDOR_LIB_PATH_RELEASE "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows/Release")
+    set(VENDOR_LIB_PATH_DEBUG "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Debug")
+    set(VENDOR_LIB_PATH_RELEASE "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Release")
 
     # Copy Debug libraries if they exist
     if(EXISTS "${VENDOR_LIB_PATH_DEBUG}/fdk-aac.lib")
