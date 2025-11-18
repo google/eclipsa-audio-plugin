@@ -49,7 +49,7 @@ IAMFPlaybackDevice::Result IAMFPlaybackDevice::create(
   FilePlayback fpb = filePlaybackRepo.get();
   device->configureDecodeLayout(fpb.getReqdDecodeLayout());
   device->configurePlaybackDevice(fpb.getPlaybackDevice());
-  return {std::move(device), std::nullopt};
+  return {std::move(device), Error::kNoError};
 }
 
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,

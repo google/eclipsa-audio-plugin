@@ -16,7 +16,6 @@
 
 #include <filesystem>
 #include <memory>
-#include <optional>
 
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FilePlayback.h"
@@ -32,7 +31,7 @@ class IAMFPlaybackDevice : private juce::ValueTree::Listener {
   };
   struct Result {
     std::unique_ptr<IAMFPlaybackDevice> device;
-    std::optional<Error> error;
+    Error error = kNoError;
   };
 
   static Result create(const std::filesystem::path iamfPath,
