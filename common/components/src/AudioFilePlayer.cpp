@@ -326,25 +326,28 @@ void AudioFilePlayer::createPlaybackEngine(
   }
 
   playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
-    auto engine = IAMFPlaybackDevice::create(
+    IAMFPlaybackDevice::Result res = IAMFPlaybackDevice::create(
         iamfPath, kDevice, isBeingDestroyed_, fpbr_, deviceManager_);
 
-    juce::MessageManager::callAsync([this, engine = engine.release()]() {
-      onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));
+    juce::MessageManager::callAsync([this, device = res.device.release(),
+                                     err = res.error]() {
+      onPlaybackEngineCreated(err, std::unique_ptr<IAMFPlaybackDevice>(device));
     });
   });
 }
 
 void AudioFilePlayer::onPlaybackEngineCreated(
+    const std::optional<IAMFPlaybackDevice::Error> err,
     std::unique_ptr<IAMFPlaybackDevice> engine) {
-  if (isBeingDestroyed_) {
-    return;
-  } else if (!engine) {
+  if (!engine && err == IAMFPlaybackDevice::Error::kInvalidIAMFFile) {
     // Failed to create playback engine - reset state to disabled
     playbackEngine_ = nullptr;
     auto fpb = fpbr_.get();
     fpb.setPlayState(FilePlayback::kDisabled);
     fpbr_.update(fpb);
+  } else if (!engine &&
+             err == IAMFPlaybackDevice::Error::kEarlyAbortRequested) {
+    // Early abort requested - do nothing
   } else {
     {
       std::lock_guard<std::mutex> lock(playbackEngineMutex_);

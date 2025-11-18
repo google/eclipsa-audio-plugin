@@ -55,7 +55,9 @@ class AudioFilePlayer : public juce::Component,
   void updateComponentVisibility();
   void createPlaybackEngine(const std::filesystem::path iamfPath);
   void attemptCreatePlaybackEngine();
-  void onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice> engine);
+  void onPlaybackEngineCreated(
+      const std::optional<IAMFPlaybackDevice::Error> err,
+      std::unique_ptr<IAMFPlaybackDevice> engine);
 
   // Components
   RoundImageButton playButton_, pauseButton_, stopButton_;

@@ -21,7 +21,7 @@
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
+IAMFPlaybackDevice::Result IAMFPlaybackDevice::create(
     const std::filesystem::path iamfPath, const juce::String pbDeviceName,
     std::atomic_bool& abortConstruction,
     FilePlaybackRepository& filePlaybackRepo,
@@ -33,9 +33,12 @@ std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
   // indexing can complete
   auto reader = IAMFFileReader::createIamfReader(
       iamfPath, IAMFFileReader::kDefaultReaderSettings, abortConstruction);
-  if (!reader || abortConstruction) {
+  if (!reader && abortConstruction) {
+    return {nullptr, Error::kEarlyAbortRequested};
+  }
+  if (!reader) {
     LOG_ERROR(0, "IAMFPlaybackDevice: Failed to create IAMF reader");
-    return nullptr;
+    return {nullptr, Error::kInvalidIAMFFile};
   }
 
   auto device = std::unique_ptr<IAMFPlaybackDevice>(
@@ -46,7 +49,7 @@ std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
   FilePlayback fpb = filePlaybackRepo.get();
   device->configureDecodeLayout(fpb.getReqdDecodeLayout());
   device->configurePlaybackDevice(fpb.getPlaybackDevice());
-  return device;
+  return {std::move(device), std::nullopt};
 }
 
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
