@@ -25,7 +25,6 @@ IAMFDecoderSource::IAMFDecoderSource(std::unique_ptr<IAMFFileReader> reader)
 void IAMFDecoderSource::play() {
   const juce::SpinLock::ScopedLockType lock(stateLock_);
   isPlaying_ = true;
-  while (!buffer_->isReady());
 }
 
 void IAMFDecoderSource::pause() {
