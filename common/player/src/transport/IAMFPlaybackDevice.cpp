@@ -63,8 +63,10 @@ IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
       decoderSource_(std::move(reader)) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
 
-  decoderSource_.setOnFinishedCallback(
-      [this] { setRepoState(FilePlayback::kStop); });
+  decoderSource_.setOnFinishedCallback([this] {
+    juce::MessageManager::callAsync(
+        [this]() { setRepoState(FilePlayback::kStop); });
+  });
 
   fpbr_.registerListener(this);
 }
