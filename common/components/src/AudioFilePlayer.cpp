@@ -15,6 +15,7 @@
 #include "AudioFilePlayer.h"
 
 #include <filesystem>
+#include <memory>
 
 #include "components/icons/svg/SvgIconLookup.h"
 #include "components/src/EclipsaColours.h"
@@ -231,7 +232,6 @@ void AudioFilePlayer::resized() {
 }
 
 void AudioFilePlayer::update() {
-  std::lock_guard<std::mutex> lock(playbackEngineMutex_);
   if (playbackEngine_) {
     const IAMFFileReader::StreamData kData = playbackEngine_->getStreamData();
     const float kDuration_s =
@@ -308,9 +308,11 @@ void AudioFilePlayer::attemptCreatePlaybackEngine() {
 void AudioFilePlayer::createPlaybackEngine(
     const std::filesystem::path iamfPath) {
   // Join any existing thread before starting a new one
+  isBeingDestroyed_ = true;
   if (playbackEngineLoaderThread_.joinable()) {
     playbackEngineLoaderThread_.join();
   }
+  isBeingDestroyed_ = false;
 
   auto playbackState = fpbr_.get();
   playbackState.setPlayState(FilePlayback::kBuffering);
@@ -319,35 +321,32 @@ void AudioFilePlayer::createPlaybackEngine(
   const juce::String kDevice = fpbr_.get().getPlaybackDevice();
 
   if (playbackEngine_) {
-    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
     playbackEngine_->stop();
   }
 
   playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
-    auto engine =
-        IAMFPlaybackDevice::create(iamfPath, kDevice, fpbr_, deviceManager_);
+    IAMFPlaybackDevice::Result res = IAMFPlaybackDevice::create(
+        iamfPath, kDevice, isBeingDestroyed_, fpbr_, deviceManager_);
 
-    juce::MessageManager::callAsync([this, engine = engine.release()]() {
-      onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice>(engine));
-    });
+    juce::MessageManager::callAsync(
+        [this, device = res.device.release(), error = res.error]() {
+          onPlaybackEngineCreated(IAMFPlaybackDevice::Result{
+              std::unique_ptr<IAMFPlaybackDevice>(device), error});
+        });
   });
 }
 
-void AudioFilePlayer::onPlaybackEngineCreated(
-    std::unique_ptr<IAMFPlaybackDevice> engine) {
-  if (isBeingDestroyed_) {
-    return;
-  } else if (!engine) {
+void AudioFilePlayer::onPlaybackEngineCreated(IAMFPlaybackDevice::Result res) {
+  if (!res.device && res.error == IAMFPlaybackDevice::Error::kInvalidIAMFFile) {
     // Failed to create playback engine - reset state to disabled
     playbackEngine_ = nullptr;
     auto fpb = fpbr_.get();
     fpb.setPlayState(FilePlayback::kDisabled);
     fpbr_.update(fpb);
+  } else if (res.error == IAMFPlaybackDevice::kEarlyAbortRequested) {
+    // Do nothing - destruction was requested
   } else {
-    {
-      std::lock_guard<std::mutex> lock(playbackEngineMutex_);
-      playbackEngine_ = std::move(engine);
-    }
+    playbackEngine_ = std::move(res.device);
     // Update play state from buffering to ready
     auto fpb = fpbr_.get();
     fpb.setPlayState(FilePlayback::kStop);

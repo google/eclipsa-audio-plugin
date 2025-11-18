@@ -15,6 +15,7 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include <atomic>
 #include <filesystem>
 #include <iosfwd>
 #include <memory>
@@ -46,10 +47,13 @@ class IAMFFileReader {
           iamf_tools::api::OutputSampleType::kInt32LittleEndian,
   };
 
+  // Create a decoder with default settings
   static std::unique_ptr<IAMFFileReader> createIamfReader(
       const std::filesystem::path& iamfFilePath);
+  // Create a decoder with custom settings and an option to abort construction
   static std::unique_ptr<IAMFFileReader> createIamfReader(
-      const std::filesystem::path& iamfFilePath, const Settings& settings);
+      const std::filesystem::path& iamfFilePath, const Settings& settings,
+      std::atomic_bool& abortConstruction);
 
   IAMFFileReader(const IAMFFileReader&) = delete;
   IAMFFileReader& operator=(const IAMFFileReader&) = delete;
@@ -63,26 +67,26 @@ class IAMFFileReader {
   bool seekFrame(const size_t frameIdx);
   bool resetLayout(const Speakers::AudioElementSpeakerLayout& layout);
 
- private:
-  IAMFFileReader(const std::filesystem::path& iamfFilePath);
-  IAMFFileReader(const std::filesystem::path& iamfFilePath,
-                 const Settings& settings);
+  // Method to be called via a valid reader instance to index the file.
+  // Takes a reference to an flag that can be set to halt indexing prematurely.
+  // Returns the number of frames valid frames or -1 if halted.
+  size_t indexFile(std::atomic_bool& haltIndexing);
 
-  struct IdxEntry {
-    std::streampos filePos;
-  };
+ private:
+  IAMFFileReader(const std::filesystem::path& iamfFilePath,
+                 std::atomic_bool& abortConstruction);
+  IAMFFileReader(const std::filesystem::path& iamfFilePath,
+                 const Settings& settings, std::atomic_bool& abortConstruction);
 
   static constexpr size_t kBufferSize_ = 4096;
 
   bool prepareTemporalUnit(std::unique_ptr<Decoder>& decoder);
   size_t parseFrame(juce::AudioBuffer<float>* buffer = nullptr);
-  size_t countFrames(std::unique_ptr<Decoder>& decoder,
-                     std::unique_ptr<std::ifstream>& fileStream);
 
   const std::filesystem::path kFilePath_;
   Settings settings_;
   std::unique_ptr<std::ifstream> fileStream_;
-  std::unique_ptr<char[]> tpuBuffer_;
+  std::unique_ptr<char[]> tpuBuffer_, sampleBuffer_;
   std::unique_ptr<Decoder> iamfDecoder_;
   StreamData streamData_;
 };
