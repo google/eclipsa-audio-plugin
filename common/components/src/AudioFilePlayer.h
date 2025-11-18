@@ -71,7 +71,6 @@ class AudioFilePlayer : public juce::Component,
   FileExportRepository& fer_;
   juce::AudioDeviceManager deviceManager_;
   std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
-  std::mutex playbackEngineMutex_;
   std::thread playbackEngineLoaderThread_;
   std::atomic_bool isBeingDestroyed_ = false;
 };

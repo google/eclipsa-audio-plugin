@@ -232,7 +232,6 @@ void AudioFilePlayer::resized() {
 }
 
 void AudioFilePlayer::update() {
-  std::lock_guard<std::mutex> lock(playbackEngineMutex_);
   if (playbackEngine_) {
     const IAMFFileReader::StreamData kData = playbackEngine_->getStreamData();
     const float kDuration_s =
@@ -322,7 +321,6 @@ void AudioFilePlayer::createPlaybackEngine(
   const juce::String kDevice = fpbr_.get().getPlaybackDevice();
 
   if (playbackEngine_) {
-    std::lock_guard<std::mutex> lock(playbackEngineMutex_);
     playbackEngine_->stop();
   }
 
@@ -346,10 +344,7 @@ void AudioFilePlayer::onPlaybackEngineCreated(IAMFPlaybackDevice::Result res) {
     fpb.setPlayState(FilePlayback::kDisabled);
     fpbr_.update(fpb);
   } else {
-    {
-      std::lock_guard<std::mutex> lock(playbackEngineMutex_);
-      playbackEngine_ = std::move(res.device);
-    }
+    playbackEngine_ = std::move(res.device);
     // Update play state from buffering to ready
     auto fpb = fpbr_.get();
     fpb.setPlayState(FilePlayback::kStop);
