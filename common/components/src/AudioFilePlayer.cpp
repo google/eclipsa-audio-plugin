@@ -15,6 +15,7 @@
 #include "AudioFilePlayer.h"
 
 #include <filesystem>
+#include <memory>
 
 #include "components/icons/svg/SvgIconLookup.h"
 #include "components/src/EclipsaColours.h"
@@ -329,9 +330,11 @@ void AudioFilePlayer::createPlaybackEngine(
     IAMFPlaybackDevice::Result res = IAMFPlaybackDevice::create(
         iamfPath, kDevice, isBeingDestroyed_, fpbr_, deviceManager_);
 
-    juce::MessageManager::callAsync([this, res = std::move(res)]() mutable {
-      onPlaybackEngineCreated(std::move(res));
-    });
+    juce::MessageManager::callAsync(
+        [this, device = res.device.release(), error = res.error]() {
+          onPlaybackEngineCreated(IAMFPlaybackDevice::Result{
+              std::unique_ptr<IAMFPlaybackDevice>(device), error});
+        });
   });
 }
 
