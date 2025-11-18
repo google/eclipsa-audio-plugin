@@ -343,6 +343,8 @@ void AudioFilePlayer::onPlaybackEngineCreated(IAMFPlaybackDevice::Result res) {
     auto fpb = fpbr_.get();
     fpb.setPlayState(FilePlayback::kDisabled);
     fpbr_.update(fpb);
+  } else if (res.error == IAMFPlaybackDevice::kEarlyAbortRequested) {
+    // Do nothing - destruction was requested
   } else {
     playbackEngine_ = std::move(res.device);
     // Update play state from buffering to ready
