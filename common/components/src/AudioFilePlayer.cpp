@@ -328,10 +328,13 @@ void AudioFilePlayer::createPlaybackEngine(
     IAMFPlaybackDevice::Result res = IAMFPlaybackDevice::create(
         iamfPath, kDevice, isBeingDestroyed_, fpbr_, deviceManager_);
 
+    auto safeThis = juce::Component::SafePointer<AudioFilePlayer>(this);
     juce::MessageManager::callAsync(
-        [this, device = res.device.release(), error = res.error]() {
-          onPlaybackEngineCreated(IAMFPlaybackDevice::Result{
-              std::unique_ptr<IAMFPlaybackDevice>(device), error});
+        [safeThis, device = res.device.release(), error = res.error]() {
+          if (safeThis) {
+            safeThis->onPlaybackEngineCreated(IAMFPlaybackDevice::Result{
+                std::unique_ptr<IAMFPlaybackDevice>(device), error});
+          }
         });
   });
 }

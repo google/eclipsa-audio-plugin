@@ -20,7 +20,6 @@
 #include <atomic>
 #include <filesystem>
 #include <memory>
-#include <mutex>
 #include <thread>
 
 #include "components/icons/svg/SvgIconComponent.h"
