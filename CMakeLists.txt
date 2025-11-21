@@ -14,8 +14,13 @@
 
 cmake_minimum_required(VERSION 3.30.0)
 
-# Disable vcpkg automatic DLL copying (applocal) - it fails without dumpbin in PATH
-set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
+if(WIN32)
+    # Disable vcpkg automatic DLL copying (applocal) - it fails without dumpbin in PATH
+    set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
+
+    # Increase stack size to 16MB to prevent stack overflows
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+endif()
 
 # Disable vcpkg from finding Boost and Protobuf (provided by libiamf)
 set(CMAKE_DISABLE_FIND_PACKAGE_Boost ON CACHE BOOL "" FORCE)
