@@ -73,7 +73,6 @@ class EditPresentationScreen : public juce::Component,
   void updateMixPresentations();
   void updatePresentationTabs();
   std::function<void()> addMixPresentation;
-  void addMixPresentationCallback();
 
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override;

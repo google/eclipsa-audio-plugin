@@ -225,28 +225,31 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Always attempt to render binaural audio.
     // This renderer is never null, it is either a BinauralRdr, a BedToBedRdr or
     // a PassthroughRdr.
-    aeRdr->rendererBinaural->render(aeRdr->inputData,
-                                    aeRdr->outputDataBinaural);
+    if ( aeRdr->rendererBinaural != nullptr)
+    {
+      aeRdr->rendererBinaural->render(aeRdr->inputData,
+                                      aeRdr->outputDataBinaural);
 
-    // Mix rendered binaural audio to the internal binaural mix buffer.
-    for (int i = 0; i < Speakers::kBinaural.getNumChannels(); ++i) {
-      binauralMixBuffer_.addFrom(i, 0, aeRdr->outputDataBinaural, i, 0,
-                                 binauralMixBuffer_.getNumSamples());
-    }
+      // Mix rendered binaural audio to the internal binaural mix buffer.
+      for (int i = 0; i < Speakers::kBinaural.getNumChannels(); ++i) {
+        binauralMixBuffer_.addFrom(i, 0, aeRdr->outputDataBinaural, i, 0,
+                                  binauralMixBuffer_.getNumSamples());
+      }
 
-    // Render beds audio if playback is not binaural,
-    // This renderer could be null if the rdrMat does not exist, so ensure the
-    // renderer is not null.
-    if (currentPlaybackLayout_ != Speakers::kBinaural &&
-        aeRdr->renderer != nullptr) {
-      aeRdr->renderer->render(aeRdr->inputData, aeRdr->outputData);
-    }
+      // Render beds audio if playback is not binaural,
+      // This renderer could be null if the rdrMat does not exist, so ensure the
+      // renderer is not null.
+      if (currentPlaybackLayout_ != Speakers::kBinaural &&
+          aeRdr->renderer != nullptr) {
+        aeRdr->renderer->render(aeRdr->inputData, aeRdr->outputData);
+      }
 
-    // Mix the rendered audio to the internal mix buffer.
-    const int numSourceChannels = aeRdr->outputData.getNumChannels();
-    for (int i = 0; i < numSourceChannels; ++i) {
-      mixBuffer_.addFrom(i, 0, aeRdr->outputData, i, 0,
-                         mixBuffer_.getNumSamples());
+      // Mix the rendered audio to the internal mix buffer.
+      const int numSourceChannels = aeRdr->outputData.getNumChannels();
+      for (int i = 0; i < numSourceChannels; ++i) {
+        mixBuffer_.addFrom(i, 0, aeRdr->outputData, i, 0,
+                          mixBuffer_.getNumSamples());
+      }
     }
   }
 

@@ -51,7 +51,7 @@ EditPresentationScreen::EditPresentationScreen(
     MixPresentationRepository* mixPresentationRepository,
     ActiveMixRepository* activeMixRepo)
     : tagScreen_(mixPresentationRepository,
-                 mixPresentationRepository_->getFirst()->getId()),
+                 mixPresentationRepository->getFirst()->getId()),
       initialTabIndex_(0),
       presentationTabs_(std::make_unique<EditPresentationTabbedComponent>(
           mixPresentationRepository, &tagScreen_)),
@@ -59,8 +59,6 @@ EditPresentationScreen::EditPresentationScreen(
       mixPresentationRepository_(mixPresentationRepository),
       audioElementRepository_(ae_repository),
       activeMixRepository_(activeMixRepo),
-
-      addMixPresentation([this]() { addMixPresentationCallback(); }),
       addMixPresentationButton_(IconStore::getInstance().getPlusIcon()) {
   setLookAndFeel(&lookAndFeel_);
   setWantsKeyboardFocus(true);
@@ -71,13 +69,6 @@ EditPresentationScreen::EditPresentationScreen(
 
   // Update mix presentation information
   updateMixPresentations();
-
-  if (numMixes_ < 1) {
-    addMixPresentationCallback();
-    updateMixPresentations();
-    // ensure the look and feel is active
-    addMixPresentationButton_.resetButton();
-  }
 
   updatePresentationTabs();
 
@@ -224,31 +215,6 @@ void EditPresentationScreen::updatePresentationTabs() {
     initialTabIndex_ = presentationTabs_->getNumTabs() - 1;
   }
   presentationTabs_->setCurrentTabIndex(initialTabIndex_);
-}
-
-void EditPresentationScreen::addMixPresentationCallback() {
-  juce::String name;
-  // if there are no mix presentations, add the default one
-  if (numMixes_ < 1) {
-    name = "My Mix Presentation";
-  } else {
-    name = "My Mix Presentation" + juce::String(numMixes_ + 1);
-  }
-  // Log the addition of a new mix presentation
-  LOG_ANALYTICS(RendererProcessor::instanceId_,
-                "Adding new mix presentation: " + name.toStdString());
-  // Add a new mix presentation
-  MixPresentation presentation(juce::Uuid(), name, 1,
-                               LanguageData::MixLanguages::Undetermined, {});
-  mixPresentationRepository_->add(presentation);
-
-  // If no active mix presentation, set this one as active.
-  if (activeMixRepository_->get().getActiveMixId() == juce::Uuid::null()) {
-    activeMixRepository_->update(presentation.getId());
-    LOG_ANALYTICS(
-        RendererProcessor::instanceId_,
-        "Set first mix presentation as active: " + name.toStdString());
-  }
 }
 
 void EditPresentationScreen::valueTreeChildAdded(

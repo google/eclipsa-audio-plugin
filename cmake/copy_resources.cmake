@@ -62,7 +62,7 @@ function(copy_resources target plugin_path)
         endif()
 
         # Single POST_BUILD command per target
-        add_custom_command(TARGET ${target} POST_BUILD
+        add_custom_command(TARGET ${target} PRE_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${PLUGIN_BINARY_DIR}"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${PLUGIN_BINARY_DIR}/"
@@ -70,6 +70,18 @@ function(copy_resources target plugin_path)
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${PLUGIN_BINARY_DIR}/"
                 COMMENT "Copied DLLs to ${PLUGIN_BINARY_DIR}"
+        )
+
+        # Copy DLLs to Debug folder in build directory
+        set(DEBUG_DIR "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+        add_custom_command(TARGET ${target} PRE_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEBUG_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${DEBUG_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${DEBUG_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${DEBUG_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${DEBUG_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${DEBUG_DIR}/"
+                COMMENT "Copied DLLs to ${DEBUG_DIR}"
         )
     endif()
 endfunction()
