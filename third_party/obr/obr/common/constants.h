@@ -25,7 +25,11 @@ static const int kMinSupportedAmbisonicOrder = 1;
 
 // Maximum Ambisonic order currently supported by obr (limited by the
 // available SH-HRIRs provided via binaural_filters.h).
-static const int kMaxSupportedAmbisonicOrder = 7;
+static const int kMaxSupportedAmbisonicOrder = 4;
+
+// Default Ambisonic order for binaural rendering of channel-based and
+// object-based audio.
+static const int kDefaultBinauralFiltersAmbisonicOrder = 3;
 
 // Maximum number of input channels supported by obr.
 static const size_t kMaxSupportedNumInputChannels = 128;

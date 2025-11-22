@@ -6,17 +6,17 @@
  * Patent License 1.0, which you can find in the PATENTS file.
  */
 
-#ifndef BINAURAL_FILTERS_6_OA_L_H_
-#define BINAURAL_FILTERS_6_OA_L_H_
+#ifndef BINAURAL_FILTERS_4_OA_AMBIENT_R_H_
+#define BINAURAL_FILTERS_4_OA_AMBIENT_R_H_
 
-#include <vector>
+#include <span>
 
 namespace obr {
 namespace filter_files {
 
-std::vector<unsigned char> BinauralFilters6OAL();
+std::span<const unsigned char> BinauralFilters4OAAmbientR();
 
 }  // namespace filter_files
 }  // namespace obr
 
-#endif  // BINAURAL_FILTERS_6_OA_L_H_
+#endif  // BINAURAL_FILTERS_4_OA_AMBIENT_R_H_

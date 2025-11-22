@@ -16,6 +16,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "obr/cli/obr_cli_lib.h"
+#include "obr/renderer/audio_element_config.h"
 #include "obr/renderer/audio_element_type.h"
 
 namespace obr {
@@ -28,12 +29,15 @@ namespace obr {
  * \param input_filename Full path to the input WAV file.
  * \param output_filename FUll path to the output WAV file.
  * \param buffer_size Processing buffer size.
+ * \param filter_profile Binaural filter profile (Direct / Ambient /
+ * Reverberant).
  * \return `absl::OkStatus()` on success. A specific status on failure.
  */
 absl::Status ObrCliMain(AudioElementType input_type,
                         const std::string& oba_metadata_filename,
                         const std::string& input_filename,
-                        const std::string& output_filename, size_t buffer_size);
+                        const std::string& output_filename, size_t buffer_size,
+                        BinauralFilterProfile filter_profile);
 
 }  // namespace obr
 
