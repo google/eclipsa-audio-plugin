@@ -21,11 +21,21 @@
 
 namespace obr {
 
-// TODO(b/400894670): Avoid using "AudioElement" in the class/function names.
+/*!\brief Enumeration for selecting the binaural filter profile used to render
+ * an Audio Element.
+ */
+enum class BinauralFilterProfile {
+  kDirect = 0,
+  kAmbient = 1,
+  kReverberant = 2,
+};
+
 /*!\brief Configuration of an audio element. */
 class AudioElementConfig {
  public:
-  explicit AudioElementConfig(AudioElementType type);
+  explicit AudioElementConfig(
+      AudioElementType type,
+      BinauralFilterProfile distance_type = BinauralFilterProfile::kAmbient);
 
   ~AudioElementConfig() = default;
 
@@ -84,6 +94,15 @@ class AudioElementConfig {
    */
   int GetBinauralFiltersAmbisonicOrder() const;
 
+  /*!\brief Returns the binaural filter profile to be used to render this Audio
+   * Element.
+   *
+   * \return Binaural filter profile.
+   */
+  BinauralFilterProfile GetBinauralFilterProfile() const {
+    return binaural_filter_profile_;
+  }
+
  private:
   AudioElementType type_;
 
@@ -94,6 +113,7 @@ class AudioElementConfig {
   std::vector<AudioObjectInputChannel> object_channels_;
 
   int binaural_filters_ambisonic_order_;
+  BinauralFilterProfile binaural_filter_profile_;
 };
 
 }  // namespace obr
