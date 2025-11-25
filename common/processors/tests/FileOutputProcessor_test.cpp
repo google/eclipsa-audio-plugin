@@ -414,3 +414,66 @@ TEST_F(FileOutputTests, validate_file_checksum) {
 
   std::filesystem::remove(iamfOutPath);
 }
+
+// Test with an invalid IAMF path
+TEST_F(FileOutputTests, iamf_invalid_path) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidIamfPath = "/invalid_path/test.iamf";
+
+  FileExport config = fileExportRepository.get();
+  config.setExportFile(kInvalidIamfPath.string());
+  fileExportRepository.update(config);
+
+  EXPECT_FALSE(std::filesystem::exists(kInvalidIamfPath));
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_FALSE(std::filesystem::exists(kInvalidIamfPath));
+}
+
+// Test with an invalid video source path
+TEST_F(FileOutputTests, mux_iamf_invalid_vin_path) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidVinPath = "/invalid_path/source.mp4";
+
+  FileExport config = fileExportRepository.get();
+  config.setVideoSource(kInvalidVinPath.string());
+  config.setExportVideo(true);
+  fileExportRepository.update(config);
+
+  EXPECT_FALSE(std::filesystem::exists(kInvalidVinPath));
+  EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+}
+
+// Test with an invalid video output path
+TEST_F(FileOutputTests, mux_iamf_invalid_vout_path) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidVoutPath = "/invalid_path/muxed.mp4";
+
+  FileExport config = fileExportRepository.get();
+  config.setVideoExportFolder(kInvalidVoutPath.string());
+  config.setExportVideo(true);
+  fileExportRepository.update(config);
+
+  EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
+  EXPECT_FALSE(std::filesystem::exists(kInvalidVoutPath));
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+}

@@ -14,6 +14,8 @@
 
 #include "FileExport.h"
 
+#include <filesystem>
+
 FileExport::FileExport()
     : RepositoryItemBase({}),
       startTime_(0),
@@ -101,4 +103,34 @@ juce::ValueTree FileExport::toValueTree() const {
            {kLPCMSampleSize, lpcm_sample_size_},
            {kSampleTally, static_cast<juce::int64>(sample_tally_)},
            {kExportCompleted, exportCompleted_}}};
+}
+
+bool FileExport::validateExportDirectory() const {
+  if (exportFile_.isEmpty()) {
+    return false;
+  }
+  std::filesystem::path filePath(exportFile_.toStdString());
+  std::filesystem::path directory = filePath.parent_path();
+  return std::filesystem::exists(directory);
+}
+
+juce::String FileExport::expandTildePath(const juce::String& path) {
+  if (path.startsWith("~")) {
+    juce::File homeDir =
+        juce::File::getSpecialLocation(juce::File::userHomeDirectory);
+    return homeDir.getFullPathName() + path.substring(1);
+  }
+  return path;
+}
+
+bool FileExport::validateFilePath(const std::filesystem::path& path,
+                                  const bool sourceFile) {
+  if (path.empty()) {
+    return false;
+  }
+  if (sourceFile) {
+    return std::filesystem::exists(path);
+  } else {
+    return std::filesystem::exists(path.parent_path());
+  }
 }
