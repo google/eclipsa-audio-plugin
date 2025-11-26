@@ -281,6 +281,12 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Set the initial text from repository
   exportPath_.setText(config.getExportFile());
 
+  // Validate the initial path and show error if invalid
+  if (!config.getExportFile().isEmpty()) {
+    validateAndShowPathError(config.getExportFile(), false,
+                             " is not a valid path.", exportPathErrorLabel_);
+  }
+
   // Configure repository update on enter/tab/focus lost
   exportPath_.onValueCommitted([this] {
     auto [expanded, valid] = validateAndShowPathError(
@@ -318,6 +324,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
   // Set the initial text from repository
   exportVideoFolder_.setText(config.getVideoExportFolder());
+
+  // Validate the initial path and show error if invalid
+  if (!config.getVideoExportFolder().isEmpty()) {
+    validateAndShowPathError(config.getVideoExportFolder(), false,
+                             " is not a valid path.",
+                             exportVideoFolderErrorLabel_);
+  }
 
   // Configure repository update on enter/tab/focus lost
   exportVideoFolder_.onValueCommitted([this] {
@@ -361,6 +374,12 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
         });
   };
   videoSource_.setText(config.getVideoSource());
+
+  // Validate the initial path and show error if invalid
+  if (!config.getVideoSource().isEmpty()) {
+    validateAndShowPathError(config.getVideoSource(), true, " does not exist.",
+                             videoSourceErrorLabel_);
+  }
 
   auto validateVideoSource = [this] {
     auto [expanded, valid] =
