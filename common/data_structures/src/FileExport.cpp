@@ -105,15 +105,6 @@ juce::ValueTree FileExport::toValueTree() const {
            {kExportCompleted, exportCompleted_}}};
 }
 
-bool FileExport::validateExportDirectory() const {
-  if (exportFile_.isEmpty()) {
-    return false;
-  }
-  std::filesystem::path filePath(exportFile_.toStdString());
-  std::filesystem::path directory = filePath.parent_path();
-  return std::filesystem::exists(directory);
-}
-
 juce::String FileExport::expandTildePath(const juce::String& path) {
   if (path.startsWith("~")) {
     juce::File homeDir =

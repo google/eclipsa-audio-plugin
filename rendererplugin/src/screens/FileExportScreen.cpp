@@ -122,6 +122,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportPathErrorLabel_.setText("",
                                 juce::NotificationType::dontSendNotification);
   exportPathErrorLabel_.setVisible(false);
+  addAndMakeVisible(exportPathErrorLabel_);
 
   // Configure export video folder error label
   exportVideoFolderErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
@@ -132,6 +133,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportVideoFolderErrorLabel_.setText(
       "", juce::NotificationType::dontSendNotification);
   exportVideoFolderErrorLabel_.setVisible(false);
+  addAndMakeVisible(exportVideoFolderErrorLabel_);
 
   // Configure video source error label (file must exist)
   videoSourceErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
@@ -141,6 +143,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   videoSourceErrorLabel_.setText("",
                                  juce::NotificationType::dontSendNotification);
   videoSourceErrorLabel_.setVisible(false);
+  addAndMakeVisible(videoSourceErrorLabel_);
 
   // Set the error labels
   startTimerErrorLabel_.setText("",
@@ -666,7 +669,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
   // Draw the export path error label just below exportPath_
   rightSideBounds.removeFromTop(4);
   auto errorRow = rightSideBounds.removeFromTop(20);
-  addAndMakeVisible(exportPathErrorLabel_);
   exportPathErrorLabel_.setBounds(errorRow.removeFromLeft(componentWidth));
 
   row = rightSideBounds.removeFromTop(rowHeight - 20);
@@ -694,7 +696,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
     // Draw video source error label below videoSource_
     rightSideBounds.removeFromTop(4);
     auto videoSourceErrRow = rightSideBounds.removeFromTop(20);
-    addAndMakeVisible(videoSourceErrorLabel_);
     videoSourceErrorLabel_.setBounds(
         videoSourceErrRow.removeFromLeft(componentWidth));
 
@@ -708,7 +709,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
     // Draw the export video folder error label just below exportVideoFolder_
     rightSideBounds.removeFromTop(4);
     auto videoErrorRow = rightSideBounds.removeFromTop(20);
-    addAndMakeVisible(exportVideoFolderErrorLabel_);
     exportVideoFolderErrorLabel_.setBounds(
         videoErrorRow.removeFromLeft(componentWidth));
   }

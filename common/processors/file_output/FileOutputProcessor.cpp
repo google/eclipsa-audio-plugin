@@ -144,6 +144,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
     // Open the file for writing
     bool openSuccess = iamfFileWriter_->open(kIamfPath.toStdString());
     if (!openSuccess) {
+      iamfFileWriter_ = nullptr;
       LOG_ERROR(0, "IAMF File Writer: Failed to open file for writing: " +
                        kIamfPath.toStdString());
     }
