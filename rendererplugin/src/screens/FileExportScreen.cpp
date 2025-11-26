@@ -122,6 +122,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportPathErrorLabel_.setText("",
                                 juce::NotificationType::dontSendNotification);
   exportPathErrorLabel_.setVisible(false);
+  exportPathErrorLabel_.setMinimumHorizontalScale(1.0f);
   addAndMakeVisible(exportPathErrorLabel_);
 
   // Configure export video folder error label
@@ -133,6 +134,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   exportVideoFolderErrorLabel_.setText(
       "", juce::NotificationType::dontSendNotification);
   exportVideoFolderErrorLabel_.setVisible(false);
+  exportVideoFolderErrorLabel_.setMinimumHorizontalScale(1.0f);
   addAndMakeVisible(exportVideoFolderErrorLabel_);
 
   // Configure video source error label (file must exist)
@@ -143,6 +145,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   videoSourceErrorLabel_.setText("",
                                  juce::NotificationType::dontSendNotification);
   videoSourceErrorLabel_.setVisible(false);
+  videoSourceErrorLabel_.setMinimumHorizontalScale(1.0f);
   addAndMakeVisible(videoSourceErrorLabel_);
 
   // Set the error labels
@@ -284,14 +287,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Validate the initial path and show error if invalid
   if (!config.getExportFile().isEmpty()) {
     validateAndShowPathError(config.getExportFile(), false,
-                             " is not a valid path.", exportPathErrorLabel_);
+                             exportPathErrorLabel_);
   }
 
   // Configure repository update on enter/tab/focus lost
   exportPath_.onValueCommitted([this] {
     auto [expanded, valid] = validateAndShowPathError(
-        exportPath_.getText(), false, " is not a valid path.",
-        exportPathErrorLabel_);
+        exportPath_.getText(), false, exportPathErrorLabel_);
 
     FileExport config = repository_->get();
     config.setExportFile(expanded);
@@ -328,15 +330,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Validate the initial path and show error if invalid
   if (!config.getVideoExportFolder().isEmpty()) {
     validateAndShowPathError(config.getVideoExportFolder(), false,
-                             " is not a valid path.",
                              exportVideoFolderErrorLabel_);
   }
 
   // Configure repository update on enter/tab/focus lost
   exportVideoFolder_.onValueCommitted([this] {
     auto [expanded, valid] = validateAndShowPathError(
-        exportVideoFolder_.getText(), false, " is not a valid path.",
-        exportVideoFolderErrorLabel_);
+        exportVideoFolder_.getText(), false, exportVideoFolderErrorLabel_);
 
     FileExport config = repository_->get();
     config.setVideoExportFolder(expanded);
@@ -377,14 +377,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
   // Validate the initial path and show error if invalid
   if (!config.getVideoSource().isEmpty()) {
-    validateAndShowPathError(config.getVideoSource(), true, " does not exist.",
+    validateAndShowPathError(config.getVideoSource(), true,
                              videoSourceErrorLabel_);
   }
 
   auto validateVideoSource = [this] {
-    auto [expanded, valid] =
-        validateAndShowPathError(videoSource_.getText(), true,
-                                 " does not exist.", videoSourceErrorLabel_);
+    auto [expanded, valid] = validateAndShowPathError(
+        videoSource_.getText(), true, videoSourceErrorLabel_);
 
     FileExport config = repository_->get();
     config.setVideoSource(expanded);
@@ -1058,14 +1057,23 @@ bool FileExportScreen::validFileExportConfig(const FileExport& config) {
 
 std::pair<juce::String, bool> FileExportScreen::validateAndShowPathError(
     const juce::String& inputPath, const bool mustExist,
-    const juce::String& invalidSuffix, juce::Label& errorLabel) {
+    juce::Label& errorLabel) {
   const juce::String kPath = FileExport::expandTildePath(inputPath);
   const bool kValid = FileExport::validateFilePath(
       std::filesystem::path(kPath.toStdString()), mustExist);
 
-  errorLabel.setVisible(!kValid);
-  errorLabel.setText(kValid ? "" : "\"" + kPath + "\"" + invalidSuffix,
-                     juce::NotificationType::dontSendNotification);
+  if (kValid) {
+    errorLabel.setVisible(false);
+    errorLabel.setText("", juce::NotificationType::dontSendNotification);
+  } else {
+    // Use appropriate prefix based on error type
+    juce::String prefix = mustExist ? "Missing Path: " : "Invalid Path: ";
+    juce::String fullMessage = prefix + kPath;
+
+    errorLabel.setVisible(true);
+    errorLabel.setText(fullMessage,
+                       juce::NotificationType::dontSendNotification);
+  }
 
   return {kPath, kValid};
 }

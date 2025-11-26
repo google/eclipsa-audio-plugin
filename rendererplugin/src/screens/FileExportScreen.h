@@ -74,7 +74,7 @@ class FileExportScreen : public juce::Component,
   // Helper to expand, validate, and update an error label for paths.
   std::pair<juce::String, bool> validateAndShowPathError(
       const juce::String& inputPath, const bool mustExist,
-      const juce::String& invalidSuffix, juce::Label& errorLabel);
+      juce::Label& errorLabel);
 
   MainEditor& editor_;
   FileExportRepository* repository_;
