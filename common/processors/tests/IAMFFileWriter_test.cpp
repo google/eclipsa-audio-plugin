@@ -29,8 +29,10 @@ TEST_F(IAMFFileWriterTest, open_close) {
   IAMFFileWriter writer(fileExportRepository, audioElementRepository,
                         mixRepository, mixPresentationLoudnessRepository,
                         kSamplesPerFrame, kSampleRate);
-  EXPECT_TRUE(writer.open(iamfOutPath));
-  EXPECT_TRUE(writer.close());
+  bool openResult = writer.open(iamfOutPath.string());
+  EXPECT_TRUE(openResult);
+  bool closeResult = writer.close();
+  EXPECT_TRUE(closeResult);
 }
 
 // Write a simple IAMF file. Decode the file to WAV and compare with source
@@ -43,7 +45,8 @@ TEST_F(IAMFFileWriterTest, write_iamf) {
   IAMFFileWriter writer(fileExportRepository, audioElementRepository,
                         mixRepository, mixPresentationLoudnessRepository,
                         kSamplesPerFrame, kSampleRate);
-  EXPECT_TRUE(writer.open(iamfOutPath));
+  bool openResult = writer.open(iamfOutPath.string());
+  EXPECT_TRUE(openResult);
 
   // Generate and write 375 frames of sine tone audio
   juce::AudioBuffer<float> buffer(2, kSamplesPerFrame);
@@ -58,8 +61,10 @@ TEST_F(IAMFFileWriterTest, write_iamf) {
     }
 
     // Write the frame
-    EXPECT_TRUE(writer.writeFrame(buffer));
+    bool writeResult = writer.writeFrame(buffer);
+    EXPECT_TRUE(writeResult);
   }
 
-  EXPECT_TRUE(writer.close());
+  bool closeResult = writer.close();
+  EXPECT_TRUE(closeResult);
 }

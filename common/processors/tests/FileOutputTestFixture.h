@@ -75,6 +75,7 @@ class FileOutputTests : public ::testing::Test {
     fileExportRepository.update(FileExport);
 
     bounceAudio(fio_proc, audioElementRepository);
+    return true;
   }
 
   void createIAMFFile2AE2MP(const std::filesystem::path& path) {
@@ -207,9 +208,9 @@ class FileOutputTests : public ::testing::Test {
     ex.setExportAudio(true);
     ex.setAudioFileFormat(AudioFileFormat::IAMF);
     ex.setSampleRate(kSampleRate);
-    ex.setVideoSource({std::filesystem::current_path().parent_path() /
+    ex.setVideoSource((std::filesystem::current_path().parent_path() /
                        "common/processors/tests/test_resources" /
-                       "SilentSampleVideo.mp4"});
+                       "SilentSampleVideo.mp4").string());
     iamfOutPath = std::filesystem::current_path() / "test.iamf";
     videoOutPath = std::filesystem::current_path() / "test.mp4";
     ex.setVideoExportFolder(videoOutPath.string());

@@ -231,6 +231,7 @@ TEST_F(BackgroundBufferTest, write_read_validate) {
   EXPECT_GT(totalFramesRead, 0);
 
   // Clean up test file
+  decoder = nullptr; // Release the file handle before deletion
   std::filesystem::remove(kTestFilePath);
 }
 
@@ -241,7 +242,7 @@ TEST_F(BackgroundBufferTest, vary_read_write) {
       std::filesystem::current_path() / "buffer_test.iamf";
   createIAMFFile2AE2MP(kTestFilePath);
 
-  // Now read the file back using IAMFBuffer
+  //Now read the file back using IAMFBuffer
   auto decoder = IAMFFileReader::createIamfReader(kTestFilePath);
   ASSERT_NE(decoder, nullptr);
 
@@ -289,6 +290,7 @@ TEST_F(BackgroundBufferTest, vary_read_write) {
   EXPECT_EQ(totalSamplesRead, kTotalSamps);
 
   // Clean up test file
+  decoder = nullptr; // Release the file handle before deletion
   std::filesystem::remove(kTestFilePath);
 }
 
@@ -349,6 +351,7 @@ TEST_F(BackgroundBufferTest, vary_read_write_long) {
   EXPECT_EQ(totalSamplesRead, kTotalSamps);
 
   // Clean up test file
+  decoder = nullptr; // Release the file handle before deletion
   std::filesystem::remove(kTestFilePath);
 }
 
@@ -412,6 +415,7 @@ TEST_F(BackgroundBufferTest, vary_read_write_long_vary_pad) {
   }
 
   // Clean up test file
+  decoder = nullptr; // Release the file handle before deletion
   std::filesystem::remove(kTestFilePath);
 }
 
@@ -480,5 +484,6 @@ TEST_F(BackgroundBufferTest, seek_and_validate) {
   }
 
   // Clean up test file
+  decoder = nullptr; // Release the file handle before deletion
   std::filesystem::remove(kTestFilePath);
 }

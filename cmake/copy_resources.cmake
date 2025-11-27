@@ -48,7 +48,7 @@ function(copy_resources target plugin_path)
         set(IAMF_TOOLS_DLL  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/${CMAKE_BUILD_TYPE}/iamf_tools.dll")
         set(OPENSVC_DECODER "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/${CMAKE_BUILD_TYPE}/OpenSVCDecoder.dll")
         string(TOLOWER "${CMAKE_CFG_INTDIR}" ZMQ_CFG)
-        set(ZMQ_DLL "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${ZMQ_CFG}/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
+        set(ZMQ_DLL         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${ZMQ_CFG}/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
         
         if("${target}" MATCHES ".*_VST3$")
             set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x86_64-win")
@@ -72,16 +72,17 @@ function(copy_resources target plugin_path)
                 COMMENT "Copied DLLs to ${PLUGIN_BINARY_DIR}"
         )
 
-        # Copy DLLs to Debug folder in build directory
-        set(DEBUG_DIR "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+        # Copy DLLs to Debug folder in build directory for use by the JUCE VST3 tool
+        # The tool runs from this directory and runs the plugins, so the DLLs need to be here as well
+        set(VST3_SIGNING_DIR "${CMAKE_CURRENT_BINARY_DIR}/${BUILD_LIB_DIR}")
         add_custom_command(TARGET ${target} PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEBUG_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${DEBUG_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${DEBUG_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${DEBUG_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${DEBUG_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${DEBUG_DIR}/"
-                COMMENT "Copied DLLs to ${DEBUG_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${VST3_SIGNING_DIR}/"
+                COMMENT "Copied DLLs to ${VST3_SIGNING_DIR}"
         )
     endif()
 endfunction()

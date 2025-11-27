@@ -130,6 +130,7 @@ TEST(test_h2b_rdr_extl, rdr_ext) {
   for (const auto extLayout : kExpandedLayouts) {
     populateInput(srcBuff);
     outBuff = Speakers::FBuffer(extLayout.getNumChannels(), kNumSamps);
+    outBuff.clear();
 
     auto rdr = createRenderer(Speakers::kHOA1, extLayout);
     rdr->render(srcBuff, outBuff);
