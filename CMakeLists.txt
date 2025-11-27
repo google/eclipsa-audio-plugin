@@ -39,12 +39,7 @@ cmake_policy(SET CMP0169 OLD)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Configure release or debug builds
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(BUILD_LIB_DIR "Debug")
-else()
-    set(BUILD_LIB_DIR "Release")
-endif()
-
+set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
 
 # Windows vcpkg setup
 if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
