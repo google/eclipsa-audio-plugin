@@ -7,7 +7,40 @@
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 #include "processors/tests/FileOutputTestFixture.h"
 
-class BackgroundBufferTest : public FileOutputTests {};
+class BackgroundBufferTest : public FileOutputTests {
+  
+  void TearDown() override {
+    decoder_.reset(); // Releaes the file before deleting
+    if (std::filesystem::exists(kTestFilePath_)) {
+      std::filesystem::remove(kTestFilePath_);
+    }
+  }
+
+  protected:
+    std::unique_ptr<IAMFFileReader> decoder_;
+    std::filesystem::path kTestFilePath_;
+
+};
+
+class BackgroundBufferStereoTest : public BackgroundBufferTest {
+ protected:
+  void SetUp() override {
+    kTestFilePath_ = std::filesystem::current_path() / "buffer_test.iamf";
+    createIAMFFile30SecStereo(kTestFilePath_);
+    decoder_ = IAMFFileReader::createIamfReader(kTestFilePath_);
+    ASSERT_NE(decoder_, nullptr);
+  }
+};
+
+class BackgroundBuffer2AETest : public BackgroundBufferTest {
+ protected:
+  void SetUp() override {
+    kTestFilePath_ = std::filesystem::current_path() / "buffer_test.iamf";
+    createIAMFFile2AE2MP(kTestFilePath_);
+    decoder_ = IAMFFileReader::createIamfReader(kTestFilePath_);
+    ASSERT_NE(decoder_, nullptr);
+  }
+};
 
 static void waitForData() {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -177,20 +210,11 @@ TEST(BackgroundBuffer, whole_file) {
 
 // 8. Using the output test fixture, write an IAMF file. Read the IAMF file back
 // from the buffer and validate each sample is as expected.
-TEST_F(BackgroundBufferTest, write_read_validate) {
-  // Create a stereo IAMF file with a 440Hz sine wave using the fixture method
-  const std::filesystem::path kTestFilePath =
-      std::filesystem::current_path() / "buffer_test.iamf";
-  createIAMFFile2AE2MP(kTestFilePath);
-
-  // Now read the file back using IAMFBuffer
-  auto decoder = IAMFFileReader::createIamfReader(kTestFilePath);
-  ASSERT_NE(decoder, nullptr);
-
+TEST_F(BackgroundBuffer2AETest, write_read_validate) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  BackgroundBuffer buffer(kPadSecs, *decoder_);
 
-  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -229,27 +253,15 @@ TEST_F(BackgroundBufferTest, write_read_validate) {
 
   // Verify we read the expected number of frames
   EXPECT_GT(totalFramesRead, 0);
-
-  // Clean up test file
-  decoder = nullptr; // Release the file handle before deletion
-  std::filesystem::remove(kTestFilePath);
 }
 
 // 9. Try various reads and writes
-TEST_F(BackgroundBufferTest, vary_read_write) {
-  // Create a stereo IAMF file with a 440Hz sine wave using the fixture method
-  const std::filesystem::path kTestFilePath =
-      std::filesystem::current_path() / "buffer_test.iamf";
-  createIAMFFile2AE2MP(kTestFilePath);
-
-  //Now read the file back using IAMFBuffer
-  auto decoder = IAMFFileReader::createIamfReader(kTestFilePath);
-  ASSERT_NE(decoder, nullptr);
+TEST_F(BackgroundBuffer2AETest, vary_read_write) {
 
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  BackgroundBuffer buffer(kPadSecs, *decoder_);
 
-  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -288,27 +300,14 @@ TEST_F(BackgroundBufferTest, vary_read_write) {
 
   // Verify we read the expected number of frames
   EXPECT_EQ(totalSamplesRead, kTotalSamps);
-
-  // Clean up test file
-  decoder = nullptr; // Release the file handle before deletion
-  std::filesystem::remove(kTestFilePath);
 }
 
 // 10. Try various reads and writes on a longer file
-TEST_F(BackgroundBufferTest, vary_read_write_long) {
-  // Create a stereo IAMF file with a 440Hz sine wave using the fixture method
-  const std::filesystem::path kTestFilePath =
-      std::filesystem::current_path() / "buffer_test.iamf";
-  createIAMFFile30SecStereo(kTestFilePath);
-
-  // Now read the file back using IAMFBuffer
-  auto decoder = IAMFFileReader::createIamfReader(kTestFilePath);
-  ASSERT_NE(decoder, nullptr);
-
+TEST_F(BackgroundBufferStereoTest, vary_read_write_long) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  BackgroundBuffer buffer(kPadSecs, *decoder_);
 
-  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -349,28 +348,15 @@ TEST_F(BackgroundBufferTest, vary_read_write_long) {
 
   // Verify we read the expected number of frames
   EXPECT_EQ(totalSamplesRead, kTotalSamps);
-
-  // Clean up test file
-  decoder = nullptr; // Release the file handle before deletion
-  std::filesystem::remove(kTestFilePath);
 }
 
 // 11. Try various reads and writes on a longer file, vary buffer padding size
-TEST_F(BackgroundBufferTest, vary_read_write_long_vary_pad) {
-  // Create a stereo IAMF file with a 440Hz sine wave using the fixture method
-  const std::filesystem::path kTestFilePath =
-      std::filesystem::current_path() / "buffer_test.iamf";
-  createIAMFFile30SecStereo(kTestFilePath);
-
-  // Now read the file back using IAMFBuffer
-  auto decoder = IAMFFileReader::createIamfReader(kTestFilePath);
-  ASSERT_NE(decoder, nullptr);
-
+TEST_F(BackgroundBufferStereoTest, vary_read_write_long_vary_pad) {
   for (const unsigned kPadSecs : {2, 4, 8, 16, 32, 64}) {
     std::cout << "Testing with pad seconds: " << kPadSecs << std::endl;
-    BackgroundBuffer buffer(kPadSecs, *decoder);
+    BackgroundBuffer buffer(kPadSecs, *decoder_);
 
-    const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+    const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
     EXPECT_TRUE(kSData.valid);
     EXPECT_EQ(kSData.sampleRate, kSampleRate);
     EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -413,31 +399,18 @@ TEST_F(BackgroundBufferTest, vary_read_write_long_vary_pad) {
     // Verify we read the expected number of frames
     EXPECT_EQ(totalSamplesRead, kTotalSamps);
   }
-
-  // Clean up test file
-  decoder = nullptr; // Release the file handle before deletion
-  std::filesystem::remove(kTestFilePath);
 }
 
 // 12. Using the output test fixture, write an IAMF file. Read the IAMF file
 // back from the buffer and validate each sample is as expected.
-TEST_F(BackgroundBufferTest, seek_and_validate) {
-  // Create a stereo IAMF file with a 440Hz sine wave using the fixture method
-  const std::filesystem::path kTestFilePath =
-      std::filesystem::current_path() / "buffer_test.iamf";
-  createIAMFFile30SecStereo(kTestFilePath);
-
-  // Now read the file back using IAMFBuffer
-  auto decoder = IAMFFileReader::createIamfReader(kTestFilePath);
-  ASSERT_NE(decoder, nullptr);
-
+TEST_F(BackgroundBufferStereoTest, seek_and_validate) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  BackgroundBuffer buffer(kPadSecs, *decoder_);
 
   waitForReady(buffer);
   ASSERT_TRUE(buffer.availableSamples() > 0);
 
-  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -482,8 +455,4 @@ TEST_F(BackgroundBufferTest, seek_and_validate) {
           << ", sample " << i;
     }
   }
-
-  // Clean up test file
-  decoder = nullptr; // Release the file handle before deletion
-  std::filesystem::remove(kTestFilePath);
 }
