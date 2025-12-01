@@ -21,16 +21,24 @@
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
+IAMFPlaybackDevice::Result IAMFPlaybackDevice::create(
     const std::filesystem::path iamfPath, const juce::String pbDeviceName,
+    std::atomic_bool& abortConstruction,
     FilePlaybackRepository& filePlaybackRepo,
     juce::AudioDeviceManager& deviceManager) {
   // Attempt to create the IAMFFileReader first. Being unable to create the
   // reader for any reason invalidates the playback device.
-  auto reader = IAMFFileReader::createIamfReader(iamfPath);
+  // While attempting to index the file during construction, we acknowledge that
+  // due to the potential size of IAMF files we may need to abort before
+  // indexing can complete
+  auto reader = IAMFFileReader::createIamfReader(
+      iamfPath, IAMFFileReader::kDefaultReaderSettings, abortConstruction);
+  if (!reader && abortConstruction) {
+    return {nullptr, Error::kEarlyAbortRequested};
+  }
   if (!reader) {
     LOG_ERROR(0, "IAMFPlaybackDevice: Failed to create IAMF reader");
-    return nullptr;
+    return {nullptr, Error::kInvalidIAMFFile};
   }
 
   auto device = std::unique_ptr<IAMFPlaybackDevice>(
@@ -41,7 +49,7 @@ std::unique_ptr<IAMFPlaybackDevice> IAMFPlaybackDevice::create(
   FilePlayback fpb = filePlaybackRepo.get();
   device->configureDecodeLayout(fpb.getReqdDecodeLayout());
   device->configurePlaybackDevice(fpb.getPlaybackDevice());
-  return device;
+  return {std::move(device), Error::kNoError};
 }
 
 IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
@@ -55,8 +63,10 @@ IAMFPlaybackDevice::IAMFPlaybackDevice(const std::filesystem::path iamfPath,
       decoderSource_(std::move(reader)) {
   deviceManager_.initialiseWithDefaultDevices(0, 2);
 
-  decoderSource_.setOnFinishedCallback(
-      [this] { setRepoState(FilePlayback::kStop); });
+  decoderSource_.setOnFinishedCallback([this] {
+    juce::MessageManager::callAsync(
+        [this]() { setRepoState(FilePlayback::kStop); });
+  });
 
   fpbr_.registerListener(this);
 }

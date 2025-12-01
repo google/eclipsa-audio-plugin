@@ -127,7 +127,7 @@ TEST(test_audio_element, iamf_md_population_cb_ae) {
             aeMD.scalable_channel_layout_config()
                 .channel_audio_layer_configs(0)
                 .loudspeaker_layout());
-  EXPECT_EQ(kNumSubstreams, aeMD.num_substreams());
+  EXPECT_EQ(kNumSubstreams, aeMD.audio_substream_ids_size());
   EXPECT_EQ(kId32, aeMD.audio_element_id());
 }
 
@@ -150,7 +150,7 @@ TEST(test_audio_element, iamf_md_population_sb_ae) {
   // Validated the populated metadata.
   EXPECT_EQ(iamf_tools_cli_proto::AUDIO_ELEMENT_SCENE_BASED,
             aeMD.audio_element_type());
-  EXPECT_EQ(kNumSubstreams, aeMD.num_substreams());
+  EXPECT_EQ(kNumSubstreams, aeMD.audio_substream_ids_size());
   EXPECT_EQ(minSubstreamId, kNumSubstreams);
   EXPECT_EQ(kId32, aeMD.audio_element_id());
   EXPECT_EQ(
