@@ -39,8 +39,6 @@ void IAMFFileWriter::populateCodecInformationFromRepository(
   iamfMD.clear_codec_config_metadata();
   iamfMD.clear_ia_sequence_header_metadata();
 
-  IAMFExportHelper::writeIASeqHdr(fileExportData.getProfile(), iamfMD);
-
   switch (fileExportData.getAudioCodec()) {
     case AudioCodec::FLAC:
       IAMFExportHelper::writeFLACConfigMD(
@@ -78,6 +76,7 @@ void IAMFFileWriter::populateAudioElementMetadataFromRepository(
   // audio_frame_metadata.
   int minAudioSubstreamForElement = 0;
   int firstAudioElementId = 500;
+  bool isExtendedAudioElementPresent = false;
   for (int i = 0; i < audioElements.size(); ++i) {
     // Populate the metadata for this audio element
     auto aeMDToPopulate = iamfMD.add_audio_element_metadata();
@@ -96,6 +95,13 @@ void IAMFFileWriter::populateAudioElementMetadataFromRepository(
         audioElements[i]->getChannelConfig().getIamfChannelLabels());
     audioElementInformation_.emplace_back(aeMetadata);
   }
+
+  // Finally, write out the minimum profile level required for the audio
+  // elements
+  IAMFExportHelper::writeIASeqHdr(
+      FileProfileHelper::minimumProfile(iamfMD.audio_element_metadata_size(),
+                                        audioElements),
+      iamfMD);
 }
 
 void IAMFFileWriter::populateMixPresentationMetadataFromRepository(

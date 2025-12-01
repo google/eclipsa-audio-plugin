@@ -20,7 +20,6 @@
 #include <atomic>
 #include <filesystem>
 #include <memory>
-#include <mutex>
 #include <thread>
 
 #include "components/icons/svg/SvgIconComponent.h"
@@ -55,7 +54,7 @@ class AudioFilePlayer : public juce::Component,
   void updateComponentVisibility();
   void createPlaybackEngine(const std::filesystem::path iamfPath);
   void attemptCreatePlaybackEngine();
-  void onPlaybackEngineCreated(std::unique_ptr<IAMFPlaybackDevice> engine);
+  void onPlaybackEngineCreated(IAMFPlaybackDevice::Result res);
 
   // Components
   RoundImageButton playButton_, pauseButton_, stopButton_;
@@ -71,7 +70,6 @@ class AudioFilePlayer : public juce::Component,
   FileExportRepository& fer_;
   juce::AudioDeviceManager deviceManager_;
   std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
-  std::mutex playbackEngineMutex_;
   std::thread playbackEngineLoaderThread_;
   std::atomic_bool isBeingDestroyed_ = false;
 };

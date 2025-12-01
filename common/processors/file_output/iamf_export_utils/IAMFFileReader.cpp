@@ -61,11 +61,13 @@ static IAMFFileReader::StreamData parseStreamData(
   return parseOBUs(decoder, fileStream);
 }
 
-IAMFFileReader::IAMFFileReader(const std::filesystem::path& iamfFilePath)
-    : IAMFFileReader(iamfFilePath, kDefaultReaderSettings) {}
+IAMFFileReader::IAMFFileReader(const std::filesystem::path& iamfFilePath,
+                               std::atomic_bool& abortConstruction)
+    : IAMFFileReader(iamfFilePath, kDefaultReaderSettings, abortConstruction) {}
 
 IAMFFileReader::IAMFFileReader(const std::filesystem::path& iamfFilePath,
-                               const Settings& settings)
+                               const Settings& settings,
+                               std::atomic_bool& abortConstruction)
     : kFilePath_(iamfFilePath),
       settings_(settings),
       tpuBuffer_(std::make_unique<char[]>(kBufferSize_)) {
@@ -87,7 +89,18 @@ IAMFFileReader::IAMFFileReader(const std::filesystem::path& iamfFilePath,
     LOG_ERROR(0, "IAMFFileReader: Failed to parse IAMF file");
     return;
   }
-  countFrames(iamfDecoder_, fileStream_);
+
+  // Initialize sample buffer based on stream data
+  // `sizeof(int32_t)` since decoder output is default 32-bit PCM
+  const size_t kSampleBufferSize =
+      streamData_.frameSize * streamData_.numChannels * sizeof(int32_t);
+  sampleBuffer_ = std::make_unique<char[]>(kSampleBufferSize);
+
+  // If indexing is aborted, flag stream as invalid
+  streamData_.numFrames = indexFile(abortConstruction);
+  if (streamData_.numFrames == -1) {
+    streamData_.valid = false;
+  }
 }
 
 IAMFFileReader::~IAMFFileReader() {
@@ -98,18 +111,21 @@ IAMFFileReader::~IAMFFileReader() {
 
 std::unique_ptr<IAMFFileReader> IAMFFileReader::createIamfReader(
     const std::filesystem::path& iamfFilePath) {
-  return createIamfReader(iamfFilePath, kDefaultReaderSettings);
+  std::atomic_bool abortConstruction(false);
+  return createIamfReader(iamfFilePath, kDefaultReaderSettings,
+                          abortConstruction);
 }
 
 std::unique_ptr<IAMFFileReader> IAMFFileReader::createIamfReader(
-    const std::filesystem::path& iamfFilePath, const Settings& settings) {
+    const std::filesystem::path& iamfFilePath, const Settings& settings,
+    std::atomic_bool& abortConstruction) {
   if (!std::filesystem::exists(iamfFilePath)) {
     LOG_ERROR(0, "IAMFFileReader: IAMF file does not exist");
     return nullptr;
   }
 
   auto reader = std::unique_ptr<IAMFFileReader>(
-      new IAMFFileReader(iamfFilePath, settings));
+      new IAMFFileReader(iamfFilePath, settings, abortConstruction));
 
   // Check if initialization was successful by verifying streamData is valid
   if (!reader->streamData_.valid) {
@@ -169,12 +185,10 @@ size_t IAMFFileReader::parseFrame(juce::AudioBuffer<float>* buffer) {
 
   const size_t kPCMSampleBufferSize =
       streamData_.frameSize * streamData_.numChannels * sizeof(int32_t);
-  std::unique_ptr<char[]> sampleBuffer = std::make_unique<char[]>(
-      streamData_.frameSize * streamData_.numChannels * sizeof(int32_t));
 
   size_t bytesRead = 0;
   iamfDecoder_->GetOutputTemporalUnit(
-      reinterpret_cast<uint8_t*>(sampleBuffer.get()), kPCMSampleBufferSize,
+      reinterpret_cast<uint8_t*>(sampleBuffer_.get()), kPCMSampleBufferSize,
       bytesRead);
   size_t samplesRead = 0;
   if (bytesRead > 0) {
@@ -189,7 +203,7 @@ size_t IAMFFileReader::parseFrame(juce::AudioBuffer<float>* buffer) {
     if (buffer) {
       for (int i = 0; i < streamData_.numChannels; ++i) {
         convertAndCopyChannelMajor(
-            reinterpret_cast<int32_t*>(sampleBuffer.get()), *buffer,
+            reinterpret_cast<int32_t*>(sampleBuffer_.get()), *buffer,
             kSampsPerCh, streamData_.numChannels);
       }
     }
@@ -198,29 +212,36 @@ size_t IAMFFileReader::parseFrame(juce::AudioBuffer<float>* buffer) {
   return samplesRead;
 }
 
-// To be called after parsing OBUs.
-// Counts frames in the file.
-size_t IAMFFileReader::countFrames(std::unique_ptr<Decoder>& decoder,
-                                   std::unique_ptr<std::ifstream>& fileStream) {
-  jassert(decoder->IsDescriptorProcessingComplete());
+size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
+  if (!iamfDecoder_ || !iamfDecoder_->IsDescriptorProcessingComplete()) {
+    LOG_ERROR(0, "IAMFFileReader: Cannot index file - decoder not ready");
+    return -1;
+  }
 
   size_t frameCount = 0;
-  while (parseFrame()) {
+  while (!haltIndexing && parseFrame()) {
     frameCount++;
   }
+
+  if (haltIndexing) {
+    return -1;
+  }
+
   streamData_.numFrames = frameCount;
 
-  fileStream->clear();
-  fileStream->seekg(0, std::ios::beg);
-  decoder = iamf_tools::api::IamfDecoderFactory::Create(settings_);
-  if (!decoder) {
+  // Reset file and decoder state for normal playback
+  fileStream_->clear();
+  fileStream_->seekg(0, std::ios::beg);
+  iamfDecoder_ = iamf_tools::api::IamfDecoderFactory::Create(settings_);
+  if (!iamfDecoder_) {
     LOG_ERROR(0,
               "IAMFFileReader: Failed to recreate IAMF decoder after indexing");
     streamData_.valid = false;
     return 0;
   }
-  parseStreamData(decoder, fileStream);
+  parseStreamData(iamfDecoder_, fileStream_);
   streamData_.currentFrameIdx = 0;
+
   return frameCount;
 }
 
@@ -292,6 +313,15 @@ bool IAMFFileReader::resetLayout(
 
   // Update stream data with new layout information, but keep frame count
   const size_t kOriginalNumFrames = streamData_.numFrames;
+
+  // Reinitialize sample buffer if stream data changed
+  if (kNewStreamData.frameSize != streamData_.frameSize ||
+      kNewStreamData.numChannels != streamData_.numChannels) {
+    const size_t kSampleBufferSize =
+        kNewStreamData.frameSize * kNewStreamData.numChannels * sizeof(int32_t);
+    sampleBuffer_ = std::make_unique<char[]>(kSampleBufferSize);
+  }
+
   streamData_ = kNewStreamData;
   streamData_.numFrames = kOriginalNumFrames;
   streamData_.currentFrameIdx = 0;

@@ -102,14 +102,12 @@ void AudioElement::populateIamfAudioElementMetadata(
 
   int aeCoupledSubstreams = channelConfig_.getCoupledChannelCount();
   int aeUncoupledSubstreams = channelConfig_.getUncoupledChannelCount();
-  aeMD->set_num_substreams(aeCoupledSubstreams + aeUncoupledSubstreams);
-  for (int i = minimumSubstreamId;
-       i < aeMD->num_substreams() + minimumSubstreamId; ++i) {
+  int numSubstreams = aeCoupledSubstreams + aeUncoupledSubstreams;
+  for (int i = minimumSubstreamId; i < numSubstreams + minimumSubstreamId;
+       ++i) {
     aeMD->add_audio_substream_ids(i);
   }
-  minimumSubstreamId = minimumSubstreamId + aeMD->num_substreams();
-
-  aeMD->set_num_parameters(0);
+  minimumSubstreamId = minimumSubstreamId + numSubstreams;
 
   // Generate scalable_channel_layout_config for a channel-based AE.
   if (aeType == iamf_tools_cli_proto::AUDIO_ELEMENT_CHANNEL_BASED) {
@@ -120,7 +118,7 @@ void AudioElement::populateIamfAudioElementMetadata(
   // Generate Ambisonics config for scene-based AE.
   else if (aeType == iamf_tools_cli_proto::AUDIO_ELEMENT_SCENE_BASED) {
     auto ambisonicsConfig = aeMD->mutable_ambisonics_config();
-    populateAmbisonicsConfig(ambisonicsConfig, aeMD->num_substreams());
+    populateAmbisonicsConfig(ambisonicsConfig, numSubstreams);
   }
 }
 
@@ -131,7 +129,6 @@ void AudioElement::populateScalableChannelLayoutConfig(
   // with 1 layer for now.
   const int kNumLayers = 1;
 
-  sclc->set_num_layers(kNumLayers);
   sclc->set_reserved(0);
 
   while (sclc->channel_audio_layer_configs_size() < kNumLayers) {

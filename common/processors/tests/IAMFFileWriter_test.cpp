@@ -21,7 +21,52 @@
 #include "FileOutputTestFixture.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-class IAMFFileWriterTest : public FileOutputTests {};
+class IAMFFileWriterAccessible : public IAMFFileWriter {
+ public:
+  IAMFFileWriterAccessible(
+      FileExportRepository& fileExportRepository,
+      AudioElementRepository& audioElementRepository,
+      MixPresentationRepository& mixPresentationRepository,
+      MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
+      int samplesPerFrame, int sampleRate)
+      : IAMFFileWriter(fileExportRepository, audioElementRepository,
+                       mixPresentationRepository,
+                       mixPresentationLoudnessRepository, samplesPerFrame,
+                       sampleRate) {}
+
+  void fetchUserMetadata(iamf_tools_cli_proto::UserMetadata& outMetadata) {
+    outMetadata.CopyFrom(*userMetadata_);
+  }
+};
+
+class IAMFFileWriterTest : public FileOutputTests {
+ public:
+  bool validateProfileSelection(
+      iamf_tools_cli_proto::ProfileVersion expectedProfile) {
+    iamf_tools_cli_proto::UserMetadata iamfMD;
+
+    // Configure the profile to be the highest
+    FileExport fileExport = fileExportRepository.get();
+    fileExport.setProfile(FileProfile::BASE_ENHANCED);
+    fileExportRepository.update(fileExport);
+
+    // Create the IAMF file
+    IAMFFileWriterAccessible writer(
+        fileExportRepository, audioElementRepository, mixRepository,
+        mixPresentationLoudnessRepository, kSamplesPerFrame, kSampleRate);
+    EXPECT_TRUE(writer.open(iamfOutPath));
+    EXPECT_TRUE(writer.close());
+
+    // Validate the profile written is simple
+    // I'd prefer to check the file directly here, but for now there is no way
+    // to do this with the decoder
+    writer.fetchUserMetadata(iamfMD);
+    EXPECT_TRUE(iamfMD.ia_sequence_header_metadata(0).primary_profile() ==
+                expectedProfile);
+    EXPECT_TRUE(iamfMD.ia_sequence_header_metadata(0).additional_profile() ==
+                expectedProfile);
+  }
+};
 
 // Open and close the writer
 TEST_F(IAMFFileWriterTest, open_close) {
@@ -62,4 +107,40 @@ TEST_F(IAMFFileWriterTest, write_iamf) {
   }
 
   EXPECT_TRUE(writer.close());
+}
+
+TEST_F(IAMFFileWriterTest, validate_simple_profile_selection) {
+  // Simple profile for single audio element
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_SIMPLE);
+}
+
+TEST_F(IAMFFileWriterTest, validate_base_profile_selection) {
+  // Base profile with 2 audio elements
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE, kAE2});
+
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE);
+}
+
+TEST_F(IAMFFileWriterTest, validate_expanded_profile_selection) {
+  // Expanded profile required for 3 audio elements
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE3 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE, kAE2, kAE3});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE_ENHANCED);
+}
+
+TEST_F(IAMFFileWriterTest, validate_expanded_element_profile_selection) {
+  // Exapnded profile required for expanded audio element type
+  const juce::Uuid kAE = addAudioElement(Speakers::kExpl7Point1Point4Front);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE_ENHANCED);
 }

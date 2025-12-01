@@ -136,6 +136,17 @@ void LoudnessStats::drawStatValues(const int labelHeight,
     return true;
   };
 
+  // If reset button was pressed, show invalid values until new stats are
+  // available.
+  if (rtData_.resetStats.load()) {
+    momentary_.second.setText(kInvalid_, juce::dontSendNotification);
+    shortTerm_.second.setText(kInvalid_, juce::dontSendNotification);
+    integrated_.second.setText(kInvalid_, juce::dontSendNotification);
+    peak_.second.setText(kInvalid_, juce::dontSendNotification);
+    range_.second.setText(kInvalid_, juce::dontSendNotification);
+    return;
+  }
+
   juce::String measuredVal =
       valid(stats.loudnessMomentary)
           ? juce::String(stats.loudnessMomentary, kDecimalPlaces_)

@@ -73,9 +73,8 @@ void MixPresentation::populateIamfMixPresentationMetadata(
   static int mixGainParamBlockID = 100;
 
   mpMD->set_mix_presentation_id(mixPresentationId);
-  // Number of languages supported by this mix presentation.
-  mpMD->set_count_label(1);
   // Indicate annotation language for this mix presentation.
+  mpMD->set_count_label(1);
   mpMD->add_annotations_language(
       LanguageData::getLanguageCode(mixPresentationLanguage_));
   // Write mix presentation name.
@@ -86,7 +85,6 @@ void MixPresentation::populateIamfMixPresentationMetadata(
   writeMixPresentationTags(mpMD);
 
   // Only 1 submix currently.
-  mpMD->set_num_sub_mixes(1);
   writeMixPresentationSubMix(mixGainParamBlockID, sampleRate, *mpMD,
                              mixPresentationLoudness, audioElementIDMap);
   ++mixGainParamBlockID;
@@ -99,7 +97,6 @@ void MixPresentation::writeMixPresentationSubMix(
     std::unordered_map<juce::Uuid, int>& audioElementIDMap) {
   auto submix = mpMD.add_sub_mixes();
 
-  submix->set_num_audio_elements(audioElements_.size());
   for (const auto& ae : audioElements_) {
     writeSubMixAudioElement(parameterBlockID, sampleRate, ae,
                             audioElementIDMap[ae.getId()],
@@ -161,11 +158,6 @@ void MixPresentation::writeMixPresentationLayout(
   // actively selected playback layout(?)), but the IAMF encoder library is able
   // to compute this data if not present.
   auto layout = submix.add_layouts();
-  if (mixPresentationLoudness.getLargestLayout() == Speakers::kStereo) {
-    submix.set_num_layouts(1);
-  } else {
-    submix.set_num_layouts(2);
-  }
   writeLayout(*layout->mutable_loudness_layout(),
               Speakers::kStereo);  // Default to stereo for now.
   writeLoudnessInfo(*layout->mutable_loudness(), mixPresentationLoudness,
@@ -408,7 +400,6 @@ void MixPresentation::writeMixPresentationTags(
     exportTags.insert({kEncoderTagName_, GIT_COMMIT_HASH});
   }
 
-  mixPresentationTags->set_num_tags(exportTags.size());
   for (auto& tag : exportTags) {
     std::string* name = new std::string(tag.first);
     std::string* value = new std::string(tag.second);

@@ -30,6 +30,7 @@ BackgroundBuffer::BackgroundBuffer(const unsigned paddingSeconds,
       std::make_unique<PbRingBuffer>(kStreamData.numChannels, padSamples_);
   decodeThread_ = std::thread(&BackgroundBuffer::decodeTask, this);
   notifyTask();
+  while (!isReady());
 }
 
 BackgroundBuffer::~BackgroundBuffer() {
