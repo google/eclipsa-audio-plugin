@@ -15,6 +15,7 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FilePlayback.h"
@@ -23,10 +24,21 @@
 
 class IAMFPlaybackDevice : private juce::ValueTree::Listener {
  public:
-  static std::unique_ptr<IAMFPlaybackDevice> create(
-      const std::filesystem::path iamfPath, const juce::String pbDeviceName,
-      FilePlaybackRepository& filePlaybackRepo,
-      juce::AudioDeviceManager& deviceManager);
+  enum Error {
+    kNoError = 0,
+    kInvalidIAMFFile,
+    kEarlyAbortRequested,
+  };
+  struct Result {
+    std::unique_ptr<IAMFPlaybackDevice> device;
+    Error error = kNoError;
+  };
+
+  static Result create(const std::filesystem::path iamfPath,
+                       const juce::String pbDeviceName,
+                       std::atomic_bool& abortConstruction,
+                       FilePlaybackRepository& filePlaybackRepo,
+                       juce::AudioDeviceManager& deviceManager);
 
   ~IAMFPlaybackDevice();
 

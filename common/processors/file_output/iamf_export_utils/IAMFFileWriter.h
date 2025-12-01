@@ -54,7 +54,7 @@ class IAMFFileWriter {
   bool close();
   bool writeFrame(const juce::AudioBuffer<float>& buffer);
 
- private:
+ protected:
   void populateCodecInformationFromRepository(
       FileExportRepository& fileExportRepository,
       iamf_tools_cli_proto::UserMetadata& iamfMD);
