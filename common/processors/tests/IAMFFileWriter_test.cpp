@@ -41,7 +41,7 @@ class IAMFFileWriterAccessible : public IAMFFileWriter {
 
 class IAMFFileWriterTest : public FileOutputTests {
  public:
-  bool validateProfileSelection(
+  void validateProfileSelection(
       iamf_tools_cli_proto::ProfileVersion expectedProfile) {
     iamf_tools_cli_proto::UserMetadata iamfMD;
 
@@ -54,8 +54,9 @@ class IAMFFileWriterTest : public FileOutputTests {
     IAMFFileWriterAccessible writer(
         fileExportRepository, audioElementRepository, mixRepository,
         mixPresentationLoudnessRepository, kSamplesPerFrame, kSampleRate);
-    EXPECT_TRUE(writer.open(iamfOutPath));
-    EXPECT_TRUE(writer.close());
+    EXPECT_TRUE(writer.open(iamfOutPath.string()));
+    bool closeResult = writer.close();
+    EXPECT_TRUE(closeResult);
 
     // Validate the profile written is simple
     // I'd prefer to check the file directly here, but for now there is no way
@@ -66,6 +67,7 @@ class IAMFFileWriterTest : public FileOutputTests {
     EXPECT_TRUE(iamfMD.ia_sequence_header_metadata(0).additional_profile() ==
                 expectedProfile);
   }
+
 };
 
 // Open and close the writer
