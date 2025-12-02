@@ -66,7 +66,7 @@
 - Rename the library to obr.dylib and copy to third_party/obr/lib
 
 - Update the dylib RPATH by running the following command:
-  install_name_tool -id "@rpath/third_party/obr/lib/libobr.dylib" libobr.dylib
+  install_name_tool -id "@rpath/third_party/obr/lib/obr.dylib" obr.dylib
 
 - Verify the RPATH was succesfully updated by running the following and ensuring the above path is returned:
   otool -l obr.dylib | grep obr.dylib

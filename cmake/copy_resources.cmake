@@ -15,7 +15,7 @@
 function(copy_resources target plugin_path)
     if(APPLE)
         # macOS: Copy dylibs to Resources
-        set(LIB_OBR_PATH "${CMAKE_SOURCE_DIR}/third_party/obr-headers/lib/obr.dylib")
+        set(LIB_OBR_PATH "${CMAKE_SOURCE_DIR}/third_party/obr/lib/obr.dylib")
         set(LIB_IAMF_TOOLS_PATH "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/libiamf_tools.dylib")
         set(LIB_ZMQ_5_2_6_PATH "${CMAKE_BINARY_DIR}/_deps/zeromq-build/lib/libzmq.5.2.6.dylib")
 

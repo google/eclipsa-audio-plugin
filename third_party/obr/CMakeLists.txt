@@ -32,13 +32,20 @@ if (WIN32)
             Eigen
     )
 else()
-    # macOS/Linux static (.a)
-    target_link_libraries(obr INTERFACE
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/obr.a"
-            Eigen
-            pffft
+        add_library(obr_dylib SHARED IMPORTED)
+        set_target_properties(obr_dylib PROPERTIES
+                IMPORTED_LOCATION         "${CMAKE_CURRENT_LIST_DIR}/lib/obr.dylib"
+                IMPORTED_LOCATION_DEBUG   "${CMAKE_CURRENT_LIST_DIR}/lib/obr.dylib"
+                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/lib/obr.dylib"
+                IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_CURRENT_LIST_DIR}/lib/obr.dylib"
+                IMPORTED_SONAME "obr.dylib"
+                LINKER_LANGUAGE CXX)
 
-    )
+        target_link_libraries(obr 
+                INTERFACE 
+                obr_dylib
+                Eigen
+                pffft)
 endif()
 
 # Make include dirs available to parent

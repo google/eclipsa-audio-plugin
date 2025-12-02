@@ -4,16 +4,14 @@ target_compile_options(libear INTERFACE "-w") # Silence is golden
 
 #Cross-platform setup
 if(WIN32)
-    set(LIBEAR_PLATFORM "Windows")
-    set(LIBEAR_EXT ".lib")
+    set(LIBEAR_DEBUG_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/Windows/Debug/libear.lib")
+    set(LIBEAR_RELEASE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/Windows/Release/libear.lib")
 else()
-    set(LIBEAR_PLATFORM "macOS")
-    set(LIBEAR_EXT ".a")
+    set(LIBEAR_DEBUG_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/libear.a")
+    set(LIBEAR_RELEASE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/libear.a")
 endif()
 
 # Check that the file actually exists
-set(LIBEAR_DEBUG_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/${LIBEAR_PLATFORM}/Debug/libear${LIBEAR_EXT}")
-set(LIBEAR_RELEASE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/${LIBEAR_PLATFORM}/Release/libear${LIBEAR_EXT}")
 
 if(NOT EXISTS "${LIBEAR_DEBUG_PATH}")
     message(FATAL_ERROR "libear Debug library not found at: ${LIBEAR_DEBUG_PATH}")

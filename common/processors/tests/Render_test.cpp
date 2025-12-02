@@ -49,7 +49,7 @@ void ensureAmbisonicToStereoIsRenderedCorrectly(
   // 9 Channels are needed for second order ambisonics
   int samplesPerBlock = 32;
   juce::AudioBuffer<float> testDataBuffer(9, samplesPerBlock);
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < samplesPerBlock; i++) {
     testDataBuffer.setSample(0, i, i + 1);
     testDataBuffer.setSample(1, i, i + 1);
     testDataBuffer.setSample(2, i, i + 1);

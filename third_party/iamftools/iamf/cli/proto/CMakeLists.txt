@@ -19,13 +19,25 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ---- MSVC runtime consistency ----
 if(MSVC)
-
     set(CMAKE_MSVC_RUNTIME_LIBRARY
             "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
             CACHE STRING "" FORCE)
 
     set(ABSL_USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
     set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
+    set(protobuf_ABSL_PROVIDER "module" CACHE STRING "" FORCE)
+    set(protobuf_DOWNLOAD_ABSEIL ON CACHE BOOL "" FORCE)
+else()
+    # On mac we need to manually fetch abseil
+    # Unsure why protobuf doesn't automatically fetch it here, should investigate later
+    FetchContent_Declare(
+            abseil
+            GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+            GIT_TAG 20250512.1
+    )
+    FetchContent_MakeAvailable(abseil)
+    set(protobuf_DOWNLOAD_ABSEIL OFF CACHE BOOL "" FORCE)
+    set(protobuf_ABSL_PROVIDER "package" CACHE STRING "" FORCE)
 endif()
 
 # ---- Dependencies ----
@@ -36,8 +48,7 @@ message(STATUS "Fetching Protobuf (Abseil handled internally)...")
 set(PROTOBUF_VERSION v32.0)
 
 # Tell protobuf to fetch Abseil internally if not found
-set(protobuf_ABSL_PROVIDER "module" CACHE STRING "" FORCE)
-set(protobuf_DOWNLOAD_ABSEIL ON CACHE BOOL "" FORCE)
+
 
 set(protobuf_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)

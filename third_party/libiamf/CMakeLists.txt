@@ -45,7 +45,7 @@ if(NOT libiamf_POPULATED)
 
   # --- macOS vendor handling
   if(APPLE)
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
     file(REMOVE
             "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libopus.a"
             "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libfdk-aac.a"

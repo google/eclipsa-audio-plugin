@@ -126,7 +126,7 @@ option(CI_TEST OFF)
 
 if(APPLE)
     # Add vendored libraries path (for CI/GitHub Actions)
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
     link_directories(${VENDOR_LIB_PATH})
 endif()
 
@@ -158,12 +158,19 @@ endif()
 include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 
 if(BUILD_AAX)
-    set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
-    list(APPEND PLUGIN_FORMATS "AAX")
+    if(WIN32)
+        set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
+        list(APPEND PLUGIN_FORMATS "AAX")
 
-    # Allow team members to specify their own AAX SDK path
-    if(NOT DEFINED AAX_SDK_ROOT)
-        set(AAX_SDK_ROOT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE PATH "Path to AAX SDK")
+        # Allow team members to specify their own AAX SDK path
+        if(NOT DEFINED AAX_SDK_ROOT)
+            set(AAX_SDK_ROOT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE PATH "Path to AAX SDK")
+        endif()
+    else()
+        set(AAX_SDK_VER "2-7-0" CACHE STRING "Default AAX SDK Version")
+        list(APPEND PLUGIN_FORMATS "AAX")
+        find_path(AAX_SDK_ROOT NAMES "aax-sdk-${AAX_SDK_VER}" HINTS "/opt" "/usr/local")
+        set(AAX_SDK_ROOT "${AAX_SDK_ROOT}/aax-sdk-${AAX_SDK_VER}")
     endif()
 
     if(EXISTS "${AAX_SDK_ROOT}")

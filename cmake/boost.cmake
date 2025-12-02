@@ -26,6 +26,8 @@ if(MSVC)
 
 endif()
 
+set(BOOST_LOCALE_ENABLE_ICU OFF)
+
 FetchContent_Declare(
         Boost
         USES_TERMINAL_DOWNLOAD TRUE

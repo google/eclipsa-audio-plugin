@@ -29,7 +29,7 @@ function(eclipsa_build_tests)
             JUCE_SILENCE_XCODE_15_LINKER_WARNING)
 
     if(APPLE)
-        set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
+        set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
         target_link_directories(eclipsa_tests PRIVATE ${VENDOR_LIB_PATH})
     else()
         set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/${CMAKE_BUILD_TYPE}")
