@@ -167,8 +167,7 @@ TEST_F(FileOutputTests, iamf_multi_codec_multi_sr_1ae_1mp) {
 
       bounceAudio(fio_proc, audioElementRepository, sampleRate);
 
-      ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
-      std::cout << sampleRate << ":" << static_cast<int>(codec) << std::endl;
+      ASSERT_TRUE(std::filesystem::exists(iamfOutPath)) << sampleRate << ":" << static_cast<int>(codec);
       std::filesystem::remove(iamfOutPath);  // Rm for next iteration
     }
   }

@@ -12,7 +12,6 @@ else()
 endif()
 
 # Check that the file actually exists
-
 if(NOT EXISTS "${LIBEAR_DEBUG_PATH}")
     message(FATAL_ERROR "libear Debug library not found at: ${LIBEAR_DEBUG_PATH}")
 endif()
@@ -20,9 +19,6 @@ endif()
 if(NOT EXISTS "${LIBEAR_RELEASE_PATH}")
     message(FATAL_ERROR "libear Release library not found at: ${LIBEAR_RELEASE_PATH}")
 endif()
-
-message(STATUS "libear Debug library: ${LIBEAR_DEBUG_PATH}")
-message(STATUS "libear Release library: ${LIBEAR_RELEASE_PATH}")
 
 # Import prebuilt static library
 add_library(libear_archive STATIC IMPORTED)

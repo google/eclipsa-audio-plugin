@@ -186,7 +186,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   if (gf_err != GF_OK) {
     std::string errStr = "IAMF Muxing: Failed to load audio file: " +
                          inputAudioFile.toStdString();
-    LOG_ERROR(0, errStr.c_str());
+    LOG_ERROR(0, errStr);
     return false;
   }
 
@@ -196,7 +196,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   if (gf_err != GF_OK) {
     std::string errStr = "IAMF Muxing: Failed to load video file: " +
                          inputVideoFile.toStdString();
-    LOG_ERROR(0, errStr.c_str());
+    LOG_ERROR(0, errStr);
     gf_fs_del(session);
     return false;
   }
@@ -207,7 +207,7 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   if (gf_err != GF_OK) {
     std::string errStr = "IAMF Muxing: Failed to load output destination: " +
                          outputMuxdFile.toStdString();
-    LOG_ERROR(0, errStr.c_str());
+    LOG_ERROR(0, errStr);
     gf_fs_del(session);
     return false;
   }
