@@ -19,7 +19,7 @@ message(STATUS "Fetching Boost")
 include(FetchContent)
 set(BOOST_ENABLE_CMAKE ON)
 
-if(MSVC)
+if(WIN32)
     set(Boost_USE_STATIC_RUNTIME OFF)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     add_definitions(-DBOOST_ALL_NO_LIB)

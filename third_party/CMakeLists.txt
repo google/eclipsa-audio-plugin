@@ -108,7 +108,7 @@ else()
 endif()
 
 # Reduce optimization level for SAF to avoid compiler crash
-if(MSVC)
+if(WIN32)
     set(CMAKE_C_FLAGS_RELEASE "/O1 /MD /DNDEBUG" CACHE STRING "" FORCE)
 endif()
 
@@ -139,8 +139,8 @@ else()
     message(WARNING "SAF include directory not found: ${SAF_INCLUDE_DIR}")
 endif()
 
-# MSVC flags
-if(MSVC)
+# Windows flags
+if(WIN32)
     add_compile_definitions(_USE_MATH_DEFINES)
 endif()
 

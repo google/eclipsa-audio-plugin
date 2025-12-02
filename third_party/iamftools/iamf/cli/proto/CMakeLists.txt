@@ -17,8 +17,8 @@ project(iamf_proto LANGUAGES CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# ---- MSVC runtime consistency ----
-if(MSVC)
+# ---- Windows runtime consistency ----
+if(WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY
             "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
             CACHE STRING "" FORCE)
@@ -48,7 +48,8 @@ message(STATUS "Fetching Protobuf (Abseil handled internally)...")
 set(PROTOBUF_VERSION v32.0)
 
 # Tell protobuf to fetch Abseil internally if not found
-
+set(protobuf_ABSL_PROVIDER "module" CACHE STRING "" FORCE)
+set(protobuf_DOWNLOAD_ABSEIL OFF CACHE BOOL "" FORCE)
 
 set(protobuf_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)

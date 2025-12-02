@@ -32,7 +32,7 @@ if(NOT libiamf_POPULATED)
   FetchContent_Populate(libiamf)
 
   # --- PATCH: Fix libiamf's CMakeLists.txt to remove GCC-only flags and m library on Windows
-  if(MSVC)
+  if(WIN32)
     file(READ "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" LIBIAMF_CMAKE_CONTENT)
     string(REPLACE "-O3" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
     string(REPLACE "-Werror=unused-variable" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")

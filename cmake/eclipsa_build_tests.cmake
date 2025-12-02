@@ -31,7 +31,7 @@ function(eclipsa_build_tests)
     if(APPLE)
         set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
         target_link_directories(eclipsa_tests PRIVATE ${VENDOR_LIB_PATH})
-    else(WIN32)
+    elseif(WIN32)
         set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/${CMAKE_BUILD_TYPE}")
         target_link_directories(eclipsa_tests PRIVATE ${VENDOR_LIB_PATH})
 
