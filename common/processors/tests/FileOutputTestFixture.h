@@ -214,7 +214,7 @@ class FileOutputTests : public ::testing::Test {
                            .append("processors")
                            .append("tests")
                            .append("test_resources")
-                           .append("SilentSampleVideo.mp4"))
+                           .append("SilentSampleVideo_h264.mp4"))
                           .string());
     iamfOutPath = std::filesystem::current_path() / "test.iamf";
     videoOutPath = std::filesystem::current_path() / "test.mp4";
@@ -309,6 +309,9 @@ class FileOutputTests : public ::testing::Test {
     std::optional<FileProfile> profile = std::nullopt;
     int sampleRate = kSampleRate;
     bool exportVideo = false;
+    std::string videoSource =
+        std::filesystem::current_path().parent_path() /
+        "common/processors/tests/test_resources/SilentSampleVideo_h264.mp4";
   };
 
   void setTestExportOpts(const ExportTestOpts opts) {
@@ -319,19 +322,21 @@ class FileOutputTests : public ::testing::Test {
     ex.setAudioCodec(opts.codec);
     ex.setSampleRate(opts.sampleRate);
     ex.setExportVideo(opts.exportVideo);
+    ex.setVideoSource(opts.videoSource);
     fileExportRepository.update(ex);
   }
 
   // Constants
-  std::vector<Speakers::AudioElementSpeakerLayout> kAudioElementLayouts = {
-      Speakers::kMono,          Speakers::kStereo,
-      Speakers::k5Point1,       Speakers::k5Point1Point2,
-      Speakers::k5Point1Point4, Speakers::k7Point1,
-      Speakers::k7Point1Point2, Speakers::k7Point1Point4,
-      Speakers::k3Point1Point2, Speakers::kBinaural,
-      Speakers::kHOA1,          Speakers::kHOA2,
-      Speakers::kHOA3,
-  };
+  const std::vector<Speakers::AudioElementSpeakerLayout> kAudioElementLayouts =
+      {
+          Speakers::kMono,          Speakers::kStereo,
+          Speakers::k5Point1,       Speakers::k5Point1Point2,
+          Speakers::k5Point1Point4, Speakers::k7Point1,
+          Speakers::k7Point1Point2, Speakers::k7Point1Point4,
+          Speakers::k3Point1Point2, Speakers::kBinaural,
+          Speakers::kHOA1,          Speakers::kHOA2,
+          Speakers::kHOA3,
+      };
   std::vector<Speakers::AudioElementSpeakerLayout>
       kAudioElementExpandedLayouts = {
           Speakers::kExplLFE,
@@ -348,6 +353,15 @@ class FileOutputTests : public ::testing::Test {
           Speakers::kExpl9Point1Point6TopSide,
           Speakers::kExpl9Point1Point6Top,
       };
+
+  const std::filesystem::path kTestSourceVideo =
+      std::filesystem::current_path().parent_path() /
+      "common/processors/tests/test_resources/SilentSampleVideo";
+
+  const std::vector<std::string> kTestSourceVideoCodecs = {"h264", "h265",
+                                                           "av1"};
+
+  const std::vector<std::string> kTestSourceVideoContainers = {".mp4", ".mov"};
 
   // Repositories
   juce::ValueTree testState{"test_state"};

@@ -37,4 +37,5 @@ void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
 bool muxIAMF(const AudioElementRepository& aeRepo,
              const MixPresentationRepository& mpRepo,
              const FileExport& exportData);
+bool validateMuxedFile(const juce::String& path);
 }  // namespace IAMFExportHelper

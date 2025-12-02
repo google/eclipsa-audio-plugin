@@ -1,6 +1,6 @@
 - Compiled from: https://github.com/gpac/gpac/tree/945c0e4b1bbf3b0278e94f8623a14e6bb061ea91
-- Commit: https://github.com/gpac/gpac/commit/945c0e4b1bbf3b0278e94f8623a14e6bb061ea91
-- Version: 1.0.0 (main branch - 945c0e4b1bbf3b0278e94f8623a14e6bb061ea91)
+- Commit: https://github.com/gpac/gpac/commit/4a06095469de39a1dae0488ab89bb11a10b15b8f
+- Version: 1.0.0 (main branch - 4a06095469de39a1dae0488ab89bb11a10b15b8f)
 
 ### Compile notes on MacOs
 - Compiled for ARM OSX (Sonoma 14.4.1, clang 15.0.0).

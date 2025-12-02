@@ -93,7 +93,7 @@ static inline void bounceAudio(FileOutputProcessor& fio_proc,
 
   juce::AudioBuffer<float> audioBuffer(kNumChannels, frameSize);
   juce::MidiBuffer dummyMidiBuffer;
-  for (int block = 0; block < 8; ++block) {
+  for (int block = 0; block < 10; ++block) {
     for (unsigned i = 0; i < kNumChannels; ++i) {
       audioBuffer.copyFrom(i, 0, kSineTone, 0, 0, frameSize);
     }

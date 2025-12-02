@@ -18,6 +18,8 @@
 #include <gpac/tools.h>
 #include <logger/logger.h>
 
+#include "gpac/tools.h"
+
 namespace IAMFExportHelper {
 
 void writeIASeqHdr(FileProfile profileVersion,
@@ -158,12 +160,87 @@ void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
   opusConfig->set_allocated_opus_encoder_metadata(opusMD);
 }
 
-bool muxIAMF(const AudioElementRepository& aeRepo,
-             const MixPresentationRepository& mpRepo,
-             const FileExport& exportData) {
-  const juce::String inputAudioFile = exportData.getExportFile();
-  const juce::String inputVideoFile = exportData.getVideoSource();
-  const juce::String outputMuxdFile = exportData.getVideoExportFolder();
+// Checks for errors in the muxed file using ffmpeg and verifies presence of an
+// IAMF audio stream and video stream
+bool validateMuxedFile(const juce::String& path) {
+#ifndef ECLIPSA_FFMPEG_AVAILABLE
+  LOG_WARNING(0, "FFmpeg validation skipped: FFmpeg is not available");
+  return true;
+#endif
+
+  // Check for errors in the file using ffmpeg
+  juce::String ffmpegCommand =
+      "ffmpeg -v error -i \"" + path + "\" -f null - 2>&1";
+
+  FILE* pipe = popen(ffmpegCommand.toRawUTF8(), "r");
+  if (!pipe) {
+    std::cout << "Failed to execute ffmpeg command" << std::endl;
+    return false;
+  }
+
+  char buffer[128];
+  juce::String ffmpegOutput;
+  while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+    ffmpegOutput += buffer;
+  }
+
+  int ffmpegExitCode = pclose(pipe);
+
+  if (!ffmpegOutput.isEmpty() || ffmpegExitCode != 0) {
+    std::cout << "FFmpeg validation errors:" << std::endl;
+    // Only print the first 1000 characters to avoid excessive output
+    if (ffmpegOutput.length() > 1000) {
+      ffmpegOutput = ffmpegOutput.substring(0, 1000) + "... (truncated)";
+    }
+    std::cout << ffmpegOutput.toRawUTF8() << std::endl;
+    return false;
+  }
+
+  // Check for IAMF Audio Element stream group using ffprobe
+  juce::String ffprobeAudioElementCommand =
+      "ffprobe \"" + path + "\" 2>&1 | grep -q 'IAMF Audio Element'";
+
+  int audioElementCheckCode = system(ffprobeAudioElementCommand.toRawUTF8());
+  if (audioElementCheckCode != 0) {
+    std::cout << "FFmpeg validation: IAMF Audio Element stream group not found"
+              << std::endl;
+    return false;
+  }
+
+  // Check for IAMF Mix Presentation stream group using ffprobe
+  juce::String ffprobeMixPresentationCommand =
+      "ffprobe \"" + path + "\" 2>&1 | grep -q 'IAMF Mix Presentation'";
+
+  int mixPresentationCheckCode =
+      system(ffprobeMixPresentationCommand.toRawUTF8());
+  if (mixPresentationCheckCode != 0) {
+    std::cout << "FFmpeg validation: IAMF Mix Presentation stream group not "
+                 "found"
+              << std::endl;
+    return false;
+  }
+
+  // Check for video stream using ffprobe
+  juce::String ffprobeVideoCommand =
+      "ffprobe -select_streams v -show_entries stream=codec_name -of "
+      "default=noprint_wrappers=1 \"" +
+      path + "\" 2>&1 | grep -q .";
+
+  int videoCheckCode = system(ffprobeVideoCommand.toRawUTF8());
+  if (videoCheckCode != 0) {
+    std::cout << "FFmpeg validation: Video stream not found" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+bool muxIamfAudio(const juce::String& inputAudioFile,
+                  const juce::String& outputMp4File) {
+#ifdef DEBUG
+  gf_log_set_tool_level(GF_LOG_FILTER, GF_LOG_INFO);
+  gf_log_set_tool_level(GF_LOG_CONTAINER, GF_LOG_INFO);
+#endif
 
   // Initialize GPAC library before creating session
   GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
@@ -175,73 +252,129 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Err gf_err = GF_OK;
   GF_FilterSession* session = gf_fs_new_defaults(GF_FilterSessionFlags(0));
   if (session == NULL) {
-    LOG_INFO(0, "IAMF Muxing: Failed to create gpac session.");
+    LOG_INFO(0, "IAMF Audio Muxing: Failed to create gpac session.");
     gf_fs_del(session);
     return false;
   }
 
-  // Construct a filter for input audio.
+  // Filter for input audio
   GF_Filter* src_audio = gf_fs_load_source(session, inputAudioFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    std::string errStr = "IAMF Muxing: Failed to load audio file: " +
-                         inputAudioFile.toStdString();
-    LOG_ERROR(0, errStr);
+    LOG_ERROR(0, "IAMF Audio Muxing: Failed to load audio file.");
+    gf_fs_del(session);
     return false;
   }
 
-  // Filter for input video.
+  // Reframer for audio stream
+  GF_Filter* reframer_filter = gf_fs_load_filter(session, "rfav1", &gf_err);
+  if (gf_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Audio Muxing: Failed to load reframer filter.");
+    gf_fs_del(session);
+    return false;
+  }
+
+  // Filter for output mp4
+  GF_Filter* dest_filter = gf_fs_load_destination(
+      session, outputMp4File.toRawUTF8(), NULL, NULL, &gf_err);
+  if (gf_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Audio Muxing: Failed to load output file filter.");
+    gf_fs_del(session);
+    return false;
+  }
+
+  // Connect the filters: audio source -> reframer -> destination
+  gf_filter_set_source(reframer_filter, src_audio, NULL);
+  gf_filter_set_source(dest_filter, reframer_filter, NULL);
+
+  gf_err = gf_fs_run(session);
+
+  if (gf_err >= GF_OK) {
+    gf_err = gf_fs_get_last_connect_error(session);
+    if (gf_err >= GF_OK) {
+      gf_err = gf_fs_get_last_process_error(session);
+    }
+  }
+
+  gf_fs_del(session);
+
+  if (gf_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Audio Muxing: Failed with error code " + gf_err);
+    return false;
+  }
+
+  return true;
+}
+
+bool muxVideo(const juce::String& inputVideoFile,
+              const juce::String& audioMp4File,
+              const juce::String& outputMuxedFile) {
+#ifdef DEBUG
+  gf_log_set_tool_level(GF_LOG_FILTER, GF_LOG_INFO);
+  gf_log_set_tool_level(GF_LOG_CONTAINER, GF_LOG_INFO);
+#endif
+
+  // Initialize GPAC library before creating session
+  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
+  if (init_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
+    return false;
+  }
+
+  GF_Err gf_err = GF_OK;
+  GF_FilterSession* session = gf_fs_new_defaults(GF_FilterSessionFlags(0));
+  if (session == NULL) {
+    LOG_INFO(0, "Video Interleaving: Failed to create gpac session.");
+    gf_fs_del(session);
+    return false;
+  }
+
+  // Filter for input video
   GF_Filter* src_video = gf_fs_load_source(session, inputVideoFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    std::string errStr = "IAMF Muxing: Failed to load video file: " +
-                         inputVideoFile.toStdString();
-    LOG_ERROR(0, errStr);
+    LOG_ERROR(0, "Video Interleaving: Failed to load video file.");
     gf_fs_del(session);
     return false;
   }
 
-  // Filter for output mp4.
+  // Filter for input mp4 containing iamf audio track
+  GF_Filter* src_audio_mp4 =
+      gf_fs_load_source(session, audioMp4File.toRawUTF8(), NULL, NULL, &gf_err);
+  if (gf_err != GF_OK) {
+    LOG_ERROR(0, "Video Interleaving: Failed to load audio MP4 file.");
+    gf_fs_del(session);
+    return false;
+  }
+
+  // Filter for output mp4
   GF_Filter* dest_filter = gf_fs_load_destination(
-      session, outputMuxdFile.toRawUTF8(), NULL, NULL, &gf_err);
+      session, outputMuxedFile.toRawUTF8(), NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    std::string errStr = "IAMF Muxing: Failed to load output destination: " +
-                         outputMuxdFile.toStdString();
-    LOG_ERROR(0, errStr);
+    LOG_ERROR(0, "Video Interleaving: Failed to load output file filter.");
     gf_fs_del(session);
     return false;
   }
 
-  // Reframer for audio stream.
-  GF_Filter* reframer_filter = gf_fs_load_filter(session, "rfav1", &gf_err);
-  if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to load reframer filter.");
-    gf_fs_del(session);
-    return false;
-  }
-
-  // Filter for muxing audio and video.
+  // Filter for muxing audio and video
   GF_Filter* mux_filter = gf_fs_load_filter(session, "mp4mx", &gf_err);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to load muxing filter.");
+    LOG_ERROR(0, "Video Interleaving: Failed to load muxing filter.");
     gf_fs_del(session);
     return false;
   }
 
   // Filter for removing audio from video
-  GF_Filter* audio_remover =
-      gf_fs_load_filter(session, "mp4dmx:tkid=video", &gf_err);
+  GF_Filter* audio_remover = gf_fs_load_filter(session, "mp4dmx", &gf_err);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to load audio remover filter.");
+    LOG_ERROR(0, "Video Interleaving: Failed to load audio remover filter.");
     gf_fs_del(session);
     return false;
   }
-  // Pass the video file through the audio removal filter before muxing
+
   gf_filter_set_source(audio_remover, src_video, NULL);
   gf_filter_set_source(mux_filter, audio_remover, NULL);
-
-  gf_filter_set_source(reframer_filter, src_audio, NULL);
-  gf_filter_set_source(mux_filter, reframer_filter, NULL);
+  gf_filter_set_source(mux_filter, src_audio_mp4, NULL);
   gf_filter_set_source(dest_filter, mux_filter, NULL);
 
   gf_err = gf_fs_run(session);
@@ -254,6 +387,53 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   }
 
   gf_fs_del(session);
+
+  if (gf_err != GF_OK) {
+    LOG_ERROR(0, "Video Interleaving: Failed with error code " + gf_err);
+    return false;
+  }
+
+  return true;
+}
+
+bool muxIAMF(const AudioElementRepository& aeRepo,
+             const MixPresentationRepository& mpRepo,
+             const FileExport& exportData) {
+  const juce::String inputAudioFile = exportData.getExportFile();
+  const juce::String inputVideoFile = exportData.getVideoSource();
+  const juce::String outputMuxdFile = exportData.getVideoExportFolder();
+
+  // Pre-muxing checks
+  if (!std::filesystem::exists(inputAudioFile.toStdString())) {
+    LOG_ERROR(0, "IAMF Muxing: Input audio file" +
+                     inputAudioFile.toStdString() + " does not exist.");
+    return false;
+  }
+  if (!std::filesystem::exists(inputVideoFile.toStdString())) {
+    LOG_ERROR(0, "IAMF Muxing: Input video file" +
+                     inputVideoFile.toStdString() + " does not exist.");
+    std::cout << "IAMF Muxing: Input video file" +
+                     inputVideoFile.toStdString() + " does not exist."
+              << std::endl;
+    return false;
+  }
+  if (outputMuxdFile.isEmpty()) {
+    LOG_ERROR(0, "IAMF Muxing: Output muxed file path is empty.");
+    return false;
+  }
+
+  // Step 1: Mux IAMF audio into an MP4 container
+  if (!muxIamfAudio(inputAudioFile, outputMuxdFile)) {
+    LOG_ERROR(0, "IAMF Muxing: Failed to mux IAMF audio.");
+    return false;
+  }
+
+  // Step 2: Interleave video with the audio MP4
+  if (!muxVideo(inputVideoFile, outputMuxdFile, outputMuxdFile)) {
+    LOG_ERROR(0, "IAMF Muxing: Failed to interleave video with audio.");
+    return false;
+  }
+
   return true;
 }
 }  // namespace IAMFExportHelper

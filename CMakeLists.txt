@@ -143,6 +143,15 @@ if(CI_TEST OR INTERNAL_TEST)
     include(GoogleTest)
     include("cmake/eclipsa_test.cmake")
     include("cmake/eclipsa_build_tests.cmake")
+
+    # Check for an FFmpeg install for tests that do additional media verification
+    include("cmake/find_ffmpeg.cmake")
+    if (FFMPEG_TOOLS_FOUND)
+        message(STATUS "FFmpeg found. Enabling tests that require FFmpeg.")
+        add_compile_definitions(ECLIPSA_FFMPEG_AVAILABLE=1)
+    else()
+        message(STATUS "FFmpeg not found. Tests requiring FFmpeg will be disabled.")
+    endif()
 endif()
 
 add_subdirectory(third_party)
