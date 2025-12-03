@@ -71,6 +71,11 @@ class FileExportScreen : public juce::Component,
 
   bool validFileExportConfig(const FileExport& config);
 
+  // Helper to expand, validate, and update an error label for paths.
+  std::pair<juce::String, bool> validateAndShowPathError(
+      const juce::String& inputPath, const bool mustExist,
+      juce::Label& errorLabel);
+
   MainEditor& editor_;
   FileExportRepository* repository_;
   AudioElementRepository* aeRepository_;
@@ -120,14 +125,17 @@ class FileExportScreen : public juce::Component,
   juce::Label exportAudioLabel_;
   SliderButton enableFileExport_;
   FilePickerTextBox exportPath_;
+  juce::Label exportPathErrorLabel_;
   juce::ImageButton browseButton_;
   juce::ToggleButton exportAudioElementsToggle_;
   juce::Label exportAudioElementsLabel_;
   juce::Label muxVidoeLabel_;
   SliderButton muxVideoToggle_;
   FilePickerTextBox exportVideoFolder_;
+  juce::Label exportVideoFolderErrorLabel_;
   juce::ImageButton browseVideoButton_;
   TitledTextBox videoSource_;
+  juce::Label videoSourceErrorLabel_;
   juce::ImageButton browseVideoSourceButton_;
 
   // Player elements

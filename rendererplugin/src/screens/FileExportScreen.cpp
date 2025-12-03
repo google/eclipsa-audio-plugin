@@ -37,10 +37,12 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       audioElements_("Audio elements"),
       exportAudioLabel_("ExportAudioLbl", "Export audio"),
       exportPath_("Save audio to ...", ".iamf"),
+      exportPathErrorLabel_("ExportPathErrLbl", ""),
       exportAudioElementsLabel_("ExportAudioElementsLbl",
                                 "Export audio elements as WAV"),
       muxVidoeLabel_("MuxVideoLbl", "Mux video"),
       exportVideoFolder_("Save video to ...", ".mp4"),
+      exportVideoFolderErrorLabel_("ExportVideoFolderErrLbl", ""),
       videoSource_("Video source"),
       audioOutputSelect_(
           "Select a file to export audio to",
@@ -111,6 +113,40 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       juce::Font("Roboto", 12.0f, juce::Font::plain));
   customCodecParameterErrorLabel_.setJustificationType(
       juce::Justification::topLeft);
+
+  // Configure export path error label
+  exportPathErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
+                                  EclipsaColours::red);
+  exportPathErrorLabel_.setFont(errorFont);
+  exportPathErrorLabel_.setJustificationType(juce::Justification::centred);
+  exportPathErrorLabel_.setText("",
+                                juce::NotificationType::dontSendNotification);
+  exportPathErrorLabel_.setVisible(false);
+  exportPathErrorLabel_.setMinimumHorizontalScale(1.0f);
+  addAndMakeVisible(exportPathErrorLabel_);
+
+  // Configure export video folder error label
+  exportVideoFolderErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
+                                         EclipsaColours::red);
+  exportVideoFolderErrorLabel_.setFont(errorFont);
+  exportVideoFolderErrorLabel_.setJustificationType(
+      juce::Justification::centred);
+  exportVideoFolderErrorLabel_.setText(
+      "", juce::NotificationType::dontSendNotification);
+  exportVideoFolderErrorLabel_.setVisible(false);
+  exportVideoFolderErrorLabel_.setMinimumHorizontalScale(1.0f);
+  addAndMakeVisible(exportVideoFolderErrorLabel_);
+
+  // Configure video source error label (file must exist)
+  videoSourceErrorLabel_.setColour(juce::Label::ColourIds::textColourId,
+                                   EclipsaColours::red);
+  videoSourceErrorLabel_.setFont(errorFont);
+  videoSourceErrorLabel_.setJustificationType(juce::Justification::centred);
+  videoSourceErrorLabel_.setText("",
+                                 juce::NotificationType::dontSendNotification);
+  videoSourceErrorLabel_.setVisible(false);
+  videoSourceErrorLabel_.setMinimumHorizontalScale(1.0f);
+  addAndMakeVisible(videoSourceErrorLabel_);
 
   // Set the error labels
   startTimerErrorLabel_.setText("",
@@ -248,23 +284,23 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Set the initial text from repository
   exportPath_.setText(config.getExportFile());
 
+  // Validate the initial path and show error if invalid
+  if (!config.getExportFile().isEmpty()) {
+    validateAndShowPathError(config.getExportFile(), false,
+                             exportPathErrorLabel_);
+  }
+
   // Configure repository update on enter/tab/focus lost
   exportPath_.onValueCommitted([this] {
+    auto [expanded, valid] = validateAndShowPathError(
+        exportPath_.getText(), false, exportPathErrorLabel_);
+
     FileExport config = repository_->get();
-    config.setExportFile(exportPath_.getText());
-    config.setExportFolder(juce::File(exportPath_.getText())
-                               .getParentDirectory()
-                               .getFullPathName());
-    LOG_WARNING(RendererProcessor::instanceId_,
-                "FileExportScreen: Updated export file to " +
-                    config.getExportFile().toStdString());
-    LOG_WARNING(RendererProcessor::instanceId_,
-                "FileExportScreen: Updated export folder to " +
-                    config.getExportFolder().toStdString());
+    config.setExportFile(expanded);
     repository_->update(config);
 
     FilePlayback playbackConfig = filePlaybackRepository_->get();
-    playbackConfig.setPlaybackFile(exportPath_.getText());
+    playbackConfig.setPlaybackFile(expanded);
     filePlaybackRepository_->update(playbackConfig);
   });
 
@@ -293,10 +329,19 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Set the initial text from repository
   exportVideoFolder_.setText(config.getVideoExportFolder());
 
+  // Validate the initial path and show error if invalid
+  if (!config.getVideoExportFolder().isEmpty()) {
+    validateAndShowPathError(config.getVideoExportFolder(), false,
+                             exportVideoFolderErrorLabel_);
+  }
+
   // Configure repository update on enter/tab/focus lost
   exportVideoFolder_.onValueCommitted([this] {
+    auto [expanded, valid] = validateAndShowPathError(
+        exportVideoFolder_.getText(), false, exportVideoFolderErrorLabel_);
+
     FileExport config = repository_->get();
-    config.setVideoExportFolder(exportVideoFolder_.getText());
+    config.setVideoExportFolder(expanded);
     repository_->update(config);
   });
 
@@ -328,9 +373,30 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           // Use the text box text to add the default extension if needed
           config.setVideoSource(videoSource_.getText());
           repository_->update(config);
+          // Selection guarantees existence; hide error
+          videoSourceErrorLabel_.setText(
+              "", juce::NotificationType::dontSendNotification);
+          videoSourceErrorLabel_.setVisible(false);
         });
   };
   videoSource_.setText(config.getVideoSource());
+
+  // Validate the initial path and show error if invalid
+  if (!config.getVideoSource().isEmpty()) {
+    validateAndShowPathError(config.getVideoSource(), true,
+                             videoSourceErrorLabel_);
+  }
+
+  auto validateVideoSource = [this] {
+    auto [expanded, valid] = validateAndShowPathError(
+        videoSource_.getText(), true, videoSourceErrorLabel_);
+
+    FileExport config = repository_->get();
+    config.setVideoSource(expanded);
+    repository_->update(config);
+  };
+  videoSource_.setOnReturnCallback(validateVideoSource);
+  videoSource_.setOnFocusLostCallback(validateVideoSource);
 
   exportAudioElementsToggle_.setToggleState(
       config.getExportAudioElements(),
@@ -624,7 +690,12 @@ void FileExportScreen::paint(juce::Graphics& g) {
   browseButton_.setBounds(
       row.removeFromLeft(75).withTrimmedTop(10).reduced(15));
 
-  row = rightSideBounds.removeFromTop(rowHeight);
+  // Draw the export path error label just below exportPath_
+  rightSideBounds.removeFromTop(4);
+  auto errorRow = rightSideBounds.removeFromTop(20);
+  exportPathErrorLabel_.setBounds(errorRow.removeFromLeft(componentWidth));
+
+  row = rightSideBounds.removeFromTop(rowHeight - 20);
   addAndMakeVisible(exportAudioElementsToggle_);
   exportAudioElementsToggle_.setBounds(row.removeFromLeft(50));
   addAndMakeVisible(exportAudioElementsLabel_);
@@ -633,7 +704,6 @@ void FileExportScreen::paint(juce::Graphics& g) {
   // Only draw video export options if the audio export is enabled.
   if (enableFileExport_.getToggleState()) {
     // Add the mux video components
-    rightSideBounds.removeFromTop(columnPadding);
     row = rightSideBounds.removeFromTop(rowHeight);
     addAndMakeVisible(muxVidoeLabel_);
     muxVidoeLabel_.setBounds(row.removeFromLeft(130));
@@ -647,12 +717,24 @@ void FileExportScreen::paint(juce::Graphics& g) {
     browseVideoSourceButton_.setBounds(
         row.removeFromLeft(75).withTrimmedTop(10).reduced(15));
 
+    // Draw video source error label below videoSource_
+    rightSideBounds.removeFromTop(4);
+    auto videoSourceErrRow = rightSideBounds.removeFromTop(20);
+    videoSourceErrorLabel_.setBounds(
+        videoSourceErrRow.removeFromLeft(componentWidth));
+
     row = rightSideBounds.removeFromTop(rowHeight);
     addAndMakeVisible(exportVideoFolder_);
     exportVideoFolder_.setBounds(row.removeFromLeft(componentWidth));
     addAndMakeVisible(browseVideoButton_);
     browseVideoButton_.setBounds(
         row.removeFromLeft(75).withTrimmedTop(10).reduced(15));
+
+    // Draw the export video folder error label just below exportVideoFolder_
+    rightSideBounds.removeFromTop(4);
+    auto videoErrorRow = rightSideBounds.removeFromTop(20);
+    exportVideoFolderErrorLabel_.setBounds(
+        videoErrorRow.removeFromLeft(componentWidth));
   }
   // Hide video export/mux options.
   else {
@@ -977,4 +1059,27 @@ bool FileExportScreen::validFileExportConfig(const FileExport& config) {
   warningLabel_.setVisible(false);
 
   return true;
+}
+
+std::pair<juce::String, bool> FileExportScreen::validateAndShowPathError(
+    const juce::String& inputPath, const bool mustExist,
+    juce::Label& errorLabel) {
+  const juce::String kPath = FileExport::expandTildePath(inputPath);
+  const bool kValid = FileExport::validateFilePath(
+      std::filesystem::path(kPath.toStdString()), mustExist);
+
+  if (kValid) {
+    errorLabel.setVisible(false);
+    errorLabel.setText("", juce::NotificationType::dontSendNotification);
+  } else {
+    // Use appropriate prefix based on error type
+    juce::String prefix = mustExist ? "Missing Path: " : "Invalid Path: ";
+    juce::String fullMessage = prefix + kPath;
+
+    errorLabel.setVisible(true);
+    errorLabel.setText(fullMessage,
+                       juce::NotificationType::dontSendNotification);
+  }
+
+  return {kPath, kValid};
 }

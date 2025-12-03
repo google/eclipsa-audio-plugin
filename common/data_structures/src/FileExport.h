@@ -103,6 +103,13 @@ class FileExport final : public RepositoryItemBase {
   static FileExport fromTree(const juce::ValueTree tree);
   virtual juce::ValueTree toValueTree() const override;
 
+  // Checks if the file's parent directory exists. Checks source file existence
+  // if indicated.
+  static bool validateFilePath(const std::filesystem::path& path,
+                               const bool sourceFile);
+
+  static juce::String expandTildePath(const juce::String& path);
+
   inline static const juce::Identifier kTreeType{"file_export"};
 
  private:

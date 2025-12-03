@@ -16,6 +16,7 @@
 
 #include <logger/logger.h>
 
+#include <filesystem>
 #include <string>
 
 #include "data_structures/src/AudioElement.h"
@@ -91,7 +92,9 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     iamfWavFileWriters_[i]->write(buffer);
   }
 
-  iamfFileWriter_->writeFrame(buffer);
+  if (iamfFileWriter_) {
+    iamfFileWriter_->writeFrame(buffer);
+  }
 }
 
 //==============================================================================
@@ -125,28 +128,29 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   config.setExportCompleted(false);
   fileExportRepository_.update(config);
 
-  juce::String exportFilename = config.getExportFile();
-  if (!exportFilename.endsWith(".iamf")) {
-    // The IAMF export tool adds .iamf to the filename
-    exportFilename = exportFilename + ".iamf";
-  }
+  iamfFileWriter_ = nullptr;
+  const juce::String kIamfPath = config.getExportFile();
+  if (FileExport::validateFilePath(
+          FileExport::expandTildePath(kIamfPath).toStdString(), false)) {
+    // Clean up the file if it exists
+    std::filesystem::remove(kIamfPath.toStdString());
 
-  // Clean up the file if it exists
-  juce::File outputFile = juce::File(exportFilename);
-  outputFile.deleteFile();
+    // Create an IAMF file writer to perform the file writing
+    iamfFileWriter_ = std::make_unique<IAMFFileWriter>(
+        fileExportRepository_, audioElementRepository_,
+        mixPresentationRepository_, mixPresentationLoudnessRepository_,
+        numSamples_, config.getSampleRate());
 
-  // // Create an IAMF file writer to perform the file writing
-  iamfFileWriter_ = std::make_unique<IAMFFileWriter>(
-      fileExportRepository_, audioElementRepository_,
-      mixPresentationRepository_, mixPresentationLoudnessRepository_,
-      numSamples_, config.getSampleRate());
-
-  // // Open the file for writing
-  bool openSuccess = iamfFileWriter_->open(exportFilename.toStdString());
-  if (!openSuccess) {
-    LOG_ERROR(0, "IAMF File Writer: Failed to open file for writing: " +
-                     exportFilename.toStdString());
-    throw std::runtime_error("Failed to open IAMF file for writing");
+    // Open the file for writing
+    bool openSuccess = iamfFileWriter_->open(kIamfPath.toStdString());
+    if (!openSuccess) {
+      iamfFileWriter_ = nullptr;
+      LOG_ERROR(0, "IAMF File Writer: Failed to open file for writing: " +
+                       kIamfPath.toStdString());
+    }
+  } else {
+    LOG_WARNING(
+        0, "FileOutputProcessor: Cannot write IAMF data to an invalid path.");
   }
 }
 
@@ -157,16 +161,29 @@ void FileOutputProcessor::closeFileExport(FileExport& config) {
     writer->close();
   }
 
-  bool exportIAMFSuccess = iamfFileWriter_->close();
   // If muxing is enabled and audio export was successful, mux the audio and
   // video files.
-  if (exportIAMFSuccess && fileExportRepository_.get().getExportVideo()) {
-    bool muxIAMFSuccess = IAMFExportHelper::muxIAMF(
-        audioElementRepository_, mixPresentationRepository_,
-        fileExportRepository_.get());
+  const bool kIamfExported = iamfFileWriter_ ? iamfFileWriter_->close() : false;
+  if (kIamfExported && fileExportRepository_.get().getExportVideo()) {
+    const bool kVSourcePathValid = FileExport::validateFilePath(
+        fileExportRepository_.get().getVideoSource().toStdString(), true);
+    const bool kVOutputPathValid = FileExport::validateFilePath(
+        fileExportRepository_.get().getVideoExportFolder().toStdString(),
+        false);
 
-    if (!muxIAMFSuccess) {
-      LOG_INFO(0, "IAMF Muxing: Failed to mux IAMF file with provided video.");
+    bool muxIamfSuccess = false;
+    if (kVSourcePathValid && kVOutputPathValid) {
+      muxIamfSuccess = IAMFExportHelper::muxIAMF(audioElementRepository_,
+                                                 mixPresentationRepository_,
+                                                 fileExportRepository_.get());
+    } else {
+      LOG_WARNING(0,
+                  "IAMF Muxing: Invalid video source or output path provided.");
+    }
+
+    if (!muxIamfSuccess) {
+      LOG_WARNING(0,
+                  "IAMF Muxing: Failed to mux IAMF file with provided video.");
     }
   }
 
