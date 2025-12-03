@@ -40,22 +40,31 @@ cc_shared_library(
 ### Windows - Run as administrator in Developer Command Prompt
 
 1) Clone repository
-2) Open C:\Dev\iamf-tools\iamf\include\iamf_tools\BUILD
-3) Add this at the end of the build file:
-# Shared library exporting all cc_libraries in this file
-cc_shared_library(
-name = "iamf_tools",
-deps = [
-":iamf_decoder_factory",
-":iamf_decoder_interface",
-":iamf_encoder_factory",
-":iamf_encoder_interface",
-":iamf_tools_api_types",
-":iamf_tools_encoder_api_types"
-],
-visibility = ["//visibility:public"],
-)
-4) Run from root: bazel build --copt="/O2" //iamf/include/iamf_tools:iamf_tools --cxxopt="/std:c++20"
+2) Create C:\Dev\iamf-tools\iamf\include\iamf_tools\iamf_tools.def with:
+
+      LIBRARY iamf_tools
+      EXPORTS
+      ?CreateFileGeneratingIamfEncoder@IamfEncoderFactory@api@iamf_tools@@SA?AV?$StatusOr@V?$unique_ptr@VIamfEncoderInterface@api@iamf_tools@@U?$default_delete@VIamfEncoderInterface@api@iamf_tools@@@std@@@std@@@lts_20250512@absl@@V?$basic_string_view@DU?$char_traits@D@std@@@std@@0@Z
+      ?Create@IamfDecoderFactory@api@iamf_tools@@SA?AV?$unique_ptr@VIamfDecoderInterface@api@iamf_tools@@U?$default_delete@VIamfDecoderInterface@api@iamf_tools@@@std@@@std@@AEBUSettings@123@@Z
+
+3) Open C:\Dev\iamf-tools\iamf\include\iamf_tools\BUILD
+4) Add this at the end of the build file:
+
+   cc_shared_library(
+   name = "iamf_tools",
+   deps = [
+   ":iamf_decoder_factory",
+   ":iamf_decoder_interface",
+   ":iamf_encoder_factory",
+   ":iamf_encoder_interface",
+   ":iamf_tools_api_types",
+   ":iamf_tools_encoder_api_types"
+   ],
+   win_def_file = "iamf_tools.def",
+   visibility = ["//visibility:public"],
+   )
+
+4) Run from root: bazel build --copt="/O3" //iamf/include/iamf_tools:iamf_tools --cxxopt="/std:c++20"
 5) Copy the resulting iamf_tools.dll and iams_tools.if.lib to third_party\iamftools\lib\Windows\Release
 
 
