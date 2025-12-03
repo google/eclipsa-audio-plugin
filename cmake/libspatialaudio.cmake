@@ -32,9 +32,7 @@ add_library(libspatialaudio INTERFACE)
 
 # Platform-specific compiler options
 if(WIN32)
-    if(MSVC)
-        target_compile_options(libspatialaudio INTERFACE /w)
-    endif()
+    target_compile_options(libspatialaudio INTERFACE /w)
 elseif(APPLE)
     target_compile_options(libspatialaudio INTERFACE "-w")
 else()
