@@ -25,14 +25,13 @@ const std::vector<AudioElementSpeakerLayout> kInputLayouts = {
     Speakers::k7Point1Point2, Speakers::k7Point1Point4,
     Speakers::kHOA1,          Speakers::kHOA2,
     Speakers::kHOA3,          Speakers::kHOA4,
-    Speakers::kHOA5,          Speakers::kHOA6,
-    Speakers::kHOA7,          Speakers::kBinaural};
+    Speakers::kBinaural};
 
 // OBR only supports binaural rendering for 5.1, 7.1.4, 3OA, and 7OA layouts
 // currently.
 TEST(test_binaural_rendering, construct_renderer) {
   for (const auto& layout : kInputLayouts) {
-    auto renderer = BinauralRdr::createBinauralRdr(layout, 1, 48000);
+    auto renderer = BinauralRdr::createBinauralRdr(layout, 32, 48000);
     // Current valid layouts.
     EXPECT_NE(renderer, nullptr);
   }

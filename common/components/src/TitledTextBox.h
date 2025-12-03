@@ -15,12 +15,11 @@
  */
 
 #pragma once
-#pragma once
 
 #ifdef _WIN32
-    #include <errno.h>
+#include <errno.h>
 #else
-    #include <sys/errno.h>
+#include <sys/errno.h>
 #endif
 
 #include "../components.h"

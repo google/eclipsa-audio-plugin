@@ -82,19 +82,22 @@ class ObrImpl {
    */
   size_t GetNumberOfAudioElements();
 
-  /*!\brief Adds an audio element to the renderer.
-   * Creates an instance of AudioElementConfig, conducts all necessary checks,
-   * populates with config data and updates renderer's DSP.
-   * This method should handle all necessary DSP resource allocations.
+  /*!
+   * \brief Adds an audio element to the renderer with a specific binaural
+   * filter type. Creates an instance of AudioElementConfig, conducts all
+   * necessary checks, populates with config data and updates renderer's DSP.
+   * Default filter type is Ambient for backward compatibility.
    *
    * \param type Type of the audio element.
-   * \param sub_type Subtype of the audio element.
+   * \param filter_profile Type of binaural filter (Direct / Ambient /
+   * Reverberant).
    * \return `absl::OkStatus()` if successful. A specific status on failure.
    */
-  absl::Status AddAudioElement(AudioElementType type);
+  absl::Status AddAudioElement(
+      AudioElementType type,
+      BinauralFilterProfile filter_profile = BinauralFilterProfile::kAmbient);
 
   /*!\brief Removes the last added audio element from the renderer.
-   * This method should handle all necessary DSP resource deallocations.
    *
    * \return `absl::OkStatus()` if successful. A specific status on failure.
    */

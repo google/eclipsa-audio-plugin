@@ -41,7 +41,7 @@ class IAMFFileWriterAccessible : public IAMFFileWriter {
 
 class IAMFFileWriterTest : public FileOutputTests {
  public:
-  bool validateProfileSelection(
+  void validateProfileSelection(
       iamf_tools_cli_proto::ProfileVersion expectedProfile) {
     iamf_tools_cli_proto::UserMetadata iamfMD;
 
@@ -54,8 +54,9 @@ class IAMFFileWriterTest : public FileOutputTests {
     IAMFFileWriterAccessible writer(
         fileExportRepository, audioElementRepository, mixRepository,
         mixPresentationLoudnessRepository, kSamplesPerFrame, kSampleRate);
-    EXPECT_TRUE(writer.open(iamfOutPath));
-    EXPECT_TRUE(writer.close());
+    EXPECT_TRUE(writer.open(iamfOutPath.string()));
+    bool closeResult = writer.close();
+    EXPECT_TRUE(closeResult);
 
     // Validate the profile written is simple
     // I'd prefer to check the file directly here, but for now there is no way
@@ -66,6 +67,7 @@ class IAMFFileWriterTest : public FileOutputTests {
     EXPECT_TRUE(iamfMD.ia_sequence_header_metadata(0).additional_profile() ==
                 expectedProfile);
   }
+
 };
 
 // Open and close the writer
@@ -74,8 +76,10 @@ TEST_F(IAMFFileWriterTest, open_close) {
   IAMFFileWriter writer(fileExportRepository, audioElementRepository,
                         mixRepository, mixPresentationLoudnessRepository,
                         kSamplesPerFrame, kSampleRate);
-  EXPECT_TRUE(writer.open(iamfOutPath));
-  EXPECT_TRUE(writer.close());
+  bool openResult = writer.open(iamfOutPath.string());
+  EXPECT_TRUE(openResult);
+  bool closeResult = writer.close();
+  EXPECT_TRUE(closeResult);
 }
 
 // Write a simple IAMF file. Decode the file to WAV and compare with source
@@ -88,7 +92,8 @@ TEST_F(IAMFFileWriterTest, write_iamf) {
   IAMFFileWriter writer(fileExportRepository, audioElementRepository,
                         mixRepository, mixPresentationLoudnessRepository,
                         kSamplesPerFrame, kSampleRate);
-  EXPECT_TRUE(writer.open(iamfOutPath));
+  bool openResult = writer.open(iamfOutPath.string());
+  EXPECT_TRUE(openResult);
 
   // Generate and write 375 frames of sine tone audio
   juce::AudioBuffer<float> buffer(2, kSamplesPerFrame);
@@ -103,10 +108,12 @@ TEST_F(IAMFFileWriterTest, write_iamf) {
     }
 
     // Write the frame
-    EXPECT_TRUE(writer.writeFrame(buffer));
+    bool writeResult = writer.writeFrame(buffer);
+    EXPECT_TRUE(writeResult);
   }
 
-  EXPECT_TRUE(writer.close());
+  bool closeResult = writer.close();
+  EXPECT_TRUE(closeResult);
 }
 
 TEST_F(IAMFFileWriterTest, validate_simple_profile_selection) {

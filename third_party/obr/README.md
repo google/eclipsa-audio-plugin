@@ -66,7 +66,7 @@
 - Rename the library to obr.dylib and copy to third_party/obr/lib
 
 - Update the dylib RPATH by running the following command:
-  install_name_tool -id "@rpath/third_party/obr/lib/libobr.dylib" libobr.dylib
+  install_name_tool -id "@rpath/third_party/obr/lib/obr.dylib" obr.dylib
 
 - Verify the RPATH was succesfully updated by running the following and ensuring the above path is returned:
   otool -l obr.dylib | grep obr.dylib
@@ -75,3 +75,45 @@
   - Copy obr/obr to third_party/obr/obr
   - Run the clean_directory.sh script in obr/scripts to remove all non-header files
       ./clean_directory.sh ../obr
+
+### Windows Build
+
+#### Prerequisites
+- Visual Studio 2022 (with "Desktop development with C++")
+- CMake 3.28 or higher
+- Git
+- Confirm Abseil version matches project (currently 20250512.1)
+
+#### Build Steps
+
+1. Create build directory
+```powershell
+cd C:\Dev\obr
+mkdir build-windows
+cd build-windows
+```
+
+2. Configure with CMake
+```powershell
+cmake .. -G "Visual Studio 17 2022" -A x64
+```
+
+3. Build
+```powershell
+cmake --build . --config Release -j 8
+```
+Build time: ~5-10 minutes
+
+4. Copy libraries to third_party
+```powershell
+# Create destination directory if it doesn't exist
+mkdir -p ..\..\..\third_party\obr\lib\Windows\Release
+
+# Copy the built libraries
+copy Release\obr.lib ..\..\..\third_party\obr\lib\Windows\Release\
+copy Release\pffft.lib ..\..\..\third_party\obr\lib\Windows\Release\
+```
+
+#### Output
+- Static library: `build-windows\Release\obr.lib` (~31 MB)
+- FFT dependency: `build-windows\Release\pffft.lib` (~68 KB)

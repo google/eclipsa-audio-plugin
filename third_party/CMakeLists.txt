@@ -23,6 +23,7 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(JUCE)
 #IAMF for IAMF file export.
 add_subdirectory(iamftools)
+
 # lib open binaural renderer for panning via ambisonics and binaural rendering.
 add_subdirectory(obr)
 # Libear for loudness rendering.
@@ -107,7 +108,7 @@ else()
 endif()
 
 # Reduce optimization level for SAF to avoid compiler crash
-if(MSVC)
+if(WIN32)
     set(CMAKE_C_FLAGS_RELEASE "/O1 /MD /DNDEBUG" CACHE STRING "" FORCE)
 endif()
 
@@ -138,8 +139,8 @@ else()
     message(WARNING "SAF include directory not found: ${SAF_INCLUDE_DIR}")
 endif()
 
-# MSVC flags
-if(MSVC)
+# Windows flags
+if(WIN32)
     add_compile_definitions(_USE_MATH_DEFINES)
 endif()
 

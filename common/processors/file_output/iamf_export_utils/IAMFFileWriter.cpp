@@ -177,8 +177,8 @@ bool IAMFFileWriter::open(const std::string& filename) {
   return true;
 }
 
-bool IAMFFileWriter::close() {
-  if (iamfEncoder_ != nullptr) {
+bool IAMFFileWriter::finalizeWriting() {
+if (iamfEncoder_ != nullptr) {
     // Step 1: Finalize the encoding process
     auto finalizeStatus = iamfEncoder_->FinalizeEncode();
     if (!finalizeStatus.ok()) {
@@ -220,11 +220,15 @@ bool IAMFFileWriter::close() {
                   "Encoder still generating temporal units after finalization");
       return false;
     }
-
-    // Step 5: Reset the encoder only after confirming everything is finalized
-    iamfEncoder_.reset(nullptr);
   }
   return true;
+}
+
+bool IAMFFileWriter::close() {
+  bool result = finalizeWriting();
+  // Always clear the encoder in order to release the file
+  iamfEncoder_ = nullptr;
+  return result;
 }
 
 inline void convertFloatToDouble(const juce::AudioBuffer<float>& src,

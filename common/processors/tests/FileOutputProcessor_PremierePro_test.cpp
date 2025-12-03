@@ -27,7 +27,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_1ae_1mp) {
     const juce::Uuid kMP = addMixPresentation();
     addAudioElementsToMix(kMP, {kAE});
 
-    setTestExportOpts({AudioCodec::LPCM});
+    setTestExportOpts({.codec = AudioCodec::LPCM});
 
     ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
@@ -46,7 +46,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_1ae_1mp_expl) {
     addAudioElementsToMix(kMP, {kAE});
 
     setTestExportOpts(
-        {AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
+        {.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
     ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
     bouncePremiereProAudio(fileExportRepository, audioElementRepository,
@@ -65,7 +65,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_2ae_1mp) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  setTestExportOpts({AudioCodec::LPCM});
+  setTestExportOpts({.codec = AudioCodec::LPCM});
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
@@ -84,7 +84,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_2ae_expl_1mp) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  setTestExportOpts({AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
+  setTestExportOpts({.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
@@ -99,7 +99,7 @@ TEST_F(FileOutputTests, pp_validate_file_checksum) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE});
 
-  setTestExportOpts({AudioCodec::LPCM});
+  setTestExportOpts({.codec = AudioCodec::LPCM});
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 

@@ -16,7 +16,6 @@ message(STATUS "Fetching ZeroMQ")
 
 set(ENABLE_PRECOMPILED OFF CACHE BOOL "Enable precompiled headers" FORCE)
 
-
 set(ZMQ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CPPZMQ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(WITH_GNUTLS OFF CACHE BOOL "" FORCE)
@@ -28,21 +27,41 @@ set(ENABLE_WS OFF CACHE BOOL "" FORCE)
 set(ENABLE_WSS OFF CACHE BOOL "" FORCE)
 
 include(FetchContent)
+
 FetchContent_Declare(
-  zeromq
-  GIT_REPOSITORY "https://github.com/zeromq/libzmq.git"
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/zeromq-src
-  target_include_directories(zeromq PUBLIC ${zeromq_SOURCE_DIR}/include)
-  CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF
+        zeromq
+        GIT_REPOSITORY "https://github.com/zeromq/libzmq.git"
+        SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/zeromq-src
+        CMAKE_ARGS
+        -DBUILD_SHARED_LIBS=ON
+        -DZMQ_BUILD_TESTS=OFF
+        -DENABLE_DRAFTS=OFF
 )
 FetchContent_MakeAvailable(zeromq)
 
+# Detect correct target and add include dirs
+if (TARGET libzmq)
+    set(ZMQ_TARGET libzmq)
+elseif (TARGET libzmq-static)
+    set(ZMQ_TARGET libzmq-static)
+else()
+    message(FATAL_ERROR "ZeroMQ target not found: expected libzmq or libzmq-static")
+endif()
+
+target_include_directories(${ZMQ_TARGET} PUBLIC
+        $<BUILD_INTERFACE:${zeromq_SOURCE_DIR}/include>
+)
+
 message(STATUS "Fetching ZeroMQ CPP Wrapper")
-include(FetchContent)
+
 FetchContent_Declare(
-  cppzmq
-  GIT_REPOSITORY "https://github.com/zeromq/cppzmq.git"
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/cppzmq-src
-  target_include_directories(cppzmq PUBLIC ${cppzmq_SOURCE_DIR})
+        cppzmq
+        GIT_REPOSITORY "https://github.com/zeromq/cppzmq.git"
+        SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/cppzmq-src
 )
 FetchContent_MakeAvailable(cppzmq)
+
+# cppzmq is header only
+target_include_directories(cppzmq INTERFACE
+        $<BUILD_INTERFACE:${cppzmq_SOURCE_DIR}>
+)

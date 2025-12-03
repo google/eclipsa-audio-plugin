@@ -117,7 +117,7 @@ GainProcessor::InitializeGainParameters() {
 void GainProcessor::updateAllAudioParameterFloats() {
   ChannelGains copy = channelGains_->get();
   std::vector<float> gains = copy.getGains();
-  for (int i = 0; i < gains.size(); i++) {
+  for (int i = 0; i < gains_.size(); i++) {
     *gains_[i] = gains[i];
   }
 }

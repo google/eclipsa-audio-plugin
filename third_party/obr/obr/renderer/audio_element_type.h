@@ -29,10 +29,7 @@ enum class AudioElementType : int {
   k2OA = 102,
   k3OA = 103,
   k4OA = 104,
-  k5OA = 105,
-  k6OA = 106,
-  k7OA = 107,
-  kAmbisonicsGroupEnd = 108,
+  kAmbisonicsGroupEnd = 105,
   kLoudspeakerLayoutsGroupBegin = 200,
   kLayoutMono = 201,
   kLayoutStereo = 202,
@@ -68,9 +65,6 @@ GetAudioElementTypeStringMap() {
             {AudioElementType::k2OA, "k2OA"},
             {AudioElementType::k3OA, "k3OA"},
             {AudioElementType::k4OA, "k4OA"},
-            {AudioElementType::k5OA, "k5OA"},
-            {AudioElementType::k6OA, "k6OA"},
-            {AudioElementType::k7OA, "k7OA"},
             {AudioElementType::kLayoutMono, "kLayoutMono"},
             {AudioElementType::kLayoutStereo, "kLayoutStereo"},
             {AudioElementType::kLayout3_1_2_ch, "kLayout3_1_2_ch"},
@@ -178,12 +172,6 @@ inline absl::StatusOr<int> GetAmbisonicOrder(AudioElementType type) {
       return 3;
     case AudioElementType::k4OA:
       return 4;
-    case AudioElementType::k5OA:
-      return 5;
-    case AudioElementType::k6OA:
-      return 6;
-    case AudioElementType::k7OA:
-      return 7;
     default:
       return absl::InvalidArgumentError(
           "Invalid audio element type (not Ambisonics).");

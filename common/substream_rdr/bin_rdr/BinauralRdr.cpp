@@ -48,12 +48,6 @@ static obr::AudioElementType asOBRLayout(
       return obr::AudioElementType::k3OA;
     case Speakers::kHOA4:
       return obr::AudioElementType::k4OA;
-    case Speakers::kHOA5:
-      return obr::AudioElementType::k5OA;
-    case Speakers::kHOA6:
-      return obr::AudioElementType::k6OA;
-    case Speakers::kHOA7:
-      return obr::AudioElementType::k7OA;
     default:
       return static_cast<obr::AudioElementType>(-1);
   }
@@ -73,10 +67,9 @@ std::unique_ptr<Renderer> BinauralRdr::createBinauralRdr(
     return nullptr;
   }
 
-  // If numSamples == 0, don't create a binaural renderer.
-  // (The number of samples is needed to size buffers internal to the obr
-  // implementation.)
-  if (numSamples == 0) {
+  // If numSamples < 32 don't create a binaural renderer.
+  // Seems like OBRs FFT requires at least 32 samples.
+  if (numSamples < 32) {
     return nullptr;
   }
 

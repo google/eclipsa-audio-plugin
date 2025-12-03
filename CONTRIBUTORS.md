@@ -6,8 +6,11 @@ The Eclipsa Audio Plugins have been developed as a joint venture between Google 
 
 - Ankur Juneja - [ankurjuneja-acx](https://github.com/ankurjuneja)
 - Branden Crawford - [BrandenAvalonCx](https://github.com/BrandenAvalonCx)
+- Erik Jourgensen - [ErikJour](https://github.com/ErikJour)
+- Felicia Lim - [felicialim](https://github.com/felicialim)
 - Harman Khungura - [harmankacx](https://github.com/harmankacx)
-- Joel Meuleman - [meule](https://github.com/jmeule)
+- Joel Meuleman - [jmeule](https://github.com/jmeule)
+- Joseph Cullen - [jwcullen](https://github.com/jwcullen)
 - Praveen Kumar - [PraveenAcx](https://github.com/PraveenAcx)
 - Ricky Curry - [rcurry-acx](https://github.com/rcurry-acx)
 

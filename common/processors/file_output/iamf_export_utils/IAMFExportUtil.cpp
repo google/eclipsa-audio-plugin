@@ -15,6 +15,7 @@
 #include "IAMFExportUtil.h"
 
 #include <gpac/filters.h>
+#include <gpac/tools.h>
 #include <logger/logger.h>
 
 namespace IAMFExportHelper {
@@ -164,6 +165,13 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   const juce::String inputVideoFile = exportData.getVideoSource();
   const juce::String outputMuxdFile = exportData.getVideoExportFolder();
 
+  // Initialize GPAC library before creating session
+  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
+  if (init_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
+    return false;
+  }
+
   GF_Err gf_err = GF_OK;
   GF_FilterSession* session = gf_fs_new_defaults(GF_FilterSessionFlags(0));
   if (session == NULL) {
@@ -176,7 +184,9 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* src_audio = gf_fs_load_source(session, inputAudioFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to load audio file.");
+    std::string errStr = "IAMF Muxing: Failed to load audio file: " +
+                         inputAudioFile.toStdString();
+    LOG_ERROR(0, errStr);
     return false;
   }
 
@@ -184,7 +194,9 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* src_video = gf_fs_load_source(session, inputVideoFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to load video file.");
+    std::string errStr = "IAMF Muxing: Failed to load video file: " +
+                         inputVideoFile.toStdString();
+    LOG_ERROR(0, errStr);
     gf_fs_del(session);
     return false;
   }
@@ -193,7 +205,9 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   GF_Filter* dest_filter = gf_fs_load_destination(
       session, outputMuxdFile.toRawUTF8(), NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to load output file filter.");
+    std::string errStr = "IAMF Muxing: Failed to load output destination: " +
+                         outputMuxdFile.toStdString();
+    LOG_ERROR(0, errStr);
     gf_fs_del(session);
     return false;
   }

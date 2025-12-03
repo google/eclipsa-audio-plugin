@@ -255,6 +255,12 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     config.setExportFolder(juce::File(exportPath_.getText())
                                .getParentDirectory()
                                .getFullPathName());
+    LOG_WARNING(RendererProcessor::instanceId_,
+                "FileExportScreen: Updated export file to " +
+                    config.getExportFile().toStdString());
+    LOG_WARNING(RendererProcessor::instanceId_,
+                "FileExportScreen: Updated export folder to " +
+                    config.getExportFolder().toStdString());
     repository_->update(config);
 
     FilePlayback playbackConfig = filePlaybackRepository_->get();
@@ -271,7 +277,9 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           juce::String fullPath = file.getResult().getFullPathName();
           exportPath_.setText(fullPath);
           FileExport config = repository_->get();
-          config.setExportFile(fullPath);
+          
+          // Use the text box text to add the default extension if needed
+          config.setExportFile(exportPath_.getText());
           config.setExportFolder(
               file.getResult().getParentDirectory().getFullPathName());
           repository_->update(config);
@@ -301,7 +309,9 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           juce::String fullPath = file.getResult().getFullPathName();
           exportVideoFolder_.setText(fullPath);
           FileExport config = repository_->get();
-          config.setVideoExportFolder(fullPath);
+
+          // Use the text box text to add the default extension if needed
+          config.setVideoExportFolder(exportVideoFolder_.getText());
           repository_->update(config);
         });
   };
@@ -314,7 +324,9 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
         [this](const auto& file) {
           videoSource_.setText(file.getResult().getFullPathName());
           FileExport config = repository_->get();
-          config.setVideoSource(file.getResult().getFullPathName());
+
+          // Use the text box text to add the default extension if needed
+          config.setVideoSource(videoSource_.getText());
           repository_->update(config);
         });
   };
