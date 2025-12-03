@@ -178,7 +178,7 @@ bool IAMFFileWriter::open(const std::string& filename) {
 }
 
 bool IAMFFileWriter::finalizeWriting() {
-if (iamfEncoder_ != nullptr) {
+  if (iamfEncoder_ != nullptr) {
     // Step 1: Finalize the encoding process
     auto finalizeStatus = iamfEncoder_->FinalizeEncode();
     if (!finalizeStatus.ok()) {

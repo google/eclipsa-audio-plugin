@@ -256,10 +256,10 @@ juce::AudioProcessorEditor* RendererProcessor::createEditor() {
   LOG_ANALYTICS(instanceId_, "RendererProcessor createEditor \n");
 
   // Check to see if there is a mix presentation, and if not then initialize one
-  // This problem is caused because some DAWs call SetStateInformation when there
-  // is no state available and some don't. So if there is no state, the mix presentation
-  // won't be initialized on some DAWs, so initialize it here before the editor is
-  // created to show the blank mix presentation in the UI.
+  // This problem is caused because some DAWs call SetStateInformation when
+  // there is no state available and some don't. So if there is no state, the
+  // mix presentation won't be initialized on some DAWs, so initialize it here
+  // before the editor is created to show the blank mix presentation in the UI.
   int count = mixPresentationRepository_.getItemCount();
   if (count == 0) {
     initializeMixPresentations();

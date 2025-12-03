@@ -62,7 +62,7 @@ class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
     // depends on view
     // uses the equation of a unit sphere
     void calculateSurfacePosition(const std::pair<float, float>& point,
-                                   const VisualizerView& view);
+                                  const VisualizerView& view);
 
     // returns the 3rd coordinates on the surface of a unit sphere
     float unitSphere(const float& x, const float& y);

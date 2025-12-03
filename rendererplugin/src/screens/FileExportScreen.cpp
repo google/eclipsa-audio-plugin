@@ -313,7 +313,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           juce::String fullPath = file.getResult().getFullPathName();
           exportPath_.setText(fullPath);
           FileExport config = repository_->get();
-          
+
           // Use the text box text to add the default extension if needed
           config.setExportFile(exportPath_.getText());
           config.setExportFolder(

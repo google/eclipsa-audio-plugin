@@ -81,7 +81,7 @@ constexpr Mat4 getTopViewTransform() {
       {0.0f, 0.0f, 4.80981f, 5.0f},
   }};
 }
- Mat4 getIsoViewTransform() {
+Mat4 getIsoViewTransform() {
   const Mat4 ortho = {{
       {0.505556f, 0.0f, 0.0f, 0.0f},
       {0.f, 0.66667f, 0.0f, 0.0f},

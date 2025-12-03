@@ -16,7 +16,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define sleep(sec) Sleep((sec)*1000)
+#define sleep(sec) Sleep((sec) * 1000)
 #endif
 
 #include "data_structures/src/AudioElementPluginSyncClient.h"

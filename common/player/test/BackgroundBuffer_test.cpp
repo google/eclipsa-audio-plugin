@@ -8,18 +8,16 @@
 #include "processors/tests/FileOutputTestFixture.h"
 
 class BackgroundBufferTest : public FileOutputTests {
-  
   void TearDown() override {
-    decoder_.reset(); // Releaes the file before deleting
+    decoder_.reset();  // Releaes the file before deleting
     if (std::filesystem::exists(kTestFilePath_)) {
       std::filesystem::remove(kTestFilePath_);
     }
   }
 
-  protected:
-    std::unique_ptr<IAMFFileReader> decoder_;
-    std::filesystem::path kTestFilePath_;
-
+ protected:
+  std::unique_ptr<IAMFFileReader> decoder_;
+  std::filesystem::path kTestFilePath_;
 };
 
 class BackgroundBufferStereoTest : public BackgroundBufferTest {
@@ -257,7 +255,6 @@ TEST_F(BackgroundBuffer2AETest, write_read_validate) {
 
 // 9. Try various reads and writes
 TEST_F(BackgroundBuffer2AETest, vary_read_write) {
-
   const unsigned kPadSecs = 1;
   BackgroundBuffer buffer(kPadSecs, *decoder_);
 

@@ -91,7 +91,7 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
     }
   }
 
-  //EJ 10/31
+  // EJ 10/31
 
   void tryConnect() {  // Start a thread here to try and perform the connection
     connectionThread_ = std::thread([this] {

@@ -67,7 +67,6 @@ class IAMFFileWriterTest : public FileOutputTests {
     EXPECT_TRUE(iamfMD.ia_sequence_header_metadata(0).additional_profile() ==
                 expectedProfile);
   }
-
 };
 
 // Open and close the writer

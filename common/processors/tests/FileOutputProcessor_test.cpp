@@ -82,7 +82,8 @@ TEST_F(FileOutputTests, iamf_lpc_2ae_expl_1mp) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  setTestExportOpts({.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
+  setTestExportOpts(
+      {.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
@@ -140,7 +141,8 @@ TEST_F(FileOutputTests, iamf_lpc_28ae_1mp) {
   const juce::Uuid kMP1 = addMixPresentation();
   addAudioElementsToMix(kMP1, aeIds);
 
-  setTestExportOpts({.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
+  setTestExportOpts(
+      {.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
@@ -155,7 +157,7 @@ TEST_F(FileOutputTests, iamf_multi_codec_multi_sr_1ae_1mp) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE});
   for (const AudioCodec codec :
-      {AudioCodec::LPCM, AudioCodec::FLAC, AudioCodec::OPUS}) {
+       {AudioCodec::LPCM, AudioCodec::FLAC, AudioCodec::OPUS}) {
     for (const int sampleRate : {16e3, 44.1e3, 48e3, 96e3}) {
       if (codec == AudioCodec::OPUS &&
           (sampleRate == 44.1e3 || sampleRate == 96e3)) {
@@ -167,7 +169,8 @@ TEST_F(FileOutputTests, iamf_multi_codec_multi_sr_1ae_1mp) {
 
       bounceAudio(fio_proc, audioElementRepository, sampleRate);
 
-      ASSERT_TRUE(std::filesystem::exists(iamfOutPath)) << sampleRate << ":" << static_cast<int>(codec);
+      ASSERT_TRUE(std::filesystem::exists(iamfOutPath))
+          << sampleRate << ":" << static_cast<int>(codec);
       std::filesystem::remove(iamfOutPath);  // Rm for next iteration
     }
   }

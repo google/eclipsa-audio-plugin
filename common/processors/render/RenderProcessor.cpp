@@ -225,15 +225,14 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Always attempt to render binaural audio.
     // This renderer is never null, it is either a BinauralRdr, a BedToBedRdr or
     // a PassthroughRdr.
-    if ( aeRdr->rendererBinaural != nullptr)
-    {
+    if (aeRdr->rendererBinaural != nullptr) {
       aeRdr->rendererBinaural->render(aeRdr->inputData,
                                       aeRdr->outputDataBinaural);
 
       // Mix rendered binaural audio to the internal binaural mix buffer.
       for (int i = 0; i < Speakers::kBinaural.getNumChannels(); ++i) {
         binauralMixBuffer_.addFrom(i, 0, aeRdr->outputDataBinaural, i, 0,
-                                  binauralMixBuffer_.getNumSamples());
+                                   binauralMixBuffer_.getNumSamples());
       }
 
       // Render beds audio if playback is not binaural,
@@ -248,7 +247,7 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       const int numSourceChannels = aeRdr->outputData.getNumChannels();
       for (int i = 0; i < numSourceChannels; ++i) {
         mixBuffer_.addFrom(i, 0, aeRdr->outputData, i, 0,
-                          mixBuffer_.getNumSamples());
+                           mixBuffer_.getNumSamples());
       }
     }
   }

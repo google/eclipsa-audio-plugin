@@ -13,12 +13,13 @@
 // limitations under the License.
 
 #include "AudioElementPluginEditor.h"
+
 #include <iostream>
 
 #ifdef _WIN32
-  // Windows doesn't need unistd.h - functionality is in io.h if needed
+// Windows doesn't need unistd.h - functionality is in io.h if needed
 #else
-  #include <unistd.h>
+#include <unistd.h>
 #endif
 
 #include "AudioElementPluginProcessor.h"

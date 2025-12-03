@@ -57,9 +57,10 @@ class AudioElementPluginProcessor final : public ProcessorBase,
 
   void releaseResources() override;
   ~AudioElementPluginProcessor() override {
-    // Ensure the processors are destroyed before the repositories or other dependent pieces
-    audioProcessors_.clear(); 
-    syncClient_.disconnectClient(); 
+    // Ensure the processors are destroyed before the repositories or other
+    // dependent pieces
+    audioProcessors_.clear();
+    syncClient_.disconnectClient();
   }
 
   void getStateInformation(juce::MemoryBlock& destData) override;

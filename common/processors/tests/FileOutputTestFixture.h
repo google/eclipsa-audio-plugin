@@ -208,10 +208,14 @@ class FileOutputTests : public ::testing::Test {
     ex.setExportAudio(true);
     ex.setAudioFileFormat(AudioFileFormat::IAMF);
     ex.setSampleRate(kSampleRate);
-    ex.setVideoSource((std::filesystem::current_path().parent_path().append("common")
-                .append("processors").append("tests")
-                .append("test_resources")
-                .append("SilentSampleVideo.mp4")).string());
+    ex.setVideoSource((std::filesystem::current_path()
+                           .parent_path()
+                           .append("common")
+                           .append("processors")
+                           .append("tests")
+                           .append("test_resources")
+                           .append("SilentSampleVideo.mp4"))
+                          .string());
     iamfOutPath = std::filesystem::current_path() / "test.iamf";
     videoOutPath = std::filesystem::current_path() / "test.mp4";
     ex.setVideoExportFolder(videoOutPath.string());

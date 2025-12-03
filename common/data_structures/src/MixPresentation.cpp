@@ -14,10 +14,9 @@
 
 #include "MixPresentation.h"
 
-#include <cstdint>
-
 #include <juce_core/juce_core.h>
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 

@@ -16,6 +16,7 @@
 
 #pragma once
 #include <bitset>
+
 #include "data_structures/src/RepositoryItem.h"
 
 class PlaybackMS final : public RepositoryItemBase {

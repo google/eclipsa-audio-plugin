@@ -180,8 +180,7 @@ class AudioElementSubscriber {
   };
 
   // AudioElementUpdateData getData(
-  void getData(
-      std::function<void(AudioElementUpdateData)> callback) const {
+  void getData(std::function<void(AudioElementUpdateData)> callback) const {
     // Read the data map
     juce::ScopedReadLock readLock(dataMapLock);
     // Iterate through each element, calling the callback

@@ -84,7 +84,8 @@ TEST_F(FileOutputTests, iamf_pp_lpc_2ae_expl_1mp) {
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
-  setTestExportOpts({.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
+  setTestExportOpts(
+      {.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
