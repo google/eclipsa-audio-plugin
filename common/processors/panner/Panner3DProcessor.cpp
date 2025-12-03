@@ -32,7 +32,6 @@ Panner3DProcessor::Panner3DProcessor(
       audioElementSpatialLayoutData_(audioElementSpatialLayoutRepository),
       automationParameterTree_(automationParameterTree) {
   outputLayout_ = audioElementSpatialLayoutRepository->get().getChannelLayout();
-  outputBuffer_.setSize(outputLayout_.getNumChannels(), samplesPerBlock_);
 
   xPosition_ = automationParameterTree_->getXPosition();
   yPosition_ = automationParameterTree_->getYPosition();

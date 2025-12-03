@@ -47,8 +47,9 @@ void ensureAmbisonicToStereoIsRenderedCorrectly(
 
   // First, create an audio buffer and fill it with some test data
   // 9 Channels are needed for second order ambisonics
-  juce::AudioBuffer<float> testDataBuffer(9, 24);
-  for (int i = 0; i < 24; i++) {
+  int samplesPerBlock = 32;
+  juce::AudioBuffer<float> testDataBuffer(9, samplesPerBlock);
+  for (int i = 0; i < samplesPerBlock; i++) {
     testDataBuffer.setSample(0, i, i + 1);
     testDataBuffer.setSample(1, i, i + 1);
     testDataBuffer.setSample(2, i, i + 1);
@@ -62,11 +63,11 @@ void ensureAmbisonicToStereoIsRenderedCorrectly(
   juce::MidiBuffer midiBuffer;
 
   // Now process the buffer
-  rProcessor.prepareToPlay(kSampleRate, 24);
+  rProcessor.prepareToPlay(kSampleRate, samplesPerBlock);
   rProcessor.processBlock(testDataBuffer, midiBuffer);
 
   // Mono->Stereo should output data only on both channels
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < samplesPerBlock; i++) {
     ASSERT_NE(testDataBuffer.getSample(0, i), 0);
     ASSERT_NE(testDataBuffer.getSample(1, i), 0);
     ASSERT_EQ(testDataBuffer.getSample(2, i), 0);
@@ -94,8 +95,9 @@ void ensureTwoStereoElementsAreMixedCorrectly(
 
   // First, create an audio buffer and fill it with some test data
   // Four channels are needed, two for each audio element
-  juce::AudioBuffer<float> testDataBuffer(4, 24);
-  for (int i = 0; i < 24; i++) {
+  int samplesPerBlock = 32;
+  juce::AudioBuffer<float> testDataBuffer(4, samplesPerBlock);
+  for (int i = 0; i < samplesPerBlock; i++) {
     testDataBuffer.setSample(0, i, i + 1);
     testDataBuffer.setSample(1, i, i + 1);
     testDataBuffer.setSample(2, i, i + 1);
@@ -104,11 +106,11 @@ void ensureTwoStereoElementsAreMixedCorrectly(
   juce::MidiBuffer midiBuffer;
 
   // Now process the buffer
-  rProcessor.prepareToPlay(kSampleRate, 24);
+  rProcessor.prepareToPlay(kSampleRate, samplesPerBlock);
   rProcessor.processBlock(testDataBuffer, midiBuffer);
 
   // Stereo output should only be on the first 2 channels
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < samplesPerBlock; i++) {
     ASSERT_NE(testDataBuffer.getSample(0, i), 0);
     ASSERT_NE(testDataBuffer.getSample(1, i), 0);
     ASSERT_EQ(testDataBuffer.getSample(2, i), 0);
@@ -131,19 +133,20 @@ void ensureMonoToStereoIsRenderedCorrectly(
 
   // First, create an audio buffer and fill it with some test data
   // Two channels are still needed, since we'll output to the second channel
-  juce::AudioBuffer<float> testDataBuffer(2, 24);
-  for (int i = 0; i < 24; i++) {
+  int samplesPerBlock = 32;
+  juce::AudioBuffer<float> testDataBuffer(2, samplesPerBlock);
+  for (int i = 0; i < samplesPerBlock; i++) {
     testDataBuffer.setSample(0, i, i + 1);
     testDataBuffer.setSample(1, i, 0);
   }
   juce::MidiBuffer midiBuffer;
 
   // Now process the buffer
-  rProcessor.prepareToPlay(kSampleRate, 24);
+  rProcessor.prepareToPlay(kSampleRate, samplesPerBlock);
   rProcessor.processBlock(testDataBuffer, midiBuffer);
 
   // Mono->Stereo should output data only on both channels
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < samplesPerBlock; i++) {
     ASSERT_NE(testDataBuffer.getSample(0, i), 0);
     ASSERT_NE(testDataBuffer.getSample(1, i), 0);
   }
@@ -163,8 +166,9 @@ void ensureStereoToFiveOneIsRenderedCorrectly(
   roomSetupData.update(setupInfo);
 
   // First, create an audio buffer and fill it with some test data
-  juce::AudioBuffer<float> testDataBuffer(7, 24);
-  for (int i = 0; i < 24; i++) {
+  int samplesPerBlock = 32;
+  juce::AudioBuffer<float> testDataBuffer(7, samplesPerBlock);
+  for (int i = 0; i < samplesPerBlock; i++) {
     testDataBuffer.setSample(0, i, i + 1);
     testDataBuffer.setSample(1, i, i + 1);
     testDataBuffer.setSample(2, i, 0);
@@ -176,10 +180,10 @@ void ensureStereoToFiveOneIsRenderedCorrectly(
   juce::MidiBuffer midiBuffer;
 
   // Now process the buffer
-  rProcessor.prepareToPlay(kSampleRate, 24);
+  rProcessor.prepareToPlay(kSampleRate, samplesPerBlock);
   rProcessor.processBlock(testDataBuffer, midiBuffer);
 
-  for (int i = 0; i < 24; i++) {
+  for (int i = 0; i < samplesPerBlock; i++) {
     ASSERT_NE(testDataBuffer.getSample(0, i), 0);
     ASSERT_NE(testDataBuffer.getSample(1, i), 0);
   }

@@ -56,7 +56,11 @@ class AudioElementPluginProcessor final : public ProcessorBase,
   static int instanceId_;  // Unique identifier for each instance of the plugin
 
   void releaseResources() override;
-  ~AudioElementPluginProcessor() override { syncClient_.disconnectClient(); }
+  ~AudioElementPluginProcessor() override {
+    // Ensure the processors are destroyed before the repositories or other dependent pieces
+    audioProcessors_.clear(); 
+    syncClient_.disconnectClient(); 
+  }
 
   void getStateInformation(juce::MemoryBlock& destData) override;
   void setStateInformation(const void* data, int sizeInBytes) override;

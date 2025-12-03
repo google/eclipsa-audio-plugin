@@ -27,28 +27,47 @@ target_include_directories(iamftools INTERFACE
 add_library(iamftools_dylib SHARED IMPORTED)
 
 if(WIN32)
-    message(STATUS "Linking prebuilt IAMF Tools from third_party/Windows")
+    # Platform-specific setup for Windows
+    set(IAMF_PLATFORM "Windows")
 
-    set(WINDOWS_LIB_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/Windows/${BUILD_LIB_DIR}")
+    # Set paths for each configuration
+    set(IAMF_TOOLS_DEBUG_DLL "${CMAKE_CURRENT_LIST_DIR}/lib/${IAMF_PLATFORM}/Debug/iamf_tools.dll")
+    set(IAMF_TOOLS_DEBUG_LIB "${CMAKE_CURRENT_LIST_DIR}/lib/${IAMF_PLATFORM}/Debug/iamf_tools.if.lib")
+    set(IAMF_TOOLS_RELEASE_DLL "${CMAKE_CURRENT_LIST_DIR}/lib/${IAMF_PLATFORM}/Release/iamf_tools.dll")
+    set(IAMF_TOOLS_RELEASE_LIB "${CMAKE_CURRENT_LIST_DIR}/lib/${IAMF_PLATFORM}/Release/iamf_tools.if.lib")
+
+    # Validate that the libraries exist
+    if(NOT EXISTS "${IAMF_TOOLS_DEBUG_DLL}")
+        message(FATAL_ERROR "IAMF Tools Debug DLL not found at: ${IAMF_TOOLS_DEBUG_DLL}")
+    endif()
+    if(NOT EXISTS "${IAMF_TOOLS_DEBUG_LIB}")
+        message(FATAL_ERROR "IAMF Tools Debug LIB not found at: ${IAMF_TOOLS_DEBUG_LIB}")
+    endif()
+    if(NOT EXISTS "${IAMF_TOOLS_RELEASE_DLL}")
+        message(FATAL_ERROR "IAMF Tools Release DLL not found at: ${IAMF_TOOLS_RELEASE_DLL}")
+    endif()
+    if(NOT EXISTS "${IAMF_TOOLS_RELEASE_LIB}")
+        message(FATAL_ERROR "IAMF Tools Release LIB not found at: ${IAMF_TOOLS_RELEASE_LIB}")
+    endif()
+
+    message(STATUS "IAMF Tools Debug DLL: ${IAMF_TOOLS_DEBUG_DLL}")
+    message(STATUS "IAMF Tools Release DLL: ${IAMF_TOOLS_RELEASE_DLL}")
 
     set_target_properties(iamftools_dylib PROPERTIES
-            IMPORTED_LOCATION "${WINDOWS_LIB_DIR}/iamf_tools.dll"
-            IMPORTED_IMPLIB   "${WINDOWS_LIB_DIR}/iamf_tools.if.lib"
-            IMPORTED_LOCATION_DEBUG   "${WINDOWS_LIB_DIR}/iamf_tools.dll"
-            IMPORTED_LOCATION_RELEASE "${WINDOWS_LIB_DIR}/iamf_tools.dll"
+            IMPORTED_LOCATION "${IAMF_TOOLS_RELEASE_DLL}"
+            IMPORTED_LOCATION_DEBUG "${IAMF_TOOLS_DEBUG_DLL}"
+            IMPORTED_LOCATION_RELEASE "${IAMF_TOOLS_RELEASE_DLL}"
+            IMPORTED_IMPLIB "${IAMF_TOOLS_RELEASE_LIB}"
+            IMPORTED_IMPLIB_DEBUG "${IAMF_TOOLS_DEBUG_LIB}"
+            IMPORTED_IMPLIB_RELEASE "${IAMF_TOOLS_RELEASE_LIB}"
             LINKER_LANGUAGE CXX
     )
 
-    # Link the import lib so MSVC resolves symbols like IamfEncoderFactory::CreateFileGeneratingIamfEncoder
-    target_link_libraries(iamftools INTERFACE
-            "${WINDOWS_LIB_DIR}/iamf_tools.if.lib"
-    )
-
-    # Copy DLL next to the built plugin
+    # Copy DLL to build directory (configuration-aware using generator expressions)
     add_custom_target(copy_iamftools_dll ALL
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${WINDOWS_LIB_DIR}/iamf_tools.dll"
-            "${CMAKE_BINARY_DIR}/iamf_tools.dll"
+            "$<IF:$<CONFIG:Debug>,${IAMF_TOOLS_DEBUG_DLL},${IAMF_TOOLS_RELEASE_DLL}>"
+            "${CMAKE_BINARY_DIR}/$<CONFIG>/iamf_tools.dll"
             COMMENT "Copying IAMF Tools DLL to build directory"
     )
 

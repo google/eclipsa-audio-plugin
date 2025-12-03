@@ -125,8 +125,8 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_2ae_cb) {
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
   setTestExportOpts({.codec = AudioCodec::LPCM,
-                     .exportVideo = true,
-                     .profile = FileProfile::BASE_ENHANCED});
+                     .profile = FileProfile::BASE_ENHANCED,
+                     .exportVideo = true});
 
   bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
@@ -143,11 +143,11 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_all_layouts) {
 
     setTestExportOpts(
         {.codec = AudioCodec::LPCM,
-         .exportVideo = true,
          .profile = (layout == Speakers::kMono || layout == Speakers::kStereo ||
                      layout == Speakers::kBinaural)
                         ? FileProfile::SIMPLE
-                        : FileProfile::BASE_ENHANCED});
+                        : FileProfile::BASE_ENHANCED,
+         .exportVideo = true});
 
     bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 
@@ -179,7 +179,7 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_codecs) {
            AudioCodec::OPUS,
        }) {
     setTestExportOpts(
-        {.codec = codec, .exportVideo = true, .sampleRate = (int)48e3});
+        {.codec = codec, .sampleRate = (int)48e3, .exportVideo = true});
 
     bounceAudio(fio_proc, audioElementRepository, ex.getSampleRate());
 

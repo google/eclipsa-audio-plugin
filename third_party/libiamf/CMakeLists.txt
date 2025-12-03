@@ -32,7 +32,7 @@ if(NOT libiamf_POPULATED)
   FetchContent_Populate(libiamf)
 
   # --- PATCH: Fix libiamf's CMakeLists.txt to remove GCC-only flags and m library on Windows
-  if(MSVC)
+  if(WIN32)
     file(READ "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" LIBIAMF_CMAKE_CONTENT)
     string(REPLACE "-O3" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
     string(REPLACE "-Werror=unused-variable" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
@@ -45,7 +45,7 @@ if(NOT libiamf_POPULATED)
 
   # --- macOS vendor handling
   if(APPLE)
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/macos")
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
     file(REMOVE
             "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libopus.a"
             "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libfdk-aac.a"
@@ -64,15 +64,31 @@ if(NOT libiamf_POPULATED)
   # --- Windows vendor handling
   if(WIN32)
     message(STATUS "Using Windows codec libraries for IAMF")
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/third_party/lib/Windows")
-    file(COPY
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/fdk-aac.lib"
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/FLAC.lib"
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/opus.lib"
-            "${VENDOR_LIB_PATH}/${BUILD_LIB_DIR}/ogg.lib"
-            DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
-    )
-    link_directories("${VENDOR_LIB_PATH}")
+
+    set(VENDOR_LIB_PATH_DEBUG "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Debug")
+    set(VENDOR_LIB_PATH_RELEASE "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Release")
+
+    # Copy Debug libraries if they exist
+    if(EXISTS "${VENDOR_LIB_PATH_DEBUG}/fdk-aac.lib")
+      file(COPY
+              "${VENDOR_LIB_PATH_DEBUG}/fdk-aac.lib"
+              "${VENDOR_LIB_PATH_DEBUG}/FLAC.lib"
+              "${VENDOR_LIB_PATH_DEBUG}/opus.lib"
+              "${VENDOR_LIB_PATH_DEBUG}/ogg.lib"
+              DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+      )
+    endif()
+
+    # Copy Release libraries if they exist
+    if(EXISTS "${VENDOR_LIB_PATH_RELEASE}/fdk-aac.lib")
+      file(COPY
+              "${VENDOR_LIB_PATH_RELEASE}/fdk-aac.lib"
+              "${VENDOR_LIB_PATH_RELEASE}/FLAC.lib"
+              "${VENDOR_LIB_PATH_RELEASE}/opus.lib"
+              "${VENDOR_LIB_PATH_RELEASE}/ogg.lib"
+              DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+      )
+    endif()
   endif()
 
 

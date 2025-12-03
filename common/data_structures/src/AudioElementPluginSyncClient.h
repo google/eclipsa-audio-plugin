@@ -99,7 +99,7 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
       // has been requested and we need to stop
       while (!connected_ && !terminationRequested_) {
         rendererAudioElementsLock_.enter();
-        bool connected = connectToSocket("localhost", port_, 30000);
+        bool connected = connectToSocket("localhost", port_, 5000);
         if (connected) {
           rendererAudioElementsLock_.exit();
           connected_ = true;
