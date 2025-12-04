@@ -149,35 +149,44 @@ jobs:
           which cmake
 
       # --- Install Dependencies (Windows) ---
-      - name: Install Intel OneAPI MKL (Windows)
+      - name: Cache Intel OneAPI
+        id: cache-oneapi
         if: runner.os == 'Windows'
+        uses: actions/cache@v3
+        with:
+          path: oneapi
+          key: ${{ runner.os }}-oneapi-mkl-2025.3.0
+
+      - name: Install Intel OneAPI MKL (Windows)
+        if: runner.os == 'Windows' && steps.cache-oneapi.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           # Download Intel OneAPI Base Toolkit (Offline Installer)
-          # Using a specific version URL. If this 404s, check Intel's site for the latest link.
+          # We use the offline installer because the online installer URL is not stable/predictable.
+          # This is a large download (~2.5GB), but we cache the result so this only happens once.
           $installerUrl = "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/1f18901e-877d-469d-a41a-a10f11b39336/intel-oneapi-base-toolkit-2025.3.0.372_offline.exe"
           $installerPath = "$env:TEMP\intel-oneapi-base-toolkit-offline.exe"
           
           Write-Host "Downloading Intel OneAPI Base Toolkit from $installerUrl..."
-          # Increased timeout to 20 minutes (1200 seconds) for large file download
-          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -TimeoutSec 1200
+          
+          # Use curl.exe for faster download (Invoke-WebRequest can be slow due to progress bar)
+          # -L: Follow redirects
+          # -o: Output file
+          # --retry: Retry on transient errors
+          & curl.exe -L -o "$installerPath" "$installerUrl" --retry 5 --retry-delay 5
+          
+          if (-not (Test-Path $installerPath)) {
+              Write-Error "Download failed: File not found at $installerPath"
+              exit 1
+          }
           
           Write-Host "Installing Intel OneAPI Base Toolkit (MKL only)..."
-          # Run installer silently. 
-          # -s: silent extraction
-          # -x: extract only (faster than full install if we just need libs, but here we install)
-          # -a: pass arguments to the installer
-          # --silent: silent mode for the installer itself
-          # --eula accept: accept the license
-          # --components ...: Install ONLY MKL to save time/space. 
-          #    Note: Component IDs can vary by version. 'intel.oneapi.win.mkl.devel' is the typical ID for MKL development files.
-          # -p=NEED_VS2022_INTEGRATION=0: skip VS2022 integration
           
-          # First, let's try to list components to be sure (optional debugging step, commented out for speed)
-          # Start-Process -FilePath $installerPath -ArgumentList "-s -a --list-components" -Wait -NoNewWindow
+          # Install to a local directory within the workspace so it can be cached
+          $installDir = "$env:GITHUB_WORKSPACE\oneapi"
           
-          # Install command with component filtering
-          $proc = Start-Process -FilePath $installerPath -ArgumentList "-s -a --silent --eula accept --components intel.oneapi.win.mkl.devel -p=NEED_VS2022_INTEGRATION=0" -Wait -NoNewWindow -PassThru
+          # Run installer silently with custom install directory
+          $proc = Start-Process -FilePath $installerPath -ArgumentList "-s -a --silent --eula accept --components intel.oneapi.win.mkl.devel -p=NEED_VS2022_INTEGRATION=0 --install-dir `"$installDir`"" -Wait -NoNewWindow -PassThru
           
           if ($proc.ExitCode -ne 0) {
               Write-Error "Installation failed with exit code $($proc.ExitCode)"
@@ -185,9 +194,12 @@ jobs:
           }
           
           Write-Host "Installation complete."
-          
-          # Set MKLROOT environment variable for subsequent steps
-          $mklRoot = "C:\Program Files (x86)\Intel\oneAPI\mkl\latest"
+
+      - name: Set MKLROOT Environment Variable
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $mklRoot = "$env:GITHUB_WORKSPACE\oneapi\mkl\latest"
           if (Test-Path $mklRoot) {
             Write-Host "MKL found at: $mklRoot"
             echo "MKLROOT=$mklRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
