@@ -153,20 +153,64 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          choco install intel-oneapi-mkl -y --no-progress
+          # Download Intel OneAPI Base Toolkit (Offline Installer)
+          $installerUrl = "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/1f18901e-877d-469d-a41a-a10f11b39336/intel-oneapi-base-toolkit-2025.3.0.372_offline.exe"
+          $installerPath = "$env:TEMP\intel-oneapi-base-toolkit-offline.exe"
+          
+          Write-Host "Downloading Intel OneAPI Base Toolkit from $installerUrl..."
+          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
+          
+          Write-Host "Installing Intel OneAPI Base Toolkit..."
+          # Run installer silently. 
+          # -s: silent
+          # -a: pass arguments to the installer
+          # --silent: silent mode for the installer itself
+          # --eula accept: accept the license
+          # -p=NEED_VS2022_INTEGRATION=0: skip VS2022 integration to avoid potential errors
+          Start-Process -FilePath $installerPath -ArgumentList "-s -a --silent --eula accept -p=NEED_VS2022_INTEGRATION=0" -Wait -NoNewWindow
+          
+          Write-Host "Installation complete."
+          
+          # Set MKLROOT environment variable for subsequent steps
+          $mklRoot = "C:\Program Files (x86)\Intel\oneAPI\mkl\latest"
+          if (Test-Path $mklRoot) {
+            Write-Host "MKL found at: $mklRoot"
+            echo "MKLROOT=$mklRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            Write-Error "MKL installation failed or not found at expected path: $mklRoot"
+            exit 1
+          }
+
+      - name: Verify MKL install (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "MKLROOT is: $env:MKLROOT"
+          
+          $libPath = "$env:MKLROOT\lib"
+          $lib64Path = "$env:MKLROOT\lib\intel64"
+          
+          if (Test-Path $lib64Path) {
+             Write-Host "Found lib/intel64"
+             Get-ChildItem $lib64Path | Select-Object Name | Select-Object -First 5
+          } elseif (Test-Path $libPath) {
+             Write-Host "Found lib (root)"
+             Get-ChildItem $libPath | Select-Object Name | Select-Object -First 5
+          } else {
+             Write-Warning "Could not find lib or lib/intel64 under MKLROOT"
+             Get-ChildItem "$env:MKLROOT" -Recurse -Depth 2
+          }
 
       # --- Configure (Windows) ---
       - name: Configure CMake (Windows)
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          $mklPath = Get-ChildItem "C:\Program Files (x86)\Intel\oneAPI\mkl" | Sort-Object Name -Descending | Select-Object -First 1 -ExpandProperty FullName
-          echo "Found MKL at: $mklPath"
           cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
             -D${{ env.TEST_TYPE }}=ON `
             -DBUILD_TESTING=ON `
             -DZMQ_BUILD_TESTS=OFF `
-            -DMKL_ROOT="$mklPath" `
+            -DMKL_ROOT="$env:MKLROOT" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 
