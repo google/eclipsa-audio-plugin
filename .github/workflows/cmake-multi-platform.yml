@@ -30,6 +30,7 @@ jobs:
           lfs: true
 
       - name: Fetch LFS objects
+        run: git lfs pull
 
       - name: Debug LFS (Windows)
         if: runner.os == 'Windows'
