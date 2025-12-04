@@ -11,6 +11,8 @@ env:
   BUILD_TYPE: Release
   TEST_TYPE: CI_TEST
   CLEAN_BUILD: false
+  # Enable vcpkg binary caching for GitHub Actions
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
 jobs:
   build:
@@ -46,7 +48,7 @@ jobs:
         id: protobuf-cache
         uses: actions/cache@v3
         with:
-          path: build/third_party/protobuf
+          path: build/_deps/protobuf-build
           key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/version.json') }}
 
       - name: Check Protobuf Cache
@@ -82,8 +84,8 @@ jobs:
         id: iamf-cache
         uses: actions/cache@v3
         with:
-          path: build/third_party/iamf
-          key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/iamf/CMakeLists.txt') }}
+          path: build/_deps/libiamf-build
+          key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/libiamf/CMakeLists.txt') }}
 
       - name: Check IAMF Cache
         if: env.CLEAN_BUILD != 'true'
