@@ -126,73 +126,55 @@ jobs:
 
       - name: Download FFmpeg and FFprobe Binaries
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required for gh cli
         run: |
           mkdir -p external/FFmpeg/bin
           cd external/FFmpeg/bin
           
-          # Detect macOS architecture
+          # 1. Detect Architecture
           ARCH=$(uname -m)
           if [ "$ARCH" = "arm64" ]; then
             PLATFORM="macos-arm64"
           else
             PLATFORM="macos-x64"
           fi
-          
           echo "Detected platform: $PLATFORM"
           
-          # Download FFmpeg and FFprobe from GitHub releases
-          # Using latest stable release from ffmpeg-builds
-          echo "Downloading ffmpeg for $PLATFORM..."
+          # 2. Download using GitHub CLI (Robust & Cleaner)
+          # Downloads the latest release matching the pattern from BtbN
+          echo "Downloading latest $PLATFORM release..."
+          gh release download \
+            --repo BtbN/FFmpeg-Builds \
+            --pattern "*${PLATFORM}-gpl.zip" \
+            --output ffmpeg.zip \
+            --clobber
           
-          # Try to download from the latest release endpoint
-          RELEASE_URL=$(curl -s https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest | grep "browser_download_url.*${PLATFORM}-gpl.zip" | head -1 | cut -d '"' -f 4)
+          # 3. Extract and Organize
+          unzip -q ffmpeg.zip
           
-          if [ -z "$RELEASE_URL" ]; then
-            echo "Failed to find FFmpeg release URL for $PLATFORM"
-            exit 1
-          fi
+          # Find the inner folder (usually ffmpeg-master-latest-...)
+          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "ffmpeg-*" | head -n 1)
           
-          echo "Downloading from: $RELEASE_URL"
-          curl -L "$RELEASE_URL" -o ffmpeg.zip
-          
-          # Verify zip file is valid
-          if ! unzip -t ffmpeg.zip > /dev/null 2>&1; then
-            echo "Downloaded file is not a valid zip archive"
-            exit 1
-          fi
-          
-          unzip -o ffmpeg.zip
-          
-          # Find and move the extracted ffmpeg/ffprobe to bin directory
-          EXTRACTED_DIR=$(unzip -Z -1 ffmpeg.zip | head -1 | cut -d'/' -f1)
-          
-          if [ -f "$EXTRACTED_DIR/bin/ffmpeg" ] && [ -f "$EXTRACTED_DIR/bin/ffprobe" ]; then
+          if [ -d "$EXTRACTED_DIR" ]; then
+            echo "Moving binaries from $EXTRACTED_DIR..."
             mv "$EXTRACTED_DIR/bin/ffmpeg" .
             mv "$EXTRACTED_DIR/bin/ffprobe" .
             rm -rf "$EXTRACTED_DIR" ffmpeg.zip
           else
-            echo "Could not find ffmpeg/ffprobe in extracted archive"
-            echo "Contents of archive:"
-            ls -la "$EXTRACTED_DIR" || true
+            echo "Error: Could not find extracted folder."
             exit 1
           fi
           
-          # Verify binaries were downloaded
-          if [ ! -f "ffmpeg" ] || [ ! -f "ffprobe" ]; then
-            echo "Failed to extract FFmpeg binaries"
-            exit 1
-          fi
-          
-          # Make binaries executable
           chmod +x ffmpeg ffprobe
           
-          # Verify they work
-          echo "FFmpeg version:"
-          ./ffmpeg -version | head -n 1
-          echo "FFprobe version:"
-          ./ffprobe -version | head -n 1
+          # 4. CRITICAL: Add current path to GITHUB_PATH
+          # This ensures subsequent steps (CMake) can find 'ffmpeg' and 'ffprobe'
+          echo "$(pwd)" >> $GITHUB_PATH
           
-          cd ../../..
+          # 5. Verification
+          echo "FFmpeg location: $(which ffmpeg || echo 'not in path yet')"
+          ./ffmpeg -version | head -n 1
 
       - name: Check Formatting
         run: |
