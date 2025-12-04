@@ -126,55 +126,24 @@ jobs:
 
       - name: Download FFmpeg and FFprobe Binaries
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required for gh cli
         run: |
+          echo "Installing FFmpeg via Homebrew..."
+          brew update
+          brew install ffmpeg
+
+          echo "Creating destination directory..."
           mkdir -p external/FFmpeg/bin
-          cd external/FFmpeg/bin
+
+          echo "Copying ffmpeg + ffprobe into project folder..."
+          cp "$(brew --prefix)/bin/ffmpeg" external/FFmpeg/bin/
+          cp "$(brew --prefix)/bin/ffprobe" external/FFmpeg/bin/
+
+          echo "Verifying versions:"
+          external/FFmpeg/bin/ffmpeg -version
+          external/FFmpeg/bin/ffprobe -version
           
-          # 1. Detect Architecture
-          ARCH=$(uname -m)
-          if [ "$ARCH" = "arm64" ]; then
-            PLATFORM="macos-arm64"
-          else
-            PLATFORM="macos-x64"
-          fi
-          echo "Detected platform: $PLATFORM"
-          
-          # 2. Download using GitHub CLI (Robust & Cleaner)
-          # Downloads the latest release matching the pattern from BtbN
-          echo "Downloading latest $PLATFORM release..."
-          gh release download \
-            --repo BtbN/FFmpeg-Builds \
-            --pattern "*${PLATFORM}-gpl.zip" \
-            --output ffmpeg.zip \
-            --clobber
-          
-          # 3. Extract and Organize
-          unzip -q ffmpeg.zip
-          
-          # Find the inner folder (usually ffmpeg-master-latest-...)
-          EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "ffmpeg-*" | head -n 1)
-          
-          if [ -d "$EXTRACTED_DIR" ]; then
-            echo "Moving binaries from $EXTRACTED_DIR..."
-            mv "$EXTRACTED_DIR/bin/ffmpeg" .
-            mv "$EXTRACTED_DIR/bin/ffprobe" .
-            rm -rf "$EXTRACTED_DIR" ffmpeg.zip
-          else
-            echo "Error: Could not find extracted folder."
-            exit 1
-          fi
-          
-          chmod +x ffmpeg ffprobe
-          
-          # 4. CRITICAL: Add current path to GITHUB_PATH
-          # This ensures subsequent steps (CMake) can find 'ffmpeg' and 'ffprobe'
-          echo "$(pwd)" >> $GITHUB_PATH
-          
-          # 5. Verification
-          echo "FFmpeg location: $(which ffmpeg || echo 'not in path yet')"
-          ./ffmpeg -version | head -n 1
+      - name: Add FFmpeg to Path
+        run: echo "$GITHUB_WORKSPACE/external/FFmpeg/bin" >> $GITHUB_PATH
 
       - name: Check Formatting
         run: |
