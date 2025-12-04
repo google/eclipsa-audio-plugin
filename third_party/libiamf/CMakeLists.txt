@@ -18,8 +18,7 @@ include(FetchContent)
 
 FetchContent_Declare(
         libiamf
-        GIT_REPOSITORY https://github.com/AOMediaCodec/libiamf.git
-        GIT_TAG 48b8b5dc06971e14826d114fd032dab285f4c944
+        URL https://github.com/AOMediaCodec/libiamf/archive/48b8b5dc06971e14826d114fd032dab285f4c944.zip
 )
 
 set(CODEC_CAP ON CACHE BOOL "Codec capability check" FORCE)
