@@ -142,23 +142,44 @@ jobs:
           
           # Download FFmpeg and FFprobe from GitHub releases
           # Using latest stable release from ffmpeg-builds
-          FFMPEG_VERSION="8.0"
-          BASE_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2024-03-21-12-34-01"
-          
           echo "Downloading ffmpeg for $PLATFORM..."
-          curl -L "${BASE_URL}/ffmpeg-N-${FFMPEG_VERSION}-${PLATFORM}-gpl.zip" -o ffmpeg.zip
+          
+          # Try to download from the latest release endpoint
+          RELEASE_URL=$(curl -s https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest | grep "browser_download_url.*${PLATFORM}-gpl.zip" | head -1 | cut -d '"' -f 4)
+          
+          if [ -z "$RELEASE_URL" ]; then
+            echo "Failed to find FFmpeg release URL for $PLATFORM"
+            exit 1
+          fi
+          
+          echo "Downloading from: $RELEASE_URL"
+          curl -L "$RELEASE_URL" -o ffmpeg.zip
+          
+          # Verify zip file is valid
+          if ! unzip -t ffmpeg.zip > /dev/null 2>&1; then
+            echo "Downloaded file is not a valid zip archive"
+            exit 1
+          fi
+          
           unzip -o ffmpeg.zip
           
-          # Move executables to bin directory
-          if [ -f "ffmpeg-N-${FFMPEG_VERSION}-${PLATFORM}-gpl/bin/ffmpeg" ]; then
-            mv ffmpeg-N-${FFMPEG_VERSION}-${PLATFORM}-gpl/bin/ffmpeg .
-            mv ffmpeg-N-${FFMPEG_VERSION}-${PLATFORM}-gpl/bin/ffprobe .
-            rm -rf ffmpeg-N-${FFMPEG_VERSION}-${PLATFORM}-gpl ffmpeg.zip
+          # Find and move the extracted ffmpeg/ffprobe to bin directory
+          EXTRACTED_DIR=$(unzip -Z -1 ffmpeg.zip | head -1 | cut -d'/' -f1)
+          
+          if [ -f "$EXTRACTED_DIR/bin/ffmpeg" ] && [ -f "$EXTRACTED_DIR/bin/ffprobe" ]; then
+            mv "$EXTRACTED_DIR/bin/ffmpeg" .
+            mv "$EXTRACTED_DIR/bin/ffprobe" .
+            rm -rf "$EXTRACTED_DIR" ffmpeg.zip
+          else
+            echo "Could not find ffmpeg/ffprobe in extracted archive"
+            echo "Contents of archive:"
+            ls -la "$EXTRACTED_DIR" || true
+            exit 1
           fi
           
           # Verify binaries were downloaded
           if [ ! -f "ffmpeg" ] || [ ! -f "ffprobe" ]; then
-            echo "Failed to download FFmpeg binaries"
+            echo "Failed to extract FFmpeg binaries"
             exit 1
           fi
           
@@ -166,7 +187,9 @@ jobs:
           chmod +x ffmpeg ffprobe
           
           # Verify they work
+          echo "FFmpeg version:"
           ./ffmpeg -version | head -n 1
+          echo "FFprobe version:"
           ./ffprobe -version | head -n 1
           
           cd ../../..
