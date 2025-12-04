@@ -29,6 +29,9 @@ jobs:
           submodules: recursive
           lfs: true
 
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
       # --- Caching Steps (Common) ---
       - name: Cache Protobuf Build
         if: env.CLEAN_BUILD != 'true'
