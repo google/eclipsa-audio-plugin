@@ -154,20 +154,35 @@ jobs:
         shell: powershell
         run: |
           # Download Intel OneAPI Base Toolkit (Offline Installer)
+          # Using a specific version URL. If this 404s, check Intel's site for the latest link.
           $installerUrl = "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/1f18901e-877d-469d-a41a-a10f11b39336/intel-oneapi-base-toolkit-2025.3.0.372_offline.exe"
           $installerPath = "$env:TEMP\intel-oneapi-base-toolkit-offline.exe"
           
           Write-Host "Downloading Intel OneAPI Base Toolkit from $installerUrl..."
-          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
+          # Increased timeout to 20 minutes (1200 seconds) for large file download
+          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -TimeoutSec 1200
           
-          Write-Host "Installing Intel OneAPI Base Toolkit..."
+          Write-Host "Installing Intel OneAPI Base Toolkit (MKL only)..."
           # Run installer silently. 
-          # -s: silent
+          # -s: silent extraction
+          # -x: extract only (faster than full install if we just need libs, but here we install)
           # -a: pass arguments to the installer
           # --silent: silent mode for the installer itself
           # --eula accept: accept the license
-          # -p=NEED_VS2022_INTEGRATION=0: skip VS2022 integration to avoid potential errors
-          Start-Process -FilePath $installerPath -ArgumentList "-s -a --silent --eula accept -p=NEED_VS2022_INTEGRATION=0" -Wait -NoNewWindow
+          # --components ...: Install ONLY MKL to save time/space. 
+          #    Note: Component IDs can vary by version. 'intel.oneapi.win.mkl.devel' is the typical ID for MKL development files.
+          # -p=NEED_VS2022_INTEGRATION=0: skip VS2022 integration
+          
+          # First, let's try to list components to be sure (optional debugging step, commented out for speed)
+          # Start-Process -FilePath $installerPath -ArgumentList "-s -a --list-components" -Wait -NoNewWindow
+          
+          # Install command with component filtering
+          $proc = Start-Process -FilePath $installerPath -ArgumentList "-s -a --silent --eula accept --components intel.oneapi.win.mkl.devel -p=NEED_VS2022_INTEGRATION=0" -Wait -NoNewWindow -PassThru
+          
+          if ($proc.ExitCode -ne 0) {
+              Write-Error "Installation failed with exit code $($proc.ExitCode)"
+              exit 1
+          }
           
           Write-Host "Installation complete."
           
