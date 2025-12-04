@@ -1,4 +1,4 @@
-name: Builds + Unit Tests
+name: Cross-Platform Build
 
 on:
   pull_request:
@@ -10,22 +10,26 @@ on:
 env:
   BUILD_TYPE: Release
   TEST_TYPE: CI_TEST
-  GENERATOR: "Unix Makefiles"
-  CXX_COMPILER: clang++
-  C_COMPILER: clang
   CLEAN_BUILD: false
 
 jobs:
   build:
-    runs-on: macos-14
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
+          lfs: true
 
+      # --- Caching Steps (Common) ---
       - name: Cache Protobuf Build
         if: env.CLEAN_BUILD != 'true'
         id: protobuf-cache
@@ -36,6 +40,7 @@ jobs:
 
       - name: Check Protobuf Cache
         if: env.CLEAN_BUILD != 'true'
+        shell: bash
         run: |
           echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
           if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -53,6 +58,7 @@ jobs:
 
       - name: Check JUCE Cache
         if: env.CLEAN_BUILD != 'true'
+        shell: bash
         run: |
           echo "JUCE cache hit: ${{ steps.juce-cache.outputs.cache-hit }}"
           if [ "${{ steps.juce-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -70,6 +76,7 @@ jobs:
 
       - name: Check IAMF Cache
         if: env.CLEAN_BUILD != 'true'
+        shell: bash
         run: |
           echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
           if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -87,6 +94,7 @@ jobs:
 
       - name: Check Libear Cache
         if: env.CLEAN_BUILD != 'true'
+        shell: bash
         run: |
           echo "Libear cache hit: ${{ steps.libear-cache.outputs.cache-hit }}"
           if [ "${{ steps.libear-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -104,6 +112,7 @@ jobs:
 
       - name: Check Main Build Cache
         if: env.CLEAN_BUILD != 'true'
+        shell: bash
         run: |
           echo "Main build cache hit: ${{ steps.main-build-cache.outputs.cache-hit }}"
           if [ "${{ steps.main-build-cache.outputs.cache-hit }}" != 'true' ]; then
@@ -113,47 +122,89 @@ jobs:
 
       - name: Check Clean Build
         if: env.CLEAN_BUILD == 'true'
+        shell: bash
         run: |
           echo "CLEAN_BUILD is true, removing entire build directory."
           if [ -d "build" ]; then rm -rf build; fi
 
+      # --- Formatting (macOS only for now) ---
       - name: Check Formatting
+        if: runner.os == 'macOS'
         run: |
           brew install clang-format
           find common -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
           find rendererplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
           find audioelementplugin -iname '*.h' -o -iname '*.cpp' | xargs clang-format --style=file:.clang-format --dry-run -Werror -i
 
-      - name: Setup CMake 3.30.x
+      # --- CMake Setup ---
+      - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v1
         with:
           cmake-version: "3.30.x"
+
       - name: Verify CMake
+        shell: bash
         run: |
           cmake --version
           which cmake
 
-      - name: Configure CMake
+      # --- Install Dependencies (Windows) ---
+      - name: Install Intel OneAPI MKL (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "${{ env.GENERATOR }}" \
+          choco install intel-oneapi-mkl -y --no-progress
+
+      # --- Configure (Windows) ---
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $mklPath = Get-ChildItem "C:\Program Files (x86)\Intel\oneAPI\mkl" | Sort-Object Name -Descending | Select-Object -First 1 -ExpandProperty FullName
+          echo "Found MKL at: $mklPath"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -D${{ env.TEST_TYPE }}=ON `
+            -DBUILD_TESTING=ON `
+            -DZMQ_BUILD_TESTS=OFF `
+            -DMKL_ROOT="$mklPath" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      # --- Configure (macOS) ---
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "Unix Makefiles" \
             -D${{ env.TEST_TYPE }}=ON \
-            -DCMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
-            -DCMAKE_C_COMPILER=${{ env.C_COMPILER }} \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER=clang \
             -DBUILD_TESTING=ON \
             -DZMQ_BUILD_TESTS=OFF
 
+      # --- Build ---
       - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} -- -j $(sysctl -n hw.logicalcpu)
+        shell: bash
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 
+      # --- Test ---
       - name: Test
         working-directory: ${{ github.workspace }}/build
-        run: ctest -C ${{ env.BUILD_TYPE }}
+        shell: bash
+        run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
 
-      # Dump CTest and Ecplisa logs if the previous step failed.
+      # --- Logs ---
       - name: Dump Test Logs
         if: ${{ failure() }}
+        shell: bash
         run: |
-          echo "//// CTest Logs ////" &&
-            cat /Users/runner/work/eclipsa/eclipsa/build/Testing/Temporary/LastTest.log &&
-            echo "//// Eclipsa Logs ////" &&
-            cat /tmp/Eclipsa_Audio_Plugin/log.txt
+          echo "//// CTest Logs ////"
+          if [ -f "Testing/Temporary/LastTest.log" ]; then cat Testing/Temporary/LastTest.log; fi
+          echo "//// Eclipsa Logs ////"
+          # Try to find logs in common locations
+          if [ -f "/tmp/Eclipsa_Audio_Plugin/log.txt" ]; then
+             cat /tmp/Eclipsa_Audio_Plugin/log.txt
+          elif [ -f "$TEMP/Eclipsa_Audio_Plugin/log.txt" ]; then
+             cat "$TEMP/Eclipsa_Audio_Plugin/log.txt"
+          else
+             echo "Log file not found."
+          fi
