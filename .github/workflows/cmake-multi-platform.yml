@@ -29,8 +29,15 @@ jobs:
           submodules: recursive
           lfs: true
 
-      - name: Checkout LFS objects
-        run: git lfs checkout
+      - name: Fetch LFS objects
+
+      - name: Debug LFS (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          ls third_party/obr/lib/Windows/Release/obr.lib
+          Get-Item third_party/obr/lib/Windows/Release/obr.lib | Select-Object Length
+
 
       # --- Caching Steps (Common) ---
       - name: Cache Protobuf Build
