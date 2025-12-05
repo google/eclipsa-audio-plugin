@@ -22,7 +22,6 @@
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
-#include "processors/file_output/iamf_export_utils/IAMFMuxing.h"
 
 //==============================================================================
 FileOutputProcessor::FileOutputProcessor(
@@ -166,24 +165,10 @@ void FileOutputProcessor::closeFileExport(FileExport& config) {
   // video files.
   const bool kIamfExported = iamfFileWriter_ ? iamfFileWriter_->close() : false;
   if (kIamfExported && fileExportRepository_.get().getExportVideo()) {
-    const bool kVSourcePathValid = FileExport::validateFilePath(
-        fileExportRepository_.get().getVideoSource().toStdString(), true);
-    const bool kVOutputPathValid = FileExport::validateFilePath(
-        fileExportRepository_.get().getVideoExportFolder().toStdString(),
-        false);
+    const bool kMuxIamfSuccess =
+        IAMFExportHelper::muxIAMF(fileExportRepository_.get());
 
-    bool muxIamfSuccess = false;
-    if (kVSourcePathValid && kVOutputPathValid) {
-      // muxIamfSuccess = IAMFExportHelper::muxIAMF(audioElementRepository_,
-      //                                            mixPresentationRepository_,
-      //                                            fileExportRepository_.get());
-      muxIamfSuccess = muxIamf(fileExportRepository_.get());
-    } else {
-      LOG_WARNING(0,
-                  "IAMF Muxing: Invalid video source or output path provided.");
-    }
-
-    if (!muxIamfSuccess) {
+    if (!kMuxIamfSuccess) {
       LOG_WARNING(0,
                   "IAMF Muxing: Failed to mux IAMF file with provided video.");
     }
