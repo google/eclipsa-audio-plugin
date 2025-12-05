@@ -224,7 +224,7 @@ bool validateMuxedFile(const juce::String& path) {
   juce::String ffprobeVideoCommand =
       "ffprobe -select_streams v -show_entries stream=codec_name -of "
       "default=noprint_wrappers=1 \"" +
-      path + "\" 2>&1 | grep -q .";
+      path + "\" 2>&1 | grep -q \"Video:\"";
 
   int videoCheckCode = system(ffprobeVideoCommand.toRawUTF8());
   if (videoCheckCode != 0) {
@@ -241,13 +241,6 @@ bool muxIamfAudio(const juce::String& inputAudioFile,
   gf_log_set_tool_level(GF_LOG_FILTER, GF_LOG_INFO);
   gf_log_set_tool_level(GF_LOG_CONTAINER, GF_LOG_INFO);
 #endif
-
-  // Initialize GPAC library before creating session
-  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
-  if (init_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
-    return false;
-  }
 
   GF_Err gf_err = GF_OK;
   GF_FilterSession* session = gf_fs_new_defaults(GF_FilterSessionFlags(0));
@@ -313,13 +306,6 @@ bool muxVideo(const juce::String& inputVideoFile,
   gf_log_set_tool_level(GF_LOG_FILTER, GF_LOG_INFO);
   gf_log_set_tool_level(GF_LOG_CONTAINER, GF_LOG_INFO);
 #endif
-
-  // Initialize GPAC library before creating session
-  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
-  if (init_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
-    return false;
-  }
 
   GF_Err gf_err = GF_OK;
   GF_FilterSession* session = gf_fs_new_defaults(GF_FilterSessionFlags(0));
@@ -419,6 +405,13 @@ bool muxIAMF(const AudioElementRepository& aeRepo,
   }
   if (outputMuxdFile.isEmpty()) {
     LOG_ERROR(0, "IAMF Muxing: Output muxed file path is empty.");
+    return false;
+  }
+
+  // Initialize GPAC library before creating session
+  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
+  if (init_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
     return false;
   }
 
