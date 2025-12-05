@@ -553,6 +553,7 @@ update_plugin_rpath() {
             "@loader_path/../Resources/"
             "@loader_path/../Resources/third_party/iamftools/lib/"
             "@loader_path/../Resources/third_party/obr/lib/"
+            "@loader_path/../Resources/third_party/gpac/lib/"
         )
         
         # Add each RPATH if it doesn't already exist
