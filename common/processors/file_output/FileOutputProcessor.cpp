@@ -22,6 +22,7 @@
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
+#include "processors/file_output/iamf_export_utils/IAMFMuxing.h"
 
 //==============================================================================
 FileOutputProcessor::FileOutputProcessor(
@@ -173,9 +174,10 @@ void FileOutputProcessor::closeFileExport(FileExport& config) {
 
     bool muxIamfSuccess = false;
     if (kVSourcePathValid && kVOutputPathValid) {
-      muxIamfSuccess = IAMFExportHelper::muxIAMF(audioElementRepository_,
-                                                 mixPresentationRepository_,
-                                                 fileExportRepository_.get());
+      // muxIamfSuccess = IAMFExportHelper::muxIAMF(audioElementRepository_,
+      //                                            mixPresentationRepository_,
+      //                                            fileExportRepository_.get());
+      muxIamfSuccess = muxIamf(fileExportRepository_.get());
     } else {
       LOG_WARNING(0,
                   "IAMF Muxing: Invalid video source or output path provided.");
