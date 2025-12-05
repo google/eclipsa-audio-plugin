@@ -18,7 +18,6 @@
 
 #include "FileOutputTestFixture.h"
 #include "data_structures/src/FileExport.h"
-#include "processors/file_output/iamf_export_utils/IAMFExportUtil.h"
 #include "processors/tests/FileOutputTestUtils.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -29,6 +28,14 @@ class MP4IAMFDemuxerTest : public FileOutputTests {
   MP4IAMFDemuxerTest() : demuxer() { muxSources = genMuxSources(); }
 
  protected:
+  bool validateMuxedFile(const juce::String& path) {
+#ifdef ECLIPSA_FFMPEG_AVAILABLE
+    return validateMuxFFmpeg(path);
+#else
+    return true;
+#endif
+  }
+
   std::vector<std::filesystem::path> genMuxSources() {
     std::vector<std::filesystem::path> sources;
     for (const auto& codec : kTestSourceVideoCodecs) {
@@ -69,7 +76,7 @@ TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_cb) {
       ASSERT_TRUE(std::filesystem::exists(videoOutPath));
       ASSERT_TRUE(demuxer.verifyIAMFIntegrity(
           videoOutPath.string(), iamfOutPath.string(), kSampleRate, 16));
-      ASSERT_TRUE(IAMFExportHelper::validateMuxedFile(videoOutPath.string()))
+      ASSERT_TRUE(validateMuxedFile(videoOutPath.string()))
           << "Muxing validation failed for muxing source: " << source.string()
           << ", layout: " << layout.toString();
 
@@ -103,8 +110,9 @@ TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_2mp) {
       ASSERT_TRUE(std::filesystem::exists(videoOutPath));
       ASSERT_TRUE(demuxer.verifyIAMFIntegrity(
           videoOutPath.string(), iamfOutPath.string(), kSampleRate, 16));
-      ASSERT_TRUE(IAMFExportHelper::validateMuxedFile(videoOutPath.string()))
-          << "Muxing validation failed for layout: " << layout.toString();
+      ASSERT_TRUE(validateMuxedFile(videoOutPath.string()))
+          << "Muxing validation failed for muxing source: " << source.string()
+          << ", layout: " << layout.toString();
       std::filesystem::remove(iamfOutPath);
       std::filesystem::remove(videoOutPath);
       audioElementRepository.clear();
@@ -136,6 +144,10 @@ TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_2ae_cb) {
     EXPECT_TRUE(demuxer.verifyIAMFIntegrity(
         videoOutPath.string(), iamfOutPath.string(), ex.getSampleRate(), 16,
         SOUND_SYSTEM_A, 0.01f));
+    ASSERT_TRUE(validateMuxedFile(videoOutPath.string()))
+        << "Muxing validation failed for muxing source: " << source.string()
+        << ", layout: " << Speakers::kStereo.toString() << " + "
+        << Speakers::kExpl9Point1Point6Side.toString();
     std::filesystem::remove(iamfOutPath);
     std::filesystem::remove(videoOutPath);
   }

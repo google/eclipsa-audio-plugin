@@ -17,8 +17,6 @@
 #pragma once
 #include <data_structures/src/AudioElement.h>
 
-#include "data_repository/implementation/AudioElementRepository.h"
-#include "data_repository/implementation/MixPresentationRepository.h"
 #include "data_structures/src/FileExport.h"
 #include "user_metadata.pb.h"
 
@@ -35,5 +33,4 @@ void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
 void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
 bool muxIAMF(const FileExport& exportData);
-bool validateMuxedFile(const juce::String& path);
 }  // namespace IAMFExportHelper

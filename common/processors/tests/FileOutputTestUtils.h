@@ -408,3 +408,101 @@ class WavFileWriter {
   std::unique_ptr<juce::WavAudioFormat> wavFormat_;
   std::unique_ptr<juce::AudioFormatWriter> writer_;
 };
+
+// Helper function to execute a command and capture its output
+static std::pair<int, juce::String> executeCommand(
+    const juce::String& executable, const juce::StringArray& arguments) {
+  juce::ChildProcess process;
+
+  // Combine executable and arguments into a single StringArray
+  juce::StringArray args;
+  args.add(executable);
+  args.addArray(arguments);
+
+  if (!process.start(args)) {
+    return {-1, ""};
+  }
+
+  juce::String output = process.readAllProcessOutput();
+  int exitCode = process.getExitCode();
+  return {exitCode, output};
+}
+
+// Helper function to check for general file errors using ffmpeg
+static bool checkForFFmpegErrors(const juce::String& path) {
+  juce::StringArray ffmpegArgs;
+  ffmpegArgs.add("-v");
+  ffmpegArgs.add("error");
+  ffmpegArgs.add("-i");
+  ffmpegArgs.add(path);
+  ffmpegArgs.add("-f");
+  ffmpegArgs.add("null");
+#ifdef _WIN32
+  ffmpegArgs.add("NUL");
+#else
+  ffmpegArgs.add("-");
+#endif
+
+  auto [exitCode, output] = executeCommand("ffmpeg", ffmpegArgs);
+  if (exitCode < 0) {
+    std::cout << "Failed to execute ffmpeg command" << std::endl;
+    return false;
+  }
+  if (!output.isEmpty() || exitCode != 0) {
+    std::cout << "FFmpeg validation errors:" << std::endl;
+    // Only print the first 1000 characters to avoid excessive output
+    if (output.length() > 1000) {
+      output = output.substring(0, 1000) + "... (truncated)";
+    }
+    std::cout << output.toRawUTF8() << std::endl;
+    return false;
+  }
+  return true;
+}
+
+// Helper function to verify expected streams are present using ffprobe
+static bool verifyIamfStreamsPresent(const juce::String& path) {
+  juce::StringArray ffprobeArgs;
+  ffprobeArgs.add(path);
+
+  auto [exitCode, output] = executeCommand("ffprobe", ffprobeArgs);
+
+  if (!output.contains("IAMF Audio Element")) {
+    std::cout << "FFmpeg validation: IAMF Audio Element stream group not found"
+              << std::endl;
+    return false;
+  }
+
+  if (!output.contains("IAMF Mix Presentation")) {
+    std::cout << "FFmpeg validation: IAMF Mix Presentation stream group not "
+                 "found"
+              << std::endl;
+    return false;
+  }
+
+  if (!output.contains("Video:")) {
+    std::cout << "FFmpeg validation: Video stream not found" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+// Checks for errors in the muxed file using ffmpeg and verifies presence of an
+// IAMF audio stream and video stream
+inline bool validateMuxFFmpeg(const juce::String& path) {
+#ifndef ECLIPSA_FFMPEG_AVAILABLE
+  LOG_WARNING(0, "FFmpeg validation skipped: FFmpeg is not available");
+  return true;
+#endif
+
+  if (!checkForFFmpegErrors(path)) {
+    return false;
+  }
+
+  if (!verifyIamfStreamsPresent(path)) {
+    return false;
+  }
+
+  return true;
+}
