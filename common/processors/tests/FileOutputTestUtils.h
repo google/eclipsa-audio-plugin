@@ -491,15 +491,9 @@ static bool verifyIamfStreamsPresent(const juce::String& path) {
 // Checks for errors in the muxed file using ffmpeg and verifies presence of an
 // IAMF audio stream and video stream
 inline bool validateMuxFFmpeg(const juce::String& path) {
-#ifndef ECLIPSA_FFMPEG_AVAILABLE
-  LOG_WARNING(0, "FFmpeg validation skipped: FFmpeg is not available");
-  return true;
-#endif
-
   if (!checkForFFmpegErrors(path)) {
     return false;
   }
-
   if (!verifyIamfStreamsPresent(path)) {
     return false;
   }
