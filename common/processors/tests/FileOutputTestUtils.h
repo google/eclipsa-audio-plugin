@@ -445,16 +445,16 @@ static bool checkForFFmpegErrors(const juce::String& path) {
 
   auto [exitCode, output] = executeCommand("ffmpeg", ffmpegArgs);
   if (exitCode < 0) {
-    std::cout << "Failed to execute ffmpeg command" << std::endl;
+    LOG_INFO(0, "Failed to execute ffmpeg command");
     return false;
   }
   if (!output.isEmpty() || exitCode != 0) {
-    std::cout << "FFmpeg validation errors:" << std::endl;
+    LOG_INFO(0, "FFmpeg validation errors:");
     // Only print the first 1000 characters to avoid excessive output
     if (output.length() > 1000) {
       output = output.substring(0, 1000) + "... (truncated)";
     }
-    std::cout << output.toRawUTF8() << std::endl;
+    LOG_INFO(0, std::string(output.toRawUTF8()));
     return false;
   }
   return true;
@@ -468,20 +468,19 @@ static bool verifyIamfStreamsPresent(const juce::String& path) {
   auto [exitCode, output] = executeCommand("ffprobe", ffprobeArgs);
 
   if (!output.contains("IAMF Audio Element")) {
-    std::cout << "FFmpeg validation: IAMF Audio Element stream group not found"
-              << std::endl;
+    LOG_INFO(0, "FFmpeg validation: IAMF Audio Element stream group not found");
     return false;
   }
 
   if (!output.contains("IAMF Mix Presentation")) {
-    std::cout << "FFmpeg validation: IAMF Mix Presentation stream group not "
-                 "found"
-              << std::endl;
+    LOG_INFO(0,
+             "FFmpeg validation: IAMF Mix Presentation stream group not "
+             "found");
     return false;
   }
 
   if (!output.contains("Video:")) {
-    std::cout << "FFmpeg validation: Video stream not found" << std::endl;
+    LOG_INFO(0, "FFmpeg validation: Video stream not found");
     return false;
   }
 
