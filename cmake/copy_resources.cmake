@@ -18,18 +18,22 @@ function(copy_resources target plugin_path)
         set(LIB_OBR_PATH "${CMAKE_SOURCE_DIR}/third_party/obr/lib/obr.dylib")
         set(LIB_IAMF_TOOLS_PATH "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/libiamf_tools.dylib")
         set(LIB_ZMQ_5_2_6_PATH "${CMAKE_BINARY_DIR}/_deps/zeromq-build/lib/libzmq.5.2.6.dylib")
+        set(LIB_GPAC_PATH "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/libgpac.dylib")
 
         # Set Resources directory and external subdirectories
         set(RESOURCES_DIR "${plugin_path}/Contents/Resources")
         set(EXTERNAL_IAMF_DIR "${RESOURCES_DIR}/third_party/iamftools/lib")
         set(EXTERNAL_OBR_DIR "${RESOURCES_DIR}/third_party/obr/lib")
+        set(EXTERNAL_GPAC_DIR "${RESOURCES_DIR}/third_party/gpac/lib")
 
         # Copy libraries to the appropriate directories
         add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_IAMF_DIR}
                 COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_OBR_DIR}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_GPAC_DIR}
                 COMMAND ${CMAKE_COMMAND} -E copy ${LIB_OBR_PATH} ${EXTERNAL_OBR_DIR}/obr.dylib
                 COMMAND ${CMAKE_COMMAND} -E copy ${LIB_IAMF_TOOLS_PATH} ${EXTERNAL_IAMF_DIR}/libiamf_tools.dylib
+                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_GPAC_PATH} ${EXTERNAL_GPAC_DIR}/libgpac.dylib
                 COMMAND ${CMAKE_COMMAND} -E copy ${LIB_ZMQ_5_2_6_PATH} ${RESOURCES_DIR}/libzmq.5.2.6.dylib
 
                 # Create symbolic links for libzmq

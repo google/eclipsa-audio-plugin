@@ -485,6 +485,7 @@ copy_dylibs_to_plugin_resources() {
         "$build_dir/_deps/zeromq-build/lib/libzmq.5.2.6.dylib:Resources/"
         "$build_dir/third_party/iamftools/lib/libiamf_tools.dylib:Resources/third_party/iamftools/lib/"
         "$build_dir/third_party/obr/lib/obr.dylib:Resources/third_party/obr/lib/"
+        "$build_dir/third_party/gpac/lib/libgpac.dylib:Resources/third_party/gpac/lib/"
     )
     
     log "Copying dylibs to $plugin_type plugin resources"
@@ -495,6 +496,7 @@ copy_dylibs_to_plugin_resources() {
         # Create resources directory structure
         run_cmd "sudo mkdir -p \"$resources_path/third_party/iamftools/lib\""
         run_cmd "sudo mkdir -p \"$resources_path/third_party/obr/lib\""
+        run_cmd "sudo mkdir -p \"$resources_path/third_party/gpac/lib\""
         
         # Copy each dylib if it exists
         for dylib_entry in "${dylib_sources[@]}"; do

@@ -52,14 +52,12 @@ if(WIN32)
     target_link_libraries(gpac INTERFACE gpac_archive ws2_32 shlwapi winmm)
 
 else()
-    add_library(gpac_archive SHARED IMPORTED)
-    set_target_properties(gpac_archive PROPERTIES
+    add_library(gpac_shared SHARED IMPORTED)
+    set_target_properties(gpac_shared PROPERTIES
             IMPORTED_LOCATION         "${CMAKE_CURRENT_LIST_DIR}/lib/libgpac.dylib"
             IMPORTED_LOCATION_DEBUG   "${CMAKE_CURRENT_LIST_DIR}/lib/libgpac.dylib"
             IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/lib/libgpac.dylib"
             IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_CURRENT_LIST_DIR}/lib/libgpac.dylib"
             LINKER_LANGUAGE CXX)
-
-    # z-lib is an OSX system library
-    target_link_libraries(gpac INTERFACE gpac_archive z)
+    target_link_libraries(gpac INTERFACE gpac_shared)
 endif()
