@@ -309,9 +309,14 @@ class FileOutputTests : public ::testing::Test {
     std::optional<FileProfile> profile = std::nullopt;
     int sampleRate = kSampleRate;
     bool exportVideo = false;
-    std::string videoSource =
-        std::filesystem::current_path().parent_path() /
-        "common/processors/tests/test_resources/SilentSampleVideo_h264.mp4";
+    std::string videoSource = (std::filesystem::current_path()
+                                   .parent_path()
+                                   .append("common")
+                                   .append("processors")
+                                   .append("tests")
+                                   .append("test_resources")
+                                   .append("SilentSampleVideo_h264.mp4"))
+                                  .string();
   };
 
   void setTestExportOpts(const ExportTestOpts opts) {
