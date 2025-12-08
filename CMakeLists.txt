@@ -152,6 +152,11 @@ if(CI_TEST OR INTERNAL_TEST)
     else()
         message(STATUS "FFmpeg not found. Tests requiring FFmpeg will be disabled.")
     endif()
+
+    # FFmpeg is required for CI tests
+    if(CI_TEST AND NOT FFMPEG_TOOLS_FOUND)
+        message(FATAL_ERROR "FFmpeg tools not found. Required for CI tests.")
+    endif()
 endif()
 
 add_subdirectory(third_party)

@@ -140,36 +140,37 @@ jobs:
           echo "CLEAN_BUILD is true, removing entire build directory."
           if [ -d "build" ]; then rm -rf build; fi
 
-      # --- FFmpeg (macOS only) ---
-      - name: Cache FFmpeg Binaries
-        id: ffmpeg-cache
+      # --- FFmpeg (macOS) ---
+      - name: Install FFmpeg (macOS)
         if: runner.os == 'macOS'
-        uses: actions/cache@v3
-        with:
-          path: external/FFmpeg/bin
-          key: ${{ runner.os }}-ffmpeg-6.0-${{ runner.arch }}
-
-      - name: Download FFmpeg and FFprobe Binaries
-        if: runner.os == 'macOS' && steps.ffmpeg-cache.outputs.cache-hit != 'true'
         run: |
           echo "Installing FFmpeg via Homebrew..."
           brew update
           brew install ffmpeg
-
-          echo "Creating destination directory..."
-          mkdir -p external/FFmpeg/bin
-
-          echo "Copying ffmpeg + ffprobe into project folder..."
-          cp "$(brew --prefix)/bin/ffmpeg" external/FFmpeg/bin/
-          cp "$(brew --prefix)/bin/ffprobe" external/FFmpeg/bin/
-
-          echo "Verifying versions:"
-          external/FFmpeg/bin/ffmpeg -version
-          external/FFmpeg/bin/ffprobe -version
           
-      - name: Add FFmpeg to Path
-        if: runner.os == 'macOS'
-        run: echo "$GITHUB_WORKSPACE/external/FFmpeg/bin" >> $GITHUB_PATH
+          echo "Verifying installation:"
+          ffmpeg -version
+          ffprobe -version
+          
+          echo "FFmpeg location:"
+          which ffmpeg
+          which ffprobe
+
+      # --- FFmpeg (Windows) ---
+      - name: Install FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "Installing FFmpeg via Chocolatey..."
+          choco install ffmpeg -y
+          
+          Write-Host "Verifying installation:"
+          ffmpeg -version
+          ffprobe -version
+          
+          Write-Host "FFmpeg location:"
+          where.exe ffmpeg
+          where.exe ffprobe
 
       # --- Formatting (macOS only for now) ---
       - name: Check Formatting
