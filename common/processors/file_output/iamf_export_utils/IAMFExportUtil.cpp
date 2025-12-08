@@ -227,7 +227,6 @@ static bool muxIAMFAudio(const juce::String& inputAudioFile,
     return false;
   }
 
-  // Connect the filters: audio source -> reframer -> destination
   gf_filter_set_source(reframer_filter, src_audio, NULL);
   gf_filter_set_source(dest_filter, reframer_filter, NULL);
 
@@ -246,7 +245,6 @@ static bool muxIAMFAudio(const juce::String& inputAudioFile,
     LOG_ERROR(0, "IAMF Audio Muxing: Failed with error code " + gf_err);
     return false;
   }
-
   return true;
 }
 

@@ -182,6 +182,6 @@ jobs:
         if: ${{ failure() }}
         run: |
           echo "//// CTest Logs ////" &&
-            cat /Users/runner/work/eclipsa/eclipsa/build/Testing/Temporary/LastTest.log &&
+            cat /Users/runner/work/eclipsa-audio-plugin/eclipsa-audio-plugin/build/Testing/Temporary/LastTest.log &&
             echo "//// Eclipsa Logs ////" &&
             cat /tmp/Eclipsa_Audio_Plugin/log.txt
