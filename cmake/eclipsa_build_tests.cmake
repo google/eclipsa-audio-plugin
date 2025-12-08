@@ -38,16 +38,12 @@ function(eclipsa_build_tests)
         # Move the dlls required for the unit tests as well
         # This can be done in the post build, since we'll run the tests after the build is complete
         set(ZMQ_DLL         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${BUILD_LIB_DIR}/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
-        set(GTEST_DLL       "${CMAKE_SOURCE_DIR}/build/bin/${BUILD_LIB_DIR}/gtest.dll")
-        set(GTEST_MAIN_DLL       "${CMAKE_SOURCE_DIR}/build/bin/${BUILD_LIB_DIR}/gtest_main.dll")
         set(CRYPTOMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libcryptoMD.dll")
         set(LIBSSLMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libsslMD.dll")  
         
-        set(TEST_DIR "${CMAKE_SOURCE_DIR}/build/${BUILD_LIB_DIR}")
+        set(TEST_DIR "${CMAKE_BINARY_DIR}/${BUILD_LIB_DIR}")
         add_custom_command(TARGET eclipsa_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GTEST_DLL} "${TEST_DIR}/"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GTEST_MAIN_DLL} "${TEST_DIR}/"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${TEST_DIR}/"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${TEST_DIR}/"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${TEST_DIR}/"

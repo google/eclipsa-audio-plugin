@@ -18,8 +18,7 @@ include(FetchContent)
 
 FetchContent_Declare(
         libiamf
-        GIT_REPOSITORY https://github.com/AOMediaCodec/libiamf.git
-        GIT_TAG 48b8b5dc06971e14826d114fd032dab285f4c944
+        URL https://github.com/AOMediaCodec/libiamf/archive/48b8b5dc06971e14826d114fd032dab285f4c944.zip
 )
 
 set(CODEC_CAP ON CACHE BOOL "Codec capability check" FORCE)
@@ -39,6 +38,7 @@ if(NOT libiamf_POPULATED)
     string(REGEX REPLACE "target_link_libraries\\([^)]*[ \t\n]+m[ \t\n)]+[^)]*\\)" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
     string(REPLACE " m)" ")" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
     string(REPLACE " m " " " LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
+    string(REPLACE "option(BUILD_SHARED_LIBS \"Build shared library\" ON)" "option(BUILD_SHARED_LIBS \"Build shared library\" OFF)" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
     file(WRITE "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" "${LIBIAMF_CMAKE_CONTENT}")
     message(STATUS "Patched libiamf CMakeLists.txt to remove GCC-only flags and m library")
   endif()
