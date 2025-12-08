@@ -36,8 +36,21 @@ cd "$TEMP_DIR"
 COMMIT_HASH=$(git rev-parse HEAD)
 
 # Configure the build
+# Write a list of extra libs to disable
+CFG_CMD="./configure --prefix="$INSTALL_DIR" --static-modules --isomedia-only --disable-rmtws"
+EXTRA_LIBS="zlib opensvc openhevc platinum freetype ssl jpeg openjpeg png mad a52 xvid faad ffmpeg freenect vorbis theora nghttp2 ngtcp2 nghttp3 oss dvb4linux alsa pulseaudio jack directfb hid lzma tinygl vtb ogg sdl caption mpeghdec libcaca curl"
+LIBS="compositor fin fout mp4mx mp4dmx reframer rfav1"
+# For each library in extra libs, append '--use-<lib>=no' to the configure command
+for lib in $EXTRA_LIBS; do
+    CFG_CMD+=" --use-$lib=no"
+done
+# For each library in libs, append '--enable-<lib>' to the configure command
+for lib in $LIBS; do
+    CFG_CMD+=" --enable-$lib"
+done
+
 echo "Configuring gpac build..."
-./configure --prefix="$INSTALL_DIR" --use-curl=no --use-ffmpeg=no --use-zlib=no --static-modules
+$CFG_CMD
 
 # Build and install the library
 echo "Building gpac..."
