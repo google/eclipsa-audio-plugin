@@ -205,7 +205,9 @@ static bool muxIAMFAudio(const juce::String& inputAudioFile,
   GF_Filter* src_audio = gf_fs_load_source(session, inputAudioFile.toRawUTF8(),
                                            NULL, NULL, &gf_err);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Audio Muxing: Failed to load audio file.");
+    LOG_ERROR(0, "IAMF Audio Muxing: Failed to load audio file " +
+                     inputAudioFile.toStdString() +
+                     " with error: " + std::string(gf_error_to_string(gf_err)));
     gf_fs_del(session);
     return false;
   }
@@ -242,7 +244,8 @@ static bool muxIAMFAudio(const juce::String& inputAudioFile,
   gf_fs_del(session);
 
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "IAMF Audio Muxing: Failed with error code " + gf_err);
+    LOG_ERROR(0, "IAMF Audio Muxing: Failed with error: " +
+                     std::string(gf_error_to_string(gf_err)));
     return false;
   }
   return true;
@@ -262,7 +265,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
   GF_ISOFile* src_video =
       gf_isom_open(inputVideoFile.toRawUTF8(), GF_ISOM_OPEN_READ, NULL);
   if (!src_video) {
-    LOG_ERROR(0, "Video Muxing: Failed to open input video file.");
+    LOG_ERROR(0, "Video Muxing: Failed to open input video file " +
+                     inputVideoFile.toStdString() + " for reading.");
     return false;
   }
 
@@ -287,7 +291,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
   GF_ISOFile* dst_file =
       gf_isom_open(outputMuxedFile.toRawUTF8(), GF_ISOM_OPEN_EDIT, NULL);
   if (!dst_file) {
-    LOG_ERROR(0, "Video Muxing: Failed to open output file for editing.");
+    LOG_ERROR(0, "Video Muxing: Failed to open output file " +
+                     outputMuxedFile.toStdString() + " for editing.");
     gf_isom_close(src_video);
     return false;
   }
@@ -300,8 +305,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
   gf_err = gf_isom_clone_track(src_video, src_video_track, dst_file,
                                GF_ISOTrackCloneFlags(0), &dst_track);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "Video Muxing: Failed to clone video track, error code " +
-                     std::to_string(gf_err));
+    LOG_ERROR(0, "Video Muxing: Failed to clone video track: " +
+                     std::string(gf_error_to_string(gf_err)));
     gf_isom_close(dst_file);
     gf_isom_close(src_video);
     return false;
@@ -328,8 +333,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
 
     if (gf_err != GF_OK) {
       LOG_ERROR(0, "Video Muxing: Failed to add sample " + std::to_string(i) +
-                       " to destination track, error code " +
-                       std::to_string(gf_err));
+                       " to destination track: " +
+                       std::string(gf_error_to_string(gf_err)));
       gf_isom_close(dst_file);
       gf_isom_close(src_video);
       return false;
@@ -342,8 +347,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
   // Set storage mode to interleaved to mimic CLI behaviour
   gf_err = gf_isom_set_storage_mode(dst_file, GF_ISOM_STORE_INTERLEAVED);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "Video Muxing: Failed to set storage mode, error code " +
-                     std::to_string(gf_err));
+    LOG_ERROR(0, "Video Muxing: Failed to set storage mode: " +
+                     std::string(gf_error_to_string(gf_err)));
     gf_isom_close(dst_file);
     return false;
   }
@@ -354,8 +359,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
   gf_err = gf_isom_set_final_name(
       dst_file, const_cast<char*>(tempOutputFile.toRawUTF8()));
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "Video Muxing: Failed to set final name, error code " +
-                     std::to_string(gf_err));
+    LOG_ERROR(0, "Video Muxing: Failed to set final name: " +
+                     std::string(gf_error_to_string(gf_err)));
     gf_isom_close(dst_file);
     return false;
   }
@@ -363,8 +368,8 @@ static bool muxVideo(const juce::String& inputVideoFile,
   // Close destination file (this writes the changes to the new filename)
   gf_err = gf_isom_close(dst_file);
   if (gf_err != GF_OK) {
-    LOG_ERROR(0, "Video Muxing: Failed to close output file, error code " +
-                     std::to_string(gf_err));
+    LOG_ERROR(0, "Video Muxing: Failed to close output file: " +
+                     std::string(gf_error_to_string(gf_err)));
     return false;
   }
 
