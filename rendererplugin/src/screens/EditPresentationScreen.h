@@ -72,7 +72,6 @@ class EditPresentationScreen : public juce::Component,
   void updateTabButtonBounds(const juce::Rectangle<int>& mixEditingBounds);
   void updateMixPresentations();
   void updatePresentationTabs();
-  std::function<void()> addMixPresentation;
 
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override;

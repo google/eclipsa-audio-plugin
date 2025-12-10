@@ -62,10 +62,22 @@ EditPresentationScreen::EditPresentationScreen(
       addMixPresentationButton_(IconStore::getInstance().getPlusIcon()) {
   setLookAndFeel(&lookAndFeel_);
   setWantsKeyboardFocus(true);
-
   mixPresentationRepository_->registerListener(this);
+
+  // Configure adding mix presentations
   addMixPresentationButton_.setCyanLookAndFeel();
-  addMixPresentationButton_.setButtonOnClick(addMixPresentation);
+  addMixPresentationButton_.setButtonOnClick([this]() {
+    // Add a new mix presentation
+    MixPresentation presentation(
+        juce::Uuid(), "My Mix Presentation" + juce::String(numMixes_ + 1), 1,
+        LanguageData::MixLanguages::Undetermined, {});
+    mixPresentationRepository_->add(presentation);
+
+    // Log the addition of a new mix presentation
+    LOG_ANALYTICS(
+        RendererProcessor::instanceId_,
+        "Adding new mix presentation: " + presentation.getName().toStdString());
+  });
 
   // Update mix presentation information
   updateMixPresentations();
