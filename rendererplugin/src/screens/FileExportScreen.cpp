@@ -485,7 +485,6 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       return;
     }
     config.setManualExport(!config.getManualExport());
-    repository_->update(config);
     if (config.getManualExport()) {
       startTimer_.setEnabled(false);
       endTimer_.setEnabled(false);
@@ -501,7 +500,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       exportVideoFolder_.setEnabled(false);
       browseVideoButton_.setEnabled(false);
       browseVideoSourceButton_.setEnabled(false);
-
+      config.setExportCompleted(false);
     } else {
       startTimer_.setEnabled(true);
       endTimer_.setEnabled(true);
@@ -517,15 +516,9 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       exportVideoFolder_.setEnabled(true);
       browseVideoButton_.setEnabled(true);
       browseVideoSourceButton_.setEnabled(true);
-
-      if (!config.getExportCompleted()) {
-        // Normally this is handled by the file export processor
-        // But in manual button cases where the processor is destroyed we need
-        // to flag it here
-        config.setExportCompleted(true);
-        repository_->update(config);
-      }
+      config.setExportCompleted(true);
     }
+    repository_->update(config);
     repaint();
   };
   LOG_ANALYTICS(RendererProcessor::instanceId_, "FileExportScreen initiated.");

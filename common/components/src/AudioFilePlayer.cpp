@@ -265,9 +265,23 @@ void AudioFilePlayer::valueTreePropertyChanged(
     triggerAsyncUpdate();
   } else if (property == FilePlayback::kPlaybackFile) {
     attemptCreatePlaybackEngine();
-  } else if (property == FileExport::kExportCompleted &&
-             fer_.get().getExportCompleted()) {
-    attemptCreatePlaybackEngine();
+  } else if (property == FileExport::kExportCompleted) {
+    // When this property is false a new export is starting, so we want to
+    // destroy the player and wait until export is complete.
+    // When this property is true we want to attempt to create the playback
+    // engine again.
+    if (fer_.get().getExportCompleted()) {
+      attemptCreatePlaybackEngine();
+    } else {
+      // Destroy the playback engine
+      playbackEngine_ = nullptr;
+      // Join any existing creation thread
+      isBeingDestroyed_ = true;
+      if (playbackEngineLoaderThread_.joinable()) {
+        playbackEngineLoaderThread_.join();
+      }
+      isBeingDestroyed_ = false;
+    }
   }
 }
 
@@ -300,6 +314,12 @@ void AudioFilePlayer::attemptCreatePlaybackEngine() {
 
   if (kFileToLoad.empty() || kFileToLoad.extension() != ".iamf" ||
       !std::filesystem::exists(kFileToLoad)) {
+    // If the file doesn't exist or it's a new file, we set the player to a
+    // stopped state
+    auto playbackState = fpbr_.get();
+    playbackState.setPlayState(FilePlayback::kStop);
+    fpbr_.update(playbackState);
+    playbackEngine_ = nullptr;
     return;
   }
   createPlaybackEngine(kFileToLoad);
@@ -346,7 +366,8 @@ void AudioFilePlayer::onPlaybackEngineCreated(IAMFPlaybackDevice::Result res) {
     auto fpb = fpbr_.get();
     fpb.setPlayState(FilePlayback::kDisabled);
     fpbr_.update(fpb);
-  } else if (res.error == IAMFPlaybackDevice::kEarlyAbortRequested) {
+  } else if (res.error == IAMFPlaybackDevice::kEarlyAbortRequested ||
+             isBeingDestroyed_) {
     // Do nothing - destruction was requested
   } else {
     playbackEngine_ = std::move(res.device);
