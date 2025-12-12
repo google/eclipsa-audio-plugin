@@ -37,7 +37,7 @@ FileExport::FileExport()
       lpcm_sample_size_(24),
       sample_tally_(0),
       profile_(FileProfile::BASE),
-      exportCompleted_(false) {}
+      exportCompleted_(true) {}
 
 FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        juce::String exportFolder,

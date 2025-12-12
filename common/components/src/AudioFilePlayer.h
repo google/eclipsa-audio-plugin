@@ -18,6 +18,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include <atomic>
+#include <condition_variable>
 #include <filesystem>
 #include <memory>
 #include <thread>
@@ -52,8 +53,9 @@ class AudioFilePlayer : public juce::Component,
   class Spinner;
 
   void updateComponentVisibility();
-  void createPlaybackEngine(const std::filesystem::path iamfPath);
+  void cancelCreatePlaybackEngine();
   void attemptCreatePlaybackEngine();
+  void createPlaybackEngine(const std::filesystem::path iamfPath);
   void onPlaybackEngineCreated(IAMFPlaybackDevice::Result res);
 
   // Components
@@ -71,5 +73,8 @@ class AudioFilePlayer : public juce::Component,
   juce::AudioDeviceManager deviceManager_;
   std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
   std::thread playbackEngineLoaderThread_;
+  std::mutex pbeMutex_;
+  std::condition_variable pbeCv_;
   std::atomic_bool isBeingDestroyed_ = false;
+  std::atomic_bool isLoadingPlaybackEngine_ = false;
 };
