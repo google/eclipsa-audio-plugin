@@ -123,6 +123,7 @@ endif()
 
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
+option(JUCE_COPY_PLUGIN_AFTER_BUILD "Automatically copy built plugins to standard locations after build" ON)
 
 if(APPLE)
     # Add vendored libraries path (for CI/GitHub Actions)
