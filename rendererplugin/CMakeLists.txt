@@ -157,8 +157,7 @@ if (WIN32 AND NOT DELAYLOAD_HEADER_GENERATED_RDR)
     # Manual loading is required in cases where the DLLs must be delay loaded
     # Delay loading is required by some DAW's, so just do it on all Windows builds since
     # there is no major disadvantage
-    #   set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin")
-    set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>") #EJ
+    set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>")
 
     set(DELAYLOAD_HEADER "${GENERATED_HEADER_DIR}/DelayLoadDlls.h")
     set(DLL_ARRAY_CONTENT "")
@@ -185,9 +184,8 @@ if (WIN32 AND NOT DELAYLOAD_HEADER_GENERATED_RDR)
     set(DELAYLOAD_HEADER_GENERATED_RDR TRUE CACHE INTERNAL "DelayLoad header has been generated")
 
     # Make the generated header available to the target
-    #    target_include_directories(RendererPlugin PRIVATE "${GENERATED_HEADER_DIR}")
     target_include_directories(RendererPlugin PRIVATE
-            "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>" #EJ
+            "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>"
     )
 endif()
 

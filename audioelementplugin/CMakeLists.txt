@@ -163,10 +163,8 @@ if (WIN32)
             OUTPUT "${DELAYLOAD_HEADER}"
             INPUT "${DELAYLOAD_HEADER_INTERMEDIATE}")
 
-    # Make the generated header available to the target
-    #    target_include_directories(AudioElementPlugin PRIVATE "${GENERATED_HEADER_DIR}
     target_include_directories(AudioElementPlugin PRIVATE
-            "${CMAKE_BINARY_DIR}/generated/audioelementplugin/$<CONFIG>" #EJ
+            "${CMAKE_BINARY_DIR}/generated/audioelementplugin/$<CONFIG>"
     )
 endif()
 
