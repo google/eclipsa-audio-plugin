@@ -92,7 +92,8 @@ target_link_libraries(RendererPlugin
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
-        libzmq)
+        libzmq
+        delayimp)
 
 # Platform-specific Boost linking
 if(WIN32)
@@ -129,12 +130,65 @@ if(BUILD_AAX AND TARGET RendererPlugin_AAX)
     message(STATUS "AAX build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_AAX_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Renderer.aaxplugin")
     copy_resources(RendererPlugin_AAX "${RENDERER_AAX_PATH}")
+
+    # For builds on Windows, set up delay loading for DLLs
+    if(WIN32)
+        foreach(dll IN LISTS DELAYLOAD_DLLS)
+            target_link_options(RendererPlugin_AAX PRIVATE /DELAYLOAD:${dll})
+        endforeach()
+    endif()
 endif()
 
 if(BUILD_VST3 AND TARGET RendererPlugin_VST3)
     message(STATUS "VST3 build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_VST3_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Renderer.vst3")
     copy_resources(RendererPlugin_VST3 "${RENDERER_VST3_PATH}")
+
+    # For builds on Windows, set up delay loading for DLLs
+    if(WIN32)
+        foreach(dll IN LISTS DELAYLOAD_DLLS)
+            target_link_options(RendererPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
+        endforeach()
+    endif()
+endif()
+
+if (WIN32 AND NOT DELAYLOAD_HEADER_GENERATED_RDR)
+    # Delay load the DLL's on Windows and create a header file with the DLL information
+    # Manual loading is required in cases where the DLLs must be delay loaded
+    # Delay loading is required by some DAW's, so just do it on all Windows builds since
+    # there is no major disadvantage
+    #   set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin")
+    set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>") #EJ
+
+    set(DELAYLOAD_HEADER "${GENERATED_HEADER_DIR}/DelayLoadDlls.h")
+    set(DLL_ARRAY_CONTENT "")
+    list(LENGTH DELAYLOAD_DLLS DLL_COUNT)
+
+    foreach(dll IN LISTS DELAYLOAD_DLLS)
+        string(APPEND DLL_ARRAY_CONTENT "    \"${dll}\",\n")
+    endforeach()
+
+    # Two-step process:
+    # 1. configure_file() expands @VARIABLE@ placeholders
+    # 2. file(GENERATE) evaluates generator expressions like $<CONFIG:Debug>
+    set(DELAYLOAD_HEADER_INTERMEDIATE "${CMAKE_BINARY_DIR}/generated/rendererplugin/DelayLoadDlls.h.intermediate")
+    configure_file(
+            "${CMAKE_SOURCE_DIR}/cmake/DelayLoadDlls.h.in"
+            "${DELAYLOAD_HEADER_INTERMEDIATE}"
+            @ONLY)
+
+    file(GENERATE
+            OUTPUT "${DELAYLOAD_HEADER}"
+            INPUT "${DELAYLOAD_HEADER_INTERMEDIATE}")
+
+    # Mark as generated to prevent multiple executions
+    set(DELAYLOAD_HEADER_GENERATED_RDR TRUE CACHE INTERNAL "DelayLoad header has been generated")
+
+    # Make the generated header available to the target
+    #    target_include_directories(RendererPlugin PRIVATE "${GENERATED_HEADER_DIR}")
+    target_include_directories(RendererPlugin PRIVATE
+            "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>" #EJ
+    )
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)

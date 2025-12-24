@@ -42,17 +42,34 @@ function(copy_resources target plugin_path)
         )
 
     elseif(WIN32)
-        # Windows: Copy DLLs for plugin formats
-        message(STATUS "Copying Windows runtime DLLs for ${target}")
+        # Set DLL names using generator expressions for multi-config generators
+        set(GPAC_DLL        "libgpac.dll")
+        set(CRYPTOMD_DLL    "libcryptoMD.dll")
+        set(LIBSSLMD_DLL    "libsslMD.dll")
+        set(IAMF_TOOLS_DLL  "iamf_tools.dll")
+        set(OPENSVC_DECODER "OpenSVCDecoder.dll")
+        set(ZMQ_DLL         "libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
 
-        # Set DLL paths using generator expressions for multi-config generators
-        set(GPAC_DLL        "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/libgpac.dll")
-        set(CRYPTOMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/libcryptoMD.dll")
-        set(LIBSSLMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/libsslMD.dll")  
-        set(IAMF_TOOLS_DLL  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/$<CONFIG>/iamf_tools.dll")
-        set(OPENSVC_DECODER "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/$<CONFIG>/OpenSVCDecoder.dll")
-        set(ZMQ_DLL         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/$<CONFIG>/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
-        
+        # Export DLL list to parent scope for DELAYLOAD configuration
+        set(DELAYLOAD_DLLS
+                ${GPAC_DLL}
+                ${CRYPTOMD_DLL}
+                ${LIBSSLMD_DLL}
+                ${IAMF_TOOLS_DLL}
+                ${OPENSVC_DECODER}
+                ${ZMQ_DLL}
+                PARENT_SCOPE
+        )
+
+        # Set the paths to the DLLs
+        set(GPAC_DLL_PATH   "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${GPAC_DLL}")
+        set(CRYPTOMD_DLL_PATH    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${CRYPTOMD_DLL}")
+        set(LIBSSLMD_DLL_PATH    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${LIBSSLMD_DLL}")
+        set(IAMF_TOOLS_DLL_PATH  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/$<CONFIG>/${IAMF_TOOLS_DLL}")
+        set(OPENSVC_DECODER_PATH "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/$<CONFIG>/${OPENSVC_DECODER}")
+        set(ZMQ_DLL_PATH         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/$<CONFIG>/${ZMQ_DLL}")
+
+
         if("${target}" MATCHES ".*_VST3$")
             set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x86_64-win")
         elseif("${target}" MATCHES ".*_AAX$")
@@ -67,11 +84,11 @@ function(copy_resources target plugin_path)
         # Single POST_BUILD command per target
         add_custom_command(TARGET ${target} PRE_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${PLUGIN_BINARY_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${PLUGIN_BINARY_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
                 COMMENT "Copied DLLs to ${PLUGIN_BINARY_DIR}"
         )
 
@@ -80,11 +97,11 @@ function(copy_resources target plugin_path)
         set(VST3_SIGNING_DIR "${CMAKE_CURRENT_BINARY_DIR}/${BUILD_LIB_DIR}")
         add_custom_command(TARGET ${target} PRE_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL_PATH} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL_PATH} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL_PATH} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL_PATH} "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL_PATH} "${VST3_SIGNING_DIR}/"
                 COMMENT "Copied DLLs to ${VST3_SIGNING_DIR}"
         )
     endif()
