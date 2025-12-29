@@ -152,45 +152,6 @@ if(BUILD_VST3 AND TARGET RendererPlugin_VST3)
     endif()
 endif()
 
-if (WIN32 AND NOT DELAYLOAD_HEADER_GENERATED_RDR)
-    # Delay load the DLL's on Windows and create a header file with the DLL information
-    # Manual loading is required in cases where the DLLs must be delay loaded
-    # Delay loading is required by some DAW's, so just do it on all Windows builds since
-    # there is no major disadvantage
-    #   set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin")
-    set(GENERATED_HEADER_DIR "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>") #EJ
-
-    set(DELAYLOAD_HEADER "${GENERATED_HEADER_DIR}/DelayLoadDlls.h")
-    set(DLL_ARRAY_CONTENT "")
-    list(LENGTH DELAYLOAD_DLLS DLL_COUNT)
-
-    foreach(dll IN LISTS DELAYLOAD_DLLS)
-        string(APPEND DLL_ARRAY_CONTENT "    \"${dll}\",\n")
-    endforeach()
-
-    # Two-step process:
-    # 1. configure_file() expands @VARIABLE@ placeholders
-    # 2. file(GENERATE) evaluates generator expressions like $<CONFIG:Debug>
-    set(DELAYLOAD_HEADER_INTERMEDIATE "${CMAKE_BINARY_DIR}/generated/rendererplugin/DelayLoadDlls.h.intermediate")
-    configure_file(
-            "${CMAKE_SOURCE_DIR}/cmake/DelayLoadDlls.h.in"
-            "${DELAYLOAD_HEADER_INTERMEDIATE}"
-            @ONLY)
-
-    file(GENERATE
-            OUTPUT "${DELAYLOAD_HEADER}"
-            INPUT "${DELAYLOAD_HEADER_INTERMEDIATE}")
-
-    # Mark as generated to prevent multiple executions
-    set(DELAYLOAD_HEADER_GENERATED_RDR TRUE CACHE INTERNAL "DelayLoad header has been generated")
-
-    # Make the generated header available to the target
-    #    target_include_directories(RendererPlugin PRIVATE "${GENERATED_HEADER_DIR}")
-    target_include_directories(RendererPlugin PRIVATE
-            "${CMAKE_BINARY_DIR}/generated/rendererplugin/$<CONFIG>" #EJ
-    )
-endif()
-
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)
     message(STATUS "MacOS release build detected. Copying Renderer Plugin Resources for AU Plugins.")
     if(ECLIPSA_LOGIC_PRO_BUILD)

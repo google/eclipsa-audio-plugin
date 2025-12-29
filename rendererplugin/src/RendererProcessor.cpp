@@ -13,6 +13,10 @@
 // limitations under the License.
 
 #include "RendererProcessor.h"
+#ifdef _WIN32
+// Windows doesn't need unistd.h - functionality is in io.h if needed
+#include <windows.h>
+#endif
 
 #include <processors/processors.h>
 
@@ -51,6 +55,26 @@ RendererProcessor::RendererProcessor()
       activeMixPresentationRepository_(getTreeWithId(kActiveMixKey)),
       filePlaybackRepository_(getTreeWithId(kFilePlaybackKey)),
       isRealtime_(true) {
+
+#ifdef WIN32
+    // Go to the plugin directory
+    const auto pluginFile = juce::File::getSpecialLocation(
+        juce::File::SpecialLocationType::currentExecutableFile);
+    const auto pluginDirectory = pluginFile.getParentDirectory();
+
+    // Find the DLLs in the plugin directory
+    auto dllFiles = pluginDirectory.findChildFiles(
+        juce::File::findFiles,
+        false,
+        "*.dll"
+    );
+
+    // Load each DLL
+    for (const auto& dllFile : dllFiles) {
+        std::string dllPath = dllFile.getFullPathName().toStdString();
+        HMODULE result = LoadLibraryA(dllPath.c_str());
+    }
+#endif
   // Initialize Logger
   Logger::getInstance().init("EclipsaRenderer");
 
