@@ -12,97 +12,198 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function(copy_resources target plugin_path)
-    if(APPLE)
-        # macOS: Copy dylibs to Resources
-        set(LIB_OBR_PATH "${CMAKE_SOURCE_DIR}/third_party/obr/lib/obr.dylib")
-        set(LIB_IAMF_TOOLS_PATH "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/libiamf_tools.dylib")
-        set(LIB_ZMQ_5_2_6_PATH "${CMAKE_BINARY_DIR}/_deps/zeromq-build/lib/libzmq.5.2.6.dylib")
-        set(LIB_GPAC_PATH "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/libgpac.dylib")
+cmake_minimum_required(VERSION 3.30.0)
 
-        # Set Resources directory and external subdirectories
-        set(RESOURCES_DIR "${plugin_path}/Contents/Resources")
-        set(EXTERNAL_IAMF_DIR "${RESOURCES_DIR}/third_party/iamftools/lib")
-        set(EXTERNAL_OBR_DIR "${RESOURCES_DIR}/third_party/obr/lib")
-        set(EXTERNAL_GPAC_DIR "${RESOURCES_DIR}/third_party/gpac/lib")
+if(WIN32)
+    # Disable vcpkg automatic DLL copying (applocal) - it fails without dumpbin in PATH
+    set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
 
-        # Copy libraries to the appropriate directories
-        add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_IAMF_DIR}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_OBR_DIR}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_GPAC_DIR}
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_OBR_PATH} ${EXTERNAL_OBR_DIR}/obr.dylib
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_IAMF_TOOLS_PATH} ${EXTERNAL_IAMF_DIR}/libiamf_tools.dylib
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_GPAC_PATH} ${EXTERNAL_GPAC_DIR}/libgpac.dylib
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_ZMQ_5_2_6_PATH} ${RESOURCES_DIR}/libzmq.5.2.6.dylib
+    # Increase stack size to 16MB to prevent stack overflows
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+endif()
 
-                # Create symbolic links for libzmq
-                COMMAND ${CMAKE_COMMAND} -E create_symlink libzmq.5.2.6.dylib ${RESOURCES_DIR}/libzmq.5.dylib
-                COMMAND ${CMAKE_COMMAND} -E create_symlink libzmq.5.dylib ${RESOURCES_DIR}/libzmq.dylib
-        )
+# Disable vcpkg from finding Boost and Protobuf (provided by libiamf)
+set(CMAKE_DISABLE_FIND_PACKAGE_Boost ON CACHE BOOL "" FORCE)
+set(CMAKE_DISABLE_FIND_PACKAGE_Protobuf ON CACHE BOOL "" FORCE)
 
-    elseif(WIN32)
-        # Set DLL names using generator expressions for multi-config generators
-        set(GPAC_DLL        "libgpac.dll")
-        set(CRYPTOMD_DLL    "libcryptoMD.dll")
-        set(LIBSSLMD_DLL    "libsslMD.dll")
-        set(IAMF_TOOLS_DLL  "iamf_tools.dll")
-        set(OPENSVC_DECODER "OpenSVCDecoder.dll")
-        set(ZMQ_DLL         "libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
+# Clear any cached Protobuf references
+unset(Protobuf_INCLUDE_DIRS CACHE)
+unset(Protobuf_LIBRARIES CACHE)
+unset(Protobuf_DIR CACHE)
+unset(Protobuf_FOUND CACHE)
+unset(Protobuf_PROTOC_EXECUTABLE CACHE)
 
-        # Export DLL list to parent scope for DELAYLOAD configuration
-        set(DELAYLOAD_DLLS
-                ${GPAC_DLL}
-                ${CRYPTOMD_DLL}
-                ${LIBSSLMD_DLL}
-                ${IAMF_TOOLS_DLL}
-                ${OPENSVC_DECODER}
-                ${ZMQ_DLL}
-                PARENT_SCOPE
-        )
+cmake_policy(SET CMP0167 NEW)
+cmake_policy(SET CMP0077 NEW)
+cmake_policy(SET CMP0169 OLD)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-        # Set the paths to the DLLs
-        set(GPAC_DLL_PATH   "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${GPAC_DLL}")
-        set(CRYPTOMD_DLL_PATH    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${CRYPTOMD_DLL}")
-        set(LIBSSLMD_DLL_PATH    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${LIBSSLMD_DLL}")
-        set(IAMF_TOOLS_DLL_PATH  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/$<CONFIG>/${IAMF_TOOLS_DLL}")
-        set(OPENSVC_DECODER_PATH "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/$<CONFIG>/${OPENSVC_DECODER}")
-        set(ZMQ_DLL_PATH         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/$<CONFIG>/${ZMQ_DLL}")
+# Configure release or debug builds
+set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
 
+# Windows vcpkg setup
+if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    # Try environment variable first (respects user's existing setup)
+    if(DEFINED ENV{VCPKG_ROOT})
+        set(VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "Path to vcpkg root")
+    endif()
 
-        if("${target}" MATCHES ".*_VST3$")
-            set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x86_64-win")
-        elseif("${target}" MATCHES ".*_AAX$")
-            set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x64")
-        elseif("${target}" MATCHES ".*_Standalone$")
-            set(PLUGIN_BINARY_DIR "${plugin_path}")
-        else()
-            message(WARNING "Unknown plugin format for target: ${target}. Skipping DLL copy.")
-            return()
+    # Configure vcpkg if VCPKG_ROOT is set
+    if(DEFINED VCPKG_ROOT)
+        set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg toolchain file")
+
+        # Validate toolchain file exists
+        if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+            message(FATAL_ERROR "vcpkg toolchain file not found at: ${CMAKE_TOOLCHAIN_FILE}")
         endif()
 
-        # Single POST_BUILD command per target
-        add_custom_command(TARGET ${target} PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${PLUGIN_BINARY_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMENT "Copied DLLs to ${PLUGIN_BINARY_DIR}"
-        )
+        # Set default triplet if not specified
+        if(NOT DEFINED VCPKG_TARGET_TRIPLET)
+            set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg target triplet")
+        endif()
 
-        # Copy DLLs to Debug folder in build directory for use by the JUCE VST3 tool
-        # The tool runs from this directory and runs the plugins, so the DLLs need to be here as well
-        set(VST3_SIGNING_DIR "${CMAKE_CURRENT_BINARY_DIR}/${BUILD_LIB_DIR}")
-        add_custom_command(TARGET ${target} PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMENT "Copied DLLs to ${VST3_SIGNING_DIR}"
-        )
+        message(WARNING "vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+        message(WARNING "vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
+    else()
+        message(WARNING "vcpkg not configured. Please either:")
+        message(WARNING "  1. Set VCPKG_ROOT environment variable, or")
+        message(WARNING "  2. Pass -DVCPKG_ROOT=<path> to CMake")
+        message(WARNING "Build will continue without vcpkg - dependencies must be installed manually")
     endif()
-endfunction()
+endif()
+
+if(NOT DEFINED ECLIPSA_VERSION)
+    set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
+endif()
+
+project(Eclipsa LANGUAGES C CXX VERSION ${ECLIPSA_VERSION})
+
+add_compile_definitions(ECLIPSA_VERSION="${ECLIPSA_VERSION}")
+
+# Make company name configurable via command line with a default value
+if(NOT DEFINED ECLIPSA_COMPANY_NAME)
+    set(ECLIPSA_COMPANY_NAME "Eclipsa Project" CACHE STRING "Company name for Eclipsa project")
+endif()
+
+if(WIN32 AND NOT CMAKE_RC_COMPILER)
+    find_program(CMAKE_RC_COMPILER rc.exe
+            HINTS "C:/Program Files (x86)/Windows Kits/10/bin/*/x64")
+endif()
+
+# Make manufacturer code configurable via command line with a default value
+if(NOT DEFINED ECLIPSA_MANUFACTURER_CODE)
+    set(ECLIPSA_MANUFACTURER_CODE "Eclp" CACHE STRING "Manufacturer code for Eclipsa project")
+endif()
+
+# Make bundle IDs configurable via command line with default values
+if(NOT DEFINED ECLIPSA_RENDERER_BUNDLE_ID)
+    set(ECLIPSA_RENDERER_BUNDLE_ID "com.eclipsaproject.renderer" CACHE STRING "Bundle ID for the renderer plugin")
+endif()
+
+if(NOT DEFINED ECLIPSA_PANNER_BUNDLE_ID)
+    set(ECLIPSA_PANNER_BUNDLE_ID "com.eclipsaproject.panner" CACHE STRING "Bundle ID for the panner plugin")
+endif()
+
+# Build configuration for different DAW targets
+option(ECLIPSA_LOGIC_PRO_BUILD "Build AU plugin optimized for Logic Pro (7.1.4 layout)" OFF)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
+
+# Set default plugin formats per platform
+if(APPLE)
+    set(PLUGIN_FORMATS "AU")
+elseif(WIN32)
+    set(PLUGIN_FORMATS "Standalone")
+else()
+    set(PLUGIN_FORMATS "")
+endif()
+
+option(INTERNAL_TEST OFF)
+option(CI_TEST OFF)
+option(JUCE_COPY_PLUGIN_AFTER_BUILD "Automatically copy built plugins to standard locations after build" ON)
+
+if(APPLE)
+    # Add vendored libraries path (for CI/GitHub Actions)
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
+    link_directories(${VENDOR_LIB_PATH})
+endif()
+
+if(CI_TEST OR INTERNAL_TEST)
+    message(STATUS "Unit tests enabled")
+    include(FetchContent)
+    FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.14.0
+    )
+    FetchContent_MakeAvailable(GoogleTest)
+    enable_testing()
+    include(GoogleTest)
+    include("cmake/eclipsa_test.cmake")
+    include("cmake/eclipsa_build_tests.cmake")
+
+    # Check for an FFmpeg install for tests that do additional media verification
+    include("cmake/find_ffmpeg.cmake")
+    if (FFMPEG_TOOLS_FOUND)
+        message(STATUS "FFmpeg found. Enabling tests that require FFmpeg.")
+        add_compile_definitions(ECLIPSA_FFMPEG_AVAILABLE=1)
+    else()
+        message(STATUS "FFmpeg not found. Tests requiring FFmpeg will be disabled.")
+    endif()
+
+    # FFmpeg is required for CI tests
+    if(CI_TEST AND NOT FFMPEG_TOOLS_FOUND)
+        message(FATAL_ERROR "FFmpeg tools not found. Required for CI tests.")
+    endif()
+endif()
+
+add_subdirectory(third_party)
+
+# ZLIB configuration for Windows builds
+if(WIN32)
+    find_package(ZLIB REQUIRED)
+    message(STATUS "ZLIB found at: ${ZLIB_LIBRARIES}")
+    # Fix link targets that request 'z'
+    link_libraries(ZLIB::ZLIB)
+endif()
+
+include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
+
+if(BUILD_AAX)
+    if(WIN32)
+        set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
+        list(APPEND PLUGIN_FORMATS "AAX")
+
+        # Allow team members to specify their own AAX SDK path
+        if(NOT DEFINED AAX_SDK_ROOT)
+            set(AAX_SDK_ROOT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE PATH "Path to AAX SDK")
+        endif()
+    else()
+        set(AAX_SDK_VER "2-7-0" CACHE STRING "Default AAX SDK Version")
+        list(APPEND PLUGIN_FORMATS "AAX")
+        find_path(AAX_SDK_ROOT NAMES "aax-sdk-${AAX_SDK_VER}" HINTS "/opt" "/usr/local")
+        set(AAX_SDK_ROOT "${AAX_SDK_ROOT}/aax-sdk-${AAX_SDK_VER}")
+    endif()
+
+    if(EXISTS "${AAX_SDK_ROOT}")
+        message(STATUS "Using AAX SDK at ${AAX_SDK_ROOT}")
+        juce_set_aax_sdk_path("${AAX_SDK_ROOT}")
+    else()
+        message(FATAL_ERROR "AAX SDK not found at ${AAX_SDK_ROOT}. Set AAX_SDK_ROOT to the correct path.")
+    endif()
+endif()
+
+if(BUILD_VST3)
+    list(APPEND PLUGIN_FORMATS "VST3")
+endif()
+
+add_subdirectory(common)
+add_subdirectory(rendererplugin)
+add_subdirectory(audioelementplugin)
+
+if (CI_TEST OR INTERNAL_TEST)
+    eclipsa_build_tests()
+endif()
