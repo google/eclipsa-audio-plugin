@@ -13,14 +13,6 @@
 // limitations under the License.
 
 #include "AudioElementPluginProcessor.h"
-
-#ifdef _WIN32
-// Windows doesn't need unistd.h - functionality is in io.h if needed
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
 #include <memory>
 
 #include "AudioElementPluginEditor.h"
@@ -33,6 +25,13 @@
 #include "processors/panner/Panner3DProcessor.h"
 #include "processors/routing/RoutingProcessor.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
+
+#ifdef _WIN32
+// Windows doesn't need unistd.h - functionality is in io.h if needed
+// #include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 int AudioElementPluginProcessor::instanceId_ = 0;
 

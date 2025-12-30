@@ -13,10 +13,6 @@
 // limitations under the License.
 
 #include "RendererProcessor.h"
-#ifdef _WIN32
-// Windows doesn't need unistd.h - functionality is in io.h if needed
-#include <windows.h>
-#endif
 
 #include <processors/processors.h>
 
@@ -30,6 +26,10 @@
 #include "logger/logger.h"
 #include "processors/processor_base/ProcessorBase.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
+#ifdef _WIN32
+// Windows doesn't need unistd.h - functionality is in io.h if needed
+// #include <windows.h>
+#endif
 
 //==============================================================================
 RendererProcessor::RendererProcessor()

@@ -16,10 +16,16 @@
 
 #pragma once
 
-#include <juce_audio_utils/juce_audio_utils.h>
+// Windows headers MUST come before JUCE to avoid macro pollution
 #ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
+// Undefine Windows macros that conflict with JUCE
+#undef Notification
 #endif
+
+#include <juce_audio_utils/juce_audio_utils.h>
 
 // Build configuration for Logic Pro compatibility
 // When true, limits to 7.1.4 layout for Logic Pro compatibility
