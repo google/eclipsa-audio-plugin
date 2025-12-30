@@ -56,20 +56,7 @@ RendererProcessor::RendererProcessor()
       filePlaybackRepository_(getTreeWithId(kFilePlaybackKey)),
       isRealtime_(true) {
 #ifdef WIN32
-    // Go to the plugin directory
-    const auto pluginFile = juce::File::getSpecialLocation(
-        juce::File::SpecialLocationType::currentExecutableFile);
-    const auto pluginDirectory = pluginFile.getParentDirectory();
-
-    // Find the DLLs in the plugin directory
-    auto dllFiles = pluginDirectory.findChildFiles(juce::File::findFiles, false,
-                                                    "*.dll");
-
-    // Load each DLL
-    for (const auto& dllFile : dllFiles) {
-        std::string dllPath = dllFile.getFullPathName().toStdString();
-        HMODULE result = LoadLibraryA(dllPath.c_str());
-    }
+  LoadWindowsDependencies();
 #endif
   // Initialize Logger
   Logger::getInstance().init("EclipsaRenderer");

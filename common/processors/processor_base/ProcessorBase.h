@@ -17,6 +17,9 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 // Build configuration for Logic Pro compatibility
 // When true, limits to 7.1.4 layout for Logic Pro compatibility
@@ -126,4 +129,20 @@ class ProcessorBase : public juce::AudioProcessor {
   void changeProgramName(int index, const juce::String& newName) override {
     juce::ignoreUnused(index, newName);
   }
+
+#ifdef WIN32
+  static void LoadWindowsDependencies() {
+    const auto pluginFile = juce::File::getSpecialLocation(
+        juce::File::SpecialLocationType::currentExecutableFile);
+    const auto pluginDirectory = pluginFile.getParentDirectory();
+
+    auto dllFiles = pluginDirectory.findChildFiles(juce::File::findFiles,
+                                                    false, "*.dll");
+
+    for (const auto& dllFile : dllFiles) {
+      std::string dllPath = dllFile.getFullPathName().toStdString();
+      LoadLibraryA(dllPath.c_str());
+    }
+  }
+#endif
 };
