@@ -82,8 +82,11 @@ target_link_libraries(AudioElementPlugin
         data_structures
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags
-        delayimp)
+        juce::juce_recommended_warning_flags)
+
+if(WIN32)
+    target_link_libraries(AudioElementPlugin PRIVATE delayimp)
+endif()
 
 # Platform-specific Boost linking
 if(WIN32)
@@ -118,9 +121,11 @@ if(BUILD_AAX AND TARGET AudioElementPlugin_AAX)
     set(AUDIO_ELEMENT_AAX_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Element Plugin.aaxplugin")
     copy_resources(AudioElementPlugin_AAX "${AUDIO_ELEMENT_AAX_PATH}")
 
-    foreach(dll IN LISTS DELAYLOAD_DLLS)
-        target_link_options(AudioElementPlugin_AAX PRIVATE /DELAYLOAD:${dll})
-    endforeach()
+    if(WIN32)
+        foreach(dll IN LISTS DELAYLOAD_DLLS)
+            target_link_options(AudioElementPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
+        endforeach()
+    endif()
 endif()
 
 if(BUILD_VST3 AND TARGET AudioElementPlugin_VST3)
@@ -128,9 +133,11 @@ if(BUILD_VST3 AND TARGET AudioElementPlugin_VST3)
     set(AUDIO_ELEMENT_VST3_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Element Plugin.vst3")
     copy_resources(AudioElementPlugin_VST3 "${AUDIO_ELEMENT_VST3_PATH}")
 
-    foreach(dll IN LISTS DELAYLOAD_DLLS)
-        target_link_options(AudioElementPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
-    endforeach()
+    if (WIN32)
+        foreach(dll IN LISTS DELAYLOAD_DLLS)
+            target_link_options(AudioElementPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
+        endforeach()
+    endif()
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)

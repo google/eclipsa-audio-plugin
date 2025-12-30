@@ -92,8 +92,11 @@ target_link_libraries(RendererPlugin
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
-        libzmq
-        delayimp)
+        libzmq)
+
+if(WIN32)
+    target_link_libraries(RendererPlugin PRIVATE delayimp)
+endif()
 
 # Platform-specific Boost linking
 if(WIN32)
