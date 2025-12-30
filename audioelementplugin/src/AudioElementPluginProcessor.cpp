@@ -52,7 +52,6 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
       syncClient_(&audioElementSpatialLayoutRepository_, 2134),
       automationParametersTreeState(*this),
       trackName_("") {
-
 #ifdef WIN32
     // Go to the plugin directory
     const auto pluginFile = juce::File::getSpecialLocation(
@@ -72,7 +71,6 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
         HMODULE result = LoadLibraryA(dllPath.c_str());
     }
 #endif
-
   elevationListener_.setListeners(&automationParametersTreeState,
                                   &audioElementSpatialLayoutRepository_);
 

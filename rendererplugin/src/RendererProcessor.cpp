@@ -55,7 +55,6 @@ RendererProcessor::RendererProcessor()
       activeMixPresentationRepository_(getTreeWithId(kActiveMixKey)),
       filePlaybackRepository_(getTreeWithId(kFilePlaybackKey)),
       isRealtime_(true) {
-
 #ifdef WIN32
     // Go to the plugin directory
     const auto pluginFile = juce::File::getSpecialLocation(
@@ -63,11 +62,8 @@ RendererProcessor::RendererProcessor()
     const auto pluginDirectory = pluginFile.getParentDirectory();
 
     // Find the DLLs in the plugin directory
-    auto dllFiles = pluginDirectory.findChildFiles(
-        juce::File::findFiles,
-        false,
-        "*.dll"
-    );
+    auto dllFiles = pluginDirectory.findChildFiles(juce::File::findFiles, false,
+                                                    "*.dll");
 
     // Load each DLL
     for (const auto& dllFile : dllFiles) {
