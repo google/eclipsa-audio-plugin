@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "AudioElementPluginProcessor.h"
+
 #include <memory>
 
 #include "AudioElementPluginEditor.h"
