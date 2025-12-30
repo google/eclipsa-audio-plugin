@@ -136,8 +136,8 @@ class ProcessorBase : public juce::AudioProcessor {
         juce::File::SpecialLocationType::currentExecutableFile);
     const auto pluginDirectory = pluginFile.getParentDirectory();
 
-    auto dllFiles = pluginDirectory.findChildFiles(juce::File::findFiles,
-                                                    false, "*.dll");
+    auto dllFiles =
+        pluginDirectory.findChildFiles(juce::File::findFiles, false, "*.dll");
 
     for (const auto& dllFile : dllFiles) {
       std::string dllPath = dllFile.getFullPathName().toStdString();
