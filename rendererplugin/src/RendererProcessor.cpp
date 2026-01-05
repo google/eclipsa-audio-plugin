@@ -27,7 +27,6 @@
 #include "processors/processor_base/ProcessorBase.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-
 //==============================================================================
 RendererProcessor::RendererProcessor()
     // Logic Pro optimized builds: use host-wide layout
