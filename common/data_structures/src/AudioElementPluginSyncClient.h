@@ -91,7 +91,6 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
     }
   }
 
-  // EJ 10/31
 
   void tryConnect() {  // Start a thread here to try and perform the connection
     connectionThread_ = std::thread([this] {
@@ -99,7 +98,7 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
       // has been requested and we need to stop
       while (!connected_ && !terminationRequested_) {
         rendererAudioElementsLock_.enter();
-        bool connected = connectToSocket("localhost", port_, 5000);
+        bool connected = connectToSocket("localhost", port_, 10);
         if (connected) {
           rendererAudioElementsLock_.exit();
           connected_ = true;
