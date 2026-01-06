@@ -91,7 +91,6 @@ class AudioElementPluginSyncClient : public juce::InterprocessConnection {
     }
   }
 
-
   void tryConnect() {  // Start a thread here to try and perform the connection
     connectionThread_ = std::thread([this] {
       // Try and connect, checking to see if deletion
