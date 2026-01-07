@@ -317,7 +317,7 @@ class AudioElementColumn : public juce::Component, juce::ImageButton::Listener {
     deleteButton_.setEnabled(false);
     deleteButton_.setTooltip(
         "Audio Elements cannot be deleted when assigned to a Mix Presentation "
-        "or Panner plugin instance.");
+        "or an Audio Element plugin instance.");
   }
 
  private:
