@@ -90,6 +90,7 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
   CustomLookAndFeel customLookAndFeel_;
 
   juce::Label titleLabel_;
+  juce::Label versionLabel_;
   juce::Label panningControlsLabel_;
   SliderButton panningControls_;
   juce::Component* currentScreen_;

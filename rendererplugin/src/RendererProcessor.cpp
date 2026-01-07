@@ -59,6 +59,7 @@ RendererProcessor::RendererProcessor()
 
   // Log instantiation of RendererProcessor
   LOG_ANALYTICS(instanceId_, "RendererProcessor instantiated.");
+  LOG_ANALYTICS(instanceId_, "Version: " ECLIPSA_VERSION);
 
   // Construct processor chain.
   audioProcessors_.push_back(

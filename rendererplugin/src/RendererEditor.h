@@ -49,6 +49,7 @@ class RendererEditor final : public MainEditor {
   CustomLookAndFeel customLookAndFeel_;
 
   juce::Label titleLabel_;
+  juce::Label versionLabel_;
   DAWWarningBanner dawWarningBanner_;
   MonitorScreen monitorScreen_;
   juce::Component* currentScreen_;

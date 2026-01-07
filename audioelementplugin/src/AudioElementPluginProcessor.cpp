@@ -78,6 +78,7 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   ++instanceId_;
 
   LOG_ANALYTICS(instanceId_, "AudioElementPluginProcessor instantiated.");
+  LOG_ANALYTICS(instanceId_, "Version: " ECLIPSA_VERSION);
 
   // Always open the max possible channels, since dynamically updating it
   // doesn't seem to work
