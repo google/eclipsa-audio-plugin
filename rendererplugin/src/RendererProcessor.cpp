@@ -52,9 +52,6 @@ RendererProcessor::RendererProcessor()
       activeMixPresentationRepository_(getTreeWithId(kActiveMixKey)),
       filePlaybackRepository_(getTreeWithId(kFilePlaybackKey)),
       isRealtime_(true) {
-#ifdef WIN32
-  LoadWindowsDependencies();
-#endif
   // Initialize Logger
   Logger::getInstance().init("EclipsaRenderer");
 
@@ -419,6 +416,9 @@ juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
+#ifdef WIN32
+    ProcessorBase::LoadWindowsDependencies();
+#endif
   return new RendererProcessor();
 }
 

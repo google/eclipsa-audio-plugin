@@ -52,9 +52,6 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
       syncClient_(&audioElementSpatialLayoutRepository_, 2134),
       automationParametersTreeState(*this),
       trackName_("") {
-#ifdef WIN32
-  LoadWindowsDependencies();
-#endif
   elevationListener_.setListeners(&automationParametersTreeState,
                                   &audioElementSpatialLayoutRepository_);
 
@@ -242,6 +239,9 @@ juce::AudioProcessorEditor* AudioElementPluginProcessor::createEditor() {
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
+#ifdef WIN32
+    ProcessorBase::LoadWindowsDependencies();
+#endif
   return new AudioElementPluginProcessor();
 }
 
