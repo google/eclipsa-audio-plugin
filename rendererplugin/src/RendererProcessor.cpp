@@ -27,7 +27,6 @@
 #include "processors/processor_base/ProcessorBase.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-
 //==============================================================================
 RendererProcessor::RendererProcessor()
     // Logic Pro optimized builds: use host-wide layout
@@ -417,7 +416,7 @@ juce::ValueTree RendererProcessor::getTreeWithId(const juce::Identifier& id) {
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 #ifdef WIN32
-    ProcessorBase::LoadWindowsDependencies();
+  ProcessorBase::LoadWindowsDependencies();
 #endif
   return new RendererProcessor();
 }

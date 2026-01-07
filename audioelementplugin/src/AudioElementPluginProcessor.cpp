@@ -240,7 +240,7 @@ juce::AudioProcessorEditor* AudioElementPluginProcessor::createEditor() {
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 #ifdef WIN32
-    ProcessorBase::LoadWindowsDependencies();
+  ProcessorBase::LoadWindowsDependencies();
 #endif
   return new AudioElementPluginProcessor();
 }
