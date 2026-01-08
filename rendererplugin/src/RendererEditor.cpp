@@ -142,10 +142,10 @@ void RendererEditor::paint(juce::Graphics& g) {
 
   versionLabel_.setText("v" + juce::String(ECLIPSA_VERSION),
                         juce::dontSendNotification);
-  versionLabel_.setFont(juce::Font("Roboto", 15.0f, juce::Font::plain));
+  versionLabel_.setFont(juce::Font("Roboto", 10.0f, juce::Font::plain));
   versionLabel_.setJustificationType(juce::Justification::bottomLeft);
   versionLabel_.setColour(juce::Label::ColourIds::textColourId,
-                          EclipsaColours::buttonMSTextColour);
+                          EclipsaColours::buttonMSTextColour.withAlpha(0.3f));
 
   // Add some spacing between title and warning banner (if shown)
   bounds.removeFromTop(5);
