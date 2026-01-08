@@ -23,6 +23,8 @@
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_structures/src/AudioElement.h"
+#include "data_structures/src/MixPresentation.h"
 #include "iamf/include/iamf_tools/iamf_encoder_interface.h"
 
 struct AudioElementMetadata {
@@ -61,6 +63,7 @@ class IAMFFileWriter {
       iamf_tools_cli_proto::UserMetadata& iamfMD);
   void populateAudioElementMetadataFromRepository(
       AudioElementRepository& audioElementRepository,
+      MixPresentationRepository& mixPresentationRepository,
       iamf_tools_cli_proto::UserMetadata& iamfMD,
       std::unordered_map<juce::Uuid, int>& audioElementIDMap);
   void populateMixPresentationMetadataFromRepository(

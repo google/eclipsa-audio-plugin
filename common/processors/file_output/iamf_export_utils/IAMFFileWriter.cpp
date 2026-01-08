@@ -14,7 +14,10 @@
 
 #include "IAMFFileWriter.h"
 
+#include <vector>
+
 #include "IAMFExportUtil.h"
+#include "data_structures/src/MixPresentation.h"
 #include "iamf/include/iamf_tools/iamf_encoder_factory.h"
 
 IAMFFileWriter::IAMFFileWriter(
@@ -61,11 +64,21 @@ void IAMFFileWriter::populateCodecInformationFromRepository(
 
 void IAMFFileWriter::populateAudioElementMetadataFromRepository(
     AudioElementRepository& audioElementRepository,
+    MixPresentationRepository& mixPresentationRepository,
     iamf_tools_cli_proto::UserMetadata& iamfMD,
     std::unordered_map<juce::Uuid, int>& audioElementIDMap) {
   // Pull down audio elements from repository.
   juce::OwnedArray<AudioElement> audioElements;
   audioElementRepository.getAll(audioElements);
+  // Pull down mix presentations from repository.
+  juce::OwnedArray<MixPresentation> mixPresentations;
+  mixPresentationRepository.getAll(mixPresentations);
+
+  // Filter audio elements to only those that are active in at least one mix
+  // presentation.
+  const std::vector<const AudioElement*> kActiveAudioElements =
+      IAMFExportHelper::filterFreeAudioElements(audioElements,
+                                                mixPresentations);
 
   // Clear any existing metadata.
   iamfMD.clear_audio_element_metadata();
@@ -77,22 +90,21 @@ void IAMFFileWriter::populateAudioElementMetadataFromRepository(
   int minAudioSubstreamForElement = 0;
   int firstAudioElementId = 500;
   bool isExtendedAudioElementPresent = false;
-  for (int i = 0; i < audioElements.size(); ++i) {
+  for (const AudioElement* audioElement : kActiveAudioElements) {
     // Populate the metadata for this audio element
     auto aeMDToPopulate = iamfMD.add_audio_element_metadata();
-    juce::Uuid elementID = audioElements[i]->getId();
+    juce::Uuid elementID = audioElement->getId();
     audioElementIDMap[elementID] = ++firstAudioElementId;
     int aeID = audioElementIDMap[elementID];
-    audioElements[i]->populateIamfAudioElementMetadata(
-        aeMDToPopulate, aeID, minAudioSubstreamForElement);
+    audioElement->populateIamfAudioElementMetadata(aeMDToPopulate, aeID,
+                                                   minAudioSubstreamForElement);
     auto afMDToPopulate = iamfMD.add_audio_frame_metadata();
-    audioElements[i]->populateIamfAudioFrameMetadata(afMDToPopulate, aeID);
+    audioElement->populateIamfAudioFrameMetadata(afMDToPopulate, aeID);
 
     // Populate the channel map information for encoding
     AudioElementMetadata aeMetadata(
-        aeID, audioElements[i]->getFirstChannel(),
-        audioElements[i]->getChannelCount(),
-        audioElements[i]->getChannelConfig().getIamfChannelLabels());
+        aeID, audioElement->getFirstChannel(), audioElement->getChannelCount(),
+        audioElement->getChannelConfig().getIamfChannelLabels());
     audioElementInformation_.emplace_back(aeMetadata);
   }
 
@@ -135,7 +147,8 @@ bool IAMFFileWriter::open(const std::string& filename) {
   audioElementIDMap_.clear();
   populateCodecInformationFromRepository(fileExportRepository_, *userMetadata_);
   populateAudioElementMetadataFromRepository(
-      audioElementRepository_, *userMetadata_, audioElementIDMap_);
+      audioElementRepository_, mixPresentationRepository_, *userMetadata_,
+      audioElementIDMap_);
   populateMixPresentationMetadataFromRepository(
       mixPresentationRepository_, *userMetadata_, audioElementIDMap_);
 

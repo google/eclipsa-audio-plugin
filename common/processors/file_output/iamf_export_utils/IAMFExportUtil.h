@@ -18,6 +18,7 @@
 #include <data_structures/src/AudioElement.h>
 
 #include "data_structures/src/FileExport.h"
+#include "data_structures/src/MixPresentation.h"
 #include "user_metadata.pb.h"
 
 namespace IAMFExportHelper {
@@ -32,5 +33,8 @@ void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
 void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
+std::vector<const AudioElement*> filterFreeAudioElements(
+    const juce::OwnedArray<AudioElement>& audioElements,
+    const juce::OwnedArray<MixPresentation>& mixPresentations);
 bool muxIAMF(const FileExport& exportData);
 }  // namespace IAMFExportHelper

@@ -112,12 +112,13 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   iamfWavFileWriters_.clear();
   iamfWavFileWriters_.reserve(audioElements.size());
   for (int i = 0; i < audioElements.size(); i++) {
-    juce::String wavFilePath =
-        config.getExportFile() + "_audio_element_ " + juce::String(i) + ".wav";
+    const juce::String kElemName = audioElements[i]->getName();
+    const juce::String kWavFilePath =
+        config.getExportFile() + "_" + kElemName + ".wav";
     sampleRate_ = config.getSampleRate();
 
     iamfWavFileWriters_.emplace_back(new AudioElementFileWriter(
-        wavFilePath, config.getSampleRate(), config.getBitDepth(),
+        kWavFilePath, config.getSampleRate(), config.getBitDepth(),
         config.getAudioCodec(), *audioElements[i]));
   }
   sampleTally_ = 0;

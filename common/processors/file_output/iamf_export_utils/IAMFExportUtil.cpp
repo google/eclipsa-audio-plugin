@@ -434,4 +434,31 @@ bool muxIAMF(const FileExport& exportData) {
   gf_sys_close();
   return true;
 }
+
+std::vector<const AudioElement*> filterFreeAudioElements(
+    const juce::OwnedArray<AudioElement>& audioElements,
+    const juce::OwnedArray<MixPresentation>& mixPresentations) {
+  std::vector<const AudioElement*> activeAudioElements;
+
+  for (const AudioElement* audioElement : audioElements) {
+    // Check if this audio element is used in any mix presentation
+    const bool kInMixPresentation = std::any_of(
+        mixPresentations.begin(), mixPresentations.end(),
+        [audioElement](const MixPresentation* mixPresentation) {
+          const std::vector<MixPresentationAudioElement> kMpAes =
+              mixPresentation->getAudioElements();
+          return std::any_of(
+              kMpAes.begin(), kMpAes.end(),
+              [audioElement](const MixPresentationAudioElement& mpAe) {
+                return mpAe.getId() == audioElement->getId();
+              });
+        });
+
+    if (kInMixPresentation) {
+      activeAudioElements.push_back(audioElement);
+    }
+  }
+
+  return activeAudioElements;
+}
 }  // namespace IAMFExportHelper
