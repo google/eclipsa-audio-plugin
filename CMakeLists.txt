@@ -72,6 +72,18 @@ if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     endif()
 endif()
 
+# Version configuration
+# The version can be set in multiple ways (in order of precedence):
+# 1. Pass via command line: cmake -DECLIPSA_VERSION=1.2.3 ...
+# 2. Set via environment variable: export ECLIPSA_VERSION=1.2.3
+# 3. Extract from git tag: git describe --tags (requires manual implementation)
+# 4. Default to "0.0.1" if none of the above are set
+#
+# For automated builds/installers, it's recommended to:
+# - Pass the version explicitly via command line flag (-DECLIPSA_VERSION=x.y.z)
+# - Or extract from git tag in your build script and pass it to CMake
+#
+# The version appears as a watermark in the bottom-left corner of both plugins.
 if(NOT DEFINED ECLIPSA_VERSION)
     set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
 endif()

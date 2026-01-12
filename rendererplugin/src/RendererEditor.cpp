@@ -140,6 +140,13 @@ void RendererEditor::paint(juce::Graphics& g) {
   titleLabel_.setFont(juce::Font("Audiowide", 30.0f, juce::Font::plain));
   titleLabel_.setBounds(bounds.removeFromTop(40));
 
+  versionLabel_.setText("v" + juce::String(ECLIPSA_VERSION),
+                        juce::dontSendNotification);
+  versionLabel_.setFont(juce::Font("Roboto", 10.0f, juce::Font::plain));
+  versionLabel_.setJustificationType(juce::Justification::bottomLeft);
+  versionLabel_.setColour(juce::Label::ColourIds::textColourId,
+                          EclipsaColours::buttonMSTextColour.withAlpha(0.3f));
+
   // Add some spacing between title and warning banner (if shown)
   bounds.removeFromTop(5);
 
@@ -169,6 +176,12 @@ void RendererEditor::paint(juce::Graphics& g) {
   // Now draw in the current screen
   addAndMakeVisible(currentScreen_);
   currentScreen_->setBounds(bounds);
+
+  addAndMakeVisible(versionLabel_);
+  auto versionBounds = getLocalBounds();
+  versionBounds.removeFromBottom(5);
+  auto bottomStrip = versionBounds.removeFromBottom(15);
+  versionLabel_.setBounds(bottomStrip.removeFromLeft(150));
 }
 
 void RendererEditor::resized() {

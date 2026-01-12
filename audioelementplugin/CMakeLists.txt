@@ -123,7 +123,7 @@ if(BUILD_AAX AND TARGET AudioElementPlugin_AAX)
 
     if(WIN32)
         foreach(dll IN LISTS DELAYLOAD_DLLS)
-            target_link_options(AudioElementPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
+            target_link_options(AudioElementPlugin_AAX PRIVATE /DELAYLOAD:${dll})
         endforeach()
     endif()
 endif()

@@ -52,9 +52,6 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
       syncClient_(&audioElementSpatialLayoutRepository_, 2134),
       automationParametersTreeState(*this),
       trackName_("") {
-#ifdef WIN32
-  LoadWindowsDependencies();
-#endif
   elevationListener_.setListeners(&automationParametersTreeState,
                                   &audioElementSpatialLayoutRepository_);
 
@@ -78,6 +75,7 @@ AudioElementPluginProcessor::AudioElementPluginProcessor()
   ++instanceId_;
 
   LOG_ANALYTICS(instanceId_, "AudioElementPluginProcessor instantiated.");
+  LOG_ANALYTICS(instanceId_, "Version: " ECLIPSA_VERSION);
 
   // Always open the max possible channels, since dynamically updating it
   // doesn't seem to work
@@ -242,6 +240,9 @@ juce::AudioProcessorEditor* AudioElementPluginProcessor::createEditor() {
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
+#ifdef WIN32
+  ProcessorBase::LoadWindowsDependencies();
+#endif
   return new AudioElementPluginProcessor();
 }
 

@@ -152,6 +152,13 @@ AudioElementPluginEditor::AudioElementPluginEditor(
   titleLabel_.setText("Eclipsa Audio Panner", juce::dontSendNotification);
   titleLabel_.setFont(juce::Font("Audiowide", 30.0f, juce::Font::plain));
 
+  versionLabel_.setText("v" + juce::String(ECLIPSA_VERSION),
+                        juce::dontSendNotification);
+  versionLabel_.setFont(juce::Font("Roboto", 10.0f, juce::Font::plain));
+  versionLabel_.setJustificationType(juce::Justification::bottomLeft);
+  versionLabel_.setColour(juce::Label::ColourIds::textColourId,
+                          EclipsaColours::buttonMSTextColour.withAlpha(0.3f));
+
   // Handle the panning controls
   panningControls_.setToggleState(config.isPanningEnabled(),
                                   juce::dontSendNotification);
@@ -335,6 +342,12 @@ void AudioElementPluginEditor::paint(juce::Graphics& g) {
   } else {
     positionSelectionScreen_.setVisible(false);
   }
+
+  addAndMakeVisible(versionLabel_);
+  auto versionBounds = getLocalBounds();
+  versionBounds.removeFromBottom(5);
+  auto bottomStrip = versionBounds.removeFromBottom(15);
+  versionLabel_.setBounds(bottomStrip.removeFromLeft(150));
 }
 
 void AudioElementPluginEditor::resized() {
