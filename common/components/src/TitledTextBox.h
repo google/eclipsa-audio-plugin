@@ -29,6 +29,9 @@ class TitledTextBox : public juce::Component {
   juce::TextEditor textEditor_;
   juce::Colour outlineColour_;
   int titleBuffer_;
+  std::function<void()> onReturnCallback_;
+  std::function<void()> onFocusLostCallback_;
+  bool suppressFocusLost_ = false;
 
  public:
   TitledTextBox(juce::String title)
@@ -55,6 +58,8 @@ class TitledTextBox : public juce::Component {
     textEditor_.setColour(juce::TextEditor::textColourId,
                           EclipsaColours::headingGrey);
     textEditor_.setFont(juce::Font("Roboto", 14.0f, juce::Font::plain));
+    textEditor_.onReturnKey = [this]() { handleReturnKey(); };
+    textEditor_.onFocusLost = [this]() { handleFocusLost(); };
   }
 
   ~TitledTextBox() override {
@@ -121,11 +126,11 @@ class TitledTextBox : public juce::Component {
   }
 
   void setOnReturnCallback(std::function<void()> callback) {
-    textEditor_.onReturnKey = callback;
+    onReturnCallback_ = callback;
   }
 
   void setOnFocusLostCallback(std::function<void()> callback) {
-    textEditor_.onFocusLost = callback;
+    onFocusLostCallback_ = callback;
   }
 
   void setOnEscapeKeyCallback(std::function<void()> callback) {
@@ -154,8 +159,33 @@ class TitledTextBox : public juce::Component {
   void setReadOnly(const bool isReadOnly) {
     textEditor_.setAccessible(!isReadOnly);
     textEditor_.setReadOnly(isReadOnly);
-    textEditor_.setCaretVisible(isReadOnly);
+    textEditor_.setCaretVisible(!isReadOnly);
   }
 
   void reduceTitleBuffer(int amount) { titleBuffer_ -= amount; }
+
+ private:
+  void handleReturnKey() {
+    if (onReturnCallback_) {
+      onReturnCallback_();
+    }
+
+    suppressFocusLost_ = true;
+    textEditor_.giveAwayKeyboardFocus();
+
+    if (textEditor_.hasKeyboardFocus(true)) {
+      suppressFocusLost_ = false;
+    }
+  }
+
+  void handleFocusLost() {
+    if (suppressFocusLost_) {
+      suppressFocusLost_ = false;
+      return;
+    }
+
+    if (onFocusLostCallback_) {
+      onFocusLostCallback_();
+    }
+  }
 };
