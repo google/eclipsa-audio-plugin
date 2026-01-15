@@ -31,12 +31,13 @@ class MonitorScreen : public juce::Component {
 
  public:
   MonitorScreen(RepositoryCollection repos, SpeakerMonitorData& data,
-                ChannelMonitorData& channelMonitorData, MainEditor& editor,
+                ChannelMonitorData& channelMonitorData,
+                FilePlaybackProcessorData& fpbData, MainEditor& editor,
                 int totalChannelCount)
       : repos_(repos),
         presentationMonitorScreen_(editor, repos_, channelMonitorData,
                                    totalChannelCount),
-        roomMonitoringScreen_(repos_, data, editor),
+        roomMonitoringScreen_(repos_, data, fpbData, editor),
         mixMonitoringScreen_(repos_, data) {}
 
   void paint(juce::Graphics& g) {

@@ -18,11 +18,13 @@
 #include "components/src/EclipsaColours.h"
 #include "components/src/ExportValidation.h"
 #include "data_structures/src/FileExport.h"
+#include "data_structures/src/FilePlayback.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/TimeFormatConverter.h"
 
 FileExportScreen::FileExportScreen(MainEditor& editor,
-                                   RepositoryCollection repos)
+                                   RepositoryCollection repos,
+                                   FilePlaybackProcessorData& fpbData)
     : editor_(editor),
       headerBar_("Export options", editor),
       exportParametersLabel_("ExportParamsLbl", "Export parameters"),
@@ -57,7 +59,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           juce::File::getSpecialLocation(juce::File::userDesktopDirectory),
           "*.mp4;*.mov"),
       exportButton_("Start Export"),
-      exportValidation_(repos.playbackRepo_, repos.fioRepo_),
+      exportValidation_(repos.playbackRepo_, repos.fioRepo_, fpbData),
       repository_(&repos.fioRepo_),
       aeRepository_(&repos.aeRepo_),
       mpRepository_(&repos.mpRepo_),
@@ -301,6 +303,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
     FilePlayback playbackConfig = filePlaybackRepository_->get();
     playbackConfig.setPlaybackFile(expanded);
+    playbackConfig.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
     filePlaybackRepository_->update(playbackConfig);
   });
 
@@ -322,6 +325,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
           FilePlayback playbackConfig = filePlaybackRepository_->get();
           playbackConfig.setPlaybackFile(exportPath_.getText());
+          playbackConfig.setPlaybackCommand(
+              FilePlayback::PlaybackCommand::kPause);
           filePlaybackRepository_->update(playbackConfig);
         });
   };

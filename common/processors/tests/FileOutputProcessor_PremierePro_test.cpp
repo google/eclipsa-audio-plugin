@@ -31,7 +31,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_1ae_1mp) {
 
     ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-    bouncePremiereProAudio(fileExportRepository, audioElementRepository,
+    bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
                            mixRepository, mixPresentationLoudnessRepository);
 
     ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
@@ -49,7 +49,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_1ae_1mp_expl) {
         {.codec = AudioCodec::LPCM, .profile = FileProfile::BASE_ENHANCED});
 
     ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
-    bouncePremiereProAudio(fileExportRepository, audioElementRepository,
+    bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
                            mixRepository, mixPresentationLoudnessRepository);
 
     ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
@@ -69,7 +69,7 @@ TEST_F(FileOutputTests, iamf_pp_lpc_2ae_1mp) {
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-  bouncePremiereProAudio(fileExportRepository, audioElementRepository,
+  bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
                          mixRepository, mixPresentationLoudnessRepository);
 
   ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
@@ -104,7 +104,7 @@ TEST_F(FileOutputTests, pp_validate_file_checksum) {
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
-  bouncePremiereProAudio(fileExportRepository, audioElementRepository,
+  bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
                          mixRepository, mixPresentationLoudnessRepository);
 
   // Verify the file exists and generate checksum

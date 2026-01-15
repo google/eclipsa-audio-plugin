@@ -16,6 +16,8 @@
 
 #include <processors/processors.h>
 
+#include <memory>
+
 #include "RendererEditor.h"
 #include "RendererVersionConverter.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
@@ -67,14 +69,14 @@ RendererProcessor::RendererProcessor()
             fileExportRepository_, mixPresentationRepository_,
             mixPresentationLoudnessRepository_, audioElementRepository_));
     audioProcessors_.push_back(std::make_unique<PremiereProFileOutputProcessor>(
-        fileExportRepository_, audioElementRepository_,
+        fileExportRepository_, filePlaybackRepository_, audioElementRepository_,
         mixPresentationRepository_, mixPresentationLoudnessRepository_));
   } else {
     audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
         fileExportRepository_, mixPresentationRepository_,
         mixPresentationLoudnessRepository_, audioElementRepository_));
     audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
-        fileExportRepository_, audioElementRepository_,
+        fileExportRepository_, filePlaybackRepository_, audioElementRepository_,
         mixPresentationRepository_, mixPresentationLoudnessRepository_));
   }
   audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>(
@@ -89,6 +91,8 @@ RendererProcessor::RendererProcessor()
   audioProcessors_.push_back(std::make_unique<MSProcessor>(getRepositories()));
   audioProcessors_.push_back(std::make_unique<MixMonitorProcessor>(
       roomSetupRepository_, monitorData_));
+  audioProcessors_.emplace_back(std::make_unique<FilePlaybackProcessor>(
+      filePlaybackRepository_, fpbData_));
   audioProcessors_.push_back(std::make_unique<RemappingProcessor>(this, true));
   // Use host layout size for output channels configuration
   juce::AudioChannelSet outputChannels;

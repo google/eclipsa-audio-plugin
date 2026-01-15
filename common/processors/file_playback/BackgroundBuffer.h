@@ -29,10 +29,12 @@ class BackgroundBuffer {
   ~BackgroundBuffer();
 
   bool isReady();
+  void waitUntilReady();
   size_t availableSamples() const;
   size_t readSamples(juce::AudioBuffer<float>& out, const unsigned startSample,
                      const unsigned numSamples);
   void seek(const size_t newFrameIdx);
+  void seek(const size_t newFrameIdx, std::atomic_bool& abortSeek);
 
  private:
   void notifyTask();

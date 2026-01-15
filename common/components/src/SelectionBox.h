@@ -190,7 +190,7 @@ class SelectionBox : public juce::Component {
       selectionBox_.setItemEnabled(id, false);
     }
     if (selectionBox_.getNumItems() == 1) {
-      selectionBox_.setSelectedId(1);
+      selectionBox_.setSelectedId(1, juce::dontSendNotification);
     }
   }
 

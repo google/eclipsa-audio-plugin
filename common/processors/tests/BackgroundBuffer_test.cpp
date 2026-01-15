@@ -1,4 +1,4 @@
-#include "../src/transport/BackgroundBuffer.h"
+#include "../file_playback/BackgroundBuffer.h"
 
 #include <gtest/gtest.h>
 
@@ -9,7 +9,7 @@
 
 class BackgroundBufferTest : public FileOutputTests {
   void TearDown() override {
-    decoder_.reset();  // Releaes the file before deleting
+    decoder_.reset();
     if (std::filesystem::exists(kTestFilePath_)) {
       std::filesystem::remove(kTestFilePath_);
     }

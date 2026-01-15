@@ -22,10 +22,11 @@
 
 RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
                                            SpeakerMonitorData& data,
+                                           FilePlaybackProcessorData& fpbData,
                                            MainEditor& editor)
     : repos_(repos),
       monitorData_(data),
-      fileExportScreen_(editor, repos),
+      fileExportScreen_(editor, repos, fpbData),
       speakerSetup_("Speaker Setup"),
       selRoomOpts_({"Speakers", "Tracks", "Labels"}, false),
       selRoomView_({"Iso", "Top", "Side", "Rear"}, true),

@@ -246,6 +246,12 @@ size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
 }
 
 bool IAMFFileReader::seekFrame(const size_t frameIdx) {
+  std::atomic_bool abort = false;
+  return seekFrame(frameIdx, abort);
+}
+
+bool IAMFFileReader::seekFrame(const size_t frameIdx,
+                               std::atomic_bool& abortSeek) {
   if (frameIdx >= streamData_.numFrames) {
     LOG_WARNING(0, "IAMFFileReader: Frame index out of range");
     return false;
@@ -274,8 +280,13 @@ bool IAMFFileReader::seekFrame(const size_t frameIdx) {
     streamData_.currentFrameIdx = 0;
   }
 
-  // Advance to the requested frame
+  // Advance to the requested frame, checking abort flag
   while (streamData_.currentFrameIdx < frameIdx) {
+    if (abortSeek) {
+      LOG_INFO(0, "IAMFFileReader: Seek operation aborted");
+      return false;
+    }
+
     if (parseFrame() == 0) {
       return false;
     }

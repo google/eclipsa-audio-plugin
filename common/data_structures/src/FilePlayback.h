@@ -17,6 +17,8 @@
 #pragma once
 #include <juce_data_structures/juce_data_structures.h>
 
+#include <string_view>
+
 #include "data_structures/src/RepositoryItem.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -36,13 +38,40 @@
 
 class FilePlayback final : public RepositoryItemBase {
  public:
-  enum CurrentPlayerState { kDisabled, kBuffering, kPlay, kPause, kStop };
+  enum class PlaybackCommand {
+    kNone,
+    kStop,
+    kPlay,
+    kPause,
+  };
+
+  enum class ProcessorState {
+    kError,
+    kPlaying,
+    kPaused,
+    kBuffering,
+  };
+
+  static constexpr std::string_view ProcessorStateToString(
+      const ProcessorState state) {
+    switch (state) {
+      case ProcessorState::kError:
+        return "Error";
+      case ProcessorState::kPlaying:
+        return "Playing";
+      case ProcessorState::kPaused:
+        return "Paused";
+      case ProcessorState::kBuffering:
+        return "Buffering";
+    }
+    return "Unknown";
+  }
 
   FilePlayback();
-  FilePlayback(int volume, CurrentPlayerState playState,
-               juce::String playbackFile, float seekPosition,
-               Speakers::AudioElementSpeakerLayout reqdDecodeLayout,
-               juce::String playbackDevice = "");
+  FilePlayback(const juce::String playbackFile,
+               const Speakers::AudioElementSpeakerLayout reqdDecodeLayout,
+               const float seekPosition, const float volume,
+               const PlaybackCommand processorCommand);
 
   ~FilePlayback() = default;
 
@@ -52,11 +81,11 @@ class FilePlayback final : public RepositoryItemBase {
   inline static const juce::Identifier kTreeType{"file_playback"};
 
  private:
-  EXPORT_VALUE(int, volume, Volume);
-  EXPORT_VALUE(CurrentPlayerState, playState, PlayState);
+  // Commands and data consumed by the processor
+  EXPORT_VALUE(PlaybackCommand, playbackCommand, PlaybackCommand);
   EXPORT_VALUE(juce::String, playbackFile, PlaybackFile);
-  EXPORT_VALUE(float, seekPosition, SeekPosition);
   EXPORT_VALUE(Speakers::AudioElementSpeakerLayout, reqdDecodeLayout,
                ReqdDecodeLayout);
-  EXPORT_VALUE(juce::String, playbackDevice, PlaybackDevice);
+  EXPORT_VALUE(float, seekPosition, SeekPosition);
+  EXPORT_VALUE(float, volume, Volume);
 };

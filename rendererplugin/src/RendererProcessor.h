@@ -98,6 +98,7 @@ class RendererProcessor final : public ProcessorBase,
   RoomSetupRepository& getRoomSetupRepository() { return roomSetupRepository_; }
   SpeakerMonitorData& getSpeakerMonitorData() { return monitorData_; }
   ChannelMonitorData& getChannelMonitorData() { return channelMonitorData_; }
+  FilePlaybackProcessorData& getFilePlaybackProcessorData() { return fpbData_; }
 
   void updateAudioElementPluginInformation(
       AudioElementSpatialLayout& audioElementSpatialLayout) override {
@@ -171,6 +172,8 @@ class RendererProcessor final : public ProcessorBase,
   SpeakerMonitorData monitorData_;
 
   ChannelMonitorData channelMonitorData_;
+
+  FilePlaybackProcessorData fpbData_;
 
   juce::AudioChannelSet outputChannelSet_ = juce::AudioChannelSet::stereo();
 

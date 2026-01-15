@@ -65,6 +65,7 @@ class IAMFFileReader {
   size_t readFrame(juce::AudioBuffer<float>& buffer);
   size_t readFrame(juce::AudioBuffer<double>& buffer);
   bool seekFrame(const size_t frameIdx);
+  bool seekFrame(const size_t frameIdx, std::atomic_bool& abortSeek);
   bool resetLayout(const Speakers::AudioElementSpeakerLayout& layout);
 
   // Method to be called via a valid reader instance to index the file.

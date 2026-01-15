@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/transport/PbRingBuffer.h"
+#include "../file_playback/PbRingBuffer.h"
 
 #include <gtest/gtest.h>
 

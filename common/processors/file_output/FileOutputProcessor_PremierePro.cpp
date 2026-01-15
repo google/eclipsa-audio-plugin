@@ -24,11 +24,12 @@
 //==============================================================================
 PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
     FileExportRepository& fileExportRepository,
+    FilePlaybackRepository& filePlaybackRepository,
     AudioElementRepository& audioElementRepository,
     MixPresentationRepository& mixPresentationRepository,
     MixPresentationLoudnessRepository& mixPresentationLoudnessRepository)
-    : FileOutputProcessor(fileExportRepository, audioElementRepository,
-                          mixPresentationRepository,
+    : FileOutputProcessor(fileExportRepository, filePlaybackRepository,
+                          audioElementRepository, mixPresentationRepository,
                           mixPresentationLoudnessRepository) {}
 
 PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {

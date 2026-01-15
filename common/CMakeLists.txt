@@ -19,7 +19,6 @@ juce_add_modules(
     data_repository
     data_structures
     logger
-    player
     processors
     substream_rdr)
 
@@ -32,9 +31,7 @@ if(CI_TEST OR INTERNAL_TEST)
     add_subdirectory(data_repository/tests)
     add_subdirectory(logger/tests)
     add_subdirectory(data_structures/tests)
-    add_subdirectory(substream_rdr/tests)
-    add_subdirectory(player/test)
-    
+    add_subdirectory(substream_rdr/tests)    
 endif()
 
 # -------------------------------
@@ -117,13 +114,11 @@ target_link_libraries(processors INTERFACE
 target_include_directories(substream_rdr INTERFACE ${OBR_INCLUDE_DIRS})
 target_include_directories(processors INTERFACE ${OBR_INCLUDE_DIRS})
 
-target_link_libraries(player INTERFACE processors substream_rdr)
-
 # -------------------------------
 #  Components and Logging
 # -------------------------------
 
-target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
+target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository)
 
 if(WIN32)
     message(STATUS "Linking logger against Boost via CMake targets")

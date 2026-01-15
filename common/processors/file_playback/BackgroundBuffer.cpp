@@ -16,6 +16,7 @@
 
 #include <cstddef>
 
+#include "logger/logger.h"
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 
 BackgroundBuffer::BackgroundBuffer(const unsigned paddingSeconds,
@@ -41,9 +42,21 @@ BackgroundBuffer::~BackgroundBuffer() {
   }
 }
 
+// TODO: Make this an atomic that's set when buffer is primed rather than taking
+// the lock from the thread populating the buffer
 bool BackgroundBuffer::isReady() {
   const juce::SpinLock::ScopedLockType lock(bufferLock_);
-  return pbuffer_->availReadSamples() >= padSamples_;
+  const bool kReady = pbuffer_->availReadSamples() >= padSamples_ || eof_;
+  return kReady;
+}
+
+void BackgroundBuffer::waitUntilReady() {
+  std::unique_lock<std::mutex> lock(cvm_);
+  while (!isReady()) {
+    // Wake decode task in case it is waiting and more data is needed
+    notifyTask();
+    cv_.wait(lock);
+  }
 }
 
 size_t BackgroundBuffer::availableSamples() const {
@@ -66,6 +79,7 @@ size_t BackgroundBuffer::readSamples(juce::AudioBuffer<float>& out,
 
   // Zero-pad if necessary. Ideally we never hit this.
   if (kSamplesRead < numSamples) {
+    LOG_WARNING(0, "BackgroundBuffer: Sample underrun on read.");
     notifyTask();
     out.clear(startSample + kSamplesRead, numSamples - kSamplesRead);
   }
@@ -75,6 +89,12 @@ size_t BackgroundBuffer::readSamples(juce::AudioBuffer<float>& out,
 }
 
 void BackgroundBuffer::seek(const size_t newFrameIdx) {
+  std::atomic_bool abort = false;
+  seek(newFrameIdx, abort);
+}
+
+void BackgroundBuffer::seek(const size_t newFrameIdx,
+                            std::atomic_bool& abortSeek) {
   bool posInBuff;
   const size_t kNewAbsSamplePos =
       newFrameIdx * decoder_.getStreamData().frameSize;
@@ -91,7 +111,7 @@ void BackgroundBuffer::seek(const size_t newFrameIdx) {
     // If frame was in buffer great - decoder can continue as normal.
     // If the frame was not in the buffer, decoder needs to seek to that pos.
     if (!posInBuff) {
-      decoder_.seekFrame(newFrameIdx);
+      decoder_.seekFrame(newFrameIdx, abortSeek);
     }
   }
   absSamplePos_ = kNewAbsSamplePos;
@@ -122,5 +142,7 @@ void BackgroundBuffer::decodeTask() {
       }
       pbuffer_->writeSamples(kSamplesDecoded, tempBuffer);
     }
+    // Signal that buffer is ready or EOF reached
+    cv_.notify_all();
   }
 }
