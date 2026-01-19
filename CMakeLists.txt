@@ -14,14 +14,6 @@
 
 cmake_minimum_required(VERSION 3.30.0)
 
-if(WIN32)
-    # Disable vcpkg automatic DLL copying (applocal) - it fails without dumpbin in PATH
-    set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
-
-    # Increase stack size to 16MB to prevent stack overflows
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
-endif()
-
 # Disable vcpkg from finding Boost and Protobuf (provided by libiamf)
 set(CMAKE_DISABLE_FIND_PACKAGE_Boost ON CACHE BOOL "" FORCE)
 set(CMAKE_DISABLE_FIND_PACKAGE_Protobuf ON CACHE BOOL "" FORCE)
@@ -42,35 +34,35 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
 
 # Windows vcpkg setup
-if(WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+if (WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     # Try environment variable first (respects user's existing setup)
-    if(DEFINED ENV{VCPKG_ROOT})
+    if (DEFINED ENV{VCPKG_ROOT})
         set(VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "Path to vcpkg root")
-    endif()
+    endif ()
 
     # Configure vcpkg if VCPKG_ROOT is set
-    if(DEFINED VCPKG_ROOT)
+    if (DEFINED VCPKG_ROOT)
         set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg toolchain file")
 
         # Validate toolchain file exists
-        if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+        if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
             message(FATAL_ERROR "vcpkg toolchain file not found at: ${CMAKE_TOOLCHAIN_FILE}")
-        endif()
+        endif ()
 
         # Set default triplet if not specified
-        if(NOT DEFINED VCPKG_TARGET_TRIPLET)
+        if (NOT DEFINED VCPKG_TARGET_TRIPLET)
             set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg target triplet")
-        endif()
+        endif ()
 
         message(WARNING "vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
         message(WARNING "vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
-    else()
+    else ()
         message(WARNING "vcpkg not configured. Please either:")
         message(WARNING "  1. Set VCPKG_ROOT environment variable, or")
         message(WARNING "  2. Pass -DVCPKG_ROOT=<path> to CMake")
         message(WARNING "Build will continue without vcpkg - dependencies must be installed manually")
-    endif()
-endif()
+    endif ()
+endif ()
 
 # Version configuration
 # The version can be set in multiple ways (in order of precedence):
@@ -84,37 +76,37 @@ endif()
 # - Or extract from git tag in your build script and pass it to CMake
 #
 # The version appears as a watermark in the bottom-left corner of both plugins.
-if(NOT DEFINED ECLIPSA_VERSION)
+if (NOT DEFINED ECLIPSA_VERSION)
     set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
-endif()
+endif ()
 
 project(Eclipsa LANGUAGES C CXX VERSION ${ECLIPSA_VERSION})
 
 add_compile_definitions(ECLIPSA_VERSION="${ECLIPSA_VERSION}")
 
 # Make company name configurable via command line with a default value
-if(NOT DEFINED ECLIPSA_COMPANY_NAME)
+if (NOT DEFINED ECLIPSA_COMPANY_NAME)
     set(ECLIPSA_COMPANY_NAME "Eclipsa Project" CACHE STRING "Company name for Eclipsa project")
-endif()
+endif ()
 
-if(WIN32 AND NOT CMAKE_RC_COMPILER)
+if (WIN32 AND NOT CMAKE_RC_COMPILER)
     find_program(CMAKE_RC_COMPILER rc.exe
             HINTS "C:/Program Files (x86)/Windows Kits/10/bin/*/x64")
-endif()
+endif ()
 
 # Make manufacturer code configurable via command line with a default value
-if(NOT DEFINED ECLIPSA_MANUFACTURER_CODE)
+if (NOT DEFINED ECLIPSA_MANUFACTURER_CODE)
     set(ECLIPSA_MANUFACTURER_CODE "Eclp" CACHE STRING "Manufacturer code for Eclipsa project")
-endif()
+endif ()
 
 # Make bundle IDs configurable via command line with default values
-if(NOT DEFINED ECLIPSA_RENDERER_BUNDLE_ID)
+if (NOT DEFINED ECLIPSA_RENDERER_BUNDLE_ID)
     set(ECLIPSA_RENDERER_BUNDLE_ID "com.eclipsaproject.renderer" CACHE STRING "Bundle ID for the renderer plugin")
-endif()
+endif ()
 
-if(NOT DEFINED ECLIPSA_PANNER_BUNDLE_ID)
+if (NOT DEFINED ECLIPSA_PANNER_BUNDLE_ID)
     set(ECLIPSA_PANNER_BUNDLE_ID "com.eclipsaproject.panner" CACHE STRING "Bundle ID for the panner plugin")
-endif()
+endif ()
 
 # Build configuration for different DAW targets
 option(ECLIPSA_LOGIC_PRO_BUILD "Build AU plugin optimized for Logic Pro (7.1.4 layout)" OFF)
@@ -125,25 +117,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
 
 # Set default plugin formats per platform
-if(APPLE)
+if (APPLE)
     set(PLUGIN_FORMATS "AU")
-elseif(WIN32)
+elseif (WIN32)
     set(PLUGIN_FORMATS "Standalone")
-else()
+else ()
     set(PLUGIN_FORMATS "")
-endif()
+endif ()
 
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Automatically copy built plugins to standard locations after build" ON)
 
-if(APPLE)
+if (APPLE)
     # Add vendored libraries path (for CI/GitHub Actions)
     set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
     link_directories(${VENDOR_LIB_PATH})
-endif()
+endif ()
 
-if(CI_TEST OR INTERNAL_TEST)
+if (CI_TEST OR INTERNAL_TEST)
     message(STATUS "Unit tests enabled")
     include(FetchContent)
     FetchContent_Declare(
@@ -162,55 +154,55 @@ if(CI_TEST OR INTERNAL_TEST)
     if (FFMPEG_TOOLS_FOUND)
         message(STATUS "FFmpeg found. Enabling tests that require FFmpeg.")
         add_compile_definitions(ECLIPSA_FFMPEG_AVAILABLE=1)
-    else()
+    else ()
         message(STATUS "FFmpeg not found. Tests requiring FFmpeg will be disabled.")
-    endif()
+    endif ()
 
     # FFmpeg is required for CI tests
-    if(CI_TEST AND NOT FFMPEG_TOOLS_FOUND)
+    if (CI_TEST AND NOT FFMPEG_TOOLS_FOUND)
         message(FATAL_ERROR "FFmpeg tools not found. Required for CI tests.")
-    endif()
-endif()
+    endif ()
+endif ()
 
 add_subdirectory(third_party)
 
 # ZLIB configuration for Windows builds
-if(WIN32)
+if (WIN32)
     find_package(ZLIB REQUIRED)
     message(STATUS "ZLIB found at: ${ZLIB_LIBRARIES}")
     # Fix link targets that request 'z'
     link_libraries(ZLIB::ZLIB)
-endif()
+endif ()
 
 include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 
-if(BUILD_AAX)
-    if(WIN32)
+if (BUILD_AAX)
+    if (WIN32)
         set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
         list(APPEND PLUGIN_FORMATS "AAX")
 
         # Allow team members to specify their own AAX SDK path
-        if(NOT DEFINED AAX_SDK_ROOT)
+        if (NOT DEFINED AAX_SDK_ROOT)
             set(AAX_SDK_ROOT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE PATH "Path to AAX SDK")
-        endif()
-    else()
+        endif ()
+    else ()
         set(AAX_SDK_VER "2-7-0" CACHE STRING "Default AAX SDK Version")
         list(APPEND PLUGIN_FORMATS "AAX")
         find_path(AAX_SDK_ROOT NAMES "aax-sdk-${AAX_SDK_VER}" HINTS "/opt" "/usr/local")
         set(AAX_SDK_ROOT "${AAX_SDK_ROOT}/aax-sdk-${AAX_SDK_VER}")
-    endif()
+    endif ()
 
-    if(EXISTS "${AAX_SDK_ROOT}")
+    if (EXISTS "${AAX_SDK_ROOT}")
         message(STATUS "Using AAX SDK at ${AAX_SDK_ROOT}")
         juce_set_aax_sdk_path("${AAX_SDK_ROOT}")
-    else()
+    else ()
         message(FATAL_ERROR "AAX SDK not found at ${AAX_SDK_ROOT}. Set AAX_SDK_ROOT to the correct path.")
-    endif()
-endif()
+    endif ()
+endif ()
 
-if(BUILD_VST3)
+if (BUILD_VST3)
     list(APPEND PLUGIN_FORMATS "VST3")
-endif()
+endif ()
 
 add_subdirectory(common)
 add_subdirectory(rendererplugin)
@@ -218,4 +210,4 @@ add_subdirectory(audioelementplugin)
 
 if (CI_TEST OR INTERNAL_TEST)
     eclipsa_build_tests()
-endif()
+endif ()
