@@ -13,13 +13,13 @@
 # limitations under the License.
 
 # Set plugin code and name based on build type
-if(ECLIPSA_LOGIC_PRO_BUILD)
+if (ECLIPSA_LOGIC_PRO_BUILD)
     set(RENDERER_PLUGIN_CODE "Ercl")
     set(RENDERER_PRODUCT_NAME "Eclipsa Audio Renderer for Logic Pro")
-else()
+else ()
     set(RENDERER_PLUGIN_CODE "Ecrd")
     set(RENDERER_PRODUCT_NAME "Eclipsa Audio Renderer")
-endif()
+endif ()
 
 juce_add_plugin(RendererPlugin
         PLUGIN_MANUFACTURER_CODE ${ECLIPSA_MANUFACTURER_CODE}
@@ -62,20 +62,17 @@ target_compile_definitions(RendererPlugin
         JucePlugin_Category="Synth")
 
 # Add DAW-specific build flags when enabled
-if(ECLIPSA_LOGIC_PRO_BUILD)
+if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
-endif()
+endif ()
 
 # Platform-specific settings
-if(APPLE)
+if (APPLE)
     target_link_options(RendererPlugin
             PUBLIC
             "-Wl"
             "-ld_classic")
-elseif(WIN32)
-    # MSVC flags for math constants
-    target_compile_definitions(RendererPlugin PRIVATE _USE_MATH_DEFINES)
-endif()
+endif ()
 
 target_include_directories(RendererPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
@@ -94,83 +91,83 @@ target_link_libraries(RendererPlugin
         juce::juce_recommended_warning_flags
         libzmq)
 
-if(WIN32)
+if (WIN32)
     target_link_libraries(RendererPlugin PRIVATE delayimp)
-endif()
+endif ()
 
 # Platform-specific Boost linking
-if(WIN32)
+if (WIN32)
     # Windows: Boost headers only (lockfree is header-only)
     target_include_directories(RendererPlugin PRIVATE ${Boost_INCLUDE_DIRS})
-else()
+else ()
     # macOS: Modern CMake target
     target_link_libraries(RendererPlugin PRIVATE Boost::lockfree)
-endif()
+endif ()
 
 # Windows-specific: Link ZLIB
-if(WIN32)
+if (WIN32)
     find_package(ZLIB REQUIRED)
-    if(ZLIB_FOUND)
+    if (ZLIB_FOUND)
         message(STATUS "Linking RendererPlugin against ZLIB: ${ZLIB_LIBRARIES}")
         target_link_libraries(RendererPlugin PRIVATE ZLIB::ZLIB)
-        if(TARGET RendererPlugin_VST3)
+        if (TARGET RendererPlugin_VST3)
             target_link_libraries(RendererPlugin_VST3 PRIVATE ZLIB::ZLIB)
-        endif()
-    else()
+        endif ()
+    else ()
         message(FATAL_ERROR "ZLIB not found for RendererPlugin")
-    endif()
-endif()
+    endif ()
+endif ()
 
-if(CI_TEST OR INTERNAL_TEST)
+if (CI_TEST OR INTERNAL_TEST)
     target_link_libraries(RendererPlugin
             PRIVATE
             juce::juce_cryptography)
     add_subdirectory(test)
-endif()
+endif ()
 
 # Copy resources for each plugin format
-if(BUILD_AAX AND TARGET RendererPlugin_AAX)
+if (BUILD_AAX AND TARGET RendererPlugin_AAX)
     message(STATUS "AAX build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_AAX_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Renderer.aaxplugin")
     copy_resources(RendererPlugin_AAX "${RENDERER_AAX_PATH}")
 
     # For builds on Windows, set up delay loading for DLLs
-    if(WIN32)
-        foreach(dll IN LISTS DELAYLOAD_DLLS)
+    if (WIN32)
+        foreach (dll IN LISTS DELAYLOAD_DLLS)
             target_link_options(RendererPlugin_AAX PRIVATE /DELAYLOAD:${dll})
-        endforeach()
-    endif()
-endif()
+        endforeach ()
+    endif ()
+endif ()
 
-if(BUILD_VST3 AND TARGET RendererPlugin_VST3)
+if (BUILD_VST3 AND TARGET RendererPlugin_VST3)
     message(STATUS "VST3 build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_VST3_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Renderer.vst3")
     copy_resources(RendererPlugin_VST3 "${RENDERER_VST3_PATH}")
 
     # For builds on Windows, set up delay loading for DLLs
-    if(WIN32)
-        foreach(dll IN LISTS DELAYLOAD_DLLS)
+    if (WIN32)
+        foreach (dll IN LISTS DELAYLOAD_DLLS)
             target_link_options(RendererPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
-        endforeach()
-    endif()
-endif()
+        endforeach ()
+    endif ()
+endif ()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)
     message(STATUS "MacOS release build detected. Copying Renderer Plugin Resources for AU Plugins.")
-    if(ECLIPSA_LOGIC_PRO_BUILD)
+    if (ECLIPSA_LOGIC_PRO_BUILD)
         set(RDR_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer for Logic Pro.component")
-    else()
+    else ()
         set(RDR_PLUGIN_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/Release/AU/Eclipsa Audio Renderer.component")
-    endif()
+    endif ()
     copy_resources(RendererPlugin ${RDR_PLUGIN_PATH})
-endif()
+endif ()
 
-if(TARGET RendererPlugin_Standalone)
+if (TARGET RendererPlugin_Standalone)
     message(STATUS "Standalone build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_STANDALONE_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/Standalone")
     copy_resources(RendererPlugin_Standalone "${RENDERER_STANDALONE_PATH}")
-endif()
+endif ()
 
-if(NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+if (NOT BUILD_AAX AND NOT BUILD_VST3 AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "No supported plugin formats detected. Skipping resource setup and resource copy for Renderer Plugin.")
-endif()
+endif ()

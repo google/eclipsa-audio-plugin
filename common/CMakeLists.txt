@@ -15,36 +15,36 @@
 # -------------------------------
 
 juce_add_modules(
-    components
-    data_repository
-    data_structures
-    logger
-    player
-    processors
-    substream_rdr)
+        components
+        data_repository
+        data_structures
+        logger
+        player
+        processors
+        substream_rdr)
 
 # -------------------------------
 #  Optional test targets
 # -------------------------------
 
-if(CI_TEST OR INTERNAL_TEST)
+if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(processors/tests)
     add_subdirectory(data_repository/tests)
     add_subdirectory(logger/tests)
     add_subdirectory(data_structures/tests)
     add_subdirectory(substream_rdr/tests)
     add_subdirectory(player/test)
-    
-endif()
+
+endif ()
 
 # -------------------------------
 #  Platform-specific processor defs
 # -------------------------------
 
 # DAW-specific build flags
-if(ECLIPSA_LOGIC_PRO_BUILD)
+if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(processors INTERFACE ECLIPSA_LOGIC_PRO_BUILD=1)
-endif()
+endif ()
 
 # -------------------------------
 #  Icon resources
@@ -125,10 +125,8 @@ target_link_libraries(player INTERFACE processors substream_rdr)
 
 target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
 
-if(WIN32)
+if (WIN32)
     message(STATUS "Linking logger against Boost via CMake targets")
-
-#    find_package(Boost 1.70.0 REQUIRED COMPONENTS log log_setup thread filesystem)
 
     target_link_libraries(logger INTERFACE
             Boost::log
@@ -139,8 +137,7 @@ if(WIN32)
             juce::juce_core
     )
 
-#    target_include_directories(logger INTERFACE ${Boost_INCLUDE_DIRS})
-else()
+else ()
     target_link_libraries(logger INTERFACE
             Boost::log
             Boost::log_setup
@@ -148,7 +145,7 @@ else()
             Boost::filesystem
             juce::juce_core
     )
-endif()
+endif ()
 
 get_target_property(SUBSTREAM_INCLUDES substream_rdr INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "substream_rdr include paths: ${SUBSTREAM_INCLUDES}")
