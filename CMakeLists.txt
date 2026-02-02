@@ -33,37 +33,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Configure release or debug builds
 set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
 
-# Windows vcpkg setup
-if (WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    # Try environment variable first (respects user's existing setup)
-    if (DEFINED ENV{VCPKG_ROOT})
-        set(VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "Path to vcpkg root")
-    endif ()
-
-    # Configure vcpkg if VCPKG_ROOT is set
-    if (DEFINED VCPKG_ROOT)
-        set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg toolchain file")
-
-        # Validate toolchain file exists
-        if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
-            message(FATAL_ERROR "vcpkg toolchain file not found at: ${CMAKE_TOOLCHAIN_FILE}")
-        endif ()
-
-        # Set default triplet if not specified
-        if (NOT DEFINED VCPKG_TARGET_TRIPLET)
-            set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg target triplet")
-        endif ()
-
-        message(WARNING "vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
-        message(WARNING "vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
-    else ()
-        message(WARNING "vcpkg not configured. Please either:")
-        message(WARNING "  1. Set VCPKG_ROOT environment variable, or")
-        message(WARNING "  2. Pass -DVCPKG_ROOT=<path> to CMake")
-        message(WARNING "Build will continue without vcpkg - dependencies must be installed manually")
-    endif ()
-endif ()
-
 # Version configuration
 # The version can be set in multiple ways (in order of precedence):
 # 1. Pass via command line: cmake -DECLIPSA_VERSION=1.2.3 ...
@@ -114,8 +83,9 @@ option(ECLIPSA_LOGIC_PRO_BUILD "Build AU plugin optimized for Logic Pro (7.1.4 l
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
-
+if (APPLE)
+    set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
+endif ()
 # Set default plugin formats per platform
 if (APPLE)
     set(PLUGIN_FORMATS "AU")
