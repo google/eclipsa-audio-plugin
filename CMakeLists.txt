@@ -58,11 +58,6 @@ if (NOT DEFINED ECLIPSA_COMPANY_NAME)
     set(ECLIPSA_COMPANY_NAME "Eclipsa Project" CACHE STRING "Company name for Eclipsa project")
 endif ()
 
-if (WIN32 AND NOT CMAKE_RC_COMPILER)
-    find_program(CMAKE_RC_COMPILER rc.exe
-            HINTS "C:/Program Files (x86)/Windows Kits/10/bin/*/x64")
-endif ()
-
 # Make manufacturer code configurable via command line with a default value
 if (NOT DEFINED ECLIPSA_MANUFACTURER_CODE)
     set(ECLIPSA_MANUFACTURER_CODE "Eclp" CACHE STRING "Manufacturer code for Eclipsa project")
@@ -83,12 +78,14 @@ option(ECLIPSA_LOGIC_PRO_BUILD "Build AU plugin optimized for Logic Pro (7.1.4 l
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-if (APPLE)
-    set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
-endif ()
+
 # Set default plugin formats per platform
 if (APPLE)
+    set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
     set(PLUGIN_FORMATS "AU")
+    # Add vendored libraries path (for CI/GitHub Actions)
+    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
+    link_directories(${VENDOR_LIB_PATH})
 elseif (WIN32)
     set(PLUGIN_FORMATS "Standalone")
 else ()
@@ -98,12 +95,6 @@ endif ()
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Automatically copy built plugins to standard locations after build" ON)
-
-if (APPLE)
-    # Add vendored libraries path (for CI/GitHub Actions)
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
-    link_directories(${VENDOR_LIB_PATH})
-endif ()
 
 if (CI_TEST OR INTERNAL_TEST)
     message(STATUS "Unit tests enabled")

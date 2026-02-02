@@ -7,8 +7,11 @@ set(_WINDOWS_TOOLCHAIN_INCLUDED TRUE)
 
 set(CMAKE_SYSTEM_NAME Windows)
 
-# Stack size
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+# Find resource compiler
+if (NOT CMAKE_RC_COMPILER)
+    find_program(CMAKE_RC_COMPILER rc.exe
+            HINTS "C:/Program Files (x86)/Windows Kits/10/bin/*/x64")
+endif ()
 
 # Disable vcpkg applocal copy
 set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
@@ -37,3 +40,9 @@ if (DEFINED VCPKG_ROOT)
 else ()
     message(WARNING "vcpkg not configured. Set VCPKG_ROOT or pass -DVCPKG_ROOT.")
 endif ()
+
+#Add math defines
+add_compile_definitions(_USE_MATH_DEFINES)
+
+# Reduce optimization to avoid MSVC compiler crash on SAF
+set(CMAKE_C_FLAGS_RELEASE "/O1 /MD /DNDEBUG" CACHE STRING "" FORCE)
