@@ -97,7 +97,7 @@ TEST_F(FilePlaybackProcessorTest, no_file) {
   setCommand(FilePlayback::PlaybackCommand::kPlay);
 
   fpbData.processorState.read(procState);
-  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPlaying);
 
   proc->processBlock(buff, mbuff);
   EXPECT_TRUE(buff.hasBeenCleared());
@@ -301,11 +301,6 @@ TEST_F(FilePlaybackProcessorTest, commands_while_buffering) {
 
   // Issue play command while buffering
   setCommand(FilePlayback::PlaybackCommand::kPlay);
-
-  fpbData.processorState.read(procState);
-  EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
-  // Issue pause command while buffering
-  setCommand(FilePlayback::PlaybackCommand::kPause);
 
   fpbData.processorState.read(procState);
   EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);

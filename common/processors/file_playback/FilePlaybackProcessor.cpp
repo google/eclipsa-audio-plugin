@@ -268,10 +268,14 @@ void FilePlaybackProcessor::valueTreePropertyChanged(
     const auto kCmd = fpb.getPlaybackCommand();
     switch (kCmd) {
       case FilePlayback::PlaybackCommand::kPlay:
-        updateProcessorState(State::kPlaying);
+        if (state_ != FilePlayback::ProcessorState::kBuffering) {
+          updateProcessorState(State::kPlaying);
+        }
         break;
       case FilePlayback::PlaybackCommand::kPause:
-        updateProcessorState(State::kPaused);
+        if (state_ != FilePlayback::ProcessorState::kBuffering) {
+          updateProcessorState(State::kPaused);
+        }
         break;
       case FilePlayback::PlaybackCommand::kStop:
         worker_->submitTask(FilePlaybackProcessorEvents::TaskType::kSeek,
