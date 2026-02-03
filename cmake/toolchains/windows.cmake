@@ -16,6 +16,7 @@
 if (DEFINED _WINDOWS_TOOLCHAIN_INCLUDED)
     return()
 endif ()
+
 set(_WINDOWS_TOOLCHAIN_INCLUDED TRUE)
 
 # Math constants
@@ -55,3 +56,27 @@ if (DEFINED VCPKG_ROOT)
 else ()
     message(WARNING "vcpkg not configured. Set VCPKG_ROOT environment variable or pass -DVCPKG_ROOT=<path>")
 endif ()
+
+# Initialize the base formats
+set(_DEFAULT_FORMATS "Standalone")
+
+if (BUILD_AAX)
+    set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
+    list(APPEND _DEFAULT_FORMATS "AAX")
+    set(AAX_SDK_SEARCH_HINT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE INTERNAL "")
+endif ()
+
+# Finalize the list into the CACHE so the project can see it
+set(PLUGIN_FORMATS "${_DEFAULT_FORMATS}" CACHE STRING "Target plugin formats")
+
+# --- ZLIB Configuration ---
+find_package(ZLIB REQUIRED)
+
+# We use a CACHE variable to store the library path/target
+# so the rest of the project can access it easily.
+set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} CACHE INTERNAL "ZLIB libraries for Windows")
+
+# If you REALLY want every single target to link ZLIB automatically:
+link_libraries(ZLIB::ZLIB)
+link_libraries(delayimp)
+

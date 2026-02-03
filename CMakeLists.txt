@@ -79,19 +79,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Set default plugin formats per platform
-if (APPLE)
-    set(CMAKE_BUILD_RPATH "@loader_path/../Resources;${CMAKE_SOURCE_DIR}")
-    set(PLUGIN_FORMATS "AU")
-    # Add vendored libraries path (for CI/GitHub Actions)
-    set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
-    link_directories(${VENDOR_LIB_PATH})
-elseif (WIN32)
-    set(PLUGIN_FORMATS "Standalone")
-else ()
-    set(PLUGIN_FORMATS "")
-endif ()
-
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Automatically copy built plugins to standard locations after build" ON)
@@ -127,37 +114,21 @@ endif ()
 
 add_subdirectory(third_party)
 
-# ZLIB configuration for Windows builds
-if (WIN32)
-    find_package(ZLIB REQUIRED)
-    message(STATUS "ZLIB found at: ${ZLIB_LIBRARIES}")
-    # Fix link targets that request 'z'
-    link_libraries(ZLIB::ZLIB)
-endif ()
-
 include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 
 if (BUILD_AAX)
-    if (WIN32)
-        set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
-        list(APPEND PLUGIN_FORMATS "AAX")
+    # Use find_path instead of hardcoded 'set' to allow user overrides
+    find_path(AAX_SDK_ROOT
+            NAMES "Interfaces/AAX_Exports.cpp" # A file known to be in the SDK
+            HINTS "${AAX_SDK_SEARCH_HINT}"
+            DOC "Path to AAX SDK"
+    )
 
-        # Allow team members to specify their own AAX SDK path
-        if (NOT DEFINED AAX_SDK_ROOT)
-            set(AAX_SDK_ROOT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE PATH "Path to AAX SDK")
-        endif ()
-    else ()
-        set(AAX_SDK_VER "2-7-0" CACHE STRING "Default AAX SDK Version")
-        list(APPEND PLUGIN_FORMATS "AAX")
-        find_path(AAX_SDK_ROOT NAMES "aax-sdk-${AAX_SDK_VER}" HINTS "/opt" "/usr/local")
-        set(AAX_SDK_ROOT "${AAX_SDK_ROOT}/aax-sdk-${AAX_SDK_VER}")
-    endif ()
-
-    if (EXISTS "${AAX_SDK_ROOT}")
-        message(STATUS "Using AAX SDK at ${AAX_SDK_ROOT}")
+    if (AAX_SDK_ROOT)
+        message(STATUS "AAX SDK found: ${AAX_SDK_ROOT}")
         juce_set_aax_sdk_path("${AAX_SDK_ROOT}")
     else ()
-        message(FATAL_ERROR "AAX SDK not found at ${AAX_SDK_ROOT}. Set AAX_SDK_ROOT to the correct path.")
+        message(FATAL_ERROR "AAX SDK not found. Please set AAX_SDK_ROOT.")
     endif ()
 endif ()
 

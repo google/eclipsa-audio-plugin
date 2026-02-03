@@ -13,96 +13,97 @@
 # limitations under the License.
 
 function(copy_resources target plugin_path)
-    if(APPLE)
-        # macOS: Copy dylibs to Resources
-        set(LIB_OBR_PATH "${CMAKE_SOURCE_DIR}/third_party/obr/lib/obr.dylib")
-        set(LIB_IAMF_TOOLS_PATH "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/libiamf_tools.dylib")
-        set(LIB_ZMQ_5_2_6_PATH "${CMAKE_BINARY_DIR}/_deps/zeromq-build/lib/libzmq.5.2.6.dylib")
-        set(LIB_GPAC_PATH "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/libgpac.dylib")
 
-        # Set Resources directory and external subdirectories
-        set(RESOURCES_DIR "${plugin_path}/Contents/Resources")
-        set(EXTERNAL_IAMF_DIR "${RESOURCES_DIR}/third_party/iamftools/lib")
-        set(EXTERNAL_OBR_DIR "${RESOURCES_DIR}/third_party/obr/lib")
-        set(EXTERNAL_GPAC_DIR "${RESOURCES_DIR}/third_party/gpac/lib")
-
-        # Copy libraries to the appropriate directories
-        add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_IAMF_DIR}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_OBR_DIR}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_GPAC_DIR}
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_OBR_PATH} ${EXTERNAL_OBR_DIR}/obr.dylib
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_IAMF_TOOLS_PATH} ${EXTERNAL_IAMF_DIR}/libiamf_tools.dylib
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_GPAC_PATH} ${EXTERNAL_GPAC_DIR}/libgpac.dylib
-                COMMAND ${CMAKE_COMMAND} -E copy ${LIB_ZMQ_5_2_6_PATH} ${RESOURCES_DIR}/libzmq.5.2.6.dylib
-
-                # Create symbolic links for libzmq
-                COMMAND ${CMAKE_COMMAND} -E create_symlink libzmq.5.2.6.dylib ${RESOURCES_DIR}/libzmq.5.dylib
-                COMMAND ${CMAKE_COMMAND} -E create_symlink libzmq.5.dylib ${RESOURCES_DIR}/libzmq.dylib
-        )
-
-    elseif(WIN32)
-        # Set DLL names using generator expressions for multi-config generators
-        set(GPAC_DLL        "libgpac.dll")
-        set(CRYPTOMD_DLL    "libcryptoMD.dll")
-        set(LIBSSLMD_DLL    "libsslMD.dll")
-        set(IAMF_TOOLS_DLL  "iamf_tools.dll")
-        set(OPENSVC_DECODER "OpenSVCDecoder.dll")
-        set(ZMQ_DLL         "libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
-
-        # Export DLL list to parent scope for DELAYLOAD configuration
-        set(DELAYLOAD_DLLS
-                ${GPAC_DLL}
-                ${CRYPTOMD_DLL}
-                ${LIBSSLMD_DLL}
-                ${IAMF_TOOLS_DLL}
-                ${OPENSVC_DECODER}
-                ${ZMQ_DLL}
-                PARENT_SCOPE
-        )
-
-        # Set the paths to the DLLs
-        set(GPAC_DLL_PATH   "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${GPAC_DLL}")
-        set(CRYPTOMD_DLL_PATH    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${CRYPTOMD_DLL}")
-        set(LIBSSLMD_DLL_PATH    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/${LIBSSLMD_DLL}")
-        set(IAMF_TOOLS_DLL_PATH  "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/$<CONFIG>/${IAMF_TOOLS_DLL}")
-        set(OPENSVC_DECODER_PATH "${CMAKE_SOURCE_DIR}/third_party/OpenSVC/lib/Windows/$<CONFIG>/${OPENSVC_DECODER}")
-        set(ZMQ_DLL_PATH         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/$<CONFIG>/${ZMQ_DLL}")
-
-
-        if("${target}" MATCHES ".*_VST3$")
-            set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x86_64-win")
-        elseif("${target}" MATCHES ".*_AAX$")
-            set(PLUGIN_BINARY_DIR "${plugin_path}/Contents/x64")
-        elseif("${target}" MATCHES ".*_Standalone$")
-            set(PLUGIN_BINARY_DIR "${plugin_path}")
-        else()
-            message(WARNING "Unknown plugin format for target: ${target}. Skipping DLL copy.")
+    # --- 1. Define Destinations ---
+    if (APPLE)
+        set(DEST_ROOT "${plugin_path}/Contents/Resources")
+        set(DEST_IAMF "${DEST_ROOT}/third_party/iamftools/lib")
+        set(DEST_OBR "${DEST_ROOT}/third_party/obr/lib")
+        set(DEST_GPAC "${DEST_ROOT}/third_party/gpac/lib")
+    elseif (WIN32)
+        if ("${target}" MATCHES ".*_VST3$")
+            set(DEST_ROOT "${plugin_path}/Contents/x86_64-win")
+        elseif ("${target}" MATCHES ".*_AAX$")
+            set(DEST_ROOT "${plugin_path}/Contents/x64")
+        elseif ("${target}" MATCHES ".*_Standalone$")
+            set(DEST_ROOT "${plugin_path}")
+        else ()
+            message(WARNING "Unknown plugin format: ${target}")
             return()
-        endif()
+        endif ()
 
-        # Single POST_BUILD command per target
-        add_custom_command(TARGET ${target} PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${PLUGIN_BINARY_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL_PATH} "${PLUGIN_BINARY_DIR}/"
-                COMMENT "Copied DLLs to ${PLUGIN_BINARY_DIR}"
+        set(DEST_IAMF "${DEST_ROOT}")
+        set(DEST_GPAC "${DEST_ROOT}")
+        # DEST_OBR is not needed on Windows
+    endif ()
+
+    # --- 2. Windows: Apply Delay Load Flags ---
+    if (WIN32)
+        target_link_options(${target} PRIVATE
+                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_gpac>"
+                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_iamf_tools>"
+                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_opensvc>"
+                "/DELAYLOAD:$<TARGET_FILE_NAME:libzmq>"
+                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_gpac_crypto>"
+                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_gpac_ssl>"
         )
+        set(DELAYLOAD_DLLS "" PARENT_SCOPE)
+    endif ()
 
-        # Copy DLLs to Debug folder in build directory for use by the JUCE VST3 tool
-        # The tool runs from this directory and runs the plugins, so the DLLs need to be here as well
+    # --- 3. Copy Commands (Grouped by Platform to avoid evaluation crashes) ---
+
+    # A. Commands Common to BOTH platforms
+    set(COPY_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_IAMF}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_GPAC}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${DEST_GPAC}/"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${DEST_IAMF}/"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${DEST_ROOT}/"
+    )
+
+    # B. Windows-Only Commands
+    if (WIN32)
+        list(APPEND COPY_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_opensvc>" "${DEST_ROOT}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_crypto>" "${DEST_ROOT}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_ssl>" "${DEST_ROOT}/"
+        )
+    endif ()
+
+    # C. Mac-Only Commands
+    if (APPLE)
+        list(APPEND COPY_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_OBR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_obr>" "${DEST_OBR}/"
+        )
+    endif ()
+
+    # Apply the aggregated commands
+    add_custom_command(TARGET ${target} POST_BUILD
+            ${COPY_COMMANDS}
+            COMMENT "Deploying resources to ${DEST_ROOT}"
+    )
+
+    # --- 4. macOS ZMQ Symlinks ---
+    if (APPLE)
+        add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libzmq>" "${DEST_ROOT}/libzmq.5.dylib"
+                COMMAND ${CMAKE_COMMAND} -E create_symlink "libzmq.5.dylib" "${DEST_ROOT}/libzmq.dylib"
+        )
+    endif ()
+
+    # --- 5. Helper Tool Copy (Windows Only) ---
+    if (WIN32)
         set(VST3_SIGNING_DIR "${CMAKE_CURRENT_BINARY_DIR}/${BUILD_LIB_DIR}")
-        add_custom_command(TARGET ${target} PRE_BUILD
+        add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GPAC_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${IAMF_TOOLS_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL_PATH} "${VST3_SIGNING_DIR}/"
-                COMMENT "Copied DLLs to ${VST3_SIGNING_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_opensvc>" "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_crypto>" "${VST3_SIGNING_DIR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_ssl>" "${VST3_SIGNING_DIR}/"
         )
-    endif()
+    endif ()
 endfunction()

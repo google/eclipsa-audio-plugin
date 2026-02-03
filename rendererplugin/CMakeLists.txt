@@ -66,14 +66,6 @@ if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif ()
 
-# Platform-specific settings
-if (APPLE)
-    target_link_options(RendererPlugin
-            PUBLIC
-            "-Wl"
-            "-ld_classic")
-endif ()
-
 target_include_directories(RendererPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
 target_link_libraries(RendererPlugin
@@ -91,33 +83,6 @@ target_link_libraries(RendererPlugin
         juce::juce_recommended_warning_flags
         libzmq)
 
-if (WIN32)
-    target_link_libraries(RendererPlugin PRIVATE delayimp)
-endif ()
-
-# Platform-specific Boost linking
-if (WIN32)
-    # Windows: Boost headers only (lockfree is header-only)
-    target_include_directories(RendererPlugin PRIVATE ${Boost_INCLUDE_DIRS})
-else ()
-    # macOS: Modern CMake target
-    target_link_libraries(RendererPlugin PRIVATE Boost::lockfree)
-endif ()
-
-# Windows-specific: Link ZLIB
-if (WIN32)
-    find_package(ZLIB REQUIRED)
-    if (ZLIB_FOUND)
-        message(STATUS "Linking RendererPlugin against ZLIB: ${ZLIB_LIBRARIES}")
-        target_link_libraries(RendererPlugin PRIVATE ZLIB::ZLIB)
-        if (TARGET RendererPlugin_VST3)
-            target_link_libraries(RendererPlugin_VST3 PRIVATE ZLIB::ZLIB)
-        endif ()
-    else ()
-        message(FATAL_ERROR "ZLIB not found for RendererPlugin")
-    endif ()
-endif ()
-
 if (CI_TEST OR INTERNAL_TEST)
     target_link_libraries(RendererPlugin
             PRIVATE
@@ -130,26 +95,12 @@ if (BUILD_AAX AND TARGET RendererPlugin_AAX)
     message(STATUS "AAX build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_AAX_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Renderer.aaxplugin")
     copy_resources(RendererPlugin_AAX "${RENDERER_AAX_PATH}")
-
-    # For builds on Windows, set up delay loading for DLLs
-    if (WIN32)
-        foreach (dll IN LISTS DELAYLOAD_DLLS)
-            target_link_options(RendererPlugin_AAX PRIVATE /DELAYLOAD:${dll})
-        endforeach ()
-    endif ()
 endif ()
 
 if (BUILD_VST3 AND TARGET RendererPlugin_VST3)
     message(STATUS "VST3 build detected. Setting up renderer plugin path and copying resources.")
     set(RENDERER_VST3_PATH "${CMAKE_BINARY_DIR}/rendererplugin/RendererPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Renderer.vst3")
     copy_resources(RendererPlugin_VST3 "${RENDERER_VST3_PATH}")
-
-    # For builds on Windows, set up delay loading for DLLs
-    if (WIN32)
-        foreach (dll IN LISTS DELAYLOAD_DLLS)
-            target_link_options(RendererPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
-        endforeach ()
-    endif ()
 endif ()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)

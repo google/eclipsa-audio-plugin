@@ -58,14 +58,6 @@ if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(AudioElementPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif ()
 
-# Platform-specific settings
-if (APPLE)
-    target_link_options(AudioElementPlugin
-            PUBLIC
-            "-Wl"
-            "-ld_classic")
-endif ()
-
 target_include_directories(AudioElementPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
 target_link_libraries(AudioElementPlugin
@@ -81,33 +73,6 @@ target_link_libraries(AudioElementPlugin
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
-if (WIN32)
-    target_link_libraries(AudioElementPlugin PRIVATE delayimp)
-endif ()
-
-# Platform-specific Boost linking
-if (WIN32)
-    # Windows: Boost headers only (lockfree is header-only)
-    target_include_directories(AudioElementPlugin PRIVATE ${Boost_INCLUDE_DIRS})
-else ()
-    # macOS: Modern CMake target
-    target_link_libraries(AudioElementPlugin PRIVATE Boost::lockfree)
-endif ()
-
-# Windows-specific: Link ZLIB
-if (WIN32)
-    find_package(ZLIB REQUIRED)
-    if (ZLIB_FOUND)
-        message(STATUS "Linking AudioElementPlugin against ZLIB: ${ZLIB_LIBRARIES}")
-        target_link_libraries(AudioElementPlugin PRIVATE ZLIB::ZLIB)
-        if (TARGET AudioElementPlugin_VST3)
-            target_link_libraries(AudioElementPlugin_VST3 PRIVATE ZLIB::ZLIB)
-        endif ()
-    else ()
-        message(FATAL_ERROR "ZLIB not found for AudioElementPlugin")
-    endif ()
-endif ()
-
 if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(test)
 endif ()
@@ -117,24 +82,12 @@ if (BUILD_AAX AND TARGET AudioElementPlugin_AAX)
     message(STATUS "AAX build detected. Setting up audio element plugin path and copying resources.")
     set(AUDIO_ELEMENT_AAX_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/AAX/Eclipsa Audio Element Plugin.aaxplugin")
     copy_resources(AudioElementPlugin_AAX "${AUDIO_ELEMENT_AAX_PATH}")
-
-    if (WIN32)
-        foreach (dll IN LISTS DELAYLOAD_DLLS)
-            target_link_options(AudioElementPlugin_AAX PRIVATE /DELAYLOAD:${dll})
-        endforeach ()
-    endif ()
 endif ()
 
 if (BUILD_VST3 AND TARGET AudioElementPlugin_VST3)
     message(STATUS "VST3 build detected. Setting up Audio Element plugin path and copying resources.")
     set(AUDIO_ELEMENT_VST3_PATH "${CMAKE_BINARY_DIR}/audioelementplugin/AudioElementPlugin_artefacts/$<CONFIG>/VST3/Eclipsa Audio Element Plugin.vst3")
     copy_resources(AudioElementPlugin_VST3 "${AUDIO_ELEMENT_VST3_PATH}")
-
-    if (WIN32)
-        foreach (dll IN LISTS DELAYLOAD_DLLS)
-            target_link_options(AudioElementPlugin_VST3 PRIVATE /DELAYLOAD:${dll})
-        endforeach ()
-    endif ()
 endif ()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release" AND APPLE)

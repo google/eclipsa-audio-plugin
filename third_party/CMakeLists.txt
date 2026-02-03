@@ -145,3 +145,70 @@ else ()
     message(WARNING "protobuf_SOURCE_DIR not defined yet ΓÇö ensure FetchContent_MakeAvailable(protobuf) ran")
 endif ()
 
+# --- Imported Targets for Vendored Binaries ---
+# We use the prefix "vendored_" to ensure we don't collide with
+# any targets defined by add_subdirectory().
+
+# 1. GPAC (renamed to vendored_gpac)
+if (NOT TARGET vendored_gpac)
+    add_library(vendored_gpac SHARED IMPORTED GLOBAL)
+    if (APPLE)
+        set_target_properties(vendored_gpac PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/libgpac.dylib")
+    elseif (WIN32)
+        set_target_properties(vendored_gpac PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Release/libgpac.dll"
+                IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Debug/libgpac.dll"
+                IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Release/libgpac.lib"
+                IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Debug/libgpac.lib"
+        )
+    endif ()
+endif ()
+
+# 2. IAMF Tools (renamed to vendored_iamf_tools)
+if (NOT TARGET vendored_iamf_tools)
+    add_library(vendored_iamf_tools SHARED IMPORTED GLOBAL)
+    if (APPLE)
+        set_target_properties(vendored_iamf_tools PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/iamftools/lib/libiamf_tools.dylib")
+    elseif (WIN32)
+        set_target_properties(vendored_iamf_tools PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/iamftools/lib/Windows/Release/iamf_tools.dll"
+                IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/iamftools/lib/Windows/Debug/iamf_tools.dll"
+                IMPORTED_IMPLIB_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/iamftools/lib/Windows/Release/iamf_tools.lib"
+                IMPORTED_IMPLIB_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/iamftools/lib/Windows/Debug/iamf_tools.lib"
+        )
+    endif ()
+endif ()
+
+# 3. OBR (Mac Only - renamed to vendored_obr)
+if (APPLE AND NOT TARGET vendored_obr)
+    add_library(vendored_obr SHARED IMPORTED GLOBAL)
+    set_target_properties(vendored_obr PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/obr/lib/obr.dylib")
+endif ()
+
+# 4. Windows-Specific Helpers
+if (WIN32)
+    if (NOT TARGET vendored_opensvc)
+        add_library(vendored_opensvc SHARED IMPORTED GLOBAL)
+        set_target_properties(vendored_opensvc PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/OpenSVC/lib/Windows/Release/OpenSVCDecoder.dll"
+                IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/OpenSVC/lib/Windows/Debug/OpenSVCDecoder.dll"
+        )
+    endif ()
+
+    if (NOT TARGET vendored_gpac_crypto)
+        add_library(vendored_gpac_crypto SHARED IMPORTED GLOBAL)
+        set_target_properties(vendored_gpac_crypto PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Release/libcryptoMD.dll"
+                IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Debug/libcryptoMD.dll"
+        )
+    endif ()
+
+    if (NOT TARGET vendored_gpac_ssl)
+        add_library(vendored_gpac_ssl SHARED IMPORTED GLOBAL)
+        set_target_properties(vendored_gpac_ssl PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Release/libsslMD.dll"
+                IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/gpac/lib/Windows/Debug/libsslMD.dll"
+        )
+    endif ()
+endif ()
+

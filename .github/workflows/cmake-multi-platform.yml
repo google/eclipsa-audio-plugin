@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-latest]
+        os: [ macos-14, windows-latest ]
 
     steps:
       - name: Checkout
@@ -67,7 +67,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: build/third_party/JUCE
-          key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/CMakeLists.txt') }}
+          key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/macos.cmake') }}
 
       - name: Check JUCE Cache
         if: env.CLEAN_BUILD != 'true'
@@ -85,7 +85,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: build/_deps/libiamf-build
-          key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/libiamf/CMakeLists.txt') }}
+          key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/libiamf/macos.cmake') }}
 
       - name: Check IAMF Cache
         if: env.CLEAN_BUILD != 'true'
@@ -103,7 +103,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: build/third_party/libear
-          key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/CMakeLists.txt') }}
+          key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/macos.cmake') }}
 
       - name: Check Libear Cache
         if: env.CLEAN_BUILD != 'true'
@@ -121,7 +121,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: build
-          key: ${{ runner.os }}-main-build-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h') }}
+          key: ${{ runner.os }}-main-build-${{ hashFiles('macos.cmake', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h') }}
 
       - name: Check Main Build Cache
         if: env.CLEAN_BUILD != 'true'

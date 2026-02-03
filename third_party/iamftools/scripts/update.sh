@@ -68,7 +68,7 @@ cp bazel-bin/iamf/include/iamf_tools/libiamf_tools.dylib "$DEST_LIB_DIR/"
 echo "Copying and updating proto files..."
 # Create proto directory if it doesn't exist
 mkdir -p "$DEST_PROTO_DIR"
-# Save CMakeLists.txt if it exists
+# Save macos.cmake if it exists
 if [ -f "$DEST_PROTO_DIR/CMakeLists.txt" ]; then
     CMAKELISTS_BACKUP=$(mktemp)
     cp "$DEST_PROTO_DIR/CMakeLists.txt" "$CMAKELISTS_BACKUP"
@@ -83,7 +83,7 @@ for file in *.proto; do
 done
 # Copy the modified proto files to the final destination
 cp *.proto "$DEST_PROTO_DIR/"
-# Restore CMakeLists.txt if it was backed up
+# Restore macos.cmake if it was backed up
 if [ -f "$CMAKELISTS_BACKUP" ]; then
     cp "$CMAKELISTS_BACKUP" "$DEST_PROTO_DIR/CMakeLists.txt"
     rm "$CMAKELISTS_BACKUP"
