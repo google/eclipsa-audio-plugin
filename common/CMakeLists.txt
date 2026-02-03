@@ -125,27 +125,13 @@ target_link_libraries(player INTERFACE processors substream_rdr)
 
 target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
 
-if (WIN32)
-    message(STATUS "Linking logger against Boost via CMake targets")
-
-    target_link_libraries(logger INTERFACE
-            Boost::log
-            Boost::log_setup
-            Boost::filesystem
-            Boost::thread
-            Boost::system
-            juce::juce_core
-    )
-
-else ()
-    target_link_libraries(logger INTERFACE
-            Boost::log
-            Boost::log_setup
-            Boost::thread
-            Boost::filesystem
-            juce::juce_core
-    )
-endif ()
+target_link_libraries(logger INTERFACE
+        Boost::log
+        Boost::log_setup
+        Boost::filesystem
+        Boost::thread
+        juce::juce_core
+)
 
 get_target_property(SUBSTREAM_INCLUDES substream_rdr INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "substream_rdr include paths: ${SUBSTREAM_INCLUDES}")

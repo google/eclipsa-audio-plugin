@@ -11,12 +11,6 @@
 
 include(FetchContent)
 
-# After FetchContent_MakeAvailable(protobuf)
-set(Protobuf_INCLUDE_DIRS "${protobuf_SOURCE_DIR}/src" CACHE PATH "" FORCE)
-set(Protobuf_LIBRARIES "${protobuf_BINARY_DIR}/libprotobuf.lib" CACHE STRING "" FORCE)
-set(Protobuf_PROTOC_EXECUTABLE "${protobuf_BINARY_DIR}/protoc" CACHE FILEPATH "" FORCE)
-set(Protobuf_DIR "${protobuf_BINARY_DIR}/cmake" CACHE PATH "" FORCE)
-
 # Force static linking for all third-party dependencies
 set(BUILD_SHARED_LIBS OFF)
 #JUCE for plugin development.
@@ -35,22 +29,15 @@ include("${CMAKE_SOURCE_DIR}/cmake/zeromq.cmake")
 #LibIAMF for audio file import.
 add_subdirectory(libiamf)
 
-#Ensure IAMF library is found and named correctly
+# IAMF library directory (platform-specific structure)
 if (WIN32)
-    # MSVC builds iamf.lib (no 'lib' prefix)
-    set(IAMF_LIB_NAME iamf)
     set(IAMF_LIB_DIR "${CMAKE_BINARY_DIR}/_deps/libiamf-build/$<CONFIG>")
 else ()
-    # UNIX builds libiamf.a
-    set(IAMF_LIB_NAME libiamf)
     set(IAMF_LIB_DIR "${CMAKE_BINARY_DIR}/_deps/libiamf-build")
 endif ()
 
 # Make sure all subprojects can find it
 link_directories(${IAMF_LIB_DIR})
-
-# Export variables globally so modules can use ${IAMF_LIB_NAME}
-set(IAMF_LIB_NAME ${IAMF_LIB_NAME} CACHE STRING "IAMF library name")
 set(IAMF_LIB_DIR ${IAMF_LIB_DIR} CACHE STRING "IAMF library directory")
 
 #Override some of the SAF variables
@@ -138,11 +125,15 @@ endif ()
 if (DEFINED protobuf_SOURCE_DIR AND DEFINED protobuf_BINARY_DIR)
     message(STATUS "Overriding Protobuf include/lib paths with fetched version")
     set(Protobuf_INCLUDE_DIRS "${protobuf_SOURCE_DIR}/src" CACHE PATH "" FORCE)
-    set(Protobuf_LIBRARIES "${protobuf_BINARY_DIR}/libprotobuf.lib" CACHE STRING "" FORCE)
+    if (WIN32)
+        set(Protobuf_LIBRARIES "${protobuf_BINARY_DIR}/libprotobuf.lib" CACHE STRING "" FORCE)
+    else ()
+        set(Protobuf_LIBRARIES "${protobuf_BINARY_DIR}/libprotobuf.a" CACHE STRING "" FORCE)
+    endif ()
     set(Protobuf_PROTOC_EXECUTABLE "${protobuf_BINARY_DIR}/protoc" CACHE FILEPATH "" FORCE)
     set(Protobuf_DIR "${protobuf_BINARY_DIR}/cmake" CACHE PATH "" FORCE)
 else ()
-    message(WARNING "protobuf_SOURCE_DIR not defined yet ΓÇö ensure FetchContent_MakeAvailable(protobuf) ran")
+    message(WARNING "protobuf_SOURCE_DIR not defined yet — ensure FetchContent_MakeAvailable(protobuf) ran")
 endif ()
 
 # --- Imported Targets for Vendored Binaries ---

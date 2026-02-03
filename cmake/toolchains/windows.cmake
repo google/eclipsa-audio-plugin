@@ -80,3 +80,8 @@ set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} CACHE INTERNAL "ZLIB libraries for Windows"
 link_libraries(ZLIB::ZLIB)
 link_libraries(delayimp)
 
+set(IAMF_LIB_NAME "iamf" CACHE STRING "")
+
+if (BUILD_VST3)
+    list(APPEND _DEFAULT_FORMATS "VST3")
+endif ()

@@ -38,3 +38,9 @@ set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos" CACHE IN
 
 # Xcode 15+ classic linker (avoids duplicate symbol warnings)
 add_link_options("-Wl,-ld_classic")
+
+set(IAMF_LIB_NAME "libiamf" CACHE STRING "")
+
+if (BUILD_VST3)
+    list(APPEND _DEFAULT_FORMATS "VST3")
+endif ()

@@ -14,25 +14,29 @@
 
 cmake_minimum_required(VERSION 3.30.0)
 
+#====================================================================
+#Cmake Policies
+#====================================================================
+cmake_policy(SET CMP0167 NEW)
+cmake_policy(SET CMP0077 NEW)
+cmake_policy(SET CMP0169 OLD)
+
+#====================================================================
 # Disable vcpkg from finding Boost and Protobuf (provided by libiamf)
+#====================================================================
 set(CMAKE_DISABLE_FIND_PACKAGE_Boost ON CACHE BOOL "" FORCE)
 set(CMAKE_DISABLE_FIND_PACKAGE_Protobuf ON CACHE BOOL "" FORCE)
 
+#====================================================================
 # Clear any cached Protobuf references
+#====================================================================
 unset(Protobuf_INCLUDE_DIRS CACHE)
 unset(Protobuf_LIBRARIES CACHE)
 unset(Protobuf_DIR CACHE)
 unset(Protobuf_FOUND CACHE)
 unset(Protobuf_PROTOC_EXECUTABLE CACHE)
 
-cmake_policy(SET CMP0167 NEW)
-cmake_policy(SET CMP0077 NEW)
-cmake_policy(SET CMP0169 OLD)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Configure release or debug builds
-set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
-
+#====================================================================
 # Version configuration
 # The version can be set in multiple ways (in order of precedence):
 # 1. Pass via command line: cmake -DECLIPSA_VERSION=1.2.3 ...
@@ -45,44 +49,58 @@ set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
 # - Or extract from git tag in your build script and pass it to CMake
 #
 # The version appears as a watermark in the bottom-left corner of both plugins.
+#====================================================================
 if (NOT DEFINED ECLIPSA_VERSION)
     set(ECLIPSA_VERSION "0.0.1" CACHE STRING "Version for Eclipsa project")
 endif ()
 
 project(Eclipsa LANGUAGES C CXX VERSION ${ECLIPSA_VERSION})
 
+#====================================================================
+# Compiler Settings
+#====================================================================
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+#====================================================================
+# Build Configuration
+#====================================================================
+set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
 add_compile_definitions(ECLIPSA_VERSION="${ECLIPSA_VERSION}")
 
+#====================================================================
+# Plugin Naming
+#====================================================================
 # Make company name configurable via command line with a default value
 if (NOT DEFINED ECLIPSA_COMPANY_NAME)
     set(ECLIPSA_COMPANY_NAME "Eclipsa Project" CACHE STRING "Company name for Eclipsa project")
 endif ()
-
 # Make manufacturer code configurable via command line with a default value
 if (NOT DEFINED ECLIPSA_MANUFACTURER_CODE)
     set(ECLIPSA_MANUFACTURER_CODE "Eclp" CACHE STRING "Manufacturer code for Eclipsa project")
 endif ()
-
 # Make bundle IDs configurable via command line with default values
 if (NOT DEFINED ECLIPSA_RENDERER_BUNDLE_ID)
     set(ECLIPSA_RENDERER_BUNDLE_ID "com.eclipsaproject.renderer" CACHE STRING "Bundle ID for the renderer plugin")
 endif ()
-
 if (NOT DEFINED ECLIPSA_PANNER_BUNDLE_ID)
     set(ECLIPSA_PANNER_BUNDLE_ID "com.eclipsaproject.panner" CACHE STRING "Bundle ID for the panner plugin")
 endif ()
 
+#====================================================================
+# Build Options
+#====================================================================
 # Build configuration for different DAW targets
 option(ECLIPSA_LOGIC_PRO_BUILD "Build AU plugin optimized for Logic Pro (7.1.4 layout)" OFF)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Automatically copy built plugins to standard locations after build" ON)
 
+#====================================================================
+# Testing
+#====================================================================
 if (CI_TEST OR INTERNAL_TEST)
     message(STATUS "Unit tests enabled")
     include(FetchContent)
@@ -112,11 +130,20 @@ if (CI_TEST OR INTERNAL_TEST)
     endif ()
 endif ()
 
-add_subdirectory(third_party)
-
+#====================================================================
+# Cmake Functions
+#====================================================================
 include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/eclipsa_plugin_defaults.cmake")
 
+#====================================================================
+# Dependencies
+#====================================================================
+add_subdirectory(third_party)
+
+#====================================================================
+# AAX Setup
+#====================================================================
 if (BUILD_AAX)
     # Use find_path instead of hardcoded 'set' to allow user overrides
     find_path(AAX_SDK_ROOT
@@ -133,14 +160,16 @@ if (BUILD_AAX)
     endif ()
 endif ()
 
-if (BUILD_VST3)
-    list(APPEND PLUGIN_FORMATS "VST3")
-endif ()
-
+#====================================================================
+# Add Sub Directories
+#====================================================================
 add_subdirectory(common)
 add_subdirectory(rendererplugin)
 add_subdirectory(audioelementplugin)
 
+#====================================================================
+# Testing #2
+#====================================================================
 if (CI_TEST OR INTERNAL_TEST)
     eclipsa_build_tests()
 endif ()
