@@ -115,6 +115,7 @@ endif ()
 add_subdirectory(third_party)
 
 include("${CMAKE_SOURCE_DIR}/cmake/copy_resources.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/eclipsa_plugin_defaults.cmake")
 
 if (BUILD_AAX)
     # Use find_path instead of hardcoded 'set' to allow user overrides

@@ -44,21 +44,15 @@ target_sources(AudioElementPlugin
         src/screens/PositionSelectionScreen.cpp
         src/screens/TrackMonitorScreen.cpp)
 
+eclipsa_plugin_defaults(AudioElementPlugin)
+
 target_compile_definitions(AudioElementPlugin
         PUBLIC
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
-        JUCE_VST3_CAN_REPLACE_VST2=0
-        JUCE_SILENCE_XCODE_15_LINKER_WARNING
-        JUCE_ENABLE_LIVE_CONSTANT_EDITOR=1
         JucePlugin_Category="Spatial")
 
-# Add DAW-specific build flags when enabled
 if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(AudioElementPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif ()
-
-target_include_directories(AudioElementPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
 target_link_libraries(AudioElementPlugin
         PRIVATE

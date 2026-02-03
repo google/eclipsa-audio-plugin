@@ -51,22 +51,16 @@ target_sources(RendererPlugin
         src/screens/mix_tabs/PresentationEditorViewPort.cpp
         src/screens/MixPresentationTagScreen.cpp)
 
+eclipsa_plugin_defaults(RendererPlugin)
+
 target_compile_definitions(RendererPlugin
         PUBLIC
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
-        JUCE_VST3_CAN_REPLACE_VST2=0
-        JUCE_SILENCE_XCODE_15_LINKER_WARNING
-        JUCE_ENABLE_LIVE_CONSTANT_EDITOR=1
         JucePlugin_IsSynth=1
         JucePlugin_Category="Synth")
 
-# Add DAW-specific build flags when enabled
 if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif ()
-
-target_include_directories(RendererPlugin PUBLIC "${BOOST_LIBRARY_INCLUDES}/include")
 
 target_link_libraries(RendererPlugin
         PRIVATE
