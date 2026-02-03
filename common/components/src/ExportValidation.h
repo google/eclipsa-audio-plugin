@@ -38,7 +38,7 @@ class ExportValidationComponent : public juce::Component,
       : fpbr_(filePlaybackRepo),
         fpbData_(fpbData),
         title_("Export validation", "Export validation"),
-        audioPlayer_(filePlaybackRepo, fileExportRepo, fpbData),
+        audioPlayer_(filePlaybackRepo, fpbData),
         layoutToDecode_("Mix Presentation Layout"),
         decodeToolTip_(SvgMap::kHelp,
                        "The decoder will decode the Mix Presentation which "
