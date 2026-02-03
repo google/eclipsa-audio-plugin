@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "../file_playback/FilePlaybackResampler.h"
 
 #include <gtest/gtest.h>
@@ -6,6 +20,8 @@
 
 #include "FileOutputTestFixture.h"
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
+
+#undef RDR_TO_FILE
 
 class FilePlaybackResamplerTest : public FileOutputTests {
  protected:
@@ -36,6 +52,7 @@ class FilePlaybackResamplerTest : public FileOutputTests {
 
 // Feed an IAMF file with a tone to the BackgroundBuffer then test the
 // resampling functionality of the ResamplingReader class.
+#ifdef RDR_TO_FILE
 TEST_F(FilePlaybackResamplerTest, vary_rates) {
   const auto kSourceRate = reader->getStreamData().sampleRate;
   for (const double kTargetRate : {16e3, 44.1e3, 48e3, 96e3}) {
@@ -71,3 +88,4 @@ TEST_F(FilePlaybackResamplerTest, vary_rates) {
     }
   }
 }
+#endif

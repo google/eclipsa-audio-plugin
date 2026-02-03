@@ -47,13 +47,13 @@ constexpr int getEventPriority(const TaskType event) {
       return 2;
     case TaskType::kSeek:
       return 1;
-      default:
+    default:
       break;
   }
   return 0;
 }
 
-inline const char* taskTypeToString(const TaskType type) {
+constexpr std::string_view taskTypeToString(const TaskType type) {
   switch (type) {
     case TaskType::kNone:
       return "kNone";
@@ -74,7 +74,7 @@ inline const char* taskTypeToString(const TaskType type) {
   }
 }
 
-inline const char* taskResultToString(const TaskResult result) {
+constexpr std::string_view taskResultToString(const TaskResult result) {
   switch (result) {
     case TaskResult::kLoadFinished:
       return "kLoadFinished";

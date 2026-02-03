@@ -14,8 +14,6 @@
 
 #include "FilePlaybackProcessor.h"
 
-#include <iostream>
-
 #include "data_structures/src/FilePlayback.h"
 #include "juce_core/system/juce_PlatformDefs.h"
 #include "logger/logger.h"
@@ -222,31 +220,25 @@ void FilePlaybackProcessor::resetProcessor() {
 }
 
 void FilePlaybackProcessor::handleTaskCompletion(const TaskResult wayFinished) {
-  std::cout << "FilePlaybackProcessor::handleTaskCompletion: Task completed: "
-            << FilePlaybackProcessorEvents::taskResultToString(wayFinished)
-            << std::endl;
+  LOG_INFO(0, "FilePlaybackProcessor::handleTaskCompletion: Task completed: " +
+                  std::string(FilePlaybackProcessorEvents::taskResultToString(
+                      wayFinished)));
 
-  const State kCurrState = state_;
-  switch (kCurrState) {
-    case State::kBuffering: {
-      switch (wayFinished) {
-        case TaskResult::kLoadFailed:
-          updateProcessorState(State::kError);
-          break;
-        case TaskResult::kLoadFinished:
-        case TaskResult::kLayoutPausedFinished:
-        case TaskResult::kSeekPausedFinished:
-          updateProcessorState(State::kPaused);
-          break;
-        case TaskResult::kLayoutPlayingFinished:
-        case TaskResult::kSeekPlayingFinished:
-          updateProcessorState(State::kPlaying);
-          break;
-      }
-    } break;
-    case State::kPlaying:
-    case State::kPaused: {
-    } break;
+  switch (wayFinished) {
+    case TaskResult::kLoadFailed:
+      updateProcessorState(State::kError);
+      break;
+    case TaskResult::kLoadFinished:
+    case TaskResult::kLayoutPausedFinished:
+    case TaskResult::kSeekPausedFinished:
+      updateProcessorState(State::kPaused);
+      break;
+    case TaskResult::kLayoutPlayingFinished:
+    case TaskResult::kSeekPlayingFinished:
+      updateProcessorState(State::kPlaying);
+      break;
+    default:
+      break;
   }
 }
 

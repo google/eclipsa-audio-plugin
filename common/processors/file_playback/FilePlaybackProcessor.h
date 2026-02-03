@@ -59,6 +59,7 @@ class FilePlaybackProcessor : public ProcessorBase, juce::ValueTree::Listener {
     state_ = newState;
     fpbData_.processorState.update(newState);
   }
+  void abortTask(const bool abort) { abortTask_ = abort; }
 
   // Tasks
   TaskResult loadFileForPlayback(const std::string& iamfFile);
@@ -71,24 +72,19 @@ class FilePlaybackProcessor : public ProcessorBase, juce::ValueTree::Listener {
  private:
   void volumeTo(const float vol);
 
-  // Data
-  std::atomic<float> gain_ = 1.0f;
-  // Audio decoding and playback
-  std::unique_ptr<IAMFFileReader> reader_;
-  std::unique_ptr<BackgroundBuffer> decodedBuffer_;
   double sampleRate_ = 0.0f;
   int samplesPerBlock_ = 0;
-  juce::AudioBuffer<float> tempBuffer_;
-  FilePlaybackResampler resampler_;
+  std::atomic<float> gain_ = 1.0f;
   PlaybackFileContext currFile_;
+  std::unique_ptr<IAMFFileReader> reader_;
+  std::unique_ptr<BackgroundBuffer> decodedBuffer_;
+  FilePlaybackResampler resampler_;
+  juce::AudioBuffer<float> tempBuffer_;
   juce::SpinLock bbl_;
+  std::atomic_bool abortTask_ = false;
+  std::unique_ptr<FilePlaybackProcessorWorker> worker_;
   // State
   FilePlaybackRepository& fpbr_;
   FilePlaybackProcessorData& fpbData_;
-  std::unique_ptr<FilePlaybackProcessorWorker> worker_;
-
- public:
-  // Task cancellation flag
-  std::atomic_bool abortTask_ = false;
   std::atomic<State> state_{State::kPaused};
 };

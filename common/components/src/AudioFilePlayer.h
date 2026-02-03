@@ -21,14 +21,12 @@
 #include "components/icons/svg/SvgIconComponent.h"
 #include "components/src/ColouredSlider.h"
 #include "components/src/RoundImageButton.h"
-#include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FilePlaybackProcessorData.h"
 
 class AudioFilePlayer : public juce::Component, private juce::Timer {
  public:
   AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
-                  FileExportRepository& fileExportRepo,
                   FilePlaybackProcessorData& fpbData);
   ~AudioFilePlayer() override;
 
@@ -53,6 +51,5 @@ class AudioFilePlayer : public juce::Component, private juce::Timer {
                                "Invalid IAMF file selected for playback"};
   // State
   FilePlaybackRepository& fpbr_;
-  FileExportRepository& fer_;
   FilePlaybackProcessorData& fpbData_;
 };

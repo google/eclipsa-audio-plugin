@@ -19,6 +19,7 @@
 #include "components/icons/svg/SvgIconLookup.h"
 #include "components/src/EclipsaColours.h"
 #include "data_structures/src/FilePlayback.h"
+#include "processors/file_playback/FilePlaybackProcessor.h"
 
 class AudioFilePlayer::Spinner : public juce::Component, private juce::Timer {
  public:
@@ -58,7 +59,6 @@ class AudioFilePlayer::Spinner : public juce::Component, private juce::Timer {
 };
 
 AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
-                                 FileExportRepository& fileExportRepo,
                                  FilePlaybackProcessorData& fpbData)
     : playButton_("Play", SvgMap::kPlay),
       pauseButton_("Pause", SvgMap::kPause),
@@ -67,7 +67,6 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
       volumeIcon_(SvgMap::kVolume),
       spinner_(std::make_unique<Spinner>()),
       fpbr_(filePlaybackRepo),
-      fer_(fileExportRepo),
       fpbData_(fpbData) {
   playButton_.setColour(juce::TextButton::buttonColourId,
                         EclipsaColours::rolloverGrey);

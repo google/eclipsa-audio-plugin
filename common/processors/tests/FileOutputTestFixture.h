@@ -237,7 +237,7 @@ class FileOutputTests : public ::testing::Test {
          std::filesystem::directory_iterator(std::filesystem::current_path())) {
       if (entry.path().extension() == ".wav" ||
           entry.path().extension() == ".mp4") {
-        // std::filesystem::remove(entry.path());
+        std::filesystem::remove(entry.path());
       }
     }
     std::filesystem::remove(iamfOutPath);

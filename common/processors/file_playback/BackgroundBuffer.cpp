@@ -42,8 +42,6 @@ BackgroundBuffer::~BackgroundBuffer() {
   }
 }
 
-// TODO: Make this an atomic that's set when buffer is primed rather than taking
-// the lock from the thread populating the buffer
 bool BackgroundBuffer::isReady() {
   const juce::SpinLock::ScopedLockType lock(bufferLock_);
   const bool kReady = pbuffer_->availReadSamples() >= padSamples_ || eof_;

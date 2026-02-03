@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
@@ -39,7 +53,9 @@ class FilePlaybackResampler {
   }
 
   void flush() {
-    if (resampler_) resampler_->flushBuffers();
+    if (resampler_) {
+      resampler_->flushBuffers();
+    }
   }
 
   int read(BackgroundBuffer& sourceFifo, juce::AudioBuffer<float>& destBuffer,
@@ -85,20 +101,20 @@ class FilePlaybackResampler {
       }
 
       // Read available samples into the provided buffer region
-      const unsigned toRead = static_cast<unsigned>(info.numSamples);
-      const size_t samplesRead = buffer_->readSamples(
-          *info.buffer, static_cast<unsigned>(info.startSample), toRead);
+      const unsigned kToRead = info.numSamples;
+      const size_t kRead =
+          buffer_->readSamples(*info.buffer, info.startSample, kToRead);
 
       // Accumulate total input samples read
-      cumulativeInputRead_ += samplesRead;
+      cumulativeInputRead_ += kRead;
 
       // If fewer samples were available, let the resampler handle the underrun
       // rather than abruptly zeroing (this avoids clicks from truncation)
-      if (samplesRead < toRead) {
+      if (kRead < kToRead) {
         // Only zero the unread portion if we got nothing at all
-        if (samplesRead == 0) {
-          const int rem = static_cast<int>(toRead);
-          info.buffer->clear(info.startSample, rem);
+        if (kRead == 0) {
+          const unsigned kRem = kToRead;
+          info.buffer->clear(info.startSample, kRem);
         }
         // Otherwise let the resampler interpolate from partial data
       }

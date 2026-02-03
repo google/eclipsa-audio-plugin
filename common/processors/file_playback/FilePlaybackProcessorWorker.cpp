@@ -14,8 +14,6 @@
 
 #include "FilePlaybackProcessorWorker.h"
 
-#include <iostream>
-
 #include "FilePlaybackProcessor.h"
 #include "logger/logger.h"
 
@@ -26,15 +24,16 @@ FilePlaybackProcessorWorker::FilePlaybackProcessorWorker(
 void FilePlaybackProcessorWorker::submitTask(
     const FilePlaybackProcessorEvents::TaskType newType,
     FilePlaybackProcessorEvents::TaskData data) {
-  std::cout << "FilePlaybackProcessorWorker::submitTask: Submitting task: "
-            << FilePlaybackProcessorEvents::taskTypeToString(newType)
-            << std::endl;
+  LOG_INFO(0, "FilePlaybackProcessorWorker::submitTask: Submitting task: " +
+                  std::string(
+                      FilePlaybackProcessorEvents::taskTypeToString(newType)));
 
   if (FilePlaybackProcessorEvents::getEventPriority(newType) <
       FilePlaybackProcessorEvents::getEventPriority(currentTask_.load())) {
-    std::cout << "FilePlaybackProcessorWorker::submitTask: Task "
-              << FilePlaybackProcessorEvents::taskTypeToString(newType)
-              << " skipped due to lower priority" << std::endl;
+    LOG_INFO(0, "FilePlaybackProcessorWorker::submitTask: Task " +
+                    std::string(FilePlaybackProcessorEvents::taskTypeToString(
+                        newType)) +
+                    " skipped due to lower priority");
     return;
   }
 
@@ -42,9 +41,9 @@ void FilePlaybackProcessorWorker::submitTask(
 
   // Join any existing task
   proc_.updateProcessorState(FilePlaybackProcessor::State::kBuffering);
-  proc_.abortTask_ = true;
+  proc_.abortTask(true);
   const bool kShutdown = worker_.removeAllJobs(true, 2000);
-  proc_.abortTask_ = false;
+  proc_.abortTask(false);
 
   if (!kShutdown) {
     LOG_ERROR(0,
