@@ -274,7 +274,7 @@ TEST_F(FilePlaybackProcessorTest, change_file_during_playback) {
   // should produce no audio, and then we should return to stopped after
   // buffering
   buff.clear();
-  setFile(juce::String(kNewReferenceFilePath));
+  setFile(juce::String(kNewReferenceFilePath.string()));
 
   fpbData.processorState.read(procState);
   EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
@@ -394,7 +394,7 @@ TEST_F(FilePlaybackProcessorTest, change_file_while_seeking) {
   const std::filesystem::path kReferenceFilePath2 =
       std::filesystem::current_path() / "test_fpb_processor_2.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath2);
-  setFile(juce::String(kReferenceFilePath1));
+  setFile(juce::String(kReferenceFilePath1.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -406,7 +406,7 @@ TEST_F(FilePlaybackProcessorTest, change_file_while_seeking) {
   EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
 
   // Change the file while seeking
-  setFile(juce::String(kReferenceFilePath2));
+  setFile(juce::String(kReferenceFilePath2.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
