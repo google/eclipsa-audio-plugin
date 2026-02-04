@@ -97,3 +97,4 @@ set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} CACHE INTERNAL "ZLIB libraries for Windows"
 #====================================================================
 link_libraries(ZLIB::ZLIB)
 link_libraries(delayimp)
+

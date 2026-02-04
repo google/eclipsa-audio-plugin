@@ -13,11 +13,13 @@ include(FetchContent)
 
 # Force static linking for all third-party dependencies
 set(BUILD_SHARED_LIBS OFF)
+#====================================================================
+# Add Dependencies
+#====================================================================
 #JUCE for plugin development.
 add_subdirectory(JUCE)
 #IAMF for IAMF file export.
 add_subdirectory(iamftools)
-
 # lib open binaural renderer for panning via ambisonics and binaural rendering.
 add_subdirectory(obr)
 # Libear for loudness rendering.
@@ -29,24 +31,27 @@ include("${CMAKE_SOURCE_DIR}/cmake/zeromq.cmake")
 #LibIAMF for audio file import.
 add_subdirectory(libiamf)
 
+#====================================================================
 # IAMF library directory (platform-specific structure)
+#====================================================================
 if (WIN32)
     set(IAMF_LIB_DIR "${CMAKE_BINARY_DIR}/_deps/libiamf-build/$<CONFIG>")
 else ()
     set(IAMF_LIB_DIR "${CMAKE_BINARY_DIR}/_deps/libiamf-build")
 endif ()
-
 # Make sure all subprojects can find it
 link_directories(${IAMF_LIB_DIR})
 set(IAMF_LIB_DIR ${IAMF_LIB_DIR} CACHE STRING "IAMF library directory")
 
+#====================================================================
+#Spatial Audio Framework
 #Override some of the SAF variables
 #Unit tests for SAF have been tested and they pass, confirming the SAF library is working as expected.
 # Manually set the SAF_PERFORMANCE_LIB variables for each platform
+#====================================================================
 set(SAF_BUILD_TESTS 0 CACHE BOOL "" FORCE)
 set(SAF_BUILD_EXAMPLES 1 CACHE BOOL "" FORCE)
 set(saf_example_list ambi_dec CACHE STRING "" FORCE)
-
 # Default performance library (fallback)
 set(SAF_PERFORMANCE_LIB "SAF_USE_OPEN_BLAS_AND_LAPACKE")
 
@@ -136,10 +141,9 @@ else ()
     message(WARNING "protobuf_SOURCE_DIR not defined yet — ensure FetchContent_MakeAvailable(protobuf) ran")
 endif ()
 
-# --- Imported Targets for Vendored Binaries ---
-# We use the prefix "vendored_" to ensure we don't collide with
-# any targets defined by add_subdirectory().
-
+#====================================================================
+# Imported Targets
+#====================================================================
 # 1. GPAC (renamed to vendored_gpac)
 if (NOT TARGET vendored_gpac)
     add_library(vendored_gpac SHARED IMPORTED GLOBAL)
@@ -202,4 +206,3 @@ if (WIN32)
         )
     endif ()
 endif ()
-

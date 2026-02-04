@@ -84,6 +84,12 @@ if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(test)
 endif ()
 
+#include("${CMAKE_SOURCE_DIR}/cmake/deploy_runtime_deps.cmake")
+#
+#if (TARGET RendererPlugin)
+#    deploy_runtime_deps(RendererPlugin_VST3)
+#endif ()
+
 # Copy resources for each plugin format
 if (BUILD_AAX AND TARGET RendererPlugin_AAX)
     message(STATUS "AAX build detected. Setting up renderer plugin path and copying resources.")

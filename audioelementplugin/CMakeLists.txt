@@ -71,6 +71,12 @@ if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(test)
 endif ()
 
+#include("${CMAKE_SOURCE_DIR}/cmake/deploy_runtime_deps.cmake")
+#
+#if (TARGET AudioElementPlugin_VST3)
+#    deploy_runtime_deps(AudioElementPlugin_VST3)
+#endif ()
+
 # Copy resources for each plugin format
 if (BUILD_AAX AND TARGET AudioElementPlugin_AAX)
     message(STATUS "AAX build detected. Setting up audio element plugin path and copying resources.")
