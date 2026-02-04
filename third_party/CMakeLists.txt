@@ -95,8 +95,6 @@ elseif (WIN32)
             endif ()
         endforeach ()
     endif ()
-else ()
-    message(SEND_ERROR "SAF: Using OpenBLAS/LAPACKE (default)")
 endif ()
 
 # Build SAF from source on all platforms

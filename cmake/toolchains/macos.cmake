@@ -44,3 +44,4 @@ set(IAMF_LIB_NAME "libiamf" CACHE STRING "")
 if (BUILD_VST3)
     list(APPEND _DEFAULT_FORMATS "VST3")
 endif ()
+

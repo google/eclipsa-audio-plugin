@@ -14,13 +14,28 @@
 
 function(copy_resources target plugin_path)
 
-    # --- 1. Define Destinations ---
+    # =========================================================================
+    # Common Dependency List Between Mac and Windows
+    # =========================================================================
+    set(COMMON_DEPS vendored_gpac
+            vendored_iamf_tools
+            libzmq
+    )
+    # =========================================================================
+    # Platform-Specific Configurations
+    # =========================================================================
     if (APPLE)
+        set(PLATFORM_DEPS vendored_obr)
         set(DEST_ROOT "${plugin_path}/Contents/Resources")
         set(DEST_IAMF "${DEST_ROOT}/third_party/iamftools/lib")
         set(DEST_OBR "${DEST_ROOT}/third_party/obr/lib")
         set(DEST_GPAC "${DEST_ROOT}/third_party/gpac/lib")
+
     elseif (WIN32)
+        set(PLATFORM_DEPS vendored_gpac_crypto
+                vendored_gpac_ssl
+        )
+
         if ("${target}" MATCHES ".*_VST3$")
             set(DEST_ROOT "${plugin_path}/Contents/x86_64-win")
         elseif ("${target}" MATCHES ".*_AAX$")
@@ -34,24 +49,13 @@ function(copy_resources target plugin_path)
 
         set(DEST_IAMF "${DEST_ROOT}")
         set(DEST_GPAC "${DEST_ROOT}")
-        # DEST_OBR is not needed on Windows
     endif ()
 
-    # --- 2. Windows: Apply Delay Load Flags ---
-    if (WIN32)
-        target_link_options(${target} PRIVATE
-                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_gpac>"
-                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_iamf_tools>"
-                "/DELAYLOAD:$<TARGET_FILE_NAME:libzmq>"
-                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_gpac_crypto>"
-                "/DELAYLOAD:$<TARGET_FILE_NAME:vendored_gpac_ssl>"
-        )
-        set(DELAYLOAD_DLLS "" PARENT_SCOPE)
-    endif ()
+    set(ALL_DEPS ${COMMON_DEPS} ${PLATFORM_DEPS})
 
-    # --- 3. Copy Commands (Grouped by Platform to avoid evaluation crashes) ---
-
-    # A. Commands Common to BOTH platforms
+    # =========================================================================
+    # Copy Commands for Common Libs
+    # =========================================================================
     set(COPY_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_IAMF}"
@@ -61,43 +65,46 @@ function(copy_resources target plugin_path)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${DEST_ROOT}/"
     )
 
-    # B. Windows-Only Commands
-    if (WIN32)
-        list(APPEND COPY_COMMANDS
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_crypto>" "${DEST_ROOT}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_ssl>" "${DEST_ROOT}/"
-        )
-    endif ()
-
-    # C. Mac-Only Commands
+    # =========================================================================
+    # Copy Commands for Platforms
+    # =========================================================================
     if (APPLE)
         list(APPEND COPY_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_OBR}"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_obr>" "${DEST_OBR}/"
         )
+    elseif (WIN32)
+        foreach (_dep IN LISTS PLATFORM_DEPS)
+            list(APPEND COPY_COMMANDS
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${_dep}>" "${DEST_ROOT}/")
+        endforeach ()
     endif ()
 
     add_custom_command(TARGET ${target} PRE_BUILD ${COPY_COMMANDS})
 
-
-    # --- 4. macOS ZMQ Symlinks ---
+    # =========================================================================
+    # Platform-Specific Post-Processing
+    # =========================================================================
     if (APPLE)
+        # ZMQ symlinks
         add_custom_command(TARGET ${target} PRE_BUILD
                 COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libzmq>" "${DEST_ROOT}/libzmq.5.dylib"
                 COMMAND ${CMAKE_COMMAND} -E create_symlink "libzmq.5.dylib" "${DEST_ROOT}/libzmq.dylib"
         )
-    endif ()
 
-    # --- 5. Helper Tool Copy (Windows Only) ---
-    if (WIN32)
+    elseif (WIN32)
+        # DELAYLOAD flags
+        foreach (_dep IN LISTS ALL_DEPS)
+            target_link_options(${target} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:${_dep}>")
+        endforeach ()
+
+        # Signing dir copy (for JUCE VST3 validator)
         set(VST3_SIGNING_DIR "${CMAKE_CURRENT_BINARY_DIR}/${BUILD_LIB_DIR}")
-        add_custom_command(TARGET ${target} PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_crypto>" "${VST3_SIGNING_DIR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac_ssl>" "${VST3_SIGNING_DIR}/"
-        )
+        set(SIGNING_COMMANDS COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}")
+        foreach (_dep IN LISTS ALL_DEPS)
+            list(APPEND SIGNING_COMMANDS
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${_dep}>" "${VST3_SIGNING_DIR}/")
+        endforeach ()
+        add_custom_command(TARGET ${target} PRE_BUILD ${SIGNING_COMMANDS})
     endif ()
 endfunction()
