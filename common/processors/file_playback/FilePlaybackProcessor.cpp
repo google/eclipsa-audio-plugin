@@ -29,6 +29,7 @@ FilePlaybackProcessor::FilePlaybackProcessor(FilePlaybackRepository& fpbr,
   fpbData_.processorState.update(State::kPaused);
   fpbData_.currFilePosition.update(0.0f);
   fpbData_.fileDuration_s.update(0);
+  fpbr_.registerListener(this);
 }
 
 FilePlaybackProcessor::~FilePlaybackProcessor() {
@@ -40,8 +41,6 @@ FilePlaybackProcessor::~FilePlaybackProcessor() {
 }
 
 void FilePlaybackProcessor::reinitializeAfterStateRestore() {
-  fpbr_.registerListener(this);
-
   const juce::String kPlaybackFile = fpbr_.get().getPlaybackFile();
   if (kPlaybackFile.isNotEmpty()) {
     worker_->submitTask(FilePlaybackProcessorEvents::TaskType::kLoad,
