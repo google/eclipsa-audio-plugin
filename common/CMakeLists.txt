@@ -10,10 +10,9 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-# -------------------------------
-#  Core module setup
-# -------------------------------
-
+#====================================================================
+# Core module setup
+#====================================================================
 juce_add_modules(
         components
         data_repository
@@ -23,10 +22,9 @@ juce_add_modules(
         processors
         substream_rdr)
 
-# -------------------------------
-#  Optional test targets
-# -------------------------------
-
+#====================================================================
+# Optional test targets
+#====================================================================
 if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(processors/tests)
     add_subdirectory(data_repository/tests)
@@ -37,35 +35,29 @@ if (CI_TEST OR INTERNAL_TEST)
 
 endif ()
 
-# -------------------------------
-#  Platform-specific processor defs
-# -------------------------------
-
+#====================================================================
 # DAW-specific build flags
+#====================================================================
 if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(processors INTERFACE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif ()
 
-# -------------------------------
-#  Icon resources
-# -------------------------------
-
+#====================================================================
+# Icon resources
+#====================================================================
 add_subdirectory(components/icons)
 target_link_libraries(components INTERFACE binary_data)
-
 # Link components against Eigen (for AmbisonicsVisualizer)
 target_link_libraries(components INTERFACE Eigen)
 
-# -------------------------------
-#  Common include directories
-# -------------------------------
-
+#====================================================================
+# Common include directories
+#====================================================================
 target_include_directories(data_structures INTERFACE
         "${BOOST_LIBRARY_INCLUDES}/include"
         "${zeromq_SOURCE_DIR}/include"
         "${cppzmq_SOURCE_DIR}"
 )
-
 target_include_directories(substream_rdr INTERFACE
         "${spatialaudio_SOURCE_DIR}/include"
         "${spatialaudio_SOURCE_DIR}"
@@ -78,11 +70,9 @@ target_include_directories(substream_rdr INTERFACE
         "${CMAKE_SOURCE_DIR}/third_party/libiamf/code/include"
 )
 
-# -------------------------------
-#  IAMF and Proto Integration
-# -------------------------------
-
-# Unified cross-platform IAMF linkage (no Bazel paths)
+#====================================================================
+# IAMF and Proto Integration
+#====================================================================
 target_link_libraries(data_structures INTERFACE iamftools substream_rdr)
 
 # Make sure our regenerated proto headers come first
@@ -90,10 +80,9 @@ target_include_directories(data_structures INTERFACE
         "${CMAKE_SOURCE_DIR}/third_party/iamftools/iamf/cli/proto"
 )
 
-# -------------------------------
-#  Substream and Processor Linking
-# -------------------------------
-
+#====================================================================
+# Substream and Processor Linking
+#====================================================================
 # Both Windows and macOS now link full audio stack (OBR + SAF)
 target_link_libraries(substream_rdr INTERFACE
         libspatialaudio
@@ -101,7 +90,6 @@ target_link_libraries(substream_rdr INTERFACE
         libear
         data_structures
 )
-
 target_link_libraries(processors INTERFACE
         gpac
         libear
@@ -113,16 +101,13 @@ target_link_libraries(processors INTERFACE
         saf_example_ambi_dec
         lufs_meter
 )
-
 target_include_directories(substream_rdr INTERFACE ${OBR_INCLUDE_DIRS})
 target_include_directories(processors INTERFACE ${OBR_INCLUDE_DIRS})
-
 target_link_libraries(player INTERFACE processors substream_rdr)
 
-# -------------------------------
-#  Components and Logging
-# -------------------------------
-
+#====================================================================
+# Components and Logging
+#====================================================================
 target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
 
 target_link_libraries(logger INTERFACE
@@ -135,3 +120,20 @@ target_link_libraries(logger INTERFACE
 
 get_target_property(SUBSTREAM_INCLUDES substream_rdr INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "substream_rdr include paths: ${SUBSTREAM_INCLUDES}")
+
+#====================================================================
+# Unified plugin dependency target
+#====================================================================
+add_library(eclipsa_common INTERFACE)
+target_link_libraries(eclipsa_common INTERFACE
+        substream_rdr
+        processors
+        components
+        player
+        logger
+        data_repository
+        data_structures
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)

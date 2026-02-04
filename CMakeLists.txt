@@ -65,6 +65,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 #====================================================================
+# Plugin Formats
+#====================================================================
+set(ECLIPSA_PLUGIN_FORMATS Standalone)
+
+if (BUILD_VST3)
+    list(APPEND ECLIPSA_PLUGIN_FORMATS VST3)
+endif ()
+if (APPLE)
+    list(APPEND ECLIPSA_PLUGIN_FORMATS AU)
+endif ()
+if (BUILD_AAX)
+    list(APPEND ECLIPSA_PLUGIN_FORMATS AAX)
+endif ()
+
+#====================================================================
 # Build Configuration
 #====================================================================
 set(BUILD_LIB_DIR "$<IF:$<CONFIG:Debug>,Debug,Release>")
@@ -92,7 +107,6 @@ endif ()
 #====================================================================
 # Build Options
 #====================================================================
-# Build configuration for different DAW targets
 option(ECLIPSA_LOGIC_PRO_BUILD "Build AU plugin optimized for Logic Pro (7.1.4 layout)" OFF)
 option(INTERNAL_TEST OFF)
 option(CI_TEST OFF)
@@ -145,9 +159,8 @@ add_subdirectory(third_party)
 # AAX Setup
 #====================================================================
 if (BUILD_AAX)
-    # Use find_path instead of hardcoded 'set' to allow user overrides
     find_path(AAX_SDK_ROOT
-            NAMES "Interfaces/AAX_Exports.cpp" # A file known to be in the SDK
+            NAMES "Interfaces/AAX_Exports.cpp"
             HINTS "${AAX_SDK_SEARCH_HINT}"
             DOC "Path to AAX SDK"
     )
@@ -166,6 +179,38 @@ endif ()
 add_subdirectory(common)
 add_subdirectory(rendererplugin)
 add_subdirectory(audioelementplugin)
+
+#====================================================================
+# Dependency List
+#====================================================================
+add_library(eclipsa_dependencies INTERFACE)
+
+target_link_libraries(eclipsa_dependencies INTERFACE
+        # Vendored shared libs
+        vendored_gpac
+        vendored_iamf_tools
+        libzmq
+
+        # Static libs from third_party
+        saf
+        Libear
+        LUFSMeter
+        spatialaudiolib
+        ${IAMF_LIB_NAME}
+)
+
+if (APPLE)
+    target_link_libraries(eclipsa_dependencies INTERFACE
+            vendored_obr
+    )
+elseif (WIN32)
+    target_link_libraries(eclipsa_dependencies INTERFACE
+            vendored_gpac_crypto
+            vendored_gpac_ssl
+            ZLIB::ZLIB
+            delayimp
+    )
+endif ()
 
 #====================================================================
 # Testing #2

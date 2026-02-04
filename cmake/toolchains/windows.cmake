@@ -21,21 +21,12 @@ endif ()
 set(_WINDOWS_TOOLCHAIN_INCLUDED TRUE)
 
 #====================================================================
-#Plugin Formats
+# AAX SDK Path (Windows)
 #====================================================================
-set(_DEFAULT_FORMATS "Standalone")
-
 if (BUILD_AAX)
     set(AAX_SDK_VER "2-8-1" CACHE STRING "AAX SDK Version")
-    list(APPEND _DEFAULT_FORMATS "AAX")
     set(AAX_SDK_SEARCH_HINT "C:/Code/Repos/aax-sdk-${AAX_SDK_VER}" CACHE INTERNAL "")
 endif ()
-
-if (BUILD_VST3)
-    list(APPEND _DEFAULT_FORMATS "VST3")
-endif ()
-
-set(PLUGIN_FORMATS "${_DEFAULT_FORMATS}" CACHE STRING "Target plugin formats")
 
 #====================================================================
 #Compiler Settings

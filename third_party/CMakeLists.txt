@@ -142,7 +142,7 @@ endif ()
 #====================================================================
 # Imported Targets
 #====================================================================
-# 1. GPAC (renamed to vendored_gpac)
+#GPAC (renamed to vendored_gpac)
 if (NOT TARGET vendored_gpac)
     add_library(vendored_gpac SHARED IMPORTED GLOBAL)
     if (APPLE)
@@ -157,7 +157,7 @@ if (NOT TARGET vendored_gpac)
     endif ()
 endif ()
 
-# 2. IAMF Tools (renamed to vendored_iamf_tools)
+#IAMF Tools (renamed to vendored_iamf_tools)
 if (NOT TARGET vendored_iamf_tools)
     add_library(vendored_iamf_tools SHARED IMPORTED GLOBAL)
     if (APPLE)
@@ -172,22 +172,14 @@ if (NOT TARGET vendored_iamf_tools)
     endif ()
 endif ()
 
-# 3. OBR (Mac Only - renamed to vendored_obr)
+#OBR (Mac Only)
 if (APPLE AND NOT TARGET vendored_obr)
     add_library(vendored_obr SHARED IMPORTED GLOBAL)
     set_target_properties(vendored_obr PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/obr/lib/obr.dylib")
 endif ()
 
-# 4. Windows-Specific Helpers
+#Windows-Specific Helpers
 if (WIN32)
-    if (NOT TARGET vendored_opensvc)
-        add_library(vendored_opensvc SHARED IMPORTED GLOBAL)
-        set_target_properties(vendored_opensvc PROPERTIES
-                IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/OpenSVC/lib/Windows/Release/OpenSVCDecoder.dll"
-                IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/OpenSVC/lib/Windows/Debug/OpenSVCDecoder.dll"
-        )
-    endif ()
-
     if (NOT TARGET vendored_gpac_crypto)
         add_library(vendored_gpac_crypto SHARED IMPORTED GLOBAL)
         set_target_properties(vendored_gpac_crypto PROPERTIES

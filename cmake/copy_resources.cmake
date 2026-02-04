@@ -54,27 +54,24 @@ function(copy_resources target plugin_path)
     set(ALL_DEPS ${COMMON_DEPS} ${PLATFORM_DEPS})
 
     # =========================================================================
-    # Copy Commands for Common Libs
+    # Copy Commands
     # =========================================================================
     set(COPY_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}"
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_IAMF}"
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_GPAC}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${DEST_GPAC}/"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${DEST_IAMF}/"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${DEST_ROOT}/"
     )
 
-    # =========================================================================
-    # Copy Commands for Platforms
-    # =========================================================================
     if (APPLE)
         list(APPEND COPY_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_IAMF}"
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_OBR}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_GPAC}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${DEST_GPAC}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${DEST_IAMF}/"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_obr>" "${DEST_OBR}/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${DEST_ROOT}/"
         )
     elseif (WIN32)
-        foreach (_dep IN LISTS PLATFORM_DEPS)
+        foreach (_dep IN LISTS ALL_DEPS)
             list(APPEND COPY_COMMANDS
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${_dep}>" "${DEST_ROOT}/")
         endforeach ()
