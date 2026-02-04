@@ -120,7 +120,7 @@ TEST_F(FilePlaybackProcessorTest, invalid_iamf) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path().parent_path() /
       "common/processors/tests/test_resources" / "Invalid.iamf";
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -136,7 +136,7 @@ TEST_F(FilePlaybackProcessorTest, play_valid_file) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createBasicIAMFFile(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -163,7 +163,7 @@ TEST_F(FilePlaybackProcessorTest, pause_valid_file) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createBasicIAMFFile(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -191,7 +191,7 @@ TEST_F(FilePlaybackProcessorTest, stop_valid_file) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createBasicIAMFFile(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -224,7 +224,7 @@ TEST_F(FilePlaybackProcessorTest, play_updates_file_position) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -256,7 +256,7 @@ TEST_F(FilePlaybackProcessorTest, change_file_during_playback) {
       std::filesystem::current_path() / "test_fpb_processor_new.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
   createIAMFFile30SecStereo(kNewReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -294,7 +294,7 @@ TEST_F(FilePlaybackProcessorTest, commands_while_buffering) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
 
   fpbData.processorState.read(procState);
   EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
@@ -316,7 +316,7 @@ TEST_F(FilePlaybackProcessorTest, seek_while_playing) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -342,7 +342,7 @@ TEST_F(FilePlaybackProcessorTest, seek_while_stopped) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -364,7 +364,7 @@ TEST_F(FilePlaybackProcessorTest, chained_seeks) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -425,7 +425,7 @@ TEST_F(FilePlaybackProcessorTest, start_export_while_playing) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -457,7 +457,7 @@ TEST_F(FilePlaybackProcessorTest, start_export_while_buffering) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
 
   fpbData.processorState.read(procState);
   EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
@@ -483,7 +483,7 @@ TEST_F(FilePlaybackProcessorTest, destroy_while_playing) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
   waitForBuffering();
 
   fpbData.processorState.read(procState);
@@ -503,7 +503,7 @@ TEST_F(FilePlaybackProcessorTest, destroy_while_buffering) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
   createIAMFFile30SecStereo(kReferenceFilePath);
-  setFile(juce::String(kReferenceFilePath));
+  setFile(juce::String(kReferenceFilePath.string()));
 
   fpbData.processorState.read(procState);
   EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
