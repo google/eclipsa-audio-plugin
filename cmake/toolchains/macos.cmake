@@ -63,3 +63,35 @@ set(SAF_PERFORMANCE_LIB "SAF_USE_APPLE_ACCELERATE" CACHE STRING "")
 set(ECLIPSA_STATIC_LIB_SUFFIX ".a" CACHE STRING "")
 
 set(ECLIPSA_PLATFORM "macos" CACHE STRING "")
+
+#====================================================================
+# GPAC Paths
+#====================================================================
+set(GPAC_DYLIB "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/libgpac.dylib" CACHE FILEPATH "")
+set(GPAC_EXTRA_LIBS "" CACHE STRING "")
+set(GPAC_COPY_DLL OFF CACHE BOOL "")
+
+#====================================================================
+# IAMF Tools Paths
+#====================================================================
+set(IAMF_TOOLS_DYLIB "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/libiamf_tools.dylib" CACHE FILEPATH "")
+set(IAMF_TOOLS_COPY_DLL OFF CACHE BOOL "")
+
+#====================================================================
+# Libear Paths
+#====================================================================
+set(LIBEAR_DEBUG_PATH "${CMAKE_SOURCE_DIR}/third_party/libear/lib/libear.a" CACHE FILEPATH "")
+set(LIBEAR_RELEASE_PATH "${CMAKE_SOURCE_DIR}/third_party/libear/lib/libear.a" CACHE FILEPATH "")
+
+#====================================================================
+# LibIAMF Paths
+#====================================================================
+set(LIBIAMF_VENDOR_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos" CACHE PATH "")
+set(LIBIAMF_NEEDS_PATCHING OFF CACHE BOOL "")
+set(LIBIAMF_REMOVE_M_LINKAGE OFF CACHE BOOL "")
+
+#====================================================================
+# OBR Paths
+#====================================================================
+set(OBR_DYLIB "${CMAKE_SOURCE_DIR}/third_party/obr/lib/obr.dylib" CACHE FILEPATH "")
+set(OBR_USE_STATIC OFF CACHE BOOL "")

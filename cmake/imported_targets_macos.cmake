@@ -12,7 +12,6 @@
 #====================================================================
 # Imported Targets - macOS
 #====================================================================
-
 # GPAC
 if (NOT TARGET vendored_gpac)
     add_library(vendored_gpac SHARED IMPORTED GLOBAL)
@@ -20,7 +19,6 @@ if (NOT TARGET vendored_gpac)
             IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/libgpac.dylib"
     )
 endif ()
-
 # IAMF Tools
 if (NOT TARGET vendored_iamf_tools)
     add_library(vendored_iamf_tools SHARED IMPORTED GLOBAL)
@@ -28,7 +26,6 @@ if (NOT TARGET vendored_iamf_tools)
             IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/libiamf_tools.dylib"
     )
 endif ()
-
 # OBR
 if (NOT TARGET vendored_obr)
     add_library(vendored_obr SHARED IMPORTED GLOBAL)

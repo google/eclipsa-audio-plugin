@@ -1,17 +1,8 @@
 add_library(libear INTERFACE)
 target_include_directories(libear INTERFACE "include/")
-target_compile_options(libear INTERFACE "-w") # Silence is golden
+target_compile_options(libear INTERFACE "-w")
 
-#Cross-platform setup
-if(WIN32)
-    set(LIBEAR_DEBUG_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/Windows/Debug/libear.lib")
-    set(LIBEAR_RELEASE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/Windows/Release/libear.lib")
-else()
-    set(LIBEAR_DEBUG_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/libear.a")
-    set(LIBEAR_RELEASE_PATH "${CMAKE_CURRENT_LIST_DIR}/lib/libear.a")
-endif()
-
-# Check that the file actually exists
+# Validate paths from toolchain
 if(NOT EXISTS "${LIBEAR_DEBUG_PATH}")
     message(FATAL_ERROR "libear Debug library not found at: ${LIBEAR_DEBUG_PATH}")
 endif()
@@ -30,10 +21,11 @@ set_target_properties(libear_archive PROPERTIES
         IMPORTED_LOCATION_MINSIZEREL "${LIBEAR_RELEASE_PATH}"
 )
 
-target_link_libraries(libear 
-  INTERFACE 
-    libear_archive
-    Boost::optional 
-    Boost::variant 
-    Boost::math 
-    Boost::algorithm)
+target_link_libraries(libear
+        INTERFACE
+        libear_archive
+        Boost::optional
+        Boost::variant
+        Boost::math
+        Boost::algorithm
+)

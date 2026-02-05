@@ -138,4 +138,45 @@ endif ()
 
 set(ECLIPSA_PLATFORM "windows" CACHE STRING "")
 
+#====================================================================
+# GPAC Paths
+#====================================================================
+set(GPAC_DEBUG_DLL "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/Debug/libgpac.dll" CACHE FILEPATH "")
+set(GPAC_DEBUG_LIB "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/Debug/libgpac.lib" CACHE FILEPATH "")
+set(GPAC_RELEASE_DLL "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/Release/libgpac.dll" CACHE FILEPATH "")
+set(GPAC_RELEASE_LIB "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/Release/libgpac.lib" CACHE FILEPATH "")
+set(GPAC_EXTRA_LIBS "ws2_32;shlwapi;winmm" CACHE STRING "")
+set(GPAC_COPY_DLL ON CACHE BOOL "")
+
+#====================================================================
+# IAMF Tools Paths
+#====================================================================
+set(IAMF_TOOLS_DEBUG_DLL "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Debug/iamf_tools.dll" CACHE FILEPATH "")
+set(IAMF_TOOLS_DEBUG_LIB "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Debug/iamf_tools.if.lib" CACHE FILEPATH "")
+set(IAMF_TOOLS_RELEASE_DLL "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Release/iamf_tools.dll" CACHE FILEPATH "")
+set(IAMF_TOOLS_RELEASE_LIB "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Release/iamf_tools.if.lib" CACHE FILEPATH "")
+set(IAMF_TOOLS_COPY_DLL ON CACHE BOOL "")
+
+#====================================================================
+# Libear Paths
+#====================================================================
+set(LIBEAR_DEBUG_PATH "${CMAKE_SOURCE_DIR}/third_party/libear/lib/Windows/Debug/libear.lib" CACHE FILEPATH "")
+set(LIBEAR_RELEASE_PATH "${CMAKE_SOURCE_DIR}/third_party/libear/lib/Windows/Release/libear.lib" CACHE FILEPATH "")
+
+#====================================================================
+# LibIAMF Paths
+#====================================================================
+set(LIBIAMF_VENDOR_DEBUG_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Debug" CACHE PATH "")
+set(LIBIAMF_VENDOR_RELEASE_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Release" CACHE PATH "")
+set(LIBIAMF_NEEDS_PATCHING ON CACHE BOOL "")
+set(LIBIAMF_REMOVE_M_LINKAGE ON CACHE BOOL "")
+
+#====================================================================
+# OBR Paths
+#====================================================================
+set(OBR_DEBUG_LIB "${CMAKE_SOURCE_DIR}/third_party/obr/lib/Windows/Debug/obr.lib" CACHE FILEPATH "")
+set(OBR_RELEASE_LIB "${CMAKE_SOURCE_DIR}/third_party/obr/lib/Windows/Release/obr.lib" CACHE FILEPATH "")
+set(PFFFT_DEBUG_LIB "${CMAKE_SOURCE_DIR}/third_party/obr/lib/Windows/Debug/pffft.lib" CACHE FILEPATH "")
+set(PFFFT_RELEASE_LIB "${CMAKE_SOURCE_DIR}/third_party/obr/lib/Windows/Release/pffft.lib" CACHE FILEPATH "")
+set(OBR_USE_STATIC ON CACHE BOOL "")
 
