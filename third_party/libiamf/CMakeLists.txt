@@ -29,8 +29,27 @@ FetchContent_GetProperties(libiamf)
 if (NOT libiamf_POPULATED)
     FetchContent_Populate(libiamf)
 
-    # Patch CMakeLists.txt if needed (Windows)
-    if (LIBIAMF_NEEDS_PATCHING)
+    #====================================================================
+    # Platform-specific configuration
+    #====================================================================
+    if (APPLE)
+        set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
+        file(REMOVE
+                "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libopus.a"
+                "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libfdk-aac.a"
+                "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libFLAC.a"
+        )
+        file(COPY
+                "${LIBIAMF_CODEC_PATH}/libopus.a"
+                "${LIBIAMF_CODEC_PATH}/libFLAC.a"
+                "${LIBIAMF_CODEC_PATH}/libfdk-aac.a"
+                "${LIBIAMF_CODEC_PATH}/libogg.a"
+                DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
+        )
+        link_directories("${LIBIAMF_CODEC_PATH}")
+
+    elseif (WIN32)
+        # Patch CMakeLists.txt to remove GCC-only flags
         file(READ "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" LIBIAMF_CMAKE_CONTENT)
         string(REPLACE "-O3" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
         string(REPLACE "-Werror=unused-variable" "" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
@@ -39,72 +58,33 @@ if (NOT libiamf_POPULATED)
         string(REPLACE " m " " " LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
         string(REPLACE "option(BUILD_SHARED_LIBS \"Build shared library\" ON)" "option(BUILD_SHARED_LIBS \"Build shared library\" OFF)" LIBIAMF_CMAKE_CONTENT "${LIBIAMF_CMAKE_CONTENT}")
         file(WRITE "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" "${LIBIAMF_CMAKE_CONTENT}")
-        message(STATUS "Patched libiamf CMakeLists.txt to remove GCC-only flags and m library")
-    endif ()
+        message(STATUS "Patched libiamf CMakeLists.txt for Windows")
 
-    # Vendor library handling
-    if (DEFINED LIBIAMF_VENDOR_PATH)
-        # macOS: single vendor path
-        file(REMOVE
-                "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libopus.a"
-                "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libfdk-aac.a"
-                "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/libFLAC.a"
-        )
+        set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/windows")
         file(COPY
-                "${LIBIAMF_VENDOR_PATH}/libopus.a"
-                "${LIBIAMF_VENDOR_PATH}/libFLAC.a"
-                "${LIBIAMF_VENDOR_PATH}/libfdk-aac.a"
-                "${LIBIAMF_VENDOR_PATH}/libogg.a"
+                "${LIBIAMF_CODEC_PATH}/fdk-aac.lib"
+                "${LIBIAMF_CODEC_PATH}/FLAC.lib"
+                "${LIBIAMF_CODEC_PATH}/opus.lib"
+                "${LIBIAMF_CODEC_PATH}/ogg.lib"
                 DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
         )
-        link_directories("${LIBIAMF_VENDOR_PATH}")
-    elseif (DEFINED LIBIAMF_VENDOR_DEBUG_PATH)
-        # Windows: debug/release vendor paths
-        message(STATUS "Using Windows codec libraries for IAMF")
-
-        if (EXISTS "${LIBIAMF_VENDOR_DEBUG_PATH}/fdk-aac.lib")
-            file(COPY
-                    "${LIBIAMF_VENDOR_DEBUG_PATH}/fdk-aac.lib"
-                    "${LIBIAMF_VENDOR_DEBUG_PATH}/FLAC.lib"
-                    "${LIBIAMF_VENDOR_DEBUG_PATH}/opus.lib"
-                    "${LIBIAMF_VENDOR_DEBUG_PATH}/ogg.lib"
-                    DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
-            )
-        endif ()
-
-        if (EXISTS "${LIBIAMF_VENDOR_RELEASE_PATH}/fdk-aac.lib")
-            file(COPY
-                    "${LIBIAMF_VENDOR_RELEASE_PATH}/fdk-aac.lib"
-                    "${LIBIAMF_VENDOR_RELEASE_PATH}/FLAC.lib"
-                    "${LIBIAMF_VENDOR_RELEASE_PATH}/opus.lib"
-                    "${LIBIAMF_VENDOR_RELEASE_PATH}/ogg.lib"
-                    DESTINATION "${libiamf_SOURCE_DIR}/code/dep_codecs/lib/"
-            )
-        endif ()
-
-        message(STATUS "Using Protobuf and Abseil targets from FetchContent")
     endif ()
 
-    # Build libiamf (after patching)
+    # Build libiamf
     add_subdirectory(${libiamf_SOURCE_DIR}/code ${libiamf_BINARY_DIR})
 
-    # Remove 'm' linkage if needed (Windows)
-    if (LIBIAMF_REMOVE_M_LINKAGE AND TARGET iamf)
-        message(STATUS "Patching libiamf: removing Linux-only 'm' linkage")
+    # Windows: remove 'm' linkage and add codec libs
+    if (WIN32 AND TARGET iamf)
         get_target_property(_iamf_libs iamf INTERFACE_LINK_LIBRARIES)
         if (_iamf_libs)
             list(REMOVE_ITEM _iamf_libs m)
             set_target_properties(iamf PROPERTIES INTERFACE_LINK_LIBRARIES "${_iamf_libs}")
         endif ()
-    endif ()
-
-    # Windows codec linking (after target exists)
-    if (DEFINED LIBIAMF_VENDOR_RELEASE_PATH AND TARGET iamf)
         target_link_libraries(iamf
-                "${LIBIAMF_VENDOR_RELEASE_PATH}/fdk-aac.lib"
-                "${LIBIAMF_VENDOR_RELEASE_PATH}/FLAC.lib"
-                "${LIBIAMF_VENDOR_RELEASE_PATH}/opus.lib"
-                "${LIBIAMF_VENDOR_RELEASE_PATH}/ogg.lib"
+                "${LIBIAMF_CODEC_PATH}/fdk-aac.lib"
+                "${LIBIAMF_CODEC_PATH}/FLAC.lib"
+                "${LIBIAMF_CODEC_PATH}/opus.lib"
+                "${LIBIAMF_CODEC_PATH}/ogg.lib"
         )
     endif ()
 endif ()
@@ -114,7 +94,7 @@ if (TARGET iamf)
     target_link_libraries(iamf ogg)
 endif ()
 
-# Include dirs (for iamfdec_utils)
+# Include dirs
 set(LIBIAMF_INCLUDE_DIRS
         ${libiamf_SOURCE_DIR}/code/include
         ${libiamf_SOURCE_DIR}/code/src/common
@@ -131,7 +111,7 @@ set(LIBIAMF_INCLUDE_DIRS
         CACHE INTERNAL "LIBIAMF include directories"
 )
 
-# Build iamfdec_utils (no main)
+# Build iamfdec_utils
 if (EXISTS "${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src")
     set(IAMFDEC_UTIL_SOURCES
             ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/dmemory.c
@@ -141,20 +121,14 @@ if (EXISTS "${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src")
             ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/src/vlogging_iamfmp4_sr.c
     )
 
-    if (IAMFDEC_UTIL_SOURCES)
-        add_library(iamfdec_utils STATIC ${IAMFDEC_UTIL_SOURCES})
-        target_include_directories(iamfdec_utils PUBLIC
-                ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/include
-                $<TARGET_PROPERTY:iamf,INTERFACE_INCLUDE_DIRECTORIES>
-        )
-        target_include_directories(iamfdec_utils PRIVATE ${LIBIAMF_INCLUDE_DIRS})
-        if (TARGET iamf)
-            target_link_libraries(iamfdec_utils PUBLIC iamf)
-        else ()
-            message(WARNING "Core 'iamf' target not found for linking iamfdec_utils.")
-        endif ()
-        message(STATUS "Created iamfdec_utils library (without main).")
-    endif ()
+    add_library(iamfdec_utils STATIC ${IAMFDEC_UTIL_SOURCES})
+    target_include_directories(iamfdec_utils PUBLIC
+            ${libiamf_SOURCE_DIR}/code/test/tools/iamfdec/include
+            $<TARGET_PROPERTY:iamf,INTERFACE_INCLUDE_DIRECTORIES>
+    )
+    target_include_directories(iamfdec_utils PRIVATE ${LIBIAMF_INCLUDE_DIRS})
+    target_link_libraries(iamfdec_utils PUBLIC iamf)
+    message(STATUS "Created iamfdec_utils library (without main).")
 endif ()
 
 message(STATUS "LIBIAMF source directory: ${libiamf_SOURCE_DIR}")

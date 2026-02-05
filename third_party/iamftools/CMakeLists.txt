@@ -23,48 +23,4 @@ target_include_directories(iamftools INTERFACE
         "${CMAKE_CURRENT_SOURCE_DIR}/iamf/include/iamf_tools"
 )
 
-# Cross-platform dynamic library setup
-add_library(iamftools_dylib SHARED IMPORTED)
-
-if (DEFINED IAMF_TOOLS_DYLIB)
-    # macOS: single dylib
-    set_target_properties(iamftools_dylib PROPERTIES
-            IMPORTED_LOCATION "${IAMF_TOOLS_DYLIB}"
-            IMPORTED_SONAME "libiamf_tools.dylib"
-            LINKER_LANGUAGE CXX
-    )
-else ()
-    # Windows: dll + lib with debug/release
-    foreach (_file ${IAMF_TOOLS_DEBUG_DLL} ${IAMF_TOOLS_DEBUG_LIB} ${IAMF_TOOLS_RELEASE_DLL} ${IAMF_TOOLS_RELEASE_LIB})
-        if (NOT EXISTS "${_file}")
-            message(FATAL_ERROR "IAMF Tools file not found: ${_file}")
-        endif ()
-    endforeach ()
-
-    message(STATUS "IAMF Tools Debug DLL: ${IAMF_TOOLS_DEBUG_DLL}")
-    message(STATUS "IAMF Tools Release DLL: ${IAMF_TOOLS_RELEASE_DLL}")
-
-    set_target_properties(iamftools_dylib PROPERTIES
-            IMPORTED_LOCATION "${IAMF_TOOLS_RELEASE_DLL}"
-            IMPORTED_LOCATION_DEBUG "${IAMF_TOOLS_DEBUG_DLL}"
-            IMPORTED_LOCATION_RELEASE "${IAMF_TOOLS_RELEASE_DLL}"
-            IMPORTED_IMPLIB "${IAMF_TOOLS_RELEASE_LIB}"
-            IMPORTED_IMPLIB_DEBUG "${IAMF_TOOLS_DEBUG_LIB}"
-            IMPORTED_IMPLIB_RELEASE "${IAMF_TOOLS_RELEASE_LIB}"
-            LINKER_LANGUAGE CXX
-    )
-endif ()
-
-if (IAMF_TOOLS_COPY_DLL)
-    add_custom_target(copy_iamftools_dll ALL
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<IF:$<CONFIG:Debug>,${IAMF_TOOLS_DEBUG_DLL},${IAMF_TOOLS_RELEASE_DLL}>"
-            "${CMAKE_BINARY_DIR}/$<CONFIG>/iamf_tools.dll"
-            COMMENT "Copying IAMF Tools DLL to build directory"
-    )
-endif ()
-
-target_link_libraries(iamftools INTERFACE
-        iamftools_dylib
-        proto-objects
-)
+target_link_libraries(iamftools INTERFACE iamftools_impl proto-objects)

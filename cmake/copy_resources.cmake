@@ -14,28 +14,23 @@
 
 function(copy_resources target plugin_path)
 
-    # =========================================================================
-    # Common Dependency List Between Mac and Windows
-    # =========================================================================
-    set(COMMON_DEPS vendored_gpac
-            vendored_iamf_tools
-            libzmq
-    )
-    # =========================================================================
-    # Platform-Specific Configurations
-    # =========================================================================
     if (APPLE)
-        set(PLATFORM_DEPS vendored_obr)
         set(DEST_ROOT "${plugin_path}/Contents/Resources")
-        set(DEST_IAMF "${DEST_ROOT}/third_party/iamftools/lib")
-        set(DEST_OBR "${DEST_ROOT}/third_party/obr/lib")
-        set(DEST_GPAC "${DEST_ROOT}/third_party/gpac/lib")
 
-    elseif (WIN32)
-        set(PLATFORM_DEPS vendored_gpac_crypto
-                vendored_gpac_ssl
+        add_custom_command(TARGET ${target} PRE_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}/third_party/gpac/lib"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}/third_party/iamftools/lib"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}/third_party/obr/lib"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${DEST_ROOT}/third_party/gpac/lib/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${DEST_ROOT}/third_party/iamftools/lib/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_obr>" "${DEST_ROOT}/third_party/obr/lib/"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${DEST_ROOT}/"
+                COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libzmq>" "${DEST_ROOT}/libzmq.5.dylib"
+                COMMAND ${CMAKE_COMMAND} -E create_symlink "libzmq.5.dylib" "${DEST_ROOT}/libzmq.dylib"
         )
 
+    elseif (WIN32)
         if ("${target}" MATCHES ".*_VST3$")
             set(DEST_ROOT "${plugin_path}/Contents/x86_64-win")
         elseif ("${target}" MATCHES ".*_AAX$")
@@ -47,61 +42,21 @@ function(copy_resources target plugin_path)
             return()
         endif ()
 
-        set(DEST_IAMF "${DEST_ROOT}")
-        set(DEST_GPAC "${DEST_ROOT}")
-    endif ()
-
-    set(ALL_DEPS ${COMMON_DEPS} ${PLATFORM_DEPS})
-
-    # =========================================================================
-    # Copy Commands
-    # =========================================================================
-    set(COPY_COMMANDS
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}"
-    )
-
-    if (APPLE)
-        list(APPEND COPY_COMMANDS
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_IAMF}"
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_OBR}"
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_GPAC}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_gpac>" "${DEST_GPAC}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_iamf_tools>" "${DEST_IAMF}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:vendored_obr>" "${DEST_OBR}/"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:libzmq>" "${DEST_ROOT}/"
-        )
-    elseif (WIN32)
-        foreach (_dep IN LISTS ALL_DEPS)
+        set(COPY_COMMANDS COMMAND ${CMAKE_COMMAND} -E make_directory "${DEST_ROOT}")
+        foreach (_dep IN LISTS ECLIPSA_VENDORED_LIBS)
             list(APPEND COPY_COMMANDS
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${_dep}>" "${DEST_ROOT}/")
-        endforeach ()
-    endif ()
-
-    add_custom_command(TARGET ${target} PRE_BUILD ${COPY_COMMANDS})
-
-    # =========================================================================
-    # Platform-Specific Post-Processing
-    # =========================================================================
-    if (APPLE)
-        # ZMQ symlinks
-        add_custom_command(TARGET ${target} PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libzmq>" "${DEST_ROOT}/libzmq.5.dylib"
-                COMMAND ${CMAKE_COMMAND} -E create_symlink "libzmq.5.dylib" "${DEST_ROOT}/libzmq.dylib"
-        )
-
-    elseif (WIN32)
-        # DELAYLOAD flags
-        foreach (_dep IN LISTS ALL_DEPS)
             target_link_options(${target} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:${_dep}>")
         endforeach ()
+        add_custom_command(TARGET ${target} PRE_BUILD ${COPY_COMMANDS})
 
-        # Signing dir copy (for JUCE VST3 validator)
         set(VST3_SIGNING_DIR "${CMAKE_CURRENT_BINARY_DIR}/${BUILD_LIB_DIR}")
         set(SIGNING_COMMANDS COMMAND ${CMAKE_COMMAND} -E make_directory "${VST3_SIGNING_DIR}")
-        foreach (_dep IN LISTS ALL_DEPS)
+        foreach (_dep IN LISTS ECLIPSA_VENDORED_LIBS)
             list(APPEND SIGNING_COMMANDS
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${_dep}>" "${VST3_SIGNING_DIR}/")
         endforeach ()
         add_custom_command(TARGET ${target} PRE_BUILD ${SIGNING_COMMANDS})
     endif ()
+
 endfunction()

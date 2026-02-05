@@ -13,6 +13,12 @@ include(FetchContent)
 
 # Force static linking for all third-party dependencies
 set(BUILD_SHARED_LIBS OFF)
+
+#====================================================================
+# Prebuilt Libraries (must come first)
+#====================================================================
+include("${CMAKE_SOURCE_DIR}/cmake/prebuiltLibs/${ECLIPSA_PLATFORM}.cmake")
+
 #====================================================================
 # Add Dependencies
 #====================================================================
@@ -92,4 +98,4 @@ endif ()
 #====================================================================
 # Imported Targets
 #====================================================================
-include("${CMAKE_SOURCE_DIR}/cmake/imported_targets_${ECLIPSA_PLATFORM}.cmake")
+#include("${CMAKE_SOURCE_DIR}/cmake/prebuiltLibs/imported_targets_${ECLIPSA_PLATFORM}.cmake")
