@@ -97,3 +97,45 @@ set(ECLIPSA_PLATFORM_LIBS
         CACHE STRING "Platform-specific libraries"
 )
 
+set(ECLIPSA_IAMF_LIB_DIR "${CMAKE_BINARY_DIR}/_deps/libiamf-build/$<CONFIG>" CACHE STRING "")
+
+set(ECLIPSA_STATIC_LIB_SUFFIX ".lib" CACHE STRING "")
+
+#====================================================================
+# SAF Performance Library (Intel MKL)
+#====================================================================
+if (NOT DEFINED CACHE{SAF_PERFORMANCE_LIB})
+    if (NOT DEFINED MKL_ROOT)
+        set(MKL_ROOT "$ENV{MKLROOT}" CACHE PATH "Path to Intel MKL root directory")
+    endif ()
+
+    if (NOT MKL_ROOT OR NOT EXISTS "${MKL_ROOT}")
+        message(STATUS "SAF: Intel MKL not found. MKLROOT is not set or invalid: '${MKL_ROOT}'")
+        message(STATUS "      Falling back to OpenBLAS/LAPACKE")
+        set(SAF_PERFORMANCE_LIB "SAF_USE_OPEN_BLAS_AND_LAPACKE" CACHE STRING "" FORCE)
+    else ()
+        message(STATUS "SAF: Found Intel MKL at: ${MKL_ROOT}")
+        set(SAF_PERFORMANCE_LIB "SAF_USE_INTEL_MKL_LP64" CACHE STRING "" FORCE)
+        set(INTEL_MKL_HEADER_PATH "${MKL_ROOT}/include" CACHE STRING "" FORCE)
+        set(INTEL_MKL_LIB
+                "${MKL_ROOT}/lib/mkl_intel_lp64.lib"
+                "${MKL_ROOT}/lib/mkl_sequential.lib"
+                "${MKL_ROOT}/lib/mkl_core.lib"
+                CACHE STRING "" FORCE
+        )
+
+        if (NOT EXISTS "${INTEL_MKL_HEADER_PATH}/mkl.h")
+            message(FATAL_ERROR "SAF: MKL header not found at ${INTEL_MKL_HEADER_PATH}/mkl.h")
+        endif ()
+
+        foreach (lib_file ${INTEL_MKL_LIB})
+            if (NOT EXISTS "${lib_file}")
+                message(FATAL_ERROR "SAF: MKL library not found: ${lib_file}")
+            endif ()
+        endforeach ()
+    endif ()
+endif ()
+
+set(ECLIPSA_PLATFORM "windows" CACHE STRING "")
+
+
