@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #pragma once
+#include <filesystem>
 #include <memory>
 
 #include "BackgroundBuffer.h"
@@ -66,6 +67,34 @@ class FilePlaybackProcessor : public ProcessorBase, juce::ValueTree::Listener {
   TaskResult seekTo(const float pos, const bool wasPlaying = false);
   TaskResult changeLayout(const Speakers::AudioElementSpeakerLayout layout,
                           const bool wasPlaying = false);
+  // New Tasks
+  void loadFile(const std::filesystem::path& file, std::atomic_bool& cancel) {
+    const std::filesystem::path kFilePath(file);
+    if (kFilePath.empty() || kFilePath.extension() != ".iamf" ||
+        !std::filesystem::exists(kFilePath)) {
+      // return TaskResult::kLoadFinished;
+    }
+    auto reader = IAMFFileReader::createIamfReader(
+        file, IAMFFileReader::kDefaultReaderSettings, cancel);
+    if (abort) {
+      // Aborted
+    }
+    if (!reader) {
+      // Load failed
+    }
+    auto buffer = new BackgroundBuffer(5, *reader);
+    if (!buffer) {
+      // Load failed
+    }
+    // Populate file context which could include data and the buffer and reader?
+  }
+  void seek(const float pos, BackgroundBuffer& buffer,
+            std::atomic_bool& cancel) {
+    // TODO: Maybe this takes an existing background buffer object
+    buffer.seek(pos, cancel);
+  }
+  void layout(const Speakers::AudioElementSpeakerLayout layout) {}
+
   void resetProcessor();
   void handleTaskCompletion(const TaskResult wayFinished);
 
