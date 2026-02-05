@@ -89,3 +89,11 @@ set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} CACHE INTERNAL "ZLIB libraries for Windows"
 link_libraries(ZLIB::ZLIB)
 link_libraries(delayimp)
 
+set(ECLIPSA_PLATFORM_LIBS
+        vendored_gpac_crypto
+        vendored_gpac_ssl
+        ZLIB::ZLIB
+        delayimp
+        CACHE STRING "Platform-specific libraries"
+)
+

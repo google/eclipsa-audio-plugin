@@ -45,6 +45,13 @@ if (BUILD_AAX)
 endif ()
 
 #====================================================================
-# Library Names (platform-specific)
+# Library Names
 #====================================================================
 set(IAMF_LIB_NAME "libiamf" CACHE STRING "")
+
+set(ECLIPSA_PLATFORM_LIBS
+        vendored_obr
+        CACHE STRING "Platform-specific libraries"
+)
+
+set(ECLIPSA_PLATFORM_PLUGIN_FORMATS AU CACHE STRING "Platform-specific plugin formats")

@@ -72,12 +72,11 @@ set(ECLIPSA_PLUGIN_FORMATS Standalone)
 if (BUILD_VST3)
     list(APPEND ECLIPSA_PLUGIN_FORMATS VST3)
 endif ()
-if (APPLE)
-    list(APPEND ECLIPSA_PLUGIN_FORMATS AU)
-endif ()
 if (BUILD_AAX)
     list(APPEND ECLIPSA_PLUGIN_FORMATS AAX)
 endif ()
+
+list(APPEND ECLIPSA_PLUGIN_FORMATS ${ECLIPSA_PLATFORM_PLUGIN_FORMATS})
 
 #====================================================================
 # Build Configuration
@@ -183,6 +182,11 @@ add_subdirectory(audioelementplugin)
 #====================================================================
 # Dependency List
 #====================================================================
+if (NOT DEFINED ECLIPSA_PLATFORM_LIBS)
+    message(WARNING "ECLIPSA_PLATFORM_LIBS not set—are you using a platform toolchain?")
+    set(ECLIPSA_PLATFORM_LIBS "")
+endif ()
+
 add_library(eclipsa_dependencies INTERFACE)
 
 target_link_libraries(eclipsa_dependencies INTERFACE
@@ -197,20 +201,10 @@ target_link_libraries(eclipsa_dependencies INTERFACE
         LUFSMeter
         spatialaudiolib
         ${IAMF_LIB_NAME}
-)
 
-if (APPLE)
-    target_link_libraries(eclipsa_dependencies INTERFACE
-            vendored_obr
-    )
-elseif (WIN32)
-    target_link_libraries(eclipsa_dependencies INTERFACE
-            vendored_gpac_crypto
-            vendored_gpac_ssl
-            ZLIB::ZLIB
-            delayimp
-    )
-endif ()
+        # Platform-specific (from toolchain)
+        ${ECLIPSA_PLATFORM_LIBS}
+)
 
 #====================================================================
 # Testing #2

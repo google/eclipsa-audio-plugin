@@ -83,7 +83,6 @@ target_include_directories(data_structures INTERFACE
 #====================================================================
 # Substream and Processor Linking
 #====================================================================
-# Both Windows and macOS now link full audio stack (OBR + SAF)
 target_link_libraries(substream_rdr INTERFACE
         libspatialaudio
         obr
