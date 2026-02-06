@@ -42,6 +42,8 @@ Building on windows requires the following additional setup steps:
     -DVCPKG_ROOT=C:/vcpkg/vcpkg
     -DVCPKG_TARGET_TRIPLET=x64-windows
     ```
+3. Set Windows Toolchain:
+   -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/windows.cmake
 
 
 ### Building Plugins Locally with CMake
@@ -67,7 +69,8 @@ The CMake build supports the following flags:
 
 On MacOS, run the following command to configure the CMake build, adding any desired flags as needed
 ```
-cmake -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE --no-warn-unused-cli -S ./ -B ./build -G "Unix Makefiles"
+cmake -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE --no-warn-unused-cli -S ./ -B ./build -G "Unix Makefiles"    -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos.cmake
+
 ```
 
 Or using Ninja
