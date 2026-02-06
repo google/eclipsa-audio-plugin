@@ -104,7 +104,7 @@ The plugin can then be built with the following command:
 cmake --build ./build --config=Release
 ```
 
-Alternativel, use the CMake extension for Visual Studio Code adding the following to settings.json:
+Alternatively, use the CMake extension for Visual Studio Code adding the following to settings.json:
 ```
     "cmake.configureSettings": {
         "VCPKG_ROOT": "C:\\Code\\Repos\\vcpkg",
