@@ -12,38 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-message(STATUS "Using prebuilt pffft from obr build")
+include(FetchContent)
 
-if (WIN32)
-  # Fetch pffft from source on Windows too
-  include(FetchContent)
-  FetchContent_Declare(
-          pffft
-          GIT_REPOSITORY "https://github.com/marton78/pffft.git"
-          SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
-  )
-  FetchContent_GetProperties(pffft)
-  if(NOT pffft_POPULATED)
-    FetchContent_Populate(pffft)
-    add_library(pffft STATIC IMPORTED)
-    set_target_properties(pffft PROPERTIES
-            IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/third_party/Windows/pffft.lib"
-    )
-    target_include_directories(pffft INTERFACE ${pffft_SOURCE_DIR})
-  endif()
-else()
+FetchContent_Declare(
+        pffft
+        GIT_REPOSITORY "https://github.com/marton78/pffft.git"
+        SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
+)
 
-  # macOS/Linux - fetch and build from source
-  include(FetchContent)
-  FetchContent_Declare(
-          pffft
-          GIT_REPOSITORY "https://github.com/marton78/pffft.git"
-          SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
-  )
-  FetchContent_GetProperties(pffft)
-  if(NOT pffft_POPULATED)
+FetchContent_GetProperties(pffft)
+if (NOT pffft_POPULATED)
     FetchContent_Populate(pffft)
-    add_library(pffft STATIC ${pffft_SOURCE_DIR}/pffft.c)
-    target_include_directories(pffft PUBLIC ${pffft_SOURCE_DIR})
-  endif()
-endif()
+
+    if (DEFINED PFFFT_RELEASE_LIB)
+        # Use prebuilt library (set in toolchain)
+        message(STATUS "Using prebuilt pffft from: ${PFFFT_RELEASE_LIB}")
+        add_library(pffft STATIC IMPORTED)
+        set_target_properties(pffft PROPERTIES
+                IMPORTED_LOCATION "${PFFFT_RELEASE_LIB}"
+                IMPORTED_LOCATION_DEBUG "${PFFFT_DEBUG_LIB}"
+                IMPORTED_LOCATION_RELEASE "${PFFFT_RELEASE_LIB}"
+        )
+        target_include_directories(pffft INTERFACE ${pffft_SOURCE_DIR})
+    else ()
+        # Build from source
+        message(STATUS "Building pffft from source")
+        add_library(pffft STATIC ${pffft_SOURCE_DIR}/pffft.c)
+        target_include_directories(pffft PUBLIC ${pffft_SOURCE_DIR})
+    endif ()
+endif ()

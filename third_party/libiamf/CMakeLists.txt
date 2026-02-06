@@ -60,7 +60,7 @@ if (NOT libiamf_POPULATED)
         file(WRITE "${libiamf_SOURCE_DIR}/code/CMakeLists.txt" "${LIBIAMF_CMAKE_CONTENT}")
         message(STATUS "Patched libiamf CMakeLists.txt for Windows")
 
-        set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/windows")
+        set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/Release")
         file(COPY
                 "${LIBIAMF_CODEC_PATH}/fdk-aac.lib"
                 "${LIBIAMF_CODEC_PATH}/FLAC.lib"

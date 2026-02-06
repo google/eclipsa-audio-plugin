@@ -28,7 +28,7 @@ add_library(iamftools_impl SHARED IMPORTED GLOBAL)
 set_target_properties(iamftools_impl PROPERTIES
         IMPORTED_LOCATION_RELEASE "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Release/iamf_tools.dll"
         IMPORTED_LOCATION_DEBUG "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Debug/iamf_tools.dll"
-        IMPORTED_IMPLIB_RELEASE "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Release/iamf_tools.lib"
+        IMPORTED_IMPLIB_RELEASE "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Release/iamf_tools.if.lib"
         IMPORTED_IMPLIB_DEBUG "${CMAKE_SOURCE_DIR}/third_party/iamftools/lib/Windows/Debug/iamf_tools.lib"
 )
 add_library(vendored_iamf_tools ALIAS iamftools_impl)
