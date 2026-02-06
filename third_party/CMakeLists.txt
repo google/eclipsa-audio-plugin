@@ -43,7 +43,7 @@ include("${CMAKE_SOURCE_DIR}/cmake/libspatialaudio.cmake")
 # LUFSMeter
 add_subdirectory(LUFSMeter)
 #====================================================================
-# IAMF library directory (platform-specific structure)
+# IAMF library directory
 #====================================================================
 set(IAMF_LIB_DIR ${ECLIPSA_IAMF_LIB_DIR})
 
