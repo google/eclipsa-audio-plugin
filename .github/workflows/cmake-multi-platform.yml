@@ -284,7 +284,7 @@ jobs:
             -DZMQ_BUILD_TESTS=OFF `
             -DMKL_ROOT="$env:MKLROOT" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/windows.cmake
 
       # --- Configure (macOS) ---
       - name: Configure CMake (macOS)
@@ -296,6 +296,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang \
             -DBUILD_TESTING=ON \
             -DZMQ_BUILD_TESTS=OFF
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/macos.cmake
 
       # --- Build ---
       - name: Build
