@@ -42,8 +42,6 @@ Building on windows requires the following additional setup steps:
     -DVCPKG_ROOT=C:/vcpkg/vcpkg
     -DVCPKG_TARGET_TRIPLET=x64-windows
     ```
-3. Set Windows Toolchain:
-   -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/windows.cmake
 
 
 ### Building Plugins Locally with CMake
@@ -97,7 +95,8 @@ Then execute the Configure and Build commands via the CMake extension.
 
 On Windows, run the following command to configure the CMake build:
 ```
-cmake.exe -DVCPKG_ROOT:STRING=C:\Code\Repos\vcpkg "-DMKL_ROOT:STRING=C:\Program Files (x86)\Intel\oneAPI\mkl\2025.3" -DVCPKG_TARGET_TRIPLET:STRING=x64-windows -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE --no-warn-unused-cli -S ./ -B ./build -G "Visual Studio 17 2022" -T host=x64 -A x64
+cmake.exe -DVCPKG_ROOT:STRING=C:\Code\Repos\vcpkg "-DMKL_ROOT:STRING=C:\Program Files (x86)\Intel\oneAPI\mkl\2025.3" -DVCPKG_TARGET_TRIPLET:STRING=x64-windows -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE --no-warn-unused-cli -S ./ -B ./build -G "Visual Studio 17 2022" -T host=x64 -A x64 -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/windows.cmake
+
 ```
 
 The plugin can then be built with the following command:
