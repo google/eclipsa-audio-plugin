@@ -10,7 +10,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 #====================================================================
-# Prebuilt Libraries - macOS
+# Prebuilt Libraries
 #====================================================================
 
 # GPAC
@@ -41,7 +41,7 @@ set_target_properties(libear_impl PROPERTIES
 )
 
 #====================================================================
-# Vendored Libraries (for bundle packaging)
+# Vendored Libraries
 #====================================================================
 set(ECLIPSA_VENDORED_LIBS
         vendored_gpac
