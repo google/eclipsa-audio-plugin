@@ -131,3 +131,32 @@ if (NOT DEFINED CACHE{SAF_PERFORMANCE_LIB})
     endif ()
 endif ()
 
+#====================================================================
+# Boost Settings
+#====================================================================
+set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "")
+add_definitions(-DBOOST_ALL_NO_LIB)
+
+#====================================================================
+# Test DLLs
+#====================================================================
+set(ECLIPSA_TEST_DLLS
+        "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/$<CONFIG>/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll"
+        "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/libcryptoMD.dll"
+        "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/$<CONFIG>/libsslMD.dll"
+        CACHE STRING ""
+)
+
+#====================================================================
+# Delay-load Libraries
+#====================================================================
+set(ECLIPSA_DELAYLOAD_LIBS
+        vendored_gpac
+        vendored_iamf_tools
+        vendored_opensvc
+        libzmq
+        vendored_gpac_crypto
+        vendored_gpac_ssl
+        CACHE STRING ""
+)
+

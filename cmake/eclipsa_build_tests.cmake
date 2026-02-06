@@ -12,57 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Function to build a single test executable from all the collected test sources
 function(eclipsa_build_tests)
     get_property(test_sources GLOBAL PROPERTY ECLIPSA_TEST_SOURCES)
     get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
 
-    # Remove duplicates from the list of libraries
     list(REMOVE_DUPLICATES test_link_libs)
 
     add_executable(eclipsa_tests ${test_sources})
     target_compile_definitions(eclipsa_tests
-        PUBLIC
+            PUBLIC
             JUCE_WEB_BROWSER=0
             JUCE_USE_CURL=0
             JUCE_VST3_CAN_REPLACE_VST2=0
-            JUCE_SILENCE_XCODE_15_LINKER_WARNING)
+            JUCE_SILENCE_XCODE_15_LINKER_WARNING
+    )
 
-    if(APPLE)
-        set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
-        target_link_directories(eclipsa_tests PRIVATE ${VENDOR_LIB_PATH})
-    elseif(WIN32)
-        set(VENDOR_LIB_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows/${CMAKE_BUILD_TYPE}")
-        target_link_directories(eclipsa_tests PRIVATE ${VENDOR_LIB_PATH})
-
-        # Move the dlls required for the unit tests as well
-        # This can be done in the post build, since we'll run the tests after the build is complete
-        set(ZMQ_DLL         "${CMAKE_BINARY_DIR}/_deps/zeromq-build/bin/${BUILD_LIB_DIR}/libzmq-v143-mt$<$<CONFIG:Debug>:-gd>-4_3_6.dll")
-        set(CRYPTOMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libcryptoMD.dll")
-        set(LIBSSLMD_DLL    "${CMAKE_SOURCE_DIR}/third_party/gpac/lib/Windows/${CMAKE_BUILD_TYPE}/libsslMD.dll")  
-        
-        set(TEST_DIR "${CMAKE_BINARY_DIR}/${BUILD_LIB_DIR}")
-        add_custom_command(TARGET eclipsa_tests POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZMQ_DLL} "${TEST_DIR}/"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CRYPTOMD_DLL} "${TEST_DIR}/"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBSSLMD_DLL} "${TEST_DIR}/"
-        COMMENT "Copied Test DLLs to ${TEST_DIR}"
+    # Vendor library path (set in toolchain)
+    if (DEFINED LIBIAMF_VENDOR_PATH)
+        target_link_directories(eclipsa_tests PRIVATE "${LIBIAMF_VENDOR_PATH}")
+    elseif (DEFINED LIBIAMF_VENDOR_RELEASE_PATH)
+        target_link_directories(eclipsa_tests PRIVATE
+                "$<IF:$<CONFIG:Debug>,${LIBIAMF_VENDOR_DEBUG_PATH},${LIBIAMF_VENDOR_RELEASE_PATH}>"
         )
-    endif()
+    endif ()
 
-    if(DEFINED LIBIAMF_INCLUDE_DIRS)
+    # Copy test DLLs (Windows only, set in toolchain)
+    if (DEFINED ECLIPSA_TEST_DLLS)
+        set(TEST_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>")
+        add_custom_command(TARGET eclipsa_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ECLIPSA_TEST_DLLS} "${TEST_DIR}/"
+                COMMENT "Copying test DLLs to ${TEST_DIR}"
+        )
+    endif ()
+
+    if (DEFINED LIBIAMF_INCLUDE_DIRS)
         target_include_directories(eclipsa_tests PRIVATE ${LIBIAMF_INCLUDE_DIRS})
-    endif()
-    
+    endif ()
+
     target_link_libraries(eclipsa_tests
-        PRIVATE
+            PRIVATE
             ${test_link_libs}
-        PUBLIC
+            PUBLIC
             juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags
-            GTest::gtest_main)
+            GTest::gtest_main
+    )
 
-    gtest_discover_tests(eclipsa_tests
-    DISCOVERY_MODE PRE_TEST)
+    gtest_discover_tests(eclipsa_tests DISCOVERY_MODE PRE_TEST)
 endfunction()
