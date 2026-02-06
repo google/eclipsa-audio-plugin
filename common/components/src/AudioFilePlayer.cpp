@@ -19,7 +19,6 @@
 #include "components/icons/svg/SvgIconLookup.h"
 #include "components/src/EclipsaColours.h"
 #include "data_structures/src/FilePlayback.h"
-#include "processors/file_playback/FilePlaybackProcessor.h"
 
 class AudioFilePlayer::Spinner : public juce::Component, private juce::Timer {
  public:
@@ -102,10 +101,10 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   fileSelectLabel_.setJustificationType(juce::Justification::centred);
 
   playbackSlider_.setRange(0.0, 1.0);
-  playbackSlider_.setValue(0.0, juce::dontSendNotification);
+  playbackSlider_.setValue(0.0, juce::sendNotification);
   playbackSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
   playbackSlider_.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-  playbackSlider_.onValueChange = [this]() {
+  playbackSlider_.onDragEnd = [this]() {
     FilePlayback fpb = fpbr_.get();
     fpb.setSeekPosition(playbackSlider_.getValue());
     fpbr_.update(fpb);
@@ -113,7 +112,7 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   addAndMakeVisible(playbackSlider_);
 
   volumeSlider_.setRange(0, 2);
-  volumeSlider_.setValue(1, juce::dontSendNotification);
+  volumeSlider_.setValue(1, juce::sendNotification);
   volumeSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
   volumeSlider_.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
   volumeSlider_.onValueChange = [this]() {
@@ -161,9 +160,9 @@ void AudioFilePlayer::resized() {
   const int kGap = 5;
 
   // Only render the warning label if we get to a disabled state
-  FilePlaybackProcessor::State state;
+  FilePlayback::ProcessorState state;
   fpbData_.processorState.read(state);
-  if (state == FilePlaybackProcessor::State::kError) {
+  if (state == FilePlayback::ProcessorState::kError) {
     flexBox.items.add(juce::FlexItem(fileSelectLabel_)
                           .withFlex(1)
                           .withHeight(kButtonSz)
@@ -173,7 +172,7 @@ void AudioFilePlayer::resized() {
   }
 
   // Render the spinner when buffering
-  if (state == FilePlaybackProcessor::State::kBuffering) {
+  if (state == FilePlayback::ProcessorState::kBuffering) {
     flexBox.items.add(
         juce::FlexItem(*spinner_)
             .withWidth(kButtonSz)
@@ -220,9 +219,9 @@ void AudioFilePlayer::resized() {
 }
 
 void AudioFilePlayer::update() {
-  FilePlaybackProcessor::State state;
+  FilePlayback::ProcessorState state;
   fpbData_.processorState.read(state);
-  if (state != FilePlaybackProcessor::State::kError) {
+  if (state != FilePlayback::ProcessorState::kError) {
     float currPos = 0.0f;
     fpbData_.currFilePosition.read(currPos);
     unsigned long long duration_s = 0.0f;
@@ -247,7 +246,9 @@ void AudioFilePlayer::update() {
     }
     timeLabel_.setText(timeStr, juce::dontSendNotification);
 
-    playbackSlider_.setValue(currPos, juce::dontSendNotification);
+    if (!playbackSlider_.isMouseButtonDown()) {
+      playbackSlider_.setValue(currPos, juce::dontSendNotification);
+    }
   }
 }
 
@@ -258,12 +259,12 @@ void AudioFilePlayer::timerCallback() {
 }
 
 void AudioFilePlayer::updateComponentVisibility() {
-  FilePlaybackProcessor::State playState;
+  FilePlayback::ProcessorState playState;
   fpbData_.processorState.read(playState);
-  const bool kPlaying = (playState == FilePlaybackProcessor::State::kPlaying);
+  const bool kPlaying = (playState == FilePlayback::ProcessorState::kPlaying);
   const bool kBuffering =
-      (playState == FilePlaybackProcessor::State::kBuffering);
-  const bool kError = (playState == FilePlaybackProcessor::State::kError);
+      (playState == FilePlayback::ProcessorState::kBuffering);
+  const bool kError = (playState == FilePlayback::ProcessorState::kError);
   fileSelectLabel_.setVisible(kError);
   playButton_.setVisible(!kPlaying && !kBuffering && !kError);
   pauseButton_.setVisible(kPlaying && !kError);

@@ -486,6 +486,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Finally, set up the manual export button
   exportButton_.onClick = [this] {
     FileExport config = repository_->get();
+    FilePlayback fpb = filePlaybackRepository_->get();
     if (juce::PluginHostType().isPremiere() && !validFileExportConfig(config)) {
       return;
     }
@@ -505,6 +506,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       exportVideoFolder_.setEnabled(false);
       browseVideoButton_.setEnabled(false);
       browseVideoSourceButton_.setEnabled(false);
+      fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+      fpb.setPlaybackFile("");
       config.setExportCompleted(false);
     } else {
       startTimer_.setEnabled(true);
@@ -522,8 +525,11 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       browseVideoButton_.setEnabled(true);
       browseVideoSourceButton_.setEnabled(true);
       config.setExportCompleted(true);
+      fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+      fpb.setPlaybackFile(config.getExportFile());
     }
     repository_->update(config);
+    filePlaybackRepository_->update(fpb);
     repaint();
   };
   LOG_ANALYTICS(RendererProcessor::instanceId_, "FileExportScreen initiated.");

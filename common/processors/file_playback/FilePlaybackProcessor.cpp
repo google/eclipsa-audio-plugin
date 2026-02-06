@@ -1,68 +1,70 @@
-// Copyright 2025 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "FilePlaybackProcessor.h"
 
+#include <filesystem>
+#include <memory>
+
+#include "FilePlaybackTasks.h"
+#include "IAMFBufferedReader.h"
 #include "data_structures/src/FilePlayback.h"
 #include "juce_core/system/juce_PlatformDefs.h"
 #include "logger/logger.h"
-#include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
-FilePlaybackProcessor::FilePlaybackProcessor(FilePlaybackRepository& fpbr,
-                                             FilePlaybackProcessorData& fpbrd)
-    : fpbr_(fpbr),
-      fpbData_(fpbrd),
-      worker_(std::make_unique<FilePlaybackProcessorWorker>(*this)) {
+FilePlaybackProcessor::FilePlaybackProcessor(FilePlaybackRepository& fpb,
+                                             FilePlaybackProcessorData& fpbd)
+    : fpbr_(fpb), fpbData_(fpbd) {
   // Initialize visible data
-  fpbData_.processorState.update(State::kPaused);
+  fpbData_.processorState.update(FilePlayback::ProcessorState::kPaused);
   fpbData_.currFilePosition.update(0.0f);
   fpbData_.fileDuration_s.update(0);
   fpbr_.registerListener(this);
 }
 
 FilePlaybackProcessor::~FilePlaybackProcessor() {
-  abortTask_ = true;
   fpbr_.deregisterListener(this);
-  fpbData_.processorState.update(State::kPaused);
-  fpbData_.currFilePosition.update(0.0f);
-  fpbData_.fileDuration_s.update(0);
+  // Reset playback commands
+  FilePlayback fpb = fpbr_.get();
+  fpb.setReqdDecodeLayout(Speakers::kStereo);
+  fpb.setSeekPosition(0.0f);
+  fpb.setVolume(1.0f);
+  fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+  fpbr_.update(fpb);
 }
 
 void FilePlaybackProcessor::reinitializeAfterStateRestore() {
-  const juce::String kPlaybackFile = fpbr_.get().getPlaybackFile();
-  if (kPlaybackFile.isNotEmpty()) {
-    worker_->submitTask(FilePlaybackProcessorEvents::TaskType::kLoad,
-                        {.filePath = kPlaybackFile.toStdString()});
-  }
+  const FilePlayback kFpb = fpbr_.get();
+  const std::filesystem::path kFile(kFpb.getPlaybackFile().toStdString());
+  const Speakers::AudioElementSpeakerLayout kLayout(kFpb.getReqdDecodeLayout());
+  submitLoadTask(kFile, kLayout);
 }
 
 void FilePlaybackProcessor::prepareToPlay(double sampleRate,
                                           int samplesPerBlock) {
-  sampleRate_ = sampleRate;
-  samplesPerBlock_ = samplesPerBlock;
+  currCtx_.daw = {.sampleRate = sampleRate, .bufferSize = samplesPerBlock};
+}
+
+void FilePlaybackProcessor::volumeTo(const float vol) {
+  jassert(vol >= 0.0f && vol <= 2.0f);
+  gain_ = vol;
+}
+
+std::unique_ptr<IamfBufferedReader> FilePlaybackProcessor::swapBuffer(
+    std::unique_ptr<IamfBufferedReader> newBuffer) {
+  juce::SpinLock::ScopedLockType lock(bufferLock_);
+  std::unique_ptr<IamfBufferedReader> oldBuffer = std::move(buffer_);
+  buffer_ = std::move(newBuffer);
+  return oldBuffer;
 }
 
 void FilePlaybackProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                         juce::MidiBuffer&) {
-  if (state_ == State::kPlaying && bbl_.tryEnter()) {
-    if (decodedBuffer_ && decodedBuffer_->isReady()) {
+                                         juce::MidiBuffer& mbuffer) {
+  if (state_ == FilePlayback::ProcessorState::kPlaying &&
+      bufferLock_.tryEnter()) {
+    if (buffer_ && buffer_->isReady()) {
       const int kSamplesSourced =
-          resampler_.read(*decodedBuffer_, tempBuffer_, buffer.getNumSamples());
-      // Update current position in file
-      currFile_.samplesConsumed += static_cast<size_t>(kSamplesSourced);
-      fpbData_.currFilePosition.update(currFile_.getPlaybackPosition());
+          resampler_.read(*buffer_, tempBuffer_, buffer.getNumSamples());
+      currCtx_.srcSamplesConsumed += kSamplesSourced;
+      fpbData_.currFilePosition.update(currCtx_.getPlaybackPosition());
 
       tempBuffer_.applyGain(gain_);
 
@@ -75,169 +77,7 @@ void FilePlaybackProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       }
       tempBuffer_.clear();
     }
-    bbl_.exit();
-  }
-}
-
-void FilePlaybackProcessor::volumeTo(const float vol) {
-  jassert(vol >= 0.0f && vol <= 2.0f);
-  gain_ = vol;
-}
-
-FilePlaybackProcessor::TaskResult FilePlaybackProcessor::loadFileForPlayback(
-    const std::string& iamfFile) {
-  juce::SpinLock::ScopedLockType lock(bbl_);
-
-  // Check validity
-  const std::filesystem::path kFilePath(iamfFile);
-  if (kFilePath.empty() || kFilePath.extension() != ".iamf" ||
-      !std::filesystem::exists(kFilePath)) {
-    resetProcessor();
-    return TaskResult::kLoadFinished;
-  }
-
-  decodedBuffer_.reset();
-
-  // Construct the reader and buffer
-  reader_ = IAMFFileReader::createIamfReader(
-      iamfFile, IAMFFileReader::kDefaultReaderSettings, abortTask_);
-  if (!reader_) {
-    TaskResult completionType;
-    if (abortTask_) {
-      completionType = TaskResult::kLoadFinished;
-      LOG_INFO(0, "FilePlaybackProcessor: File load pre-empted");
-    } else {
-      completionType = TaskResult::kLoadFailed;
-      LOG_INFO(0, "FilePlaybackProcessor: Invalid or corrupted IAMF file");
-    }
-    return completionType;
-  }
-
-  decodedBuffer_ = std::make_unique<BackgroundBuffer>(5, *reader_);
-  if (!decodedBuffer_) {
-    LOG_ERROR(0, "FilePlaybackProcessor: Failed to create background buffer");
-    return TaskResult::kLoadFailed;
-  }
-
-  // Populate current file context
-  const IAMFFileReader::StreamData kData = reader_->getStreamData();
-  currFile_ = {.filePath = iamfFile,
-               .sampleRate = kData.sampleRate,
-               .frameSize = kData.frameSize,
-               .numChannels = static_cast<unsigned>(kData.numChannels),
-               .numFrames = kData.numFrames,
-               .samplesConsumed = 0};
-
-  const juce::int64 kDuration = static_cast<juce::int64>(
-      kData.numFrames * kData.frameSize / kData.sampleRate);
-  fpbData_.fileDuration_s.update(kDuration);
-  fpbData_.currFilePosition.update(0.0f);
-
-  // Prepare resampler and temp buffer for playback
-  resampler_.prepare(currFile_.sampleRate, sampleRate_, currFile_.numChannels);
-  tempBuffer_ =
-      juce::AudioBuffer<float>(currFile_.numChannels, samplesPerBlock_);
-  return TaskResult::kLoadFinished;
-}
-
-FilePlaybackProcessor::TaskResult FilePlaybackProcessor::seekTo(
-    const float pos, const bool wasPlaying) {
-  juce::SpinLock::ScopedLockType lock(bbl_);
-  float actualPos = 0.0f;
-  if (reader_ && decodedBuffer_) {
-    const auto kStreamData = reader_->getStreamData();
-    const size_t kTargetFrame =
-        static_cast<size_t>(pos * kStreamData.numFrames);
-    decodedBuffer_->seek(kTargetFrame, abortTask_);
-    if (abortTask_) {
-      LOG_INFO(0, "FilePlaybackProcessor: Seek operation pre-empted");
-      return wasPlaying ? TaskResult::kSeekPlayingFinished
-                        : TaskResult::kSeekPausedFinished;
-    }
-
-    // Update with the actual position
-    currFile_.samplesConsumed = kTargetFrame * kStreamData.frameSize;
-    actualPos = currFile_.getPlaybackPosition();
-  }
-
-  // Wait for the buffer to be ready after seeking
-  if (decodedBuffer_) {
-    LOG_INFO(0,
-             "FilePlaybackProcessor: Waiting for buffer to be ready after "
-             "seek");
-    decodedBuffer_->waitUntilReady();
-    LOG_INFO(0, "FilePlaybackProcessor: Buffer ready after seek.");
-  }
-
-  // Restore the previous playback state after seeking
-  fpbData_.currFilePosition.update(actualPos);
-  return wasPlaying ? TaskResult::kSeekPlayingFinished
-                    : TaskResult::kSeekPausedFinished;
-}
-
-FilePlaybackProcessor::TaskResult FilePlaybackProcessor::changeLayout(
-    const Speakers::AudioElementSpeakerLayout layout, const bool wasPlaying) {
-  juce::SpinLock::ScopedLockType lock(bbl_);
-  decodedBuffer_.reset();
-
-  if (!reader_) {
-    return FilePlaybackProcessorEvents::TaskResult::kLoadFailed;
-  }
-
-  reader_->resetLayout(layout);
-  decodedBuffer_ = std::make_unique<BackgroundBuffer>(5, *reader_);
-  if (!decodedBuffer_) {
-    LOG_ERROR(0,
-              "FilePlaybackProcessor: Failed to create background buffer after "
-              "layout change");
-    return FilePlaybackProcessorEvents::TaskResult::kLoadFailed;
-  }
-
-  // Reset current file context
-  currFile_.samplesConsumed = 0;
-  currFile_.numChannels = layout.getNumChannels();
-
-  // Prepare resampler and temp buffer for playback
-  resampler_.prepare(currFile_.sampleRate, sampleRate_, currFile_.numChannels);
-  tempBuffer_ =
-      juce::AudioBuffer<float>(currFile_.numChannels, samplesPerBlock_);
-  return wasPlaying
-             ? FilePlaybackProcessorEvents::TaskResult::kLayoutPlayingFinished
-             : FilePlaybackProcessorEvents::TaskResult::kLayoutPausedFinished;
-}
-
-void FilePlaybackProcessor::resetProcessor() {
-  decodedBuffer_.reset();
-  reader_.reset();
-
-  // Reset the file context
-  currFile_ = {};
-
-  // Reset processor data to initial state
-  fpbData_.currFilePosition.update(0.0f);
-  fpbData_.fileDuration_s.update(0);
-}
-
-void FilePlaybackProcessor::handleTaskCompletion(const TaskResult wayFinished) {
-  LOG_INFO(0, "FilePlaybackProcessor::handleTaskCompletion: Task completed: " +
-                  std::string(FilePlaybackProcessorEvents::taskResultToString(
-                      wayFinished)));
-
-  switch (wayFinished) {
-    case TaskResult::kLoadFailed:
-      updateProcessorState(State::kError);
-      break;
-    case TaskResult::kLoadFinished:
-    case TaskResult::kLayoutPausedFinished:
-    case TaskResult::kSeekPausedFinished:
-      updateProcessorState(State::kPaused);
-      break;
-    case TaskResult::kLayoutPlayingFinished:
-    case TaskResult::kSeekPlayingFinished:
-      updateProcessorState(State::kPlaying);
-      break;
-    default:
-      break;
+    bufferLock_.exit();
   }
 }
 
@@ -246,40 +86,189 @@ void FilePlaybackProcessor::valueTreePropertyChanged(
   LOG_INFO(0, "FilePlaybackProcessor: ValueTree property changed: " +
                   property.toString().toStdString());
 
-  FilePlayback fpb = fpbr_.get();
+  FilePlayback kFpb = fpbr_.get();
   if (property == FilePlayback::kPlaybackFile) {
-    const juce::String kFile = fpb.getPlaybackFile();
-    worker_->submitTask(FilePlaybackProcessorEvents::TaskType::kLoad,
-                        {.filePath = kFile.toStdString()});
-  } else if (property == FilePlayback::kReqdDecodeLayout) {
-    worker_->submitTask(
-        FilePlaybackProcessorEvents::TaskType::kLayout,
-        {.prevState = state_, .layout = fpb.getReqdDecodeLayout()});
-  } else if (property == FilePlayback::kSeekPosition) {
-    const State kCurrState = state_;
-    worker_->submitTask(
-        FilePlaybackProcessorEvents::TaskType::kSeek,
-        {.prevState = kCurrState, .val = fpb.getSeekPosition()});
-  } else if (property == FilePlayback::kVolume) {
-    const float kVol = fpb.getVolume();
-    volumeTo(kVol);
-  } else if (property == FilePlayback::kPlaybackCommand) {
-    const auto kCmd = fpb.getPlaybackCommand();
+    const std::filesystem::path kFile(kFpb.getPlaybackFile().toStdString());
+    const Speakers::AudioElementSpeakerLayout kLayout(
+        kFpb.getReqdDecodeLayout());
+    submitLoadTask(kFile, kLayout);
+    return;
+  }
+
+  if (property == FilePlayback::kReqdDecodeLayout) {
+    const std::filesystem::path kFile(kFpb.getPlaybackFile().toStdString());
+    const size_t kNumFrames = currCtx_.src.numFrames;
+    const Speakers::AudioElementSpeakerLayout kLayout(
+        kFpb.getReqdDecodeLayout());
+    submitLayoutTask(kFile, kNumFrames, kLayout);
+    return;
+  }
+
+  if (property == FilePlayback::kSeekPosition) {
+    const std::filesystem::path kFile(kFpb.getPlaybackFile().toStdString());
+    const size_t kNumFrames = currCtx_.src.numFrames;
+    const Speakers::AudioElementSpeakerLayout kLayout(
+        kFpb.getReqdDecodeLayout());
+    const float kPos = kFpb.getSeekPosition();
+    const FilePlayback::ProcessorState kPrevState = state_;
+    submitSeekTask(kFile, kNumFrames, kLayout, kPos, kPrevState);
+    return;
+  }
+
+  if (property == FilePlayback::kVolume) {
+    volumeTo(kFpb.getVolume());
+    return;
+  }
+
+  if (property == FilePlayback::kPlaybackCommand) {
+    const auto kCmd = kFpb.getPlaybackCommand();
+    bool existingBuffer;
+    {
+      juce::SpinLock::ScopedLockType lock(bufferLock_);
+      existingBuffer = buffer_ != nullptr;
+    }
     switch (kCmd) {
       case FilePlayback::PlaybackCommand::kPlay:
-        if (state_ != FilePlayback::ProcessorState::kBuffering) {
-          updateProcessorState(State::kPlaying);
+        if (existingBuffer) {
+          updateState(FilePlayback::ProcessorState::kPlaying);
         }
         break;
       case FilePlayback::PlaybackCommand::kPause:
-        if (state_ != FilePlayback::ProcessorState::kBuffering) {
-          updateProcessorState(State::kPaused);
+        if (existingBuffer) {
+          updateState(FilePlayback::ProcessorState::kPaused);
         }
         break;
       case FilePlayback::PlaybackCommand::kStop:
-        worker_->submitTask(FilePlaybackProcessorEvents::TaskType::kSeek,
-                            {.prevState = State::kPaused});
+        const std::filesystem::path kFile(kFpb.getPlaybackFile().toStdString());
+        const size_t kNumFrames = currCtx_.src.numFrames;
+        const Speakers::AudioElementSpeakerLayout kLayout(
+            kFpb.getReqdDecodeLayout());
+        const float kPos = kFpb.getSeekPosition();
+        submitSeekTask(kFile, kNumFrames, kLayout, 0.0f,
+                       FilePlayback::ProcessorState::kPaused);
         break;
     }
+    return;
   }
+}
+
+void FilePlaybackProcessor::postTask(Result&& taskRes) {
+  if (taskRes.status == PlaybackTasks::kPreempted) {
+    return;
+  }
+
+  if (taskRes.status == PlaybackTasks::kLoadFailed) {
+    transitionState(taskRes.status);
+    return;
+  }
+
+  if (taskRes.buffer) {
+    juce::SpinLock::ScopedLockType lock(bufferLock_);
+    if (taskRes.metadata.valid) {
+      currCtx_.src = taskRes.metadata;
+    }
+    const size_t kSrcFrameSz = currCtx_.src.frameSize;
+    const size_t kSeekedSamples = taskRes.seekedFrameIdx * kSrcFrameSz;
+    currCtx_.srcSamplesConsumed = kSeekedSamples;
+
+    resampler_.prepare(currCtx_.src.sampleRate, currCtx_.daw.sampleRate,
+                       currCtx_.src.numChannels);
+    tempBuffer_.setSize(currCtx_.src.numChannels, currCtx_.daw.bufferSize);
+
+    fpbData_.currFilePosition.update(currCtx_.getPlaybackPosition());
+    fpbData_.fileDuration_s.update(currCtx_.src.numFrames *
+                                   currCtx_.src.frameSize /
+                                   currCtx_.src.sampleRate);
+
+    buffer_ = std::move(taskRes.buffer);
+  }
+  transitionState(taskRes.status);
+}
+
+void FilePlaybackProcessor::transitionState(const ResultType res) {
+  const FilePlayback::ProcessorState kNextState = getNextState(res);
+  state_ = kNextState;
+  fpbData_.processorState.update(state_);
+}
+
+FilePlayback::ProcessorState FilePlaybackProcessor::getNextState(
+    const ResultType res) const {
+  switch (res) {
+    case ResultType::kLoadFailed:
+      return FilePlayback::ProcessorState::kError;
+    case ResultType::kLoadFinished:
+    case ResultType::kLayoutFinished:
+    case ResultType::kSeekPausedFinished:
+      return FilePlayback::ProcessorState::kPaused;
+    case ResultType::kSeekPlayingFinished:
+      return FilePlayback::ProcessorState::kPlaying;
+    default:
+      return FilePlayback::ProcessorState::kPaused;
+  }
+}
+
+void FilePlaybackProcessor::updateState(
+    const FilePlayback::ProcessorState state) {
+  state_ = state;
+  fpbData_.processorState.update(state_);
+}
+
+void FilePlaybackProcessor::submitLoadTask(
+    const std::filesystem::path& path,
+    const Speakers::AudioElementSpeakerLayout layout) {
+  if (!PlaybackTasks::isIamfFile(path)) {
+    currCtx_.src.numFrames = 0;
+    fpbData_.fileDuration_s.update(0);
+    updateState(FilePlayback::ProcessorState::kPaused);
+    return;
+  }
+
+  currCtx_.src.numFrames = 0;
+  worker_.submit(
+      [path, layout](Worker::CancelFlag& stop) {
+        return PlaybackTasks::loadTask(path, layout, stop);
+      },
+      [this](Result&& result) { postTask(std::move(result)); });
+  updateState(FilePlayback::ProcessorState::kBuffering);
+}
+
+void FilePlaybackProcessor::submitLayoutTask(
+    const std::filesystem::path& path, const size_t numFrames,
+    const Speakers::AudioElementSpeakerLayout layout) {
+  if (!PlaybackTasks::isIamfFile(path)) {
+    updateState(FilePlayback::ProcessorState::kPaused);
+    return;
+  }
+
+  worker_.submit(
+      [path, layout, numFrames](Worker::CancelFlag& stop) {
+        return PlaybackTasks::layoutTask(path, layout, numFrames, stop);
+      },
+      [this](Result&& result) { postTask(std::move(result)); });
+  updateState(FilePlayback::ProcessorState::kBuffering);
+}
+
+void FilePlaybackProcessor::submitSeekTask(
+    const std::filesystem::path& path, const size_t numFrames,
+    const Speakers::AudioElementSpeakerLayout layout, const float position,
+    const FilePlayback::ProcessorState prevState) {
+  IamfBufferedReader* buffer = swapBuffer(nullptr).release();
+  if (buffer) {
+    worker_.submit(
+        [position, prevState, numFrames, buffer](Worker::CancelFlag& stop) {
+          return PlaybackTasks::seekTask(position, prevState, numFrames, buffer,
+                                         stop);
+        },
+        [this](Result&& result) { postTask(std::move(result)); });
+  } else {
+    worker_.submit(
+        [path, layout, position, numFrames,
+         prevState](Worker::CancelFlag& stop) {
+          return PlaybackTasks::seekTask(path, layout, position, prevState,
+                                         stop);
+        },
+        [this](Result&& result) { postTask(std::move(result)); });
+  }
+
+  updateState(FilePlayback::ProcessorState::kBuffering);
 }

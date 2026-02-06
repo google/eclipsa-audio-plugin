@@ -59,6 +59,7 @@ class ExportValidationComponent : public juce::Component,
       if (selectedIndex >= 0 && selectedIndex < kLayouts.size()) {
         auto fpb = fpbr_.get();
         fpb.setReqdDecodeLayout(kLayouts[selectedIndex]);
+        fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
         fpbr_.update(fpb);
       }
     });
@@ -143,10 +144,10 @@ class ExportValidationComponent : public juce::Component,
   void timerCallback() override { updateLayoutInteractivity(); }
 
   void updateLayoutInteractivity() {
-    FilePlaybackProcessor::State state;
+    FilePlayback::ProcessorState state;
     fpbData_.processorState.read(state);
     layoutToDecode_.setEnabled(state !=
-                               FilePlaybackProcessor::State::kBuffering);
+                               FilePlayback::ProcessorState::kBuffering);
   }
 
   const std::array<Speakers::AudioElementSpeakerLayout, 9> kLayouts{

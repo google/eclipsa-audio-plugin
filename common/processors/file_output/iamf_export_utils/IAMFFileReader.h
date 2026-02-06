@@ -72,6 +72,9 @@ class IAMFFileReader {
   // Takes a reference to an flag that can be set to halt indexing prematurely.
   // Returns the number of frames valid frames or -1 if halted.
   size_t indexFile(std::atomic_bool& haltIndexing);
+  // Setter method if caller wants to manage frame count externally (e.g. via
+  // indexing task)
+  void setNumFrames(size_t numFrames) { streamData_.numFrames = numFrames; }
 
  private:
   IAMFFileReader(const std::filesystem::path& iamfFilePath,

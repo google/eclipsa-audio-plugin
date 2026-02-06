@@ -95,12 +95,6 @@ IAMFFileReader::IAMFFileReader(const std::filesystem::path& iamfFilePath,
   const size_t kSampleBufferSize =
       streamData_.frameSize * streamData_.numChannels * sizeof(int32_t);
   sampleBuffer_ = std::make_unique<char[]>(kSampleBufferSize);
-
-  // If indexing is aborted, flag stream as invalid
-  streamData_.numFrames = indexFile(abortConstruction);
-  if (streamData_.numFrames == -1) {
-    streamData_.valid = false;
-  }
 }
 
 IAMFFileReader::~IAMFFileReader() {
@@ -253,7 +247,8 @@ bool IAMFFileReader::seekFrame(const size_t frameIdx) {
 bool IAMFFileReader::seekFrame(const size_t frameIdx,
                                std::atomic_bool& abortSeek) {
   if (frameIdx >= streamData_.numFrames) {
-    LOG_WARNING(0, "IAMFFileReader: Frame index out of range");
+    LOG_WARNING(0, "IAMFFileReader: Frame index out of range: " +
+                       std::to_string(frameIdx));
     return false;
   }
 
@@ -334,6 +329,7 @@ bool IAMFFileReader::resetLayout(
   }
 
   streamData_ = kNewStreamData;
+  streamData_.numChannels = layout.getNumChannels();
   streamData_.numFrames = kOriginalNumFrames;
   streamData_.currentFrameIdx = 0;
 

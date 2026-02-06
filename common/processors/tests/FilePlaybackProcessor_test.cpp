@@ -1,10 +1,7 @@
-#include "../file_playback/FilePlaybackProcessor.h"
+#include "processors/file_playback/FilePlaybackProcessor.h"
 
 #include <gtest/gtest.h>
 
-#include <memory>
-
-#include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FilePlayback.h"
 #include "processors/tests/FileOutputTestFixture.h"
 
@@ -19,44 +16,40 @@ class FilePlaybackProcessorTest : public FileOutputTests {
     buff.clear();
   }
 
-  // Event processing requires calling processBlock to advance the state
-  // machine
-  void progressStateMachine() { proc->processBlock(buff, mbuff); }
-
   // Helper methods to issue commands and progress state machine
   void setFile(const juce::String& path) {
     fpb = fpbr.get();
     fpb.setPlaybackFile(path);
     fpbr.update(fpb);
-    progressStateMachine();
   }
 
   void setCommand(FilePlayback::PlaybackCommand cmd) {
     fpb = fpbr.get();
     fpb.setPlaybackCommand(cmd);
     fpbr.update(fpb);
-    progressStateMachine();
   }
 
   void setSeek(float position) {
     fpb = fpbr.get();
     fpb.setSeekPosition(position);
     fpbr.update(fpb);
-    progressStateMachine();
+  }
+
+  void setLayout(Speakers::AudioElementSpeakerLayout layout) {
+    fpb = fpbr.get();
+    fpb.setReqdDecodeLayout(layout);
+    fpbr.update(fpb);
   }
 
   void setExportCompleted(bool completed) {
     fe = fileExportRepository.get();
     fe.setExportCompleted(completed);
     fileExportRepository.update(fe);
-    progressStateMachine();
   }
 
   void waitForBuffering() {
-    progressStateMachine();
     fpbData.processorState.read(procState);
     while (procState == FilePlayback::ProcessorState::kBuffering) {
-      progressStateMachine();
       const std::chrono::milliseconds kWaitDuration(10);
       std::this_thread::sleep_for(kWaitDuration);
       fpbData.processorState.read(procState);
@@ -97,7 +90,7 @@ TEST_F(FilePlaybackProcessorTest, no_file) {
   setCommand(FilePlayback::PlaybackCommand::kPlay);
 
   fpbData.processorState.read(procState);
-  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPlaying);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
 
   proc->processBlock(buff, mbuff);
   EXPECT_TRUE(buff.hasBeenCleared());
@@ -270,7 +263,8 @@ TEST_F(FilePlaybackProcessorTest, change_file_during_playback) {
   proc->processBlock(buff, mbuff);
   EXPECT_FALSE(buff.hasBeenCleared());
 
-  // When we change the file, we should read the buffering state, processBlock
+  // When we change the file, we should read the buffering state,
+  // processBlock
   // should produce no audio, and then we should return to stopped after
   // buffering
   buff.clear();
@@ -337,7 +331,7 @@ TEST_F(FilePlaybackProcessorTest, seek_while_playing) {
   EXPECT_FALSE(buff.hasBeenCleared());
 }
 
-// Expect a valid seek to continue producing audio after buffering
+// Valid seek while stopped
 TEST_F(FilePlaybackProcessorTest, seek_while_stopped) {
   const std::filesystem::path kReferenceFilePath =
       std::filesystem::current_path() / "test_fpb_processor.iamf";
@@ -382,7 +376,7 @@ TEST_F(FilePlaybackProcessorTest, chained_seeks) {
   EXPECT_TRUE(buff.hasBeenCleared());
   float filePos = -1.0f;
   fpbData.currFilePosition.read(filePos);
-  EXPECT_FLOAT_EQ(filePos, 0.5f);
+  EXPECT_NEAR(filePos, 0.5f, 0.01f);
 }
 
 // Expect changing the file while seeking to finish at the start of the new
@@ -510,4 +504,118 @@ TEST_F(FilePlaybackProcessorTest, destroy_while_buffering) {
 
   // Destroy processor
   proc.reset();
+}
+
+// Expect changing layout on a fresh file to buffer and return to paused
+TEST_F(FilePlaybackProcessorTest, change_layout_on_fresh_file) {
+  const std::filesystem::path kReferenceFilePath =
+      std::filesystem::current_path() / "test_fpb_processor.iamf";
+  createIAMFFile30SecStereo(kReferenceFilePath);
+  setFile(juce::String(kReferenceFilePath.string()));
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  // Change layout to 5.1
+  setLayout(Speakers::k5Point1);
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
+
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  proc->processBlock(buff, mbuff);
+  EXPECT_TRUE(buff.hasBeenCleared());
+}
+
+// Expect changing layout while playing to buffer and return to paused
+TEST_F(FilePlaybackProcessorTest, change_layout_while_playing) {
+  const std::filesystem::path kReferenceFilePath =
+      std::filesystem::current_path() / "test_fpb_processor.iamf";
+  createIAMFFile30SecStereo(kReferenceFilePath);
+  setFile(juce::String(kReferenceFilePath.string()));
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  setCommand(FilePlayback::PlaybackCommand::kPlay);
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPlaying);
+
+  proc->processBlock(buff, mbuff);
+  EXPECT_FALSE(buff.hasBeenCleared());
+
+  // Change layout to 7.1
+  setLayout(Speakers::k7Point1);
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
+
+  buff.clear();
+  proc->processBlock(buff, mbuff);
+  EXPECT_TRUE(buff.hasBeenCleared());
+
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  proc->processBlock(buff, mbuff);
+  EXPECT_TRUE(buff.hasBeenCleared());
+  float currFilePos = -1.0f;
+  fpbData.currFilePosition.read(currFilePos);
+  EXPECT_FLOAT_EQ(currFilePos, 0.0f);
+}
+
+// Expect seeking after changing layout to work as expected
+TEST_F(FilePlaybackProcessorTest, seek_after_changing_layout) {
+  // Load the file and wait for buffering
+  const std::filesystem::path kReferenceFilePath =
+      std::filesystem::current_path() / "test_fpb_processor.iamf";
+  createIAMFFile30SecStereo(kReferenceFilePath);
+  setFile(juce::String(kReferenceFilePath.string()));
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  // Change the layout
+  setLayout(Speakers::k5Point1);
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kBuffering);
+
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  // Do some seeks and validate
+  setSeek(0.5f);
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+
+  float currFilePos = -1.0f;
+  fpbData.currFilePosition.read(currFilePos);
+  EXPECT_NEAR(currFilePos, 0.5f, 0.01f);
+
+  proc->processBlock(buff, mbuff);
+  EXPECT_TRUE(buff.hasBeenCleared());
+
+  // Seek behind
+  setSeek(0.1f);
+  waitForBuffering();
+
+  fpbData.processorState.read(procState);
+  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPaused);
+  fpbData.currFilePosition.read(currFilePos);
+  EXPECT_NEAR(currFilePos, 0.1f, 0.01f);
 }

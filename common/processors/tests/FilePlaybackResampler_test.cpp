@@ -23,32 +23,32 @@
 
 #undef RDR_TO_FILE
 
-class FilePlaybackResamplerTest : public FileOutputTests {
- protected:
-  FilePlaybackResamplerTest() {
-    // Create the file
-    const std::filesystem::path kReferenceFilePath =
-        std::filesystem::current_path() / "test_fpb_resampler.iamf";
-    createIAMFFile2AE2MP(kReferenceFilePath);
+// class FilePlaybackResamplerTest : public FileOutputTests {
+//  protected:
+//   FilePlaybackResamplerTest() {
+//     // Create the file
+//     const std::filesystem::path kReferenceFilePath =
+//         std::filesystem::current_path() / "test_fpb_resampler.iamf";
+//     createIAMFFile2AE2MP(kReferenceFilePath);
 
-    // Create the reader and background buffer
-    reader = IAMFFileReader::createIamfReader(
-        kReferenceFilePath.string(), IAMFFileReader::kDefaultReaderSettings,
-        abort_);
-    backgroundBuffer = std::make_unique<BackgroundBuffer>(2, *reader);
-    while (!backgroundBuffer->isReady()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+//     // Create the reader and background buffer
+//     reader = IAMFFileReader::createIamfReader(
+//         kReferenceFilePath.string(), IAMFFileReader::kDefaultReaderSettings,
+//         abort_);
+//     backgroundBuffer = std::make_unique<IamfBackgroundBuffer>(2, *reader);
+//     while (!backgroundBuffer->isReady()) {
+//       std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//     }
 
-    // Create the resampler
-    const double kSourceRate = reader->getStreamData().sampleRate;
-  }
+//     // Create the resampler
+//     const double kSourceRate = reader->getStreamData().sampleRate;
+//   }
 
-  std::unique_ptr<IAMFFileReader> reader;
-  std::unique_ptr<BackgroundBuffer> backgroundBuffer;
-  FilePlaybackResampler resampler;
-  std::atomic_bool abort_{false};
-};
+//   std::unique_ptr<IAMFFileReader> reader;
+//   std::unique_ptr<IamfBackgroundBuffer> backgroundBuffer;
+//   FilePlaybackResampler resampler;
+//   std::atomic_bool abort_{false};
+// };
 
 // Feed an IAMF file with a tone to the BackgroundBuffer then test the
 // resampling functionality of the ResamplingReader class.

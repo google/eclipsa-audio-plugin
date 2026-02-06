@@ -26,6 +26,7 @@
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/RoomSetup.h"
 #include "logger/logger.h"
+#include "processors/file_playback/FilePlaybackProcessor.h"
 #include "processors/processor_base/ProcessorBase.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 

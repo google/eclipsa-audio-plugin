@@ -15,8 +15,14 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
-#include "BackgroundBuffer.h"
+#include "IAMFBufferedReader.h"
 
+/**
+ * @brief Resamples IAMF audio data from a source sample rate to a target sample
+ * rate. Uses the buffered reader as an audio source that gets fed to the JUCE
+ * resampler, which the processor pulls from in processBlock().
+ *
+ */
 class FilePlaybackResampler {
  public:
   struct Context {
@@ -58,13 +64,13 @@ class FilePlaybackResampler {
     }
   }
 
-  int read(BackgroundBuffer& sourceFifo, juce::AudioBuffer<float>& destBuffer,
+  int read(IamfBufferedReader& sourceFifo, juce::AudioBuffer<float>& destBuffer,
            int numSamplesToProduce) {
     jassert(destBuffer.getNumChannels() >= numChannels_);
     jassert(numSamplesToProduce > 0);
 
     // Ensure adapter points to the current FIFO
-    bbSource_.setBackgroundBuffer(&sourceFifo);
+    bbSource_.setSourceBuffer(&sourceFifo);
 
     // Capture the cumulative input consumed before this block
     const size_t kInputBefore = bbSource_.getCumulativeInputRead();
@@ -83,9 +89,9 @@ class FilePlaybackResampler {
 
  private:
   // Adapter that exposes BackgroundBuffer as an AudioSource for the resampler
-  class BackgroundBufferAudioSource : public juce::AudioSource {
+  class IamfAudioSource : public juce::AudioSource {
    public:
-    void setBackgroundBuffer(BackgroundBuffer* buf) { buffer_ = buf; }
+    void setSourceBuffer(IamfBufferedReader* buf) { buffer_ = buf; }
 
     size_t getCumulativeInputRead() const { return cumulativeInputRead_; }
 
@@ -121,11 +127,11 @@ class FilePlaybackResampler {
     }
 
    private:
-    BackgroundBuffer* buffer_ = nullptr;
+    IamfBufferedReader* buffer_ = nullptr;
     size_t cumulativeInputRead_ = 0;
   };
 
-  BackgroundBufferAudioSource bbSource_;
+  IamfAudioSource bbSource_;
   std::unique_ptr<juce::ResamplingAudioSource> resampler_;
   int resamplerNumChannels_ = 0;
   double resampleRatio_ = 1.0;

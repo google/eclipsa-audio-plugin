@@ -20,13 +20,14 @@
 #include <cstdlib>
 #include <memory>
 
-#include "PbRingBuffer.h"
+#include "../file_playback/PbRingBuffer.h"
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 
-class BackgroundBuffer {
+class IamfBufferedReader {
  public:
-  BackgroundBuffer(const unsigned paddingSeconds, IAMFFileReader& decoder);
-  ~BackgroundBuffer();
+  explicit IamfBufferedReader(std::unique_ptr<IAMFFileReader>&& reader,
+                              const unsigned paddingSeconds);
+  ~IamfBufferedReader();
 
   bool isReady();
   void waitUntilReady();
@@ -40,12 +41,12 @@ class BackgroundBuffer {
   void notifyTask();
   void decodeTask();
 
-  IAMFFileReader& decoder_;
+  std::unique_ptr<IAMFFileReader> decoder_;
   size_t padSamples_, absSamplePos_;
   juce::SpinLock bufferLock_;
   std::unique_ptr<PbRingBuffer> pbuffer_;
   // Decoding thread and control
-  std::atomic_bool stop_, eof_;
+  std::atomic_bool stop_ = false, eof_ = false;
   std::condition_variable cv_;
   std::mutex cvm_;
   std::thread decodeThread_;
