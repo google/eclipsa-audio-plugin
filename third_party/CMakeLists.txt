@@ -15,7 +15,7 @@ include(FetchContent)
 set(BUILD_SHARED_LIBS OFF)
 
 #====================================================================
-# Prebuilt Libraries (must come first)
+# Prebuilt Libraries
 #====================================================================
 include("${CMAKE_SOURCE_DIR}/cmake/prebuiltLibs/${ECLIPSA_PLATFORM}.cmake")
 
@@ -36,7 +36,12 @@ add_subdirectory(libear)
 include("${CMAKE_SOURCE_DIR}/cmake/zeromq.cmake")
 #LibIAMF for audio file import.
 add_subdirectory(libiamf)
-
+# gpac for AV muxing
+add_subdirectory(gpac)
+# lib spatialaudio for panning
+include("${CMAKE_SOURCE_DIR}/cmake/libspatialaudio.cmake")
+# LUFSMeter
+add_subdirectory(LUFSMeter)
 #====================================================================
 # IAMF library directory (platform-specific structure)
 #====================================================================
@@ -46,28 +51,6 @@ set(IAMF_LIB_DIR ${ECLIPSA_IAMF_LIB_DIR})
 link_directories(${IAMF_LIB_DIR})
 set(IAMF_LIB_DIR ${IAMF_LIB_DIR} CACHE STRING "IAMF library directory")
 
-#====================================================================
-#Spatial Audio Framework
-#Override some of the SAF variables
-#Unit tests for SAF have been tested and they pass, confirming the SAF library is working as expected.
-# Manually set the SAF_PERFORMANCE_LIB variables for each platform
-#====================================================================
-# Spatial Audio Framework
-#====================================================================
-set(SAF_BUILD_TESTS 0 CACHE BOOL "" FORCE)
-set(SAF_BUILD_EXAMPLES 1 CACHE BOOL "" FORCE)
-set(saf_example_list ambi_dec CACHE STRING "" FORCE)
-
-message(STATUS "SAF: Building from source with ${SAF_PERFORMANCE_LIB}")
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/Spatial_Audio_Framework)
-
-# gpac for AV muxing
-add_subdirectory(gpac)
-# lib spatialaudio for panning
-include("${CMAKE_SOURCE_DIR}/cmake/libspatialaudio.cmake")
-# LUFSMeter
-add_subdirectory(LUFSMeter)
-
 # IAMF decoder
 set(IAMF_DEC_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/libiamf/code/include")
 if (EXISTS ${IAMF_DEC_INCLUDE_DIR})
@@ -76,7 +59,18 @@ else ()
     message(FATAL_ERROR "IAMF decoder include directory not found: ${IAMF_DEC_INCLUDE_DIR}")
 endif ()
 
-# SAF includes (optional)
+#====================================================================
+#Spatial Audio Framework
+#====================================================================
+set(SAF_BUILD_TESTS 0 CACHE BOOL "" FORCE)
+set(SAF_BUILD_EXAMPLES 1 CACHE BOOL "" FORCE)
+set(saf_example_list ambi_dec CACHE STRING "" FORCE)
+
+# Manually set the SAF_PERFORMANCE_LIB variables for each platform
+message(STATUS "SAF: Building from source with ${SAF_PERFORMANCE_LIB}")
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/Spatial_Audio_Framework)
+
+# SAF includes
 set(SAF_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/Spatial_Audio_Framework/examples/include")
 if (EXISTS ${SAF_INCLUDE_DIR})
     include_directories(${SAF_INCLUDE_DIR})
@@ -84,7 +78,9 @@ else ()
     message(WARNING "SAF include directory not found: ${SAF_INCLUDE_DIR}")
 endif ()
 
-#Force all projects to use locally fetched Protobuf
+#====================================================================
+# Protobuf
+#====================================================================
 if (DEFINED protobuf_SOURCE_DIR AND DEFINED protobuf_BINARY_DIR)
     message(STATUS "Overriding Protobuf include/lib paths with fetched version")
     set(Protobuf_INCLUDE_DIRS "${protobuf_SOURCE_DIR}/src" CACHE PATH "" FORCE)
