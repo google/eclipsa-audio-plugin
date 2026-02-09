@@ -101,6 +101,7 @@ class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
   void drawCircle(juce::Graphics& g, juce::Rectangle<int>& bounds);
   void drawCarat(juce::Graphics& g);
   void drawHeatmap(juce::Graphics& g, const juce::Rectangle<int>& bounds);
+  void updatePeakLoudnesses(const std::vector<float>& currentLoudnesses);
 
   std::optional<std::pair<float, float>> projectSpeakerToView(
       const CartesianPoint3D& speaker3D, const VisualizerView& view,
@@ -118,6 +119,13 @@ class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
   juce::AffineTransform caratTransform_;
 
   const std::vector<CartesianPoint3D> speakerPositions_;
+
+  // Peak hold mechanism for speaker loudnesses
+  std::vector<float> peakLoudnesses_;       // Stores peak loudness per speaker
+  std::vector<int> decayCounters_;          // Countdown before decay starts
+  static constexpr int kRefreshRate_ = 30;  // Hz
+  static constexpr float kDecayPeriod_ = 0.5f;  // seconds
+  static constexpr float kDecayRate_ = 1.0f;  // dB per frame after decay period
   const juce::Image carat_ = IconStore::getInstance().getCaratIcon();
 
   juce::Label label_;                  // label holds the position text

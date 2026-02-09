@@ -23,14 +23,16 @@ AmbisonicsVisualizer::AmbisonicsVisualizer(AmbisonicsData* ambisonicsData,
                                            const VisualizerView& view)
     : ambisonicsData_(ambisonicsData),
       view_(view),
-      speakerPositions_(getSpeakerPositions(ambisonicsData)) {
+      speakerPositions_(getSpeakerPositions(ambisonicsData)),
+      peakLoudnesses_(ambisonicsData->speakerAzimuths.size(), -100.0f),
+      decayCounters_(ambisonicsData->speakerAzimuths.size(), 0) {
   label_.setText(getViewText(view), juce::dontSendNotification);
   label_.setJustificationType(juce::Justification::centred);
   label_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
   label_.setColour(juce::Label::backgroundColourId,
                    juce::Colours::transparentBlack);
   addAndMakeVisible(label_);
-  startTimerHz(30);
+  startTimerHz(kRefreshRate_);
 }
 
 AmbisonicsVisualizer::~AmbisonicsVisualizer() { setLookAndFeel(nullptr); }
@@ -206,6 +208,9 @@ void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
   std::vector<float> loudnessValues(ambisonicsData_->speakerElevations.size());
   ambisonicsData_->speakerLoudnesses.read(loudnessValues);
 
+  // Update peak loudnesses with current values
+  updatePeakLoudnesses(loudnessValues);
+
   const float kRadius = bounds.getWidth() / 2.0f;
   const float kCentreX = bounds.getCentreX();
   const float kCentreY = bounds.getCentreY();
@@ -218,7 +223,8 @@ void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
 
   // Draw a radial gradient for each speaker
   for (int i = 0; i < ambisonicsData_->speakerAzimuths.size(); i++) {
-    float loudness = loudnessValues[i];
+    // Use peak loudness instead of current value
+    float loudness = peakLoudnesses_[i];
 
     // Skip silent speakers
     const float kSilenceThreshold = -40.0f;
@@ -396,4 +402,32 @@ float AmbisonicsVisualizer::CartesianPoint3D::geoDesicDistance(
 float AmbisonicsVisualizer::CartesianPoint3D::dotProduct(
     const CartesianPoint3D& vec1, const CartesianPoint3D& vec2) {
   return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z;
+}
+
+void AmbisonicsVisualizer::updatePeakLoudnesses(
+    const std::vector<float>& currentLoudnesses) {
+  for (int i = 0; i < currentLoudnesses.size(); i++) {
+    float currentLoudness = currentLoudnesses[i];
+
+    // If current loudness is higher (louder) than peak, update peak and reset
+    // decay
+    if (currentLoudness > peakLoudnesses_[i]) {
+      peakLoudnesses_[i] = currentLoudness;
+      decayCounters_[i] = static_cast<int>(kRefreshRate_ * kDecayPeriod_);
+    } else {
+      // Decrement counter
+      --decayCounters_[i];
+
+      // When counter expires, begin decaying the peak
+      if (decayCounters_[i] <= 0) {
+        peakLoudnesses_[i] -= kDecayRate_;
+
+        // Don't let peak go below silence threshold
+        const float kSilenceThreshold = -100.0f;
+        if (peakLoudnesses_[i] < kSilenceThreshold) {
+          peakLoudnesses_[i] = kSilenceThreshold;
+        }
+      }
+    }
+  }
 }
