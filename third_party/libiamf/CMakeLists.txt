@@ -28,6 +28,7 @@ set(HOA_BINAURALIZER OFF CACHE BOOL "Enable HOA binaural rendering" FORCE)
 FetchContent_GetProperties(libiamf)
 if (NOT libiamf_POPULATED)
     FetchContent_Populate(libiamf)
+    file(REMOVE_RECURSE "${libiamf_SOURCE_DIR}/tests")
 
     #====================================================================
     # Platform-specific configuration
