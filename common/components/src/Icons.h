@@ -43,7 +43,7 @@ class IconStore {
   /* =========================================================================
    * To add a new icon:
      - Place icon in "icons" folder
-     - Update macos.cmake in the "icons" folder to include the new icon
+     - Update CMakeLists.txt in the "icons" folder to include the new icon
      - Run the build, which regnerates the JUCE binary data file
      - Add a new LOAD_IMAGE macro for the new icon, using the icon's filename
      - Fetch your new icon with IconStore::getInstance().getNewIcon()
