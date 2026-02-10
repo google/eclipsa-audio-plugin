@@ -52,12 +52,8 @@ endif ()
 #====================================================================
 set(X_VCPKG_APPLOCAL_DEPS_INSTALL OFF CACHE BOOL "")
 
-if (NOT DEFINED VCPKG_ROOT)
-    if (DEFINED ENV{VCPKG_ROOT})
-        set(VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "Path to vcpkg root")
-    elseif (DEFINED ENV{VCPKG_INSTALLATION_ROOT})
-        set(VCPKG_ROOT "$ENV{VCPKG_INSTALLATION_ROOT}" CACHE PATH "Path to vcpkg root")
-    endif ()
+if (NOT DEFINED VCPKG_ROOT AND DEFINED ENV{VCPKG_ROOT})
+    set(VCPKG_ROOT "$ENV{VCPKG_ROOT}" CACHE PATH "Path to vcpkg root")
 endif ()
 
 if (DEFINED VCPKG_ROOT)
@@ -68,28 +64,19 @@ if (DEFINED VCPKG_ROOT)
     endif ()
 
     if (NOT DEFINED VCPKG_TARGET_TRIPLET)
-        set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+        set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "vcpkg target triplet")
     endif ()
 
-    # --- NEW: FORCE INSTALL ZLIB FOR REMOTE RUNNERS ---
-    # This ensures ZLIB exists before find_package is called.
-    message(STATUS "VCPKG: Pre-installing ZLIB to satisfy toolchain requirements...")
-    execute_process(
-            COMMAND "${VCPKG_ROOT}/vcpkg" install zlib:${VCPKG_TARGET_TRIPLET}
-            RESULT_VARIABLE VCPKG_ZLIB_RESULT
-    )
-    if (NOT VCPKG_ZLIB_RESULT EQUAL 0)
-        message(FATAL_ERROR "VCPKG: Failed to pre-install ZLIB.")
-    endif()
-    # --------------------------------------------------
+    message(STATUS "vcpkg toolchain: ${_VCPKG_TOOLCHAIN}")
+    message(STATUS "vcpkg triplet: ${VCPKG_TARGET_TRIPLET}")
 
     include("${_VCPKG_TOOLCHAIN}")
 else ()
-    message(WARNING "vcpkg not configured. Set VCPKG_ROOT environment variable.")
+    message(WARNING "vcpkg not configured. Set VCPKG_ROOT environment variable or pass -DVCPKG_ROOT=<path>")
 endif ()
 
 #====================================================================
-# Dependencies (Now ZLIB will be found)
+# Dependencies
 #====================================================================
 find_package(ZLIB REQUIRED)
 set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} CACHE INTERNAL "ZLIB libraries for Windows")
