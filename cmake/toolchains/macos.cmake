@@ -57,6 +57,8 @@ set(ECLIPSA_STATIC_LIB_SUFFIX ".a" CACHE STRING "")
 set(ECLIPSA_PLATFORM_PLUGIN_FORMATS AU CACHE STRING "")
 set(ECLIPSA_PLATFORM_LIBS vendored_obr CACHE STRING "")
 set(SAF_PERFORMANCE_LIB "SAF_USE_APPLE_ACCELERATE" CACHE STRING "")
+set(LIBIAMF_VENDOR_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos" CACHE PATH "")
+
 
 #====================================================================
 # Bundle Structure

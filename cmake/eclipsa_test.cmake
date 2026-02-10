@@ -24,38 +24,36 @@ function(eclipsa_add_test test_name test_source test_libs)
     get_property(test_sources GLOBAL PROPERTY ECLIPSA_TEST_SOURCES)
     set_property(GLOBAL PROPERTY ECLIPSA_TEST_SOURCES "${test_sources};${absolute_test_source}")
 
-    # Append the test libraries to a global list of libraries
-    get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
-    set_property(GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS "${test_link_libs};${test_libs}")
-
     # Add codec libraries for all test targets if on macOS
     if(APPLE)
-        # Append only if not already present in test_libs
+        set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
         list(FIND test_libs "opus" opus_found)
         if(opus_found EQUAL -1)
-            list(APPEND test_libs opus)
+            list(APPEND test_libs "${LIBIAMF_CODEC_PATH}/libopus.a")
         endif()
         list(FIND test_libs "ogg" ogg_found)
         if(ogg_found EQUAL -1)
-            list(APPEND test_libs ogg)
+            list(APPEND test_libs "${LIBIAMF_CODEC_PATH}/libogg.a")
         endif()
     endif()
 
     # Add IAMF include directories if 'iamf' or 'iamfdec_utils' is requested
     if("${test_libs}" MATCHES "iamf" OR "${test_libs}" MATCHES "iamfdec_utils")
         if(NOT DEFINED LIBIAMF_INCLUDE_DIRS)
-             message(WARNING "LIBIAMF_INCLUDE_DIRS not defined, but required by ${test_name}")
+            message(WARNING "LIBIAMF_INCLUDE_DIRS not defined, but required by ${test_name}")
         endif()
     endif()
-    
+
     # If iamfdec_utils was requested, make sure iamf is also linked (dependency)
     if(TARGET iamf AND "${test_libs}" MATCHES "iamfdec_utils")
-        # Check if iamf is already in the list to avoid duplicates
         list(FIND test_libs "iamf" iamf_already_linked)
         if(iamf_already_linked EQUAL -1)
-            # Link iamf privately as it's a dependency of a private lib
             list(APPEND test_libs iamf)
             message(STATUS "Also linking core 'iamf' library as dependency for ${test_name}")
         endif()
     endif()
+
+    # Append the test libraries to global list AFTER all modifications
+    get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
+    set_property(GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS "${test_link_libs};${test_libs}")
 endfunction()
