@@ -272,6 +272,13 @@ jobs:
              Write-Warning "Could not find lib or lib/intel64 under MKLROOT"
              Get-ChildItem "$env:MKLROOT" -Recurse -Depth 2
           }
+          
+      # --- Install vcpkg dependencies (Windows) ---
+      - name: Install vcpkg dependencies
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          vcpkg install --triplet x64-windows
 
       # --- Configure (Windows) ---
       - name: Configure CMake (Windows)
