@@ -35,13 +35,13 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version")
 #====================================================================
 get_filename_component(_ECLIPSA_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 set(CMAKE_BUILD_RPATH
+        "${_ECLIPSA_ROOT}"
         "@loader_path/../Resources"
         "${_ECLIPSA_ROOT}/third_party/gpac/lib"
         "${_ECLIPSA_ROOT}/third_party/iamftools/lib"
         "${_ECLIPSA_ROOT}/third_party/obr/lib"
         CACHE STRING ""
 )
-
 #====================================================================
 # Linker Settings
 #====================================================================
