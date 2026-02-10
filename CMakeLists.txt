@@ -153,7 +153,10 @@ include("${CMAKE_SOURCE_DIR}/cmake/eclipsa_plugin_defaults.cmake")
 # Dependencies
 #====================================================================
 add_subdirectory(third_party)
-
+if(WIN32)
+    find_package(ZLIB REQUIRED)
+    link_libraries(ZLIB::ZLIB)
+endif()
 #====================================================================
 # AAX Setup
 #====================================================================

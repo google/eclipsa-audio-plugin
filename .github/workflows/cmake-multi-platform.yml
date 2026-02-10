@@ -272,6 +272,23 @@ jobs:
              Write-Warning "Could not find lib or lib/intel64 under MKLROOT"
              Get-ChildItem "$env:MKLROOT" -Recurse -Depth 2
           }
+        # --- vcpkg Setup (Windows) ---
+      - name: Export GitHub Actions cache environment variables
+        if: runner.os == 'Windows'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');    
+
+      - name: Setup vcpkg
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          echo "VCPKG_ROOT=C:\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          cd C:\vcpkg
+          git pull
+          .\bootstrap-vcpkg.bat 
           
       # --- Install vcpkg dependencies (Windows) ---
       - name: Install vcpkg dependencies
@@ -290,6 +307,7 @@ jobs:
             -DBUILD_TESTING=ON `
             -DZMQ_BUILD_TESTS=OFF `
             -DMKL_ROOT="$env:MKLROOT" `
+            -DVCPKG_ROOT="$env:VCPKG_ROOT" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
             -DCMAKE_TOOLCHAIN_FILE="cmake/toolchains/windows.cmake"
 

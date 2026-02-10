@@ -33,7 +33,14 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version")
 #====================================================================
 # RPATH Configuration
 #====================================================================
-set(CMAKE_BUILD_RPATH "@loader_path/../Resources" CACHE STRING "")
+get_filename_component(_ECLIPSA_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(CMAKE_BUILD_RPATH
+        "@loader_path/../Resources"
+        "${_ECLIPSA_ROOT}/third_party/gpac/lib"
+        "${_ECLIPSA_ROOT}/third_party/iamftools/lib"
+        "${_ECLIPSA_ROOT}/third_party/obr/lib"
+        CACHE STRING ""
+)
 
 #====================================================================
 # Linker Settings
@@ -58,7 +65,6 @@ set(ECLIPSA_PLATFORM_PLUGIN_FORMATS AU CACHE STRING "")
 set(ECLIPSA_PLATFORM_LIBS vendored_obr CACHE STRING "")
 set(SAF_PERFORMANCE_LIB "SAF_USE_APPLE_ACCELERATE" CACHE STRING "")
 set(LIBIAMF_VENDOR_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos" CACHE PATH "")
-
 
 #====================================================================
 # Bundle Structure
