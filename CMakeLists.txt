@@ -176,6 +176,7 @@ endif ()
 # Add Sub Directories
 #====================================================================
 add_subdirectory(common)
+message(STATUS "ECLIPSA_PLUGIN_FORMATS = ${ECLIPSA_PLUGIN_FORMATS}")
 add_subdirectory(rendererplugin)
 add_subdirectory(audioelementplugin)
 
