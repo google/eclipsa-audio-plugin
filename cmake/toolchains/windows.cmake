@@ -23,7 +23,7 @@ set(_WINDOWS_TOOLCHAIN_INCLUDED TRUE)
 #====================================================================
 # Platform Identifier
 #====================================================================
-set(ECLIPSA_PLATFORM "windows" CACHE STRING "")
+set(ECLIPSA_PLATFORM "windows" CACHE STRING "" FORCE)
 
 #====================================================================
 # AAX SDK Path

@@ -90,8 +90,9 @@ if (NOT libiamf_POPULATED)
     endif ()
 endif ()
 
-# Extra linking for ogg
-if (TARGET iamf)
+# Extra linking for ogg (Mac/Linux only)
+# Windows is already handled explicitly above with full paths
+if (TARGET iamf AND NOT WIN32)
     target_link_libraries(iamf ogg)
 endif ()
 

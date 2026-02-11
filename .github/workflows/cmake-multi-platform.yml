@@ -289,7 +289,7 @@ jobs:
           cd C:\vcpkg
           git pull
           .\bootstrap-vcpkg.bat 
-          
+
       # --- Install vcpkg dependencies (Windows) ---
       - name: Install vcpkg dependencies
         if: runner.os == 'Windows'
@@ -309,7 +309,8 @@ jobs:
             -DMKL_ROOT="$env:MKLROOT" `
             -DVCPKG_ROOT="$env:VCPKG_ROOT" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DCMAKE_TOOLCHAIN_FILE="cmake/toolchains/windows.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="cmake/toolchains/windows.cmake"
 
       # --- Configure (macOS) ---
       - name: Configure CMake (macOS)
