@@ -231,8 +231,13 @@ void FilePlaybackProcessor::submitLoadTask(
     const std::filesystem::path& path,
     const Speakers::AudioElementSpeakerLayout layout) {
   if (!PlaybackTasks::isIamfFile(path)) {
+    {
+      juce::SpinLock::ScopedLockType lock(bufferLock_);
+      buffer_ = nullptr;
+    }
     currCtx_.src.numFrames = 0;
     fpbData_.fileDuration_s.update(0);
+    fpbData_.currFilePosition.update(0);
     updateState(FilePlayback::ProcessorState::kPaused);
     return;
   }
