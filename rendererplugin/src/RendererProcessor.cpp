@@ -16,8 +16,6 @@
 
 #include <processors/processors.h>
 
-#include <memory>
-
 #include "RendererEditor.h"
 #include "RendererVersionConverter.h"
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"

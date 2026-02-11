@@ -25,7 +25,6 @@
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FilePlayback.h"
 #include "data_structures/src/FilePlaybackProcessorData.h"
-#include "processors/file_playback/FilePlaybackProcessor.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 class ExportValidationComponent : public juce::Component,
