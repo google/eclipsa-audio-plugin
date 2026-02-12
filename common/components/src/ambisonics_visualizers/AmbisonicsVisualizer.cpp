@@ -14,6 +14,7 @@
 
 #include "AmbisonicsVisualizer.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "components/src/EclipsaColours.h"
@@ -24,8 +25,7 @@ AmbisonicsVisualizer::AmbisonicsVisualizer(AmbisonicsData* ambisonicsData,
     : ambisonicsData_(ambisonicsData),
       view_(view),
       speakerPositions_(getSpeakerPositions(ambisonicsData)),
-      peakLoudnesses_(ambisonicsData->speakerAzimuths.size(), -100.0f),
-      decayCounters_(ambisonicsData->speakerAzimuths.size(), 0) {
+      smoothedLoudnesses_(ambisonicsData->speakerAzimuths.size(), -100.0f) {
   label_.setText(getViewText(view), juce::dontSendNotification);
   label_.setJustificationType(juce::Justification::centred);
   label_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
@@ -208,8 +208,8 @@ void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
   std::vector<float> loudnessValues(ambisonicsData_->speakerElevations.size());
   ambisonicsData_->speakerLoudnesses.read(loudnessValues);
 
-  // Update peak loudnesses with current values
-  updatePeakLoudnesses(loudnessValues);
+  // Update smoothed loudnesses with current values
+  updateSmoothedLoudnesses(loudnessValues);
 
   const float kRadius = bounds.getWidth() / 2.0f;
   const float kCentreX = bounds.getCentreX();
@@ -223,12 +223,12 @@ void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
 
   // Draw a radial gradient for each speaker
   for (int i = 0; i < ambisonicsData_->speakerAzimuths.size(); i++) {
-    // Use peak loudness instead of current value
-    float loudness = peakLoudnesses_[i];
+    // Use smoothed loudness instead of current value
+    const float kLoudness = smoothedLoudnesses_[i];
 
     // Skip silent speakers
-    const float kSilenceThreshold = -40.0f;
-    if (loudness < kSilenceThreshold) {
+    const float kSilenceThreshold = -60.0f;
+    if (kLoudness < kSilenceThreshold) {
       continue;
     }
 
@@ -245,7 +245,7 @@ void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
     const auto [kSpeakerX, kSpeakerY] = kProjectedPoint.value();
 
     // Map loudness to color
-    juce::Colour colour = ColourLegend::assignColour(loudness);
+    juce::Colour colour = ColourLegend::assignColour(kLoudness);
 
     // Create radial gradient from speaker position
     // Gradient radius based on loudness (louder = larger influence area)
@@ -254,7 +254,7 @@ void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
     const float kMaxGradientScale = 1.0f;
     const float kGradientRadius =
         kRadius * kGradientRadMultiplier *
-        juce::jmap(loudness, kSilenceThreshold, 0.0f, kMinGradientScale,
+        juce::jmap(kLoudness, kSilenceThreshold, 0.0f, kMinGradientScale,
                    kMaxGradientScale);
 
     const float kCenterAlpha = 0.8f;
@@ -404,30 +404,23 @@ float AmbisonicsVisualizer::CartesianPoint3D::dotProduct(
   return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z;
 }
 
-void AmbisonicsVisualizer::updatePeakLoudnesses(
+void AmbisonicsVisualizer::updateSmoothedLoudnesses(
     const std::vector<float>& currentLoudnesses) {
+  const float kWindowSeconds = 0.05f;
+
+  const float dt = 1.0f / static_cast<float>(kRefreshRate_);
+  const float alpha = 1.0f - std::exp(-dt / kWindowSeconds);
   for (int i = 0; i < currentLoudnesses.size(); i++) {
-    float currentLoudness = currentLoudnesses[i];
-
-    // If current loudness is higher (louder) than peak, update peak and reset
-    // decay
-    if (currentLoudness > peakLoudnesses_[i]) {
-      peakLoudnesses_[i] = currentLoudness;
-      decayCounters_[i] = static_cast<int>(kRefreshRate_ * kDecayPeriod_);
-    } else {
-      // Decrement counter
-      --decayCounters_[i];
-
-      // When counter expires, begin decaying the peak
-      if (decayCounters_[i] <= 0) {
-        peakLoudnesses_[i] -= kDecayRate_;
-
-        // Don't let peak go below silence threshold
-        const float kSilenceThreshold = -100.0f;
-        if (peakLoudnesses_[i] < kSilenceThreshold) {
-          peakLoudnesses_[i] = kSilenceThreshold;
-        }
-      }
-    }
+    const float kCurrLoudness =
+        isnan(currentLoudnesses[i]) ? -100.0f : currentLoudnesses[i];
+    const float delta = kCurrLoudness - smoothedLoudnesses_[i];
+    smoothedLoudnesses_[i] += delta * alpha;
   }
+  // Filter out possible NaN and inf values
+  std::for_each(smoothedLoudnesses_.begin(), smoothedLoudnesses_.end(),
+                [](float& ldn) {
+                  if (std::isnan(ldn) || std::isinf(ldn)) {
+                    ldn = -100.0f;
+                  }
+                });
 }
