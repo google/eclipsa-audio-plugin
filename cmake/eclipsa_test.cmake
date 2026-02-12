@@ -22,24 +22,35 @@ function(eclipsa_add_test test_name test_source test_libs)
     get_property(test_sources GLOBAL PROPERTY ECLIPSA_TEST_SOURCES)
     set_property(GLOBAL PROPERTY ECLIPSA_TEST_SOURCES "${test_sources};${absolute_test_source}")
 
-    list(FIND test_libs "opus" opus_found)
-    if (opus_found EQUAL -1)
-        list(APPEND test_libs opus)
+    # Only add codec libs when a test needs IAMF decode/encode stack
+    set(_needs_iamf_codecs FALSE)
+    if ("${test_libs}" MATCHES "(^|;)iamf(;|$)" OR "${test_libs}" MATCHES "(^|;)iamfdec_utils(;|$)")
+        set(_needs_iamf_codecs TRUE)
     endif ()
 
-    list(FIND test_libs "ogg" ogg_found)
-    if (ogg_found EQUAL -1)
-        list(APPEND test_libs ogg)
-    endif ()
-
-    # Dependency logic for iamf/iamfdec_utils
-    if ("${test_libs}" MATCHES "iamf" OR "${test_libs}" MATCHES "iamfdec_utils")
-        if (NOT DEFINED LIBIAMF_INCLUDE_DIRS)
-            message(WARNING "LIBIAMF_INCLUDE_DIRS not defined, but required by ${test_name}")
+    if (_needs_iamf_codecs)
+        if (APPLE)
+            set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/macos")
+            list(APPEND test_libs
+                    "${LIBIAMF_CODEC_PATH}/libopus.a"
+                    "${LIBIAMF_CODEC_PATH}/libogg.a"
+            )
+        elseif (WIN32)
+            set(LIBIAMF_CODEC_PATH "${CMAKE_SOURCE_DIR}/third_party/libiamf/lib/Windows")
+            list(APPEND test_libs
+                    $<IF:$<CONFIG:Debug>,${LIBIAMF_CODEC_PATH}/Debug/opus.lib,${LIBIAMF_CODEC_PATH}/Release/opus.lib>
+                    $<IF:$<CONFIG:Debug>,${LIBIAMF_CODEC_PATH}/Debug/ogg.lib,${LIBIAMF_CODEC_PATH}/Release/ogg.lib>
+            )
         endif ()
     endif ()
 
-    if (TARGET iamf AND "${test_libs}" MATCHES "iamfdec_utils")
+    # IAMF include dirs warning
+    if (_needs_iamf_codecs AND NOT DEFINED LIBIAMF_INCLUDE_DIRS)
+        message(WARNING "LIBIAMF_INCLUDE_DIRS not defined, but required by ${test_name}")
+    endif ()
+
+    # If iamfdec_utils requested, ensure iamf is also linked
+    if (TARGET iamf AND "${test_libs}" MATCHES "(^|;)iamfdec_utils(;|$)")
         list(FIND test_libs "iamf" iamf_already_linked)
         if (iamf_already_linked EQUAL -1)
             list(APPEND test_libs iamf)
