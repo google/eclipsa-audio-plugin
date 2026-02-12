@@ -31,6 +31,7 @@
 
 #include "../processor_base/ProcessorBase.h"
 #include "AudioElementFileWriter.h"
+#include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "iamf_export_utils/IAMFFileWriter.h"
 
@@ -40,6 +41,7 @@ class FileOutputProcessor : public ProcessorBase {
   //==============================================================================
   FileOutputProcessor(
       FileExportRepository& fileExportRepository,
+      FilePlaybackRepository& filePlaybackRepository,
       AudioElementRepository& audioElementRepository,
       MixPresentationRepository& mixPresentationRepository,
       MixPresentationLoudnessRepository& mixPresentationLoudnessRepository);
@@ -84,6 +86,7 @@ class FileOutputProcessor : public ProcessorBase {
 
   bool performingRender_;  // True if we are rendering in offline mode
   FileExportRepository& fileExportRepository_;
+  FilePlaybackRepository& fpbr_;
   AudioElementRepository& audioElementRepository_;
   MixPresentationRepository& mixPresentationRepository_;
   MixPresentationLoudnessRepository& mixPresentationLoudnessRepository_;

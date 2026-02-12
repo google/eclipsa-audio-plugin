@@ -12,28 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "BackgroundBuffer.h"
+#include "IAMFBufferedReader.h"
 
-#include <cstddef>
-
+#include "logger/logger.h"
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 
-BackgroundBuffer::BackgroundBuffer(const unsigned paddingSeconds,
-                                   IAMFFileReader& decoder)
-    : decoder_(decoder), stop_(false), eof_(false) {
-  const auto kStreamData = decoder_.getStreamData();
-  padSamples_ = std::min((size_t)paddingSeconds * kStreamData.sampleRate,
-                         kStreamData.numFrames * kStreamData.frameSize);
+IamfBufferedReader::IamfBufferedReader(std::unique_ptr<IAMFFileReader>&& reader,
+                                       const unsigned paddingSeconds)
+    : decoder_(std::move(reader)) {
+  const auto kStreamData = decoder_->getStreamData();
+  padSamples_ = paddingSeconds * kStreamData.sampleRate;
   absSamplePos_ = 0;
-  decoder_.seekFrame(0);
+  decoder_->seekFrame(0);
   pbuffer_ =
       std::make_unique<PbRingBuffer>(kStreamData.numChannels, padSamples_);
-  decodeThread_ = std::thread(&BackgroundBuffer::decodeTask, this);
+  decodeThread_ = std::thread(&IamfBufferedReader::decodeTask, this);
   notifyTask();
   while (!isReady());
 }
 
-BackgroundBuffer::~BackgroundBuffer() {
+IamfBufferedReader::~IamfBufferedReader() {
   stop_ = true;
   cv_.notify_all();
   if (decodeThread_.joinable()) {
@@ -41,19 +39,29 @@ BackgroundBuffer::~BackgroundBuffer() {
   }
 }
 
-bool BackgroundBuffer::isReady() {
+bool IamfBufferedReader::isReady() {
   const juce::SpinLock::ScopedLockType lock(bufferLock_);
-  return pbuffer_->availReadSamples() >= padSamples_;
+  const bool kReady = pbuffer_->availReadSamples() >= padSamples_ || eof_;
+  return kReady;
 }
 
-size_t BackgroundBuffer::availableSamples() const {
+void IamfBufferedReader::waitUntilReady() {
+  std::unique_lock<std::mutex> lock(cvm_);
+  while (!isReady()) {
+    // Wake decode task in case it is waiting and more data is needed
+    notifyTask();
+    cv_.wait(lock);
+  }
+}
+
+size_t IamfBufferedReader::availableSamples() const {
   const juce::SpinLock::ScopedLockType lock(bufferLock_);
   return pbuffer_->availReadSamples();
 }
 
-size_t BackgroundBuffer::readSamples(juce::AudioBuffer<float>& out,
-                                     const unsigned startSample,
-                                     const unsigned numSamples) {
+size_t IamfBufferedReader::readSamples(juce::AudioBuffer<float>& out,
+                                       const unsigned startSample,
+                                       const unsigned numSamples) {
   size_t kSamplesRead;
   {
     const juce::SpinLock::ScopedLockType lock(bufferLock_);
@@ -66,6 +74,7 @@ size_t BackgroundBuffer::readSamples(juce::AudioBuffer<float>& out,
 
   // Zero-pad if necessary. Ideally we never hit this.
   if (kSamplesRead < numSamples) {
+    LOG_WARNING(0, "BackgroundBuffer: Sample underrun on read.");
     notifyTask();
     out.clear(startSample + kSamplesRead, numSamples - kSamplesRead);
   }
@@ -74,10 +83,16 @@ size_t BackgroundBuffer::readSamples(juce::AudioBuffer<float>& out,
   return kSamplesRead;
 }
 
-void BackgroundBuffer::seek(const size_t newFrameIdx) {
+void IamfBufferedReader::seek(const size_t newFrameIdx) {
+  std::atomic_bool abort = false;
+  seek(newFrameIdx, abort);
+}
+
+void IamfBufferedReader::seek(const size_t newFrameIdx,
+                              std::atomic_bool& abortSeek) {
   bool posInBuff;
   const size_t kNewAbsSamplePos =
-      newFrameIdx * decoder_.getStreamData().frameSize;
+      newFrameIdx * decoder_->getStreamData().frameSize;
   {
     const juce::SpinLock::ScopedLockType lock(bufferLock_);
     size_t diff;
@@ -91,7 +106,7 @@ void BackgroundBuffer::seek(const size_t newFrameIdx) {
     // If frame was in buffer great - decoder can continue as normal.
     // If the frame was not in the buffer, decoder needs to seek to that pos.
     if (!posInBuff) {
-      decoder_.seekFrame(newFrameIdx);
+      decoder_->seekFrame(newFrameIdx, abortSeek);
     }
   }
   absSamplePos_ = kNewAbsSamplePos;
@@ -99,10 +114,10 @@ void BackgroundBuffer::seek(const size_t newFrameIdx) {
   notifyTask();
 }
 
-void BackgroundBuffer::notifyTask() { cv_.notify_all(); }
+void IamfBufferedReader::notifyTask() { cv_.notify_all(); }
 
-void BackgroundBuffer::decodeTask() {
-  const IAMFFileReader::StreamData kStreamData = decoder_.getStreamData();
+void IamfBufferedReader::decodeTask() {
+  const IAMFFileReader::StreamData kStreamData = decoder_->getStreamData();
   juce::AudioBuffer<float> tempBuffer(kStreamData.numChannels,
                                       kStreamData.frameSize);
   while (!stop_) {
@@ -115,12 +130,14 @@ void BackgroundBuffer::decodeTask() {
     // full.
     const juce::SpinLock::ScopedLockType bl(bufferLock_);
     while (!stop_ && pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
-      const size_t kSamplesDecoded = decoder_.readFrame(tempBuffer);
+      const size_t kSamplesDecoded = decoder_->readFrame(tempBuffer);
       if (kSamplesDecoded == 0) {
         eof_ = true;
         break;
       }
       pbuffer_->writeSamples(kSamplesDecoded, tempBuffer);
     }
+    // Signal that buffer is ready or EOF reached
+    cv_.notify_all();
   }
 }

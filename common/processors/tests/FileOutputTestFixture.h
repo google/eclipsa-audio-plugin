@@ -27,6 +27,7 @@
 #include "../common/data_structures/src/MixPresentationLoudness.h"
 #include "../common/substream_rdr/substream_rdr_utils/Speakers.h"
 #include "../file_output/FileOutputProcessor.h"
+#include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FileExport.h"
 #include "processors/tests/FileOutputTestUtils.h"
 
@@ -34,6 +35,12 @@
 class TestFileExportRepository : public FileExportRepository {
  public:
   TestFileExportRepository() : FileExportRepository(juce::ValueTree{"test"}) {}
+};
+
+class TestFilePlaybackRepository : public FilePlaybackRepository {
+ public:
+  TestFilePlaybackRepository()
+      : FilePlaybackRepository(juce::ValueTree{"test"}) {}
 };
 
 class TestAudioElementRepository : public AudioElementRepository {
@@ -202,8 +209,8 @@ class FileOutputTests : public ::testing::Test {
  protected:
   FileOutputTests()
       : ex(fileExportRepository.get()),
-        fio_proc(fileExportRepository, audioElementRepository, mixRepository,
-                 mixPresentationLoudnessRepository) {
+        fio_proc(fileExportRepository, fpbr, audioElementRepository,
+                 mixRepository, mixPresentationLoudnessRepository) {
     // Configure basic audio export data
     ex.setExportAudio(true);
     ex.setAudioFileFormat(AudioFileFormat::IAMF);
@@ -372,6 +379,8 @@ class FileOutputTests : public ::testing::Test {
   juce::ValueTree testState{"test_state"};
   FileExportRepository fileExportRepository{
       testState.getOrCreateChildWithName("file", nullptr)};
+  FilePlaybackRepository fpbr{
+      testState.getOrCreateChildWithName("playback", nullptr)};
   AudioElementRepository audioElementRepository{
       testState.getOrCreateChildWithName("element", nullptr)};
   MixPresentationRepository mixRepository{

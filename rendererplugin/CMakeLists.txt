@@ -63,9 +63,8 @@ target_compile_definitions(RendererPlugin
 if (ECLIPSA_LOGIC_PRO_BUILD)
     target_compile_definitions(RendererPlugin PRIVATE ECLIPSA_LOGIC_PRO_BUILD=1)
 endif ()
-
 #====================================================================
-#Link libraries
+# Link libraries
 #====================================================================
 target_link_libraries(RendererPlugin
         PRIVATE

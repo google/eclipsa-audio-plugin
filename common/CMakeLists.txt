@@ -18,7 +18,6 @@ juce_add_modules(
         data_repository
         data_structures
         logger
-        player
         processors
         substream_rdr)
 
@@ -31,8 +30,6 @@ if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(logger/tests)
     add_subdirectory(data_structures/tests)
     add_subdirectory(substream_rdr/tests)
-    add_subdirectory(player/test)
-
 endif ()
 
 #====================================================================
@@ -102,13 +99,11 @@ target_link_libraries(processors INTERFACE
 )
 target_include_directories(substream_rdr INTERFACE ${OBR_INCLUDE_DIRS})
 target_include_directories(processors INTERFACE ${OBR_INCLUDE_DIRS})
-target_link_libraries(player INTERFACE processors substream_rdr)
 
 #====================================================================
 # Components and Logging
 #====================================================================
-target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository player)
-
+target_link_libraries(components INTERFACE binary_data libear substream_rdr processors data_structures data_repository)
 target_link_libraries(logger INTERFACE
         Boost::log
         Boost::log_setup
@@ -128,7 +123,6 @@ target_link_libraries(eclipsa_common INTERFACE
         substream_rdr
         processors
         components
-        player
         logger
         data_repository
         data_structures

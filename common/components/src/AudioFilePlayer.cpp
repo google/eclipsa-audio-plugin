@@ -14,14 +14,11 @@
 
 #include "AudioFilePlayer.h"
 
-#include <filesystem>
 #include <memory>
 
 #include "components/icons/svg/SvgIconLookup.h"
 #include "components/src/EclipsaColours.h"
 #include "data_structures/src/FilePlayback.h"
-#include "player/src/transport/IAMFPlaybackDevice.h"
-#include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 
 class AudioFilePlayer::Spinner : public juce::Component, private juce::Timer {
  public:
@@ -61,7 +58,7 @@ class AudioFilePlayer::Spinner : public juce::Component, private juce::Timer {
 };
 
 AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
-                                 FileExportRepository& fileExportRepo)
+                                 FilePlaybackProcessorData& fpbData)
     : playButton_("Play", SvgMap::kPlay),
       pauseButton_("Pause", SvgMap::kPause),
       stopButton_("Stop", SvgMap::kStop),
@@ -69,7 +66,7 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
       volumeIcon_(SvgMap::kVolume),
       spinner_(std::make_unique<Spinner>()),
       fpbr_(filePlaybackRepo),
-      fer_(fileExportRepo) {
+      fpbData_(fpbData) {
   playButton_.setColour(juce::TextButton::buttonColourId,
                         EclipsaColours::rolloverGrey);
   pauseButton_.setColour(juce::TextButton::buttonColourId,
@@ -77,18 +74,18 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   stopButton_.setColour(juce::TextButton::buttonColourId,
                         EclipsaColours::rolloverGrey);
   playButton_.onClick = [this]() {
-    auto fpb = fpbr_.get();
-    fpb.setPlayState(FilePlayback::kPlay);
+    FilePlayback fpb = fpbr_.get();
+    fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPlay);
     fpbr_.update(fpb);
   };
   pauseButton_.onClick = [this]() {
-    auto fpb = fpbr_.get();
-    fpb.setPlayState(FilePlayback::kPause);
+    FilePlayback fpb = fpbr_.get();
+    fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
     fpbr_.update(fpb);
   };
   stopButton_.onClick = [this]() {
-    auto fpb = fpbr_.get();
-    fpb.setPlayState(FilePlayback::kStop);
+    FilePlayback fpb = fpbr_.get();
+    fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kStop);
     fpbr_.update(fpb);
   };
 
@@ -104,22 +101,28 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   fileSelectLabel_.setJustificationType(juce::Justification::centred);
 
   playbackSlider_.setRange(0.0, 1.0);
-  playbackSlider_.setValue(0.0);
+  playbackSlider_.setValue(0.0, juce::sendNotification);
   playbackSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
   playbackSlider_.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-  playbackSlider_.onValueChange = [this]() {
-    auto fpb = fpbr_.get();
-    fpb.setSeekPosition(static_cast<float>(playbackSlider_.getValue()));
+  playbackSlider_.onDragEnd = [this]() {
+    FilePlayback fpb = fpbr_.get();
+    fpb.setSeekPosition(playbackSlider_.getValue());
     fpbr_.update(fpb);
   };
   addAndMakeVisible(playbackSlider_);
 
-  volumeSlider_.setRange(0, 1);
-  volumeSlider_.setValue(0.5);
+  volumeSlider_.setRange(0, 2);
+  volumeSlider_.setValue(1, juce::sendNotification);
   volumeSlider_.setSliderStyle(juce::Slider::LinearHorizontal);
   volumeSlider_.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-  addAndMakeVisible(volumeSlider_);
+  volumeSlider_.onValueChange = [this]() {
+    FilePlayback fpb = fpbr_.get();
+    const float kVol = volumeSlider_.getValue();
+    fpb.setVolume(kVol);
+    fpbr_.update(fpb);
+  };
 
+  addAndMakeVisible(volumeSlider_);
   addAndMakeVisible(playButton_);
   addAndMakeVisible(pauseButton_);
   addAndMakeVisible(stopButton_);
@@ -128,28 +131,13 @@ AudioFilePlayer::AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
   addAndMakeVisible(fileSelectLabel_);
   addAndMakeVisible(*spinner_);
 
-  fpbr_.registerListener(this);
-  fer_.registerListener(this);
-  if (fpbr_.get().getPlaybackFile().isNotEmpty()) {
-    attemptCreatePlaybackEngine();
-  }
   updateComponentVisibility();
   startTimerHz(30);
 }
 
 AudioFilePlayer::~AudioFilePlayer() {
-  // Signal that we're being destroyed. Join the background thread for safe
-  // cleanup.
-  isBeingDestroyed_ = true;
-  if (playbackEngineLoaderThread_.joinable()) {
-    playbackEngineLoaderThread_.join();
-  }
-
-  fpbr_.deregisterListener(this);
-  fer_.deregisterListener(this);
-
   FilePlayback fpb = fpbr_.get();
-  fpb.setPlayState(FilePlayback::kStop);
+  fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
   fpbr_.update(fpb);
 }
 
@@ -171,11 +159,10 @@ void AudioFilePlayer::resized() {
   const int kButtonSz = 24;
   const int kGap = 5;
 
-  auto fpb = fpbr_.get();
-  bool isBuffering = (fpb.getPlayState() == FilePlayback::kBuffering);
-
   // Only render the warning label if we get to a disabled state
-  if (fpb.getPlayState() == FilePlayback::kDisabled) {
+  FilePlayback::ProcessorState state;
+  fpbData_.processorState.read(state);
+  if (state == FilePlayback::ProcessorState::kError) {
     flexBox.items.add(juce::FlexItem(fileSelectLabel_)
                           .withFlex(1)
                           .withHeight(kButtonSz)
@@ -185,7 +172,7 @@ void AudioFilePlayer::resized() {
   }
 
   // Render the spinner when buffering
-  if (isBuffering) {
+  if (state == FilePlayback::ProcessorState::kBuffering) {
     flexBox.items.add(
         juce::FlexItem(*spinner_)
             .withWidth(kButtonSz)
@@ -232,161 +219,60 @@ void AudioFilePlayer::resized() {
 }
 
 void AudioFilePlayer::update() {
-  std::lock_guard<std::mutex> lock(pbeMutex_);
-  if (playbackEngine_) {
-    const IAMFFileReader::StreamData kData = playbackEngine_->getStreamData();
-    const float kDuration_s =
-        kData.numFrames * kData.frameSize / (float)kData.sampleRate;
-    const float kPosition_s =
-        kData.currentFrameIdx * kData.frameSize / (float)kData.sampleRate;
+  FilePlayback::ProcessorState state;
+  fpbData_.processorState.read(state);
+  if (state != FilePlayback::ProcessorState::kError) {
+    float currPos = 0.0f;
+    fpbData_.currFilePosition.read(currPos);
+    unsigned long long duration_s = 0.0f;
+    fpbData_.fileDuration_s.read(duration_s);
+    const float kCurrentTime = currPos * duration_s;
 
-    const int durationMins = (int)(kDuration_s / 60);
-    const int durationSecs = (int)(kDuration_s) % 60;
-    const int currentMins = (int)(kPosition_s / 60);
-    const int currentSecs = (int)(kPosition_s) % 60;
-    timeLabel_.setText(
-        juce::String::formatted("%02d:%02d / %02d:%02d", currentMins,
-                                currentSecs, durationMins, durationSecs),
-        juce::dontSendNotification);
-    playbackSlider_.setValue(
-        kDuration_s > 0.0f ? (kPosition_s / kDuration_s) : 0.0f,
-        juce::dontSendNotification);
-    playbackEngine_->setVolume(volumeSlider_.getValue());
-  } else {
-    timeLabel_.setText("00:00 / 00:00", juce::dontSendNotification);
-    playbackSlider_.setValue(0, juce::dontSendNotification);
-  }
-}
+    const int kCurrMinutes = static_cast<int>(kCurrentTime) / 60;
+    const int kCurrSeconds = static_cast<int>(kCurrentTime) % 60;
+    const int kTotalMinutes = static_cast<int>(duration_s) / 60;
+    const int kTotalSeconds = static_cast<int>(duration_s) % 60;
 
-void AudioFilePlayer::timerCallback() { update(); }
-
-void AudioFilePlayer::valueTreePropertyChanged(
-    juce::ValueTree& tree, const juce::Identifier& property) {
-  if (property == FilePlayback::kPlayState) {
-    triggerAsyncUpdate();
-  } else if (property == FilePlayback::kPlaybackFile) {
-    attemptCreatePlaybackEngine();
-  } else if (property == FileExport::kExportCompleted) {
-    // When this property is false a new export is starting, so we want to
-    // destroy the player and wait until export is complete.
-    // When this property is true we want to attempt to create the playback
-    // engine again.
-    if (fer_.get().getExportCompleted()) {
-      auto safeThis = juce::Component::SafePointer<AudioFilePlayer>(this);
-      juce::MessageManager::callAsync(
-          [safeThis]() { safeThis->attemptCreatePlaybackEngine(); });
+    juce::String timeStr;
+    // Format long file durations differently
+    if (duration_s >= 3600) {
+      timeStr =
+          juce::String::formatted("%d:%02d / %d:%02d", kCurrMinutes,
+                                  kCurrSeconds, kTotalMinutes, kTotalSeconds);
     } else {
-      cancelCreatePlaybackEngine();
+      timeStr =
+          juce::String::formatted("%02d:%02d / %02d:%02d", kCurrMinutes,
+                                  kCurrSeconds, kTotalMinutes, kTotalSeconds);
+    }
+    timeLabel_.setText(timeStr, juce::dontSendNotification);
+
+    if (!playbackSlider_.isMouseButtonDown()) {
+      playbackSlider_.setValue(currPos, juce::dontSendNotification);
     }
   }
 }
 
-void AudioFilePlayer::handleAsyncUpdate() {
+void AudioFilePlayer::timerCallback() {
+  update();
   updateComponentVisibility();
   resized();
 }
 
 void AudioFilePlayer::updateComponentVisibility() {
-  auto fpb = fpbr_.get();
-  auto playState = fpb.getPlayState();
-  const bool kPlaying = (playState == FilePlayback::kPlay);
-  const bool kBuffering = (playState == FilePlayback::kBuffering);
-  const bool kDisabled = (playState == FilePlayback::kDisabled);
-  fileSelectLabel_.setVisible(kDisabled);
-  playButton_.setVisible(!kPlaying && !kBuffering && !kDisabled);
-  pauseButton_.setVisible(kPlaying && !kDisabled);
-  stopButton_.setVisible(!kBuffering && !kDisabled);
-  timeLabel_.setVisible(!kDisabled);
-  playbackSlider_.setVisible(!kDisabled);
-  volumeIcon_.setVisible(!kDisabled);
-  volumeSlider_.setVisible(!kDisabled);
+  FilePlayback::ProcessorState playState;
+  fpbData_.processorState.read(playState);
+  const bool kPlaying = (playState == FilePlayback::ProcessorState::kPlaying);
+  const bool kBuffering =
+      (playState == FilePlayback::ProcessorState::kBuffering);
+  const bool kError = (playState == FilePlayback::ProcessorState::kError);
+  fileSelectLabel_.setVisible(kError);
+  playButton_.setVisible(!kPlaying && !kBuffering && !kError);
+  pauseButton_.setVisible(kPlaying && !kError);
+  stopButton_.setVisible(!kBuffering && !kError);
+  timeLabel_.setVisible(!kError);
+  playbackSlider_.setVisible(!kError);
+  playbackSlider_.setEnabled(!kBuffering);
+  volumeIcon_.setVisible(!kError);
+  volumeSlider_.setVisible(!kError);
   if (spinner_) spinner_->setVisible(kBuffering);
-}
-
-void AudioFilePlayer::cancelCreatePlaybackEngine() {
-  isBeingDestroyed_ = true;
-  if (playbackEngineLoaderThread_.joinable()) {
-    playbackEngineLoaderThread_.join();
-  }
-  // Wait for async callback to complete
-  std::unique_lock<std::mutex> lock(pbeMutex_);
-  pbeCv_.wait(lock, [this] { return !isLoadingPlaybackEngine_; });
-  isBeingDestroyed_ = false;
-}
-
-void AudioFilePlayer::attemptCreatePlaybackEngine() {
-  cancelCreatePlaybackEngine();
-
-  // If the file doesn't exist or it's a new file, we set the player to a
-  // stopped state
-  auto fe = fer_.get();
-  const std::filesystem::path kFileToLoad(fe.getExportFile().toStdString());
-  if (kFileToLoad.empty() || kFileToLoad.extension() != ".iamf" ||
-      !std::filesystem::exists(kFileToLoad)) {
-    auto playbackState = fpbr_.get();
-    playbackState.setPlayState(FilePlayback::kStop);
-    fpbr_.update(playbackState);
-    return;
-  }
-
-  auto fpb = fpbr_.get();
-  fpb.setPlayState(FilePlayback::kBuffering);
-  fpbr_.update(fpb);
-
-  createPlaybackEngine(kFileToLoad);
-}
-
-void AudioFilePlayer::createPlaybackEngine(
-    const std::filesystem::path iamfPath) {
-  const juce::String kDevice = fpbr_.get().getPlaybackDevice();
-  playbackEngineLoaderThread_ = std::thread([this, iamfPath, kDevice]() {
-    isLoadingPlaybackEngine_ = true;
-
-    IAMFPlaybackDevice::Result res = IAMFPlaybackDevice::create(
-        iamfPath, kDevice, isBeingDestroyed_, fpbr_, deviceManager_);
-
-    auto safeThis = juce::Component::SafePointer<AudioFilePlayer>(this);
-
-    if (isBeingDestroyed_) {
-      isLoadingPlaybackEngine_ = false;
-      return;
-    }
-    juce::MessageManager::callAsync(
-        [safeThis, device = res.device.release(), error = res.error]() {
-          if (safeThis && !safeThis->isBeingDestroyed_) {
-            safeThis->onPlaybackEngineCreated(IAMFPlaybackDevice::Result{
-                std::unique_ptr<IAMFPlaybackDevice>(device), error});
-          } else {
-            delete device;
-          }
-
-          // Always reset the loading flag and notify waiters
-          if (safeThis) {
-            std::lock_guard<std::mutex> lock(safeThis->pbeMutex_);
-            safeThis->isLoadingPlaybackEngine_ = false;
-            safeThis->pbeCv_.notify_all();
-          }
-        });
-  });
-}
-
-void AudioFilePlayer::onPlaybackEngineCreated(IAMFPlaybackDevice::Result res) {
-  std::lock_guard<std::mutex> lock(pbeMutex_);
-  if (!res.device && res.error == IAMFPlaybackDevice::Error::kInvalidIAMFFile) {
-    // Failed to create playback engine - reset state to disabled
-    playbackEngine_ = nullptr;
-    auto fpb = fpbr_.get();
-    fpb.setPlayState(FilePlayback::kDisabled);
-    fpbr_.update(fpb);
-  } else if (res.error == IAMFPlaybackDevice::kEarlyAbortRequested ||
-             isBeingDestroyed_) {
-    // Do nothing - destruction was requested
-    playbackEngine_ = nullptr;
-  } else {
-    playbackEngine_ = std::move(res.device);
-    // Update play state from buffering to ready
-    auto fpb = fpbr_.get();
-    fpb.setPlayState(FilePlayback::kStop);
-    fpbr_.update(fpb);
-  }
 }

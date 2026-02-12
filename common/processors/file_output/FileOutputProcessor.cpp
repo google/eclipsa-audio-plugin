@@ -19,19 +19,23 @@
 #include <filesystem>
 #include <string>
 
+#include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
+#include "data_structures/src/FilePlayback.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
 
 //==============================================================================
 FileOutputProcessor::FileOutputProcessor(
     FileExportRepository& fileExportRepository,
+    FilePlaybackRepository& filePlaybackRepository,
     AudioElementRepository& audioElementRepository,
     MixPresentationRepository& mixPresentationRepository,
     MixPresentationLoudnessRepository& mixPresentationLoudnessRepository)
     : ProcessorBase(),
       performingRender_(false),
       fileExportRepository_(fileExportRepository),
+      fpbr_(filePlaybackRepository),
       audioElementRepository_(audioElementRepository),
       mixPresentationRepository_(mixPresentationRepository),
       mixPresentationLoudnessRepository_(mixPresentationLoudnessRepository) {}
@@ -125,17 +129,17 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
 
   // Set the sample tally in the configuration for FLAC encoding
   config.setSampleTally(sampleTally_);
-  // Reset the export completed flag used by validation components
-  config.setExportCompleted(false);
   fileExportRepository_.update(config);
+  // Reset the playback processor to stop any ongoing playback
+  FilePlayback fpb = fpbr_.get();
+  fpb.setPlaybackFile("");
+  fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+  fpbr_.update(fpb);
 
   iamfFileWriter_ = nullptr;
   const juce::String kIamfPath = config.getExportFile();
   if (FileExport::validateFilePath(
           FileExport::expandTildePath(kIamfPath).toStdString(), false)) {
-    // Clean up the file if it exists
-    std::filesystem::remove(kIamfPath.toStdString());
-
     // Create an IAMF file writer to perform the file writing
     iamfFileWriter_ = std::make_unique<IAMFFileWriter>(
         fileExportRepository_, audioElementRepository_,
@@ -184,9 +188,12 @@ void FileOutputProcessor::closeFileExport(FileExport& config) {
   }
   iamfWavFileWriters_.clear();
 
-  auto fe = fileExportRepository_.get();
-  fe.setExportCompleted(true);
-  fileExportRepository_.update(fe);
+  // Mark export as completed
+  const FileExport kExport = fileExportRepository_.get();
+  FilePlayback fpb = fpbr_.get();
+  fpb.setPlaybackFile(kExport.getExportFile());
+  fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+  fpbr_.update(fpb);
 }
 
 bool FileOutputProcessor::shouldBufferBeWritten(

@@ -24,38 +24,28 @@
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/FilePlayback.h"
+#include "data_structures/src/FilePlaybackProcessorData.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
 class ExportValidationComponent : public juce::Component,
-                                  juce::ValueTree::Listener {
+                                  juce::ValueTree::Listener,
+                                  private juce::Timer {
  public:
   ExportValidationComponent(FilePlaybackRepository& filePlaybackRepo,
-                            FileExportRepository& fileExportRepo)
-      : title_("Export validation", "Export validation"),
-        audioPlayer_(filePlaybackRepo, fileExportRepo),
-        playbackDevice_("Playback Device"),
+                            FileExportRepository& fileExportRepo,
+                            FilePlaybackProcessorData& fpbData)
+      : fpbr_(filePlaybackRepo),
+        fpbData_(fpbData),
+        title_("Export validation", "Export validation"),
+        audioPlayer_(filePlaybackRepo, fpbData),
         layoutToDecode_("Mix Presentation Layout"),
         decodeToolTip_(SvgMap::kHelp,
                        "The decoder will decode the Mix Presentation which "
-                       "best matches the requested layout."),
-        fpbr_(filePlaybackRepo) {
+                       "best matches the requested layout.") {
     title_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
     title_.setJustificationType(juce::Justification::left);
     title_.setFont(juce::Font("Roboto", 22.0f, juce::Font::plain));
     addAndMakeVisible(title_);
-
-    // Populate playback devices
-    populatePlaybackDevices();
-
-    // Setup playback device onChange handler
-    playbackDevice_.onChange([this]() {
-      const int selectedIndex = playbackDevice_.getSelectedIndex();
-      if (selectedIndex >= 0 && selectedIndex < deviceNames_.size()) {
-        auto fpb = fpbr_.get();
-        fpb.setPlaybackDevice(deviceNames_[selectedIndex]);
-        fpbr_.update(fpb);
-      }
-    });
 
     // Populate layout options
     for (const auto& layout : kLayouts) {
@@ -68,6 +58,7 @@ class ExportValidationComponent : public juce::Component,
       if (selectedIndex >= 0 && selectedIndex < kLayouts.size()) {
         auto fpb = fpbr_.get();
         fpb.setReqdDecodeLayout(kLayouts[selectedIndex]);
+        fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
         fpbr_.update(fpb);
       }
     });
@@ -79,15 +70,20 @@ class ExportValidationComponent : public juce::Component,
     addAndMakeVisible(tooltipWindow_);
 
     addAndMakeVisible(audioPlayer_);
-    addAndMakeVisible(playbackDevice_);
     addAndMakeVisible(layoutToDecode_);
     addAndMakeVisible(decodeToolTip_);
-    fpbr_.registerListener(this);
+
+    updateLayoutInteractivity();
+    startTimerHz(30);
   }
 
-  ~ExportValidationComponent() { fpbr_.deregisterListener(this); }
+  ~ExportValidationComponent() override { stopTimer(); }
 
   void resized() override {
+    if (isPremiereHost_) {
+      return;
+    }
+
     auto bounds = getLocalBounds();
 
     const int kRowHeight = 65, kGap = 10;
@@ -105,11 +101,6 @@ class ExportValidationComponent : public juce::Component,
     const float kHalfGap = kGap / 2.0f;
     const float kDropdownWidth = 178.0f;
     const float kTooltipWidth = 24.0f;
-    flexBox.items.add(
-        juce::FlexItem(playbackDevice_)
-            .withMinWidth(kDropdownWidth)
-            .withHeight(kRowHeight)
-            .withMargin(juce::FlexItem::Margin(0, kHalfGap, 0, 0)));
     flexBox.items.add(
         juce::FlexItem(layoutToDecode_)
             .withMinWidth(kDropdownWidth)
@@ -146,66 +137,16 @@ class ExportValidationComponent : public juce::Component,
     SvgIconComponent iconComponent_;
   };
 
-  void populatePlaybackDevices() {
-    // Initialize device manager temporarily to query devices
-    juce::AudioDeviceManager deviceManager;
-    deviceManager.initialiseWithDefaultDevices(0, 2);
-
-    // Get available device types
-    auto& deviceTypes = deviceManager.getAvailableDeviceTypes();
-
-    for (auto* deviceType : deviceTypes) {
-      deviceType->scanForDevices();
-      auto deviceNames =
-          deviceType->getDeviceNames(false);  // false = output devices
-
-      for (const auto& deviceName : deviceNames) {
-        playbackDevice_.addOption(deviceName);
-        deviceNames_.push_back(deviceName);
-      }
-    }
-
-    // Set default device if available
-    if (!deviceNames_.empty()) {
-      playbackDevice_.setSelectedIndex(0, juce::dontSendNotification);
-      auto fpb = fpbr_.get();
-      fpb.setPlaybackDevice(deviceNames_[0]);
-      fpbr_.update(fpb);
-    }
-  }
-
   void valueTreePropertyChanged(juce::ValueTree& tree,
-                                const juce::Identifier& property) {
-    const FilePlayback::CurrentPlayerState kState = fpbr_.get().getPlayState();
-    // UI is visible but not interactive during buffering
-    if (kState == FilePlayback::kBuffering ||
-        kState == FilePlayback::kDisabled) {
-      audioPlayer_.setVisible(true);
-      playbackDevice_.setVisible(true);
-      layoutToDecode_.setVisible(true);
-      decodeToolTip_.setVisible(true);
-      playbackDevice_.setInterceptsMouseClicks(false, false);
-      layoutToDecode_.setInterceptsMouseClicks(false, false);
-      audioPlayer_.setInterceptsMouseClicks(false, false);
-    }
-    // When a file gets selected or play/pause/stop/seek - remain visible
-    else if (property == FilePlayback::kPlaybackFile ||
-             property == FilePlayback::kPlayState) {
-      audioPlayer_.setVisible(true);
-      playbackDevice_.setVisible(true);
-      layoutToDecode_.setVisible(true);
-      decodeToolTip_.setVisible(true);
-      playbackDevice_.setInterceptsMouseClicks(true, true);
-      layoutToDecode_.setInterceptsMouseClicks(true, true);
-      audioPlayer_.setInterceptsMouseClicks(true, true);
-    }
-    // Disabled/other states are irrelevant to the components
-    else {
-      audioPlayer_.setVisible(true);
-      playbackDevice_.setVisible(true);
-      layoutToDecode_.setVisible(true);
-      decodeToolTip_.setVisible(true);
-    }
+                                const juce::Identifier& property) {}
+
+  void timerCallback() override { updateLayoutInteractivity(); }
+
+  void updateLayoutInteractivity() {
+    FilePlayback::ProcessorState state;
+    fpbData_.processorState.read(state);
+    layoutToDecode_.setEnabled(state !=
+                               FilePlayback::ProcessorState::kBuffering);
   }
 
   const std::array<Speakers::AudioElementSpeakerLayout, 9> kLayouts{
@@ -219,13 +160,13 @@ class ExportValidationComponent : public juce::Component,
       Speakers::k7Point1Point4,
       Speakers::kExpl9Point1Point6,
   };
+  const bool isPremiereHost_{juce::PluginHostType().isPremiere()};
 
   FilePlaybackRepository& fpbr_;
+  FilePlaybackProcessorData& fpbData_;
   juce::Label title_;
-  SelectionBox playbackDevice_;
   SelectionBox layoutToDecode_;
   SVGToolTip decodeToolTip_;
   AudioFilePlayer audioPlayer_;
-  std::vector<juce::String> deviceNames_;
   juce::TooltipWindow tooltipWindow_{this};
 };

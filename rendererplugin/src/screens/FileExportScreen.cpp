@@ -18,11 +18,13 @@
 #include "components/src/EclipsaColours.h"
 #include "components/src/ExportValidation.h"
 #include "data_structures/src/FileExport.h"
+#include "data_structures/src/FilePlayback.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/TimeFormatConverter.h"
 
 FileExportScreen::FileExportScreen(MainEditor& editor,
-                                   RepositoryCollection repos)
+                                   RepositoryCollection repos,
+                                   FilePlaybackProcessorData& fpbData)
     : editor_(editor),
       headerBar_("Export options", editor),
       exportParametersLabel_("ExportParamsLbl", "Export parameters"),
@@ -57,7 +59,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           juce::File::getSpecialLocation(juce::File::userDesktopDirectory),
           "*.mp4;*.mov"),
       exportButton_("Start Export"),
-      exportValidation_(repos.playbackRepo_, repos.fioRepo_),
+      exportValidation_(repos.playbackRepo_, repos.fioRepo_, fpbData),
       repository_(&repos.fioRepo_),
       aeRepository_(&repos.aeRepo_),
       mpRepository_(&repos.mpRepo_),
@@ -301,6 +303,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
     FilePlayback playbackConfig = filePlaybackRepository_->get();
     playbackConfig.setPlaybackFile(expanded);
+    playbackConfig.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
     filePlaybackRepository_->update(playbackConfig);
   });
 
@@ -322,6 +325,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
 
           FilePlayback playbackConfig = filePlaybackRepository_->get();
           playbackConfig.setPlaybackFile(exportPath_.getText());
+          playbackConfig.setPlaybackCommand(
+              FilePlayback::PlaybackCommand::kPause);
           filePlaybackRepository_->update(playbackConfig);
         });
   };
@@ -481,6 +486,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Finally, set up the manual export button
   exportButton_.onClick = [this] {
     FileExport config = repository_->get();
+    FilePlayback fpb = filePlaybackRepository_->get();
     if (juce::PluginHostType().isPremiere() && !validFileExportConfig(config)) {
       return;
     }
@@ -500,6 +506,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       exportVideoFolder_.setEnabled(false);
       browseVideoButton_.setEnabled(false);
       browseVideoSourceButton_.setEnabled(false);
+      fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+      fpb.setPlaybackFile("");
       config.setExportCompleted(false);
     } else {
       startTimer_.setEnabled(true);
@@ -517,8 +525,11 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
       browseVideoButton_.setEnabled(true);
       browseVideoSourceButton_.setEnabled(true);
       config.setExportCompleted(true);
+      fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
+      fpb.setPlaybackFile(config.getExportFile());
     }
     repository_->update(config);
+    filePlaybackRepository_->update(fpb);
     repaint();
   };
   LOG_ANALYTICS(RendererProcessor::instanceId_, "FileExportScreen initiated.");

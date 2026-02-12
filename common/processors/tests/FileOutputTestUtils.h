@@ -22,6 +22,7 @@
 #include "IAMF_decoder.h"
 #include "IAMF_defines.h"
 #include "data_structures/src/FileExport.h"
+#include "data_structures/src/FilePlayback.h"
 #include "dep_wavwriter.h"
 #include "processors/file_output/FileOutputProcessor.h"
 #include "processors/file_output/FileOutputProcessor_PremierePro.h"
@@ -106,6 +107,7 @@ static inline void bounceAudio(FileOutputProcessor& fio_proc,
 // file output processor.
 static inline void bouncePremiereProAudio(
     FileExportRepository& fileExportRepository,
+    FilePlaybackRepository& filePlaybackRepository,
     AudioElementRepository& audioElementRepository,
     MixPresentationRepository& mixPresentationRepository,
     MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
@@ -118,8 +120,8 @@ static inline void bouncePremiereProAudio(
   // Premiere pro reconstructs the file output processor each time, rather then
   // using an existing instance
   PremiereProFileOutputProcessor fio_proc_pp(
-      fileExportRepository, audioElementRepository, mixPresentationRepository,
-      mixPresentationLoudnessRepository);
+      fileExportRepository, filePlaybackRepository, audioElementRepository,
+      mixPresentationRepository, mixPresentationLoudnessRepository);
 
   const unsigned kNumChannels = totalAudioChannels(audioElementRepository);
   const auto kSineTone = generateSineWave(440.0f, sampleRate, frameSize);

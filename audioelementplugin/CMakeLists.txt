@@ -50,6 +50,11 @@ eclipsa_plugin_defaults(AudioElementPlugin)
 
 target_compile_definitions(AudioElementPlugin
         PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_SILENCE_XCODE_15_LINKER_WARNING
+        JUCE_ENABLE_LIVE_CONSTANT_EDITOR=1
         JucePlugin_Category="Spatial")
 
 if (ECLIPSA_LOGIC_PRO_BUILD)
@@ -61,7 +66,15 @@ endif ()
 #====================================================================
 target_link_libraries(AudioElementPlugin
         PRIVATE
-        eclipsa_common)
+        substream_rdr
+        processors
+        components
+        logger
+        data_repository
+        data_structures
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags)
 
 #====================================================================
 #Testing

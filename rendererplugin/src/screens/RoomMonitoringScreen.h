@@ -17,13 +17,14 @@
 #pragma once
 #include "FileExportScreen.h"
 #include "components/src/ImageTextButton.h"
+#include "data_structures/src/FilePlaybackProcessorData.h"
 
 class RoomMonitoringScreen : public juce::Component,
                              public juce::ValueTree::Listener,
                              public juce::Timer {
  public:
   RoomMonitoringScreen(RepositoryCollection repos, SpeakerMonitorData& data,
-                       MainEditor& editor);
+                       FilePlaybackProcessorData& fpbData, MainEditor& editor);
   ~RoomMonitoringScreen();
 
   void paint(juce::Graphics& g);

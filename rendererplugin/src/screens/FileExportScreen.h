@@ -39,7 +39,8 @@ enum class TimeFormat {
 class FileExportScreen : public juce::Component,
                          public juce::ValueTree::Listener {
  public:
-  FileExportScreen(MainEditor& editor, RepositoryCollection repos);
+  FileExportScreen(MainEditor& editor, RepositoryCollection repos,
+                   FilePlaybackProcessorData& fpbData);
 
   ~FileExportScreen();
 

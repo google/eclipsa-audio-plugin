@@ -208,6 +208,7 @@ TEST_F(IAMFFileReaderTest, seek_valid) {
   createIAMFFile2AE2MP(kReferenceFilePath);
   std::unique_ptr<IAMFFileReader> reader =
       IAMFFileReader::createIamfReader(kReferenceFilePath);
+  reader->indexFile(abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
 
   const IAMFFileReader::StreamData kSData = reader->getStreamData();
@@ -242,6 +243,7 @@ TEST_F(IAMFFileReaderTest, seek_valid_backwards) {
   std::unique_ptr<IAMFFileReader> reader =
       IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(reader, nullptr);
+  reader->indexFile(abortConstructionFlag);
   const IAMFFileReader::StreamData kSData = reader->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.numChannels, 2);
@@ -279,6 +281,7 @@ TEST_F(IAMFFileReaderTest, seek_invalid) {
   createIAMFFile2AE2MP(kReferenceFilePath);
   std::unique_ptr<IAMFFileReader> reader =
       IAMFFileReader::createIamfReader(kReferenceFilePath);
+  reader->indexFile(abortConstructionFlag);
   ASSERT_NE(reader, nullptr);
   const IAMFFileReader::StreamData kSData = reader->getStreamData();
   EXPECT_TRUE(kSData.valid);
@@ -330,10 +333,14 @@ TEST_F(IAMFFileReaderTest, reset_layout) {
 // Test aborting construction during file indexing
 TEST_F(IAMFFileReaderTest, abort_indexing) {
   createIAMFFile30SecStereo(kReferenceFilePath);
-  std::atomic_bool earlyAbortFlag(true);
+  std::atomic_bool earlyAbortFlag(false);
+
   std::unique_ptr<IAMFFileReader> reader = IAMFFileReader::createIamfReader(
       kReferenceFilePath, IAMFFileReader::kDefaultReaderSettings,
       earlyAbortFlag);
 
-  ASSERT_EQ(reader, nullptr);
+  earlyAbortFlag = true;
+  const size_t kNumFrames = reader->indexFile(earlyAbortFlag);
+
+  ASSERT_EQ(kNumFrames, -1);
 }

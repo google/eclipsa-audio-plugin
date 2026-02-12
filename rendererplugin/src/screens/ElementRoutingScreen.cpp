@@ -68,16 +68,6 @@ ElementRoutingScreen::ElementRoutingScreen(
   if (totalChanneCount >= 28) {
     profileSelectionBox_.addOption("Base Enhanced");
   }
-  profileSelectionBox_.onChange([this]() {
-    FileExport profileConfig = fileExportRepository_->get();
-    int idx = profileSelectionBox_.getSelectedIndex();
-    currentProfile_ = static_cast<FileProfile>(idx);
-    profileConfig.setProfile(currentProfile_);
-    fileExportRepository_->update(profileConfig);
-    LOG_ANALYTICS(RendererProcessor::instanceId_,
-                  "Profile changed to: " + std::to_string(idx));
-    updateAudioElementChannels();
-  });
 
   profileSelectionBox_.setSelectedIndex(
       (int)profileConfig.getProfile(),
@@ -114,7 +104,16 @@ ElementRoutingScreen::ElementRoutingScreen(
   // Add a listener for the addition of new panners
   audioElementSpatialLayoutRepository_->registerListener(this);
 
-  // Tie the horizontal scrollbars together
+  profileSelectionBox_.onChange([this]() {
+    FileExport profileConfig = fileExportRepository_->get();
+    int idx = profileSelectionBox_.getSelectedIndex();
+    currentProfile_ = static_cast<FileProfile>(idx);
+    profileConfig.setProfile(currentProfile_);
+    fileExportRepository_->update(profileConfig);
+    LOG_ANALYTICS(RendererProcessor::instanceId_,
+                  "Profile changed to: " + std::to_string(idx));
+    updateAudioElementChannels();
+  });
 }
 
 ElementRoutingScreen::~ElementRoutingScreen() {

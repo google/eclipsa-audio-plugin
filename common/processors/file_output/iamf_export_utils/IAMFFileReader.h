@@ -65,12 +65,16 @@ class IAMFFileReader {
   size_t readFrame(juce::AudioBuffer<float>& buffer);
   size_t readFrame(juce::AudioBuffer<double>& buffer);
   bool seekFrame(const size_t frameIdx);
+  bool seekFrame(const size_t frameIdx, std::atomic_bool& abortSeek);
   bool resetLayout(const Speakers::AudioElementSpeakerLayout& layout);
 
   // Method to be called via a valid reader instance to index the file.
   // Takes a reference to an flag that can be set to halt indexing prematurely.
   // Returns the number of frames valid frames or -1 if halted.
   size_t indexFile(std::atomic_bool& haltIndexing);
+  // Setter method if caller wants to manage frame count externally (e.g. via
+  // indexing task)
+  void setNumFrames(size_t numFrames) { streamData_.numFrames = numFrames; }
 
  private:
   IAMFFileReader(const std::filesystem::path& iamfFilePath,

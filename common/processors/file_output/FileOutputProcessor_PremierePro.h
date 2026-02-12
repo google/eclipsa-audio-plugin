@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "data_repository/implementation/FilePlaybackRepository.h"
 #include "processors/file_output/FileOutputProcessor.h"
 
 //==============================================================================
@@ -32,6 +33,7 @@ class PremiereProFileOutputProcessor final : public FileOutputProcessor {
   //==============================================================================
   PremiereProFileOutputProcessor(
       FileExportRepository& fileExportRepository,
+      FilePlaybackRepository& filePlaybackRepository,
       AudioElementRepository& audioElementRepository,
       MixPresentationRepository& mixPresentationRepository,
       MixPresentationLoudnessRepository& mixPresentationLoudnessRepository);

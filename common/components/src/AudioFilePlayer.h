@@ -15,48 +15,30 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_gui_extra/juce_gui_extra.h>
 
-#include <atomic>
-#include <condition_variable>
-#include <filesystem>
 #include <memory>
-#include <thread>
 
 #include "components/icons/svg/SvgIconComponent.h"
 #include "components/src/ColouredSlider.h"
 #include "components/src/RoundImageButton.h"
-#include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
-#include "player/src/transport/IAMFPlaybackDevice.h"
+#include "data_structures/src/FilePlaybackProcessorData.h"
 
-class IAMFPlaybackEngine;
-
-class AudioFilePlayer : public juce::Component,
-                        public juce::ValueTree::Listener,
-                        private juce::Timer,
-                        private juce::AsyncUpdater {
+class AudioFilePlayer : public juce::Component, private juce::Timer {
  public:
   AudioFilePlayer(FilePlaybackRepository& filePlaybackRepo,
-                  FileExportRepository& fileExportRepo);
+                  FilePlaybackProcessorData& fpbData);
   ~AudioFilePlayer() override;
 
   void paint(juce::Graphics& g) override;
   void resized() override;
   void update();
   void timerCallback() override;
-  void valueTreePropertyChanged(juce::ValueTree& tree,
-                                const juce::Identifier& property) override;
-  void handleAsyncUpdate() override;
 
  private:
   class Spinner;
 
   void updateComponentVisibility();
-  void cancelCreatePlaybackEngine();
-  void attemptCreatePlaybackEngine();
-  void createPlaybackEngine(const std::filesystem::path iamfPath);
-  void onPlaybackEngineCreated(IAMFPlaybackDevice::Result res);
 
   // Components
   RoundImageButton playButton_, pauseButton_, stopButton_;
@@ -69,12 +51,5 @@ class AudioFilePlayer : public juce::Component,
                                "Invalid IAMF file selected for playback"};
   // State
   FilePlaybackRepository& fpbr_;
-  FileExportRepository& fer_;
-  juce::AudioDeviceManager deviceManager_;
-  std::unique_ptr<IAMFPlaybackDevice> playbackEngine_;
-  std::thread playbackEngineLoaderThread_;
-  std::mutex pbeMutex_;
-  std::condition_variable pbeCv_;
-  std::atomic_bool isBeingDestroyed_ = false;
-  std::atomic_bool isLoadingPlaybackEngine_ = false;
+  FilePlaybackProcessorData& fpbData_;
 };

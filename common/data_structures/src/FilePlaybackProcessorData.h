@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "player.h"
+#pragma once
+#include "FilePlayback.h"
+#include "RealtimeDataType.h"
 
-#include "src/transport/BackgroundBuffer.cpp"
-#include "src/transport/IAMFDecoderSource.cpp"
-#include "src/transport/IAMFPlaybackDevice.cpp"
+struct FilePlaybackProcessorData {
+  RealtimeDataType<FilePlayback::ProcessorState> processorState;
+  RealtimeDataType<juce::uint64> fileDuration_s;
+  RealtimeDataType<float> currFilePosition;
+};

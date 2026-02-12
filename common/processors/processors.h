@@ -38,6 +38,7 @@ END_JUCE_MODULE_DECLARATION
 #include "file_output/FileOutputProcessor.h"
 #include "file_output/FileOutputProcessor_PremierePro.h"
 #include "file_output/WavFileOutputProcessor.h"
+#include "file_playback/FilePlaybackProcessor.h"
 #include "gain/GainEditor.h"
 #include "gain/GainProcessor.h"
 #include "gain/MSProcessor.h"

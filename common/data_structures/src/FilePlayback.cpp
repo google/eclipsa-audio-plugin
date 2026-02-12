@@ -18,43 +18,40 @@
 
 FilePlayback::FilePlayback()
     : RepositoryItemBase({}),
-      volume_(0),
-      playState_(CurrentPlayerState::kStop),
       playbackFile_(""),
+      reqdDecodeLayout_(Speakers::kStereo),
       seekPosition_(0.0f),
-      reqdDecodeLayout_(),
-      playbackDevice_("") {}
+      volume_(1.0f),
+      playbackCommand_(PlaybackCommand::kStop) {}
 
-FilePlayback::FilePlayback(int volume, CurrentPlayerState playState,
-                           juce::String playbackFile, float seekPosition,
-                           Speakers::AudioElementSpeakerLayout reqdDecodeLayout,
-                           juce::String playbackDevice)
+FilePlayback::FilePlayback(
+    const juce::String playbackFile,
+    const Speakers::AudioElementSpeakerLayout reqdDecodeLayout,
+    const float seekPosition, const float volume,
+    const PlaybackCommand processorCommand)
     : RepositoryItemBase({}),
-      volume_(volume),
-      playState_(playState),
       playbackFile_(playbackFile),
-      seekPosition_(seekPosition),
       reqdDecodeLayout_(reqdDecodeLayout),
-      playbackDevice_(playbackDevice) {}
+      seekPosition_(seekPosition),
+      volume_(volume),
+      playbackCommand_(processorCommand) {}
 
 FilePlayback FilePlayback::fromTree(const juce::ValueTree tree) {
-  FilePlayback fpb;
-  fpb.volume_ = tree[kVolume];
-  fpb.playState_ = (CurrentPlayerState)(int)tree[kPlayState];
-  fpb.playbackFile_ = tree[kPlaybackFile];
-  fpb.seekPosition_ = tree[kSeekPosition];
-  fpb.reqdDecodeLayout_ =
-      (Speakers::AudioElementSpeakerLayout)(int)tree[kReqdDecodeLayout];
-  fpb.playbackDevice_ = tree[kPlaybackDevice];
-  return fpb;
+  return FilePlayback(
+      tree[kPlaybackFile],
+      static_cast<Speakers::AudioElementSpeakerLayout>(
+          (int)tree[kReqdDecodeLayout]),
+      (float)tree[kSeekPosition], (float)tree[kVolume],
+      static_cast<PlaybackCommand>((int)tree[kPlaybackCommand]));
 }
 
 juce::ValueTree FilePlayback::toValueTree() const {
   return {kTreeType,
-          {{kVolume, volume_},
-           {kPlayState, (int)playState_},
-           {kPlaybackFile, playbackFile_},
-           {kSeekPosition, seekPosition_},
-           {kReqdDecodeLayout, (int)reqdDecodeLayout_},
-           {kPlaybackDevice, playbackDevice_}}};
+          {
+              {kPlaybackCommand, (int)playbackCommand_},
+              {kPlaybackFile, playbackFile_},
+              {kReqdDecodeLayout, (int)reqdDecodeLayout_},
+              {kSeekPosition, seekPosition_},
+              {kVolume, volume_},
+          }};
 }

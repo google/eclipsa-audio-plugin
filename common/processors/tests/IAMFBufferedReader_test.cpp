@@ -1,15 +1,16 @@
-#include "../src/transport/BackgroundBuffer.h"
+#include "../file_playback/IAMFBufferedReader.h"
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <filesystem>
 
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 #include "processors/tests/FileOutputTestFixture.h"
 
-class BackgroundBufferTest : public FileOutputTests {
+class IAMFBufferedReaderTest : public FileOutputTests {
   void TearDown() override {
-    decoder_.reset();  // Releaes the file before deleting
+    decoder_.reset();
     if (std::filesystem::exists(kTestFilePath_)) {
       std::filesystem::remove(kTestFilePath_);
     }
@@ -20,112 +21,107 @@ class BackgroundBufferTest : public FileOutputTests {
   std::filesystem::path kTestFilePath_;
 };
 
-class BackgroundBufferStereoTest : public BackgroundBufferTest {
+class IAMFBufferedReaderStereoTest : public IAMFBufferedReaderTest {
  protected:
   void SetUp() override {
     kTestFilePath_ = std::filesystem::current_path() / "buffer_test.iamf";
     createIAMFFile30SecStereo(kTestFilePath_);
+    std::atomic_bool cancel = false;
     decoder_ = IAMFFileReader::createIamfReader(kTestFilePath_);
     ASSERT_NE(decoder_, nullptr);
+    decoder_->indexFile(cancel);
   }
 };
 
-class BackgroundBuffer2AETest : public BackgroundBufferTest {
+class IAMFBufferedReader2AETest : public IAMFBufferedReaderTest {
  protected:
   void SetUp() override {
     kTestFilePath_ = std::filesystem::current_path() / "buffer_test.iamf";
     createIAMFFile2AE2MP(kTestFilePath_);
+    std::atomic_bool cancel = false;
     decoder_ = IAMFFileReader::createIamfReader(kTestFilePath_);
     ASSERT_NE(decoder_, nullptr);
+    decoder_->indexFile(cancel);
   }
 };
 
-static void waitForData() {
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-}
-
-static void waitForReady(BackgroundBuffer& buffer) {
-  const unsigned kMaxWaitMs = 5000;
-  unsigned waitedMs = 0;
-  while (!buffer.isReady() && waitedMs < kMaxWaitMs) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    waitedMs += 100;
-  }
-  EXPECT_TRUE(buffer.isReady());
-}
-
 const std::filesystem::path kReferenceFilePath =
-    std::filesystem::current_path() / "../common/player/test/test_resources" /
-    "test.iamf";
+    std::filesystem::current_path() /
+    "../common/processors/tests/test_resources/" / "HashSourceFileDebug.iamf";
 
 // 1. Test creating and filling the buffer.
-TEST(BackgroundBuffer, fill) {
+TEST(IAMFBufferedReader, fill) {
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
-  BackgroundBuffer buffer(1, *decoder);
+  IamfBufferedReader buffer(std::move(decoder), 1);
 
-  waitForData();
+  buffer.waitUntilReady();
+
   EXPECT_TRUE(buffer.availableSamples() > 0);
 }
 
 // 2. Test filling the buffer then reading some samples.
-TEST(BackgroundBuffer, fill_read) {
+TEST(IAMFBufferedReader, fill_read) {
+  std::atomic_bool cancel = false;
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
+  decoder->indexFile(cancel);
   ASSERT_NE(decoder, nullptr);
-  BackgroundBuffer buffer(1, *decoder);
+  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder), 1);
+  buffer.waitUntilReady();
 
-  waitForReady(buffer);
-
-  juce::AudioBuffer<float> out(decoder->getStreamData().numChannels,
-                               decoder->getStreamData().frameSize);
+  juce::AudioBuffer<float> out(kSData.numChannels, kSData.frameSize);
   EXPECT_EQ(buffer.readSamples(out, 0, out.getNumSamples()),
             out.getNumSamples());
 
-  juce::AudioBuffer<float> out2(decoder->getStreamData().numChannels,
-                                decoder->getStreamData().frameSize + 7);
+  juce::AudioBuffer<float> out2(kSData.numChannels, kSData.frameSize + 7);
   EXPECT_EQ(buffer.readSamples(out2, 0, out2.getNumSamples()),
             out2.getNumSamples());
 }
 
 // 3. Test filling the buffer, then seeking to a position ahead but in the
 // buffer.
-TEST(BackgroundBuffer, fill_seek_ahead) {
+TEST(IAMFBufferedReader, fill_seek_ahead) {
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
-  BackgroundBuffer buffer(1, *decoder);
+  std::atomic_bool cancel = false;
+  decoder->indexFile(cancel);
 
-  waitForReady(buffer);
+  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder), 1);
+
+  buffer.waitUntilReady();
 
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
-  juce::AudioBuffer<float> out(decoder->getStreamData().numChannels,
-                               decoder->getStreamData().frameSize);
+  juce::AudioBuffer<float> out(kSData.numChannels, kSData.frameSize);
   EXPECT_EQ(buffer.readSamples(out, 0, out.getNumSamples()),
             out.getNumSamples());
 
-  buffer.seek(20);
+  buffer.seek(3);
   EXPECT_EQ(buffer.readSamples(out, 0, out.getNumSamples()),
             out.getNumSamples());
 }
 
 // 4. Test filling the buffer, then seeking to a position behind but in the
 // buffer.
-TEST(BackgroundBuffer, fill_seek_behind) {
+TEST(IAMFBufferedReader, fill_seek_behind) {
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
+  std::atomic_bool cancel = false;
+  decoder->indexFile(cancel);
 
-  const unsigned kPadSecs = 1;
-  const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  const size_t kPadSamples = 100;
+  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder), 1);
 
-  waitForReady(buffer);
+  buffer.waitUntilReady();
 
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
   // Read through the padding. The underlying window should retain the padding
   // as it's the first time data is being read from the buffer.
-  juce::AudioBuffer<float> out(decoder->getStreamData().numChannels,
-                               kPadSamples);
+  juce::AudioBuffer<float> out(kSData.numChannels, kPadSamples);
   EXPECT_EQ(buffer.readSamples(out, 0, out.getNumSamples()),
             out.getNumSamples());
 
@@ -138,15 +134,17 @@ TEST(BackgroundBuffer, fill_seek_behind) {
 
 // 5. Test filling the buffer, then seeking to a position ahead outside the
 // buffer.
-TEST(BackgroundBuffer, fill_seek_ahead_ob) {
+TEST(IAMFBufferedReader, fill_seek_ahead_ob) {
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
+  std::atomic_bool cancel = false;
+  decoder->indexFile(cancel);
 
   const unsigned kPadSecs = 1;
   const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  IamfBufferedReader buffer(std::move(decoder), kPadSecs);
 
-  waitForReady(buffer);
+  buffer.waitUntilReady();
 
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
@@ -156,23 +154,23 @@ TEST(BackgroundBuffer, fill_seek_ahead_ob) {
 
 // 6. Test filling the buffer, then seeking to a position behind outside the
 // buffer.
-TEST(BackgroundBuffer, fill_seek_behind_ob) {
+TEST(IAMFBufferedReader, fill_seek_behind_ob) {
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
+  std::atomic_bool cancel = false;
+  decoder->indexFile(cancel);
 
-  const unsigned kPadSecs = 1;
-  const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  const size_t kPadSamples = 100;
+  IamfBufferedReader buffer(std::move(decoder), 1);
 
-  waitForReady(buffer);
+  buffer.waitUntilReady();
 
   EXPECT_TRUE(buffer.availableSamples() > 0);
 
   // Read through the padding. The underlying window should retain the padding
   // as it's the first time data is being read from the buffer. But we expect
   // the requested frame to not be in the buffer as we've read past it.
-  juce::AudioBuffer<float> out(decoder->getStreamData().numChannels,
-                               kPadSamples * 2);
+  juce::AudioBuffer<float> out(2, kPadSamples * 2);
   EXPECT_EQ(buffer.readSamples(out, 0, out.getNumSamples()),
             out.getNumSamples());
 
@@ -181,15 +179,17 @@ TEST(BackgroundBuffer, fill_seek_behind_ob) {
 }
 
 // 7. Read through the entire IAMF file.
-TEST(BackgroundBuffer, whole_file) {
+TEST(IAMFBufferedReader, whole_file) {
   auto decoder = IAMFFileReader::createIamfReader(kReferenceFilePath);
   ASSERT_NE(decoder, nullptr);
+  std::atomic_bool cancel = false;
+  decoder->indexFile(cancel);
+  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
 
   const unsigned kPadSecs = 3;
-  const size_t kPadSamples = decoder->getStreamData().sampleRate * kPadSecs;
-  BackgroundBuffer buffer(kPadSecs, *decoder);
+  const size_t kPadSamples = kSData.sampleRate * kPadSecs;
+  IamfBufferedReader buffer(std::move(decoder), kPadSecs);
 
-  const IAMFFileReader::StreamData kSData = decoder->getStreamData();
   const size_t kTotalSamples = kSData.numFrames * kSData.frameSize;
   const size_t kBufferSz = 1024;
   juce::AudioBuffer<float> out(kSData.numChannels, kBufferSz);
@@ -200,7 +200,7 @@ TEST(BackgroundBuffer, whole_file) {
       size_t samplesRead = buffer.readSamples(out, 0, kBufferSz);
       totalSamplesRead += samplesRead;
     } else {
-      waitForData();
+      buffer.waitUntilReady();
     }
   }
   EXPECT_EQ(totalSamplesRead, kTotalSamples);
@@ -208,11 +208,11 @@ TEST(BackgroundBuffer, whole_file) {
 
 // 8. Using the output test fixture, write an IAMF file. Read the IAMF file back
 // from the buffer and validate each sample is as expected.
-TEST_F(BackgroundBuffer2AETest, write_read_validate) {
+TEST_F(IAMFBufferedReader2AETest, write_read_validate) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder_);
-
   const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder_), kPadSecs);
+
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -225,7 +225,7 @@ TEST_F(BackgroundBuffer2AETest, write_read_validate) {
   while (totalFramesRead < kSData.numFrames) {
     // Wait if not enough samples available
     if (buffer.availableSamples() < kSData.frameSize) {
-      waitForData();
+      buffer.waitUntilReady();
       continue;
     }
 
@@ -254,11 +254,11 @@ TEST_F(BackgroundBuffer2AETest, write_read_validate) {
 }
 
 // 9. Try various reads and writes
-TEST_F(BackgroundBuffer2AETest, vary_read_write) {
+TEST_F(IAMFBufferedReader2AETest, vary_read_write) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder_);
-
   const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder_), kPadSecs);
+
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -275,7 +275,7 @@ TEST_F(BackgroundBuffer2AETest, vary_read_write) {
     size_t samplesRead =
         buffer.readSamples(readBuffer, startSample, samplesToRead);
     if (samplesRead < samplesToRead) {
-      waitForData();
+      buffer.waitUntilReady();
     }
 
     // Validate each sample matches the expected 440Hz sine wave
@@ -300,11 +300,11 @@ TEST_F(BackgroundBuffer2AETest, vary_read_write) {
 }
 
 // 10. Try various reads and writes on a longer file
-TEST_F(BackgroundBufferStereoTest, vary_read_write_long) {
+TEST_F(IAMFBufferedReaderStereoTest, vary_read_write_long) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder_);
-
   const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder_), kPadSecs);
+
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -323,7 +323,7 @@ TEST_F(BackgroundBufferStereoTest, vary_read_write_long) {
     if (samplesRead < samplesToRead) {
       std::cout << "Waiting for data at totalSamplesRead: " << totalSamplesRead
                 << std::endl;
-      waitForData();
+      buffer.waitUntilReady();
     }
 
     // Validate each sample matches the expected 440Hz sine wave
@@ -348,12 +348,16 @@ TEST_F(BackgroundBufferStereoTest, vary_read_write_long) {
 }
 
 // 11. Try various reads and writes on a longer file, vary buffer padding size
-TEST_F(BackgroundBufferStereoTest, vary_read_write_long_vary_pad) {
+TEST_F(IAMFBufferedReaderStereoTest, vary_read_write_long_vary_pad) {
   for (const unsigned kPadSecs : {2, 4, 8, 16, 32, 64}) {
     std::cout << "Testing with pad seconds: " << kPadSecs << std::endl;
-    BackgroundBuffer buffer(kPadSecs, *decoder_);
 
-    const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
+    // Recreate decoder for each iteration since we're moving it
+    auto decoder = IAMFFileReader::createIamfReader(kTestFilePath_);
+    ASSERT_NE(decoder, nullptr);
+    const IAMFFileReader::StreamData kSData = decoder->getStreamData();
+
+    IamfBufferedReader buffer(std::move(decoder), kPadSecs);
     EXPECT_TRUE(kSData.valid);
     EXPECT_EQ(kSData.sampleRate, kSampleRate);
     EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -373,7 +377,7 @@ TEST_F(BackgroundBufferStereoTest, vary_read_write_long_vary_pad) {
         std::cout << "Waiting for data at totalSamplesRead: "
                   << totalSamplesRead << " with pad seconds: " << kPadSecs
                   << std::endl;
-        waitForData();
+        buffer.waitUntilReady();
       }
 
       // Validate each sample matches the expected 440Hz sine wave
@@ -400,14 +404,15 @@ TEST_F(BackgroundBufferStereoTest, vary_read_write_long_vary_pad) {
 
 // 12. Using the output test fixture, write an IAMF file. Read the IAMF file
 // back from the buffer and validate each sample is as expected.
-TEST_F(BackgroundBufferStereoTest, seek_and_validate) {
+TEST_F(IAMFBufferedReaderStereoTest, seek_and_validate) {
   const unsigned kPadSecs = 1;
-  BackgroundBuffer buffer(kPadSecs, *decoder_);
+  const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
+  IamfBufferedReader buffer(std::move(decoder_), kPadSecs);
 
-  waitForReady(buffer);
+  buffer.waitUntilReady();
+
   ASSERT_TRUE(buffer.availableSamples() > 0);
 
-  const IAMFFileReader::StreamData kSData = decoder_->getStreamData();
   EXPECT_TRUE(kSData.valid);
   EXPECT_EQ(kSData.sampleRate, kSampleRate);
   EXPECT_EQ(kSData.numChannels, Speakers::kStereo.getNumChannels());
@@ -437,7 +442,7 @@ TEST_F(BackgroundBufferStereoTest, seek_and_validate) {
   // Seek to a position outside the padding and validate samples
   seekFrameIdx = 1000;
   buffer.seek(seekFrameIdx);
-  waitForData();
+  buffer.waitUntilReady();
   ASSERT_EQ(buffer.readSamples(readBuffer, 0, kSData.frameSize),
             kSData.frameSize);
   for (int channel = 0; channel < kSData.numChannels; ++channel) {

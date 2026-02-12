@@ -27,6 +27,10 @@ eclipsa_add_test(test_loudness_proc LoudnessExportProcessor_test.cpp "processors
 eclipsa_add_test(test_ebu128_loudness MeasureEBU128_test.cpp "processors;lufs_meter")
 eclipsa_add_test(test_iamf_writer IAMFFileWriter_test.cpp "processors;iamf")
 eclipsa_add_test(test_iamf_reader IAMFFileReader_test.cpp "processors;iamf")
+eclipsa_add_test(test_fileplayback_worker FilePlaybackWorker_test.cpp "processors;iamf")
+eclipsa_add_test(test_fileplayback_processor FilePlaybackProcessor_test.cpp "processors;iamf")
+eclipsa_add_test(test_fileplayback_resampler FilePlaybackResampler_test.cpp "processors;iamf")
+eclipsa_add_test(test_iamf_buffered_reader IamfBufferedReader_test.cpp "processors;iamf")
 
 if(APPLE)
     # Demuxing tests only work on apple for now

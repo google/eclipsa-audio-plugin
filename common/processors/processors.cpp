@@ -23,6 +23,8 @@
 #include "file_output/iamf_export_utils/IAMFExportUtil.cpp"
 #include "file_output/iamf_export_utils/IAMFFileReader.cpp"
 #include "file_output/iamf_export_utils/IAMFFileWriter.cpp"
+#include "file_playback/FilePlaybackProcessor.cpp"
+#include "file_playback/IAMFBufferedReader.cpp"
 #include "gain/GainEditor.cpp"
 #include "gain/GainProcessor.cpp"
 #include "gain/MSProcessor.cpp"
