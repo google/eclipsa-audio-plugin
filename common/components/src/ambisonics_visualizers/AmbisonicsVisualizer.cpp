@@ -14,7 +14,6 @@
 
 #include "AmbisonicsVisualizer.h"
 
-#include <algorithm>
 #include <cmath>
 
 #include "components/src/EclipsaColours.h"
@@ -417,10 +416,9 @@ void AmbisonicsVisualizer::updateSmoothedLoudnesses(
     smoothedLoudnesses_[i] += delta * alpha;
   }
   // Filter out possible NaN and inf values
-  std::for_each(smoothedLoudnesses_.begin(), smoothedLoudnesses_.end(),
-                [](float& ldn) {
-                  if (std::isnan(ldn) || std::isinf(ldn)) {
-                    ldn = -100.0f;
-                  }
-                });
+  for (float& loudness : smoothedLoudnesses_) {
+    if (std::isnan(loudness) || std::isinf(loudness)) {
+      loudness = -100.0f;
+    }
+  }
 }

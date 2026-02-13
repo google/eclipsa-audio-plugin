@@ -19,8 +19,6 @@
 #include <Eigen/Dense>
 #include <optional>
 
-#include "../EclipsaColours.h"
-#include "ColourLegend.h"
 #include "data_structures/src/AmbisonicsData.h"
 
 class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
@@ -121,8 +119,8 @@ class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
   const std::vector<CartesianPoint3D> speakerPositions_;
 
   // Smoothed loudness values for speakers
-  std::vector<float> smoothedLoudnesses_;   // Low-pass filtered loudness
-  static constexpr int kRefreshRate_ = 30;  // Hz
+  std::vector<float> smoothedLoudnesses_;
+  static constexpr int kRefreshRate_ = 30;
   const juce::Image carat_ = IconStore::getInstance().getCaratIcon();
 
   juce::Label label_;                  // label holds the position text
