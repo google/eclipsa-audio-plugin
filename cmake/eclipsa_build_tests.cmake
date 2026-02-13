@@ -36,13 +36,14 @@ function(eclipsa_build_tests)
         )
     endif ()
 
-    # Copy test DLLs (Windows only, set in toolchain)
-    if (DEFINED ECLIPSA_TEST_DLLS)
-        set(TEST_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>")
+    if (WIN32 AND DEFINED ECLIPSA_TEST_DLLS)
         add_custom_command(TARGET eclipsa_tests POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${TEST_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ECLIPSA_TEST_DLLS} "${TEST_DIR}/"
-                COMMENT "Copying test DLLs to ${TEST_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:eclipsa_tests>"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${ECLIPSA_TEST_DLLS}
+                "$<TARGET_FILE_DIR:eclipsa_tests>/"
+                COMMAND_EXPAND_LISTS
+                COMMENT "Copying test DLLs to $<TARGET_FILE_DIR:eclipsa_tests>"
         )
     endif ()
 
@@ -58,6 +59,16 @@ function(eclipsa_build_tests)
             juce::juce_recommended_warning_flags
             GTest::gtest_main
     )
+
+    if (WIN32)
+        add_custom_command(TARGET eclipsa_tests POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:eclipsa_tests>
+                $<TARGET_FILE_DIR:eclipsa_tests>
+                COMMAND_EXPAND_LISTS
+                COMMENT "Copying runtime DLLs for eclipsa_tests"
+        )
+    endif ()
 
     gtest_discover_tests(eclipsa_tests DISCOVERY_MODE PRE_TEST)
 endfunction()
