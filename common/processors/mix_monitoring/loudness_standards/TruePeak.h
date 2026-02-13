@@ -18,6 +18,12 @@
 
 #include <vector>
 
+/**
+ * @brief Computes the `true peak` measurement described in ITU-R BS.1770-4.
+ * Uses a polyphase filter approach similar to the FFmpeg.
+ *
+ */
+
 class TruePeak {
  public:
   float compute(const juce::AudioBuffer<float>& buffer);
