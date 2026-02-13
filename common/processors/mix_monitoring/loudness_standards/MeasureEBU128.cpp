@@ -17,8 +17,6 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <logger/logger.h>
 
-#include <algorithm>
-#include <cmath>
 #include <limits>
 
 #include "TruePeak.h"

@@ -19,13 +19,11 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 
-#include <chrono>
 #include <filesystem>
 #include <memory>
 
 #include "processors/file_output/FileWriter.h"
 #include "processors/tests/FileOutputTestUtils.h"
-#include "substream_rdr/substream_rdr_utils/Speakers.h"
 #include "substream_rdr/surround_panner/MonoToSpeakerPanner.h"
 
 // Enable to generate panned files to get the loudness information with FFMPEG
