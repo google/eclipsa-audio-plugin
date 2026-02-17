@@ -49,8 +49,15 @@ class FilePlaybackProcessorTest : public FileOutputTests {
 
   void waitForBuffering() {
     fpbData.processorState.read(procState);
+    const std::chrono::seconds kMaxWaitTime(30);
+    const std::chrono::milliseconds kWaitDuration(10);
+    auto startTime = std::chrono::steady_clock::now();
+
     while (procState == FilePlayback::ProcessorState::kBuffering) {
-      const std::chrono::milliseconds kWaitDuration(10);
+      auto elapsed = std::chrono::steady_clock::now() - startTime;
+      if (elapsed > kMaxWaitTime) {
+        FAIL() << "Buffering timeout exceeded 30 seconds";
+      }
       std::this_thread::sleep_for(kWaitDuration);
       fpbData.processorState.read(procState);
     }
