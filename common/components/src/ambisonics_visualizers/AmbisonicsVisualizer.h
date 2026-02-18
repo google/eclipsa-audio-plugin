@@ -15,11 +15,10 @@
  */
 
 #pragma once
-#include <Eigen/Dense>
-#include <queue>
 
-#include "../EclipsaColours.h"
-#include "ColourLegend.h"
+#include <Eigen/Dense>
+#include <optional>
+
 #include "data_structures/src/AmbisonicsData.h"
 
 class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
@@ -72,24 +71,6 @@ class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
                             const CartesianPoint3D& vec2);
   };
 
-  struct VisualizerElement {
-    VisualizerElement(
-        const juce::Path& tesselatedPatch, const CartesianPoint3D& position,
-        const std::priority_queue<std::pair<float, int>>& closestSpeakers);
-
-    const juce::Path tesselationPatch_;
-    const CartesianPoint3D position_;
-    const std::priority_queue<std::pair<float, int>> closestSpeakers_;
-    const float twoSigmaSquared_ = 2.f * 0.25f * 0.25f;  // sigma = 0.25
-    const std::vector<float> gaussianFilterWeights_;
-    const float denominator_;
-    juce::Colour prevColour_ = EclipsaColours::inactiveGrey;
-
-   private:
-    std::vector<float> calculateWeights();
-    float calculateDenominator();
-  };
-
   AmbisonicsVisualizer(AmbisonicsData* ambisonicsData,
                        const VisualizerView& view);
 
@@ -117,32 +98,30 @@ class AmbisonicsVisualizer : public juce::Component, public juce::Timer {
   void adjustDialAspectRatio(juce::Rectangle<int>& dialBounds);
   void drawCircle(juce::Graphics& g, juce::Rectangle<int>& bounds);
   void drawCarat(juce::Graphics& g);
+  void drawHeatmap(juce::Graphics& g, const juce::Rectangle<int>& bounds);
+  void updateSmoothedLoudnesses(const std::vector<float>& currentLoudnesses);
+
+  std::optional<std::pair<float, float>> projectSpeakerToView(
+      const CartesianPoint3D& speaker3D, const VisualizerView& view,
+      float centreX, float centreY, float radius);
 
   // called in initializer list
   float getCaratRotation(const VisualizerView& view);
   juce::String getViewText(const VisualizerView& view);
-
-  void writeVisualizerElements(const juce::Path& path,
-                               const CartesianPoint3D& point);
-  void tesselateCircle(juce::Graphics& g, const juce::Rectangle<int>& bounds);
-  void repaintTesselatedCircle(juce::Graphics& g);
-
-  // returns loudness, using a gaussian filter to smooth the values across the
-  // kNearestSpeakers_
-  float gaussianFilter(const VisualizerElement& element,
-                       const std::vector<float>& loudnessValues);
 
   std::vector<CartesianPoint3D> getSpeakerPositions(
       AmbisonicsData* ambisonicsData);
 
   AmbisonicsData* ambisonicsData_;
   VisualizerView view_;
-  juce::OwnedArray<VisualizerElement> visualizerElements_;
   juce::AffineTransform caratTransform_;
 
   const std::vector<CartesianPoint3D> speakerPositions_;
+
+  // Smoothed loudness values for speakers
+  std::vector<float> smoothedLoudnesses_;
+  static constexpr int kRefreshRate_ = 30;
   const juce::Image carat_ = IconStore::getInstance().getCaratIcon();
-  const int kNearestSpeakers_ = 8;  // number of nearest speakers to display
 
   juce::Label label_;                  // label holds the position text
   juce::Image image_;                  // image holds the carat image

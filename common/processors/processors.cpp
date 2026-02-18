@@ -34,6 +34,7 @@
 #include "mix_monitoring/MixMonitorProcessor.cpp"
 #include "mix_monitoring/TrackMonitorProcessor.cpp"
 #include "mix_monitoring/loudness_standards/MeasureEBU128.cpp"
+#include "mix_monitoring/loudness_standards/TruePeak.cpp"
 #include "panner/Panner3DProcessor.cpp"
 #include "remapping/RemappingProcessor.cpp"
 #include "render/RenderProcessor.cpp"

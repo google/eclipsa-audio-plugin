@@ -15,24 +15,23 @@
 #include "AmbisonicsVisualizer.h"
 
 #include <cmath>
-#include <queue>
 
 #include "components/src/EclipsaColours.h"
 #include "components/src/ambisonics_visualizers/ColourLegend.h"
-#include "components/src/loudness_meter/LoudnessScale.h"
 
 AmbisonicsVisualizer::AmbisonicsVisualizer(AmbisonicsData* ambisonicsData,
                                            const VisualizerView& view)
     : ambisonicsData_(ambisonicsData),
       view_(view),
-      speakerPositions_(getSpeakerPositions(ambisonicsData)) {
+      speakerPositions_(getSpeakerPositions(ambisonicsData)),
+      smoothedLoudnesses_(ambisonicsData->speakerAzimuths.size(), -100.0f) {
   label_.setText(getViewText(view), juce::dontSendNotification);
   label_.setJustificationType(juce::Justification::centred);
   label_.setColour(juce::Label::textColourId, EclipsaColours::headingGrey);
   label_.setColour(juce::Label::backgroundColourId,
                    juce::Colours::transparentBlack);
   addAndMakeVisible(label_);
-  startTimerHz(10);
+  startTimerHz(kRefreshRate_);
 }
 
 AmbisonicsVisualizer::~AmbisonicsVisualizer() { setLookAndFeel(nullptr); }
@@ -61,11 +60,8 @@ void AmbisonicsVisualizer::paint(juce::Graphics& g) {
   g.setColour(EclipsaColours::ambisonicsFillGrey);
   g.fillEllipse(bounds.toFloat());
 
-  if (visualizerElements_.isEmpty()) {
-    tesselateCircle(g, bounds);
-  } else {
-    repaintTesselatedCircle(g);
-  }
+  // Draw heatmap
+  drawHeatmap(g, bounds);
 
   if (view_ != VisualizerView::kFront && view_ != VisualizerView::kRear) {
     if (caratTransform_.isIdentity()) {
@@ -204,193 +200,131 @@ AmbisonicsVisualizer::getSpeakerPositions(AmbisonicsData* ambisonicsData) {
   return speakerPositions;
 }
 
-void AmbisonicsVisualizer::tesselateCircle(juce::Graphics& g,
-                                           const juce::Rectangle<int>& bounds) {
-  std::vector<float> loudnessValues(ambisonicsData_->speakerElevations.size());
-  const bool valuesReturned =
-      ambisonicsData_->speakerLoudnesses.read(loudnessValues);
-  int colorIndex = 0;
-  const int radius = bounds.getWidth() / 2;
-  const int centreX = bounds.getCentreX();
-  const int centreY = bounds.getCentreY();
-  const int numPoints = 20;
-  Eigen::VectorXf thetas = Eigen::VectorXf::LinSpaced(
-      numPoints, 0, 2 * juce::MathConstants<float>::pi);
-  const Eigen::VectorXf radii =
-      Eigen::VectorXf::LinSpaced(numPoints, 0, radius);
-
-  // create pie segments for the first two radii
-  const float pieSegmentRadius = radii[1];
-  const float avg_radius =
-      (pieSegmentRadius / 2) / radius;  // ensure the value is normalized
-  // keep an element index to access memoized elements
-  int elementIndex = 0;
-  for (int j = 1; j < numPoints; j++) {  // iterate through the thetas
-    juce::Path tesselatedPatch;
-    const float theta = thetas[j];
-    const float thetaPrev = thetas[j - 1];
-    juce::Point<float> arcStart{
-        centreX + pieSegmentRadius * std::sin(thetaPrev),
-        centreY - pieSegmentRadius * std::cos(thetaPrev)};
-    tesselatedPatch.startNewSubPath(centreX, centreY);
-    juce::Point<int> pointA = tesselatedPatch.getCurrentPosition().toInt();
-    tesselatedPatch.lineTo(arcStart);
-    juce::Point<int> pointB = tesselatedPatch.getCurrentPosition().toInt();
-    tesselatedPatch.addCentredArc(centreX, centreY, pieSegmentRadius,
-                                  pieSegmentRadius, 0, thetaPrev, theta);
-    juce::Point<int> pointC = tesselatedPatch.getCurrentPosition().toInt();
-    tesselatedPatch.lineTo(centreX, centreY);
-    juce::Point<int> pointD = tesselatedPatch.getCurrentPosition().toInt();
-    tesselatedPatch.closeSubPath();
-
-    // add r & theta to the 3D points
-    const float avg_theta = (theta + thetaPrev) / 2;
-    // write to the Visualizer Elements
-    writeVisualizerElements(tesselatedPatch,
-                            CartesianPoint3D(avg_radius, avg_theta, view_));
-    if (valuesReturned) {
-      float loudness =
-          gaussianFilter(*visualizerElements_.getLast(), loudnessValues);
-      juce::Colour colour = ColourLegend::assignColour(loudness);
-
-      visualizerElements_.getLast()->prevColour_ = colour;
-    }
-    g.setColour(visualizerElements_.getLast()->prevColour_);
-    g.fillPath(tesselatedPatch);
-    g.strokePath(tesselatedPatch, juce::PathStrokeType(1.f));
-  }
-
-  // create the rest of the circle
-  int thetaCount = numPoints;            // store the previous theta count
-  for (int i = 2; i < numPoints; i++) {  // iterate through the radii
-    const float outerRadius = radii[i];
-    const float innerRadius = radii[i - 1];
-    const float avg_radius = ((outerRadius + innerRadius) / 2) /
-                             radius;  // ensure radius is normalized
-    // try to preserve radial resolution
-    // scale the number of thetas based on the ratio of the radii
-    const int newThetaCount =
-        std::ceil(thetaCount * outerRadius /
-                  innerRadius);  // round up to the next integer
-    thetaCount = newThetaCount;  // store the previous theta count
-    thetas = Eigen::VectorXf::LinSpaced(newThetaCount, 0,
-                                        2 * juce::MathConstants<float>::pi);
-    for (int j = 1; j < newThetaCount; j++) {  // iterate through the thetas
-      juce::Path tesselatedPatch;
-      // get the equivalent x and y coordinates of the starting point
-      // theta is 0 from the circles top centre
-      juce::Point<float> innerArcStart = {
-          centreX + innerRadius * std::sin(thetas[j - 1]),
-          centreY - innerRadius * std::cos(thetas[j - 1])};
-
-      tesselatedPatch.startNewSubPath(innerArcStart);
-
-      // inner arc is drawn clockwise
-      tesselatedPatch.addCentredArc(centreX, centreY, innerRadius, innerRadius,
-                                    0, thetas[j - 1], thetas[j], true);
-
-      juce::Point<float> innerArcEnd = tesselatedPatch.getCurrentPosition();
-      // theta is 0 from the circles top centre
-      juce::Point<float> outterArcStart = {
-          centreX + outerRadius * std::sin(thetas[j]),
-          centreY - outerRadius * std::cos(thetas[j])};
-
-      tesselatedPatch.lineTo(outterArcStart);
-      //  outer arc is drawn counter clockwise
-      tesselatedPatch.addCentredArc(centreX, centreY, outerRadius, outerRadius,
-                                    0, thetas[j], thetas[j - 1]);
-
-      juce::Point<float> outerArcEnd = tesselatedPatch.getCurrentPosition();
-
-      tesselatedPatch.lineTo(innerArcStart);
-      tesselatedPatch.closeSubPath();
-
-      const float avg_theta = (thetas[j] + thetas[j - 1]) / 2;
-      // write to the Visualizer Elements
-      writeVisualizerElements(tesselatedPatch,
-                              CartesianPoint3D(avg_radius, avg_theta, view_));
-      if (valuesReturned) {
-        float loudness =
-            gaussianFilter(*visualizerElements_.getLast(), loudnessValues);
-        juce::Colour colour = ColourLegend::assignColour(loudness);
-
-        visualizerElements_.getLast()->prevColour_ = colour;
-      }
-      g.setColour(visualizerElements_.getLast()->prevColour_);
-      g.fillPath(tesselatedPatch);
-      g.strokePath(tesselatedPatch, juce::PathStrokeType(1.f));
-    }
-  }
-}
-
 void AmbisonicsVisualizer::timerCallback() { repaint(); }
 
-void AmbisonicsVisualizer::repaintTesselatedCircle(juce::Graphics& g) {
+void AmbisonicsVisualizer::drawHeatmap(juce::Graphics& g,
+                                       const juce::Rectangle<int>& bounds) {
   std::vector<float> loudnessValues(ambisonicsData_->speakerElevations.size());
-  const bool readValues =
-      ambisonicsData_->speakerLoudnesses.read(loudnessValues);
-  // couldn't read the values
-  // repaint the previous colours
-  if (!readValues) {
-    for (auto& element : visualizerElements_) {
-      g.setColour(element->prevColour_);
-      g.fillPath(element->tesselationPatch_);
-      g.strokePath(element->tesselationPatch_, juce::PathStrokeType(1.f));
+  ambisonicsData_->speakerLoudnesses.read(loudnessValues);
+
+  // Update smoothed loudnesses with current values
+  updateSmoothedLoudnesses(loudnessValues);
+
+  const float kRadius = bounds.getWidth() / 2.0f;
+  const float kCentreX = bounds.getCentreX();
+  const float kCentreY = bounds.getCentreY();
+
+  // Create a clipping region for the circle
+  juce::Path clipPath;
+  clipPath.addEllipse(bounds.toFloat());
+  g.saveState();
+  g.reduceClipRegion(clipPath);
+
+  // Draw a radial gradient for each speaker
+  for (int i = 0; i < ambisonicsData_->speakerAzimuths.size(); i++) {
+    // Use smoothed loudness instead of current value
+    const float kLoudness = smoothedLoudnesses_[i];
+
+    // Skip silent speakers
+    const float kSilenceThreshold = -60.0f;
+    if (kLoudness < kSilenceThreshold) {
+      continue;
     }
-  } else {      // able to update the loudness values, paint the new colours
-    int i = 0;  // track element index for debugging
-    for (auto& element : visualizerElements_) {
-      float loudness = gaussianFilter(*element, loudnessValues);
-      juce::Colour colour = ColourLegend::assignColour(loudness);
-      g.setColour(colour);
-      g.fillPath(element->tesselationPatch_);
-      g.strokePath(element->tesselationPatch_, juce::PathStrokeType(1.f));
-      element->prevColour_ = colour;
-      i++;
-    }
+
+    // Get speaker position in 3D
+    const CartesianPoint3D& kSpeakerPos = speakerPositions_[i];
+
+    // Project speaker position onto the 2D circle view
+    const auto kProjectedPoint =
+        projectSpeakerToView(kSpeakerPos, view_, kCentreX, kCentreY, kRadius);
+
+    // Skip if speaker is on the back hemisphere (not visible in this view)
+    if (!kProjectedPoint.has_value()) continue;
+
+    const auto [kSpeakerX, kSpeakerY] = kProjectedPoint.value();
+
+    // Map loudness to color
+    juce::Colour colour = ColourLegend::assignColour(kLoudness);
+
+    // Create radial gradient from speaker position
+    // Gradient radius based on loudness (louder = larger influence area)
+    const float kGradientRadMultiplier = 0.8f;
+    const float kMinGradientScale = 1.0f;
+    const float kMaxGradientScale = 1.0f;
+    const float kGradientRadius =
+        kRadius * kGradientRadMultiplier *
+        juce::jmap(kLoudness, kSilenceThreshold, 0.0f, kMinGradientScale,
+                   kMaxGradientScale);
+
+    const float kCenterAlpha = 0.8f;
+    const float kEdgeAlpha = 0.0f;
+    juce::ColourGradient gradient(colour.withAlpha(kCenterAlpha),  // center
+                                  kSpeakerX, kSpeakerY,  // speaker position
+                                  colour.withAlpha(kEdgeAlpha),  // edge
+                                  kSpeakerX + kGradientRadius,
+                                  kSpeakerY,  // edge of influence
+                                  true);
+
+    g.setGradientFill(gradient);
+
+    // Draw a circle for this speaker's influence area
+    juce::Rectangle<float> gradientBounds(
+        kSpeakerX - kGradientRadius, kSpeakerY - kGradientRadius,
+        kGradientRadius * 2, kGradientRadius * 2);
+
+    g.fillEllipse(gradientBounds);
   }
+
+  g.restoreState();
 }
 
-float AmbisonicsVisualizer::gaussianFilter(
-    const VisualizerElement& element,
-    const std::vector<float>& loudnessValues) {
-  float numerator = 0.f;
-  float denominator = 0.f;
-  // create a local copy to iterate over
-  std::priority_queue<std::pair<float, int>> closestSpeakers =
-      element.closestSpeakers_;
-  int index = 0;
-  // closestSpeakers will always have a max size of kNearestSpeakers_
-  // element.gaussianFilterWeights_ will always have a size of kNearestSpeakers_
-  while (!closestSpeakers.empty() && index < kNearestSpeakers_) {
-    const auto speaker = closestSpeakers.top();
-    const float distance = speaker.first;
-    const float loudness = loudnessValues[speaker.second];
-    const float weight = element.gaussianFilterWeights_[index];
-    numerator += loudness * weight;
-    index++;
-    closestSpeakers.pop();
-  }
-  return {numerator / element.denominator_};
-}
+std::optional<std::pair<float, float>>
+AmbisonicsVisualizer::projectSpeakerToView(const CartesianPoint3D& speaker3D,
+                                           const VisualizerView& view,
+                                           float centreX, float centreY,
+                                           float radius) {
+  float x2D, y2D;
 
-void AmbisonicsVisualizer::writeVisualizerElements(
-    const juce::Path& path, const CartesianPoint3D& point) {
-  // calculate the distance from point i to point j, keeping the k nearest
-  // speakers
-  std::priority_queue<std::pair<float, int>> closestSpeakers;
-  for (int j = 0; j < ambisonicsData_->speakerAzimuths.size(); j++) {
-    float geoDesicDistance =
-        CartesianPoint3D::geoDesicDistance(point, speakerPositions_[j]);
-    if (closestSpeakers.size() < kNearestSpeakers_) {
-      closestSpeakers.push({geoDesicDistance, j});
-    } else if (closestSpeakers.top().first > geoDesicDistance) {
-      closestSpeakers.pop();
-      closestSpeakers.push({geoDesicDistance, j});
-    }
+  // Coordinate system: +X = front (azimuth 0°), +Y = left (azimuth 90°), +Z =
+  // up (these come from SAF conventions)
+  switch (view) {
+    case VisualizerView::kFront:
+      if (speaker3D.x < 0) return std::nullopt;  // speaker on far side (behind)
+      x2D = speaker3D.y;
+      y2D = -speaker3D.z;
+      break;
+    case VisualizerView::kRear:
+      if (speaker3D.x > 0) return std::nullopt;  // speaker on far side (front)
+      x2D = -speaker3D.y;
+      y2D = -speaker3D.z;
+      break;
+    case VisualizerView::kLeft:
+      if (speaker3D.y < 0) return std::nullopt;  // speaker on far side (right)
+      x2D = speaker3D.x;
+      y2D = -speaker3D.z;
+      break;
+    case VisualizerView::kRight:
+      if (speaker3D.y > 0) return std::nullopt;  // speaker on far side (left)
+      x2D = -speaker3D.x;
+      y2D = -speaker3D.z;
+      break;
+    case VisualizerView::kTop:
+      if (speaker3D.z < 0) return std::nullopt;  // speaker on far side (below)
+      x2D = speaker3D.y;
+      y2D = speaker3D.x;
+      break;
+    case VisualizerView::kBottom:
+      if (speaker3D.z > 0) return std::nullopt;  // speaker on far side (above)
+      x2D = speaker3D.y;
+      y2D = -speaker3D.x;
+      break;
   }
-  visualizerElements_.add(
-      std::make_unique<VisualizerElement>(path, point, closestSpeakers));
+
+  // Convert from [-1, 1] normalized coordinates to pixel coordinates
+  const float kPixelX = centreX + x2D * radius;
+  const float kPixelY = centreY + y2D * radius;
+
+  return std::make_pair(kPixelX, kPixelY);
 }
 
 AmbisonicsVisualizer::CartesianPoint3D::CartesianPoint3D(const float& azimuth,
@@ -469,35 +403,22 @@ float AmbisonicsVisualizer::CartesianPoint3D::dotProduct(
   return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z;
 }
 
-AmbisonicsVisualizer::VisualizerElement::VisualizerElement(
-    const juce::Path& tesselatedPatch, const CartesianPoint3D& position,
-    const std::priority_queue<std::pair<float, int>>& closestSpeakers)
-    : tesselationPatch_(tesselatedPatch),
-      position_(position),
-      closestSpeakers_(closestSpeakers),
-      gaussianFilterWeights_(calculateWeights()),
-      denominator_(calculateDenominator()) {}
+void AmbisonicsVisualizer::updateSmoothedLoudnesses(
+    const std::vector<float>& currentLoudnesses) {
+  const float kWindowSeconds = 0.05f;
 
-std::vector<float> AmbisonicsVisualizer::VisualizerElement::calculateWeights() {
-  std::vector<float> weights;
-  std::priority_queue<std::pair<float, int>> speakerCopy =
-      closestSpeakers_;  // create a local copy to iterate over
-  // calculate the weights for the k nearest speakers
-  while (!speakerCopy.empty()) {
-    const auto speaker = speakerCopy.top();
-    const float distance = speaker.first;
-    const float weight =
-        std::exp(-1.f * std::pow(distance, 2) / twoSigmaSquared_);
-    weights.push_back(weight);
-    speakerCopy.pop();
+  const float dt = 1.0f / static_cast<float>(kRefreshRate_);
+  const float alpha = 1.0f - std::exp(-dt / kWindowSeconds);
+  for (int i = 0; i < currentLoudnesses.size(); i++) {
+    const float kCurrLoudness =
+        isnan(currentLoudnesses[i]) ? -100.0f : currentLoudnesses[i];
+    const float delta = kCurrLoudness - smoothedLoudnesses_[i];
+    smoothedLoudnesses_[i] += delta * alpha;
   }
-  return weights;
-}
-
-float AmbisonicsVisualizer::VisualizerElement::calculateDenominator() {
-  float denominator = 0.f;
-  for (auto& weight : gaussianFilterWeights_) {
-    denominator += weight;
+  // Filter out possible NaN and inf values
+  for (float& loudness : smoothedLoudnesses_) {
+    if (std::isnan(loudness) || std::isinf(loudness)) {
+      loudness = -100.0f;
+    }
   }
-  return denominator;
 }

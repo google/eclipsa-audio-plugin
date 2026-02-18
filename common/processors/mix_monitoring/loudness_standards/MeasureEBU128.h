@@ -20,6 +20,7 @@
 #include <logger/logger.h>
 
 #include "EBU128LoudnessMeter.h"
+#include "TruePeak.h"
 
 class MeasureEBU128 {
  public:
@@ -32,10 +33,6 @@ class MeasureEBU128 {
   /**
    * @brief Create a loudness measurement object for a given sample rate and
    * rendering layout.
-   * NOTE:
-   * Filter coefficients are hard-coded from ITU 1770 for a sample rate of
-   * 48kHz, so calculations at other sample rates are currently expected to be
-   * inaccurate.
    * @param sampleRate
    * @param chData Playback layout for which to measure loudness.
    */
@@ -65,12 +62,6 @@ class MeasureEBU128 {
 
   float calculateDigitalPeak(const juce::AudioBuffer<float>& buffer);
 
-  struct LPF {
-    juce::dsp::AudioBlock<float> block;
-    juce::dsp::ProcessorDuplicator<juce::dsp::FIR::Filter<float>,
-                                   juce::dsp::FIR::Coefficients<float>>
-        filter;
-  };
   // Playback information
   const double kSampleRate_;
   juce::AudioChannelSet playbackLayout_;
@@ -78,11 +69,8 @@ class MeasureEBU128 {
   // Library for calculating loudness and range values
   Ebu128LoudnessMeter loudnessMeter_;
 
-  // Resamplers for true peak calculation.
-  int upsampleRatio_ = 4;  // Upsampling ratio for true peak calculation.
-  juce::AudioBuffer<float> upsampledBuffer_;  // Larger buffer to upsample into.
-  std::vector<juce::Interpolators::Lagrange> perChannelResamplers_;
-  LPF lpf_;
+  // True peak calculator
+  TruePeak truePeakMeter_;
 
   // Internal copy of calculated loudness statistics to return when
   // loudnesses' are queried between measurement periods.

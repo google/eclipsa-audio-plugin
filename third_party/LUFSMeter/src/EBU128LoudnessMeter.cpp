@@ -89,9 +89,6 @@ Ebu128LoudnessMeter::Ebu128LoudnessMeter()
       loudnessRangeEnd(minimalReturnValue),
       freezeLoudnessRangeOnSilence(false),
       currentBlockIsSilent(false) {
-  DBG("The longest possible measurement until a buffer overflow = " +
-      juce::String(INT_MAX / 10. / 3600. / 365.) + " years");
-
   // If this class is used without caution and processBlock
   // is called before prepareToPlay, divisions by zero
   // might occure. E.g. if numberOfSamplesInAllBins = 0.
@@ -143,8 +140,6 @@ void Ebu128LoudnessMeter::prepareToPlay(double sampleRate,
     }
   }
 
-  DBG("expectedRequestRate = " + juce::String(expectedRequestRate));
-
   // Figure out how many bins are needed.
   const int timeOfAccumulationForShortTerm =
       3;  // seconds.
@@ -154,9 +149,7 @@ void Ebu128LoudnessMeter::prepareToPlay(double sampleRate,
   numberOfSamplesInAllBins = numberOfBins * numberOfSamplesPerBin;
 
   numberOfBinsToCover100ms = int(0.1 * expectedRequestRate);
-  DBG("numberOfBinsToCover100ms = " + juce::String(numberOfBinsToCover100ms));
   numberOfBinsToCover400ms = int(0.4 * expectedRequestRate);
-  DBG("numberOfBinsToCover400ms = " + juce::String(numberOfBinsToCover400ms));
   numberOfSamplesIn400ms = numberOfBinsToCover400ms * numberOfSamplesPerBin;
 
   currentBin = 0;
@@ -205,7 +198,6 @@ void Ebu128LoudnessMeter::processBlock(const juce::AudioSampleBuffer& buffer) {
     const float magnitude = buffer.getMagnitude(0, buffer.getNumSamples());
     if (magnitude < silenceThreshold) {
       currentBlockIsSilent = true;
-      DBG("Silence detected.");
     } else
       currentBlockIsSilent = false;
   }
