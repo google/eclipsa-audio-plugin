@@ -58,5 +58,10 @@ function(eclipsa_add_test test_name test_source test_libs)
     endif ()
 
     get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_resources")
+        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/test_resources"
+                DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    endif ()
+
     set_property(GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS "${test_link_libs};${test_libs}")
 endfunction()
