@@ -61,7 +61,8 @@ void FileOutputProcessor::prepareToPlay(double sampleRate,
   sampleRate_ = sampleRate;
 }
 
-void FileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
+void FileOutputProcessor::setNonRealtime(const bool isNonRealtime) noexcept {
+  // Bouncing in DAW and currently rendering || not bouncing and not rendering
   if (isNonRealtime == performingRender_) {
     return;
   }
@@ -92,10 +93,12 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     return;
   }
 
+  // Process audio elements individually as Wav files
   for (int i = 0; i < iamfWavFileWriters_.size(); ++i) {
     iamfWavFileWriters_[i]->write(buffer);
   }
 
+  // Process IAMF File
   if (iamfFileWriter_) {
     iamfFileWriter_->writeFrame(buffer);
   }
@@ -105,8 +108,8 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 void FileOutputProcessor::initializeFileExport(FileExport& config) {
   LOG_ANALYTICS(0, "Beginning .iamf file export");
   performingRender_ = true;
-  startTime_ = config.getStartTime();
-  endTime_ = config.getEndTime();
+  startTime_ = config.getStartTime() / 1000;
+  endTime_ = config.getEndTime() / 1000;
   std::string exportFile = config.getExportFile().toStdString();
 
   // To create the IAMF file, create a list of all the audio element wav
@@ -159,10 +162,10 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   }
 }
 
-void FileOutputProcessor::closeFileExport(FileExport& config) {
+void FileOutputProcessor::closeFileExport(const FileExport& config) {
   LOG_ANALYTICS(0, "closing writers and exporting IAMF file");
   // close the output file, since rendering is completed
-  for (auto& writer : iamfWavFileWriters_) {
+  for (const auto& writer : iamfWavFileWriters_) {
     writer->close();
   }
 
@@ -209,11 +212,11 @@ bool FileOutputProcessor::shouldBufferBeWritten(
 
   // Calculate the current time with the existing number of samples that have
   // been processed
-  long currentTime = sampleTally_ / sampleRate_;
+  const long currentTime = sampleTally_ / sampleRate_;
   // update the sample tally
   sampleTally_ += buffer.getNumSamples();
   // with the updated sample tally, calculate the next time
-  long nextTime = sampleTally_ / sampleRate_;
+  const long nextTime = sampleTally_ / sampleRate_;
 
   if (startTime_ != 0 || endTime_ != 0) {
     // Handle the case where startTime and endTime are set, implying we

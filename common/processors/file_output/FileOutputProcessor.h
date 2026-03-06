@@ -80,7 +80,7 @@ class FileOutputProcessor : public ProcessorBase {
 
   void initializeFileExport(FileExport& config);
 
-  void closeFileExport(FileExport& config);
+  void closeFileExport(const FileExport& config);
 
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
 

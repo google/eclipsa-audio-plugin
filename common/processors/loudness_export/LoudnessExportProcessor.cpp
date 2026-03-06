@@ -253,8 +253,8 @@ void LoudnessExportProcessor::initializeLoudnessExport(FileExport& config) {
 
   sampleRate_ = config.getSampleRate();
   sampleTally_ = 0;
-  startTime_ = config.getStartTime();
-  endTime_ = config.getEndTime();
+  startTime_ = config.getStartTime() / 1000;
+  endTime_ = config.getEndTime() / 1000;
 
   intializeExportContainers();
 }

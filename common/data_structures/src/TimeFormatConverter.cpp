@@ -57,22 +57,6 @@ juce::String TimeFormatConverter::secondsToBarsBeats(
          juce::String(ticks).paddedLeft('0', 3);
 }
 
-juce::String TimeFormatConverter::secondsToTimecode(
-    int timeInSeconds, const juce::AudioPlayHead::FrameRate& frameRate) {
-  int hours = timeInSeconds / 3600;
-  int minutes = (timeInSeconds % 3600) / 60;
-  int seconds = timeInSeconds % 60;
-  int frames = 0;  // For integer seconds, frames = 0
-
-  // Format: HH:MM:SS:FF
-  juce::String hourStr = juce::String(hours).paddedLeft('0', 2);
-  juce::String minStr = juce::String(minutes).paddedLeft('0', 2);
-  juce::String secStr = juce::String(seconds).paddedLeft('0', 2);
-  juce::String frameStr = juce::String(frames).paddedLeft('0', 2);
-
-  return hourStr + ":" + minStr + ":" + secStr + ":" + frameStr;
-}
-
 int TimeFormatConverter::hmsToSeconds(const juce::String& val) {
   auto parts = juce::StringArray::fromTokens(val, ":", "");
   if (parts.size() != 3) {
@@ -130,33 +114,33 @@ int TimeFormatConverter::barsBeatsToSeconds(
   return static_cast<int>(totalBeats * secondsPerBeat);
 }
 
-int TimeFormatConverter::timecodeToSeconds(const juce::String& val) {
+int TimeFormatConverter::timecodeToMs(const juce::String& val, double fps) {
   auto parts = juce::StringArray::fromTokens(val, ":", "");
-  if (parts.size() != 4) {
-    return -1;
-  }
-  if (!parts[0].containsOnly("0123456789") ||
-      !parts[1].containsOnly("0123456789") ||
-      !parts[2].containsOnly("0123456789") ||
-      !parts[3].containsOnly("0123456789")) {
-    return -1;
-  }
+  if (parts.size() != 4) return -1;
+
+  for (auto& p : parts)
+    if (!p.containsOnly("0123456789")) return -1;
 
   int hours = parts[0].getIntValue();
   int minutes = parts[1].getIntValue();
   int seconds = parts[2].getIntValue();
   int frames = parts[3].getIntValue();
 
-  // Validate ranges (frames validation would require frame rate)
   if (minutes > 59 || seconds > 59 || hours < 0 || minutes < 0 || seconds < 0 ||
-      frames < 0) {
+      frames < 0 || frames >= (int)fps)
     return -1;
-  }
 
-  // Note: Frames are ignored for now as we work with integer seconds
-  // This means 00:00:05:00 and 00:00:05:29 both become 5 seconds
-  // This is acceptable for the current use case but creates lossy conversion
-  return (hours * 3600 + minutes * 60 + seconds);
+  double totalSeconds = hours * 3600 + minutes * 60 + seconds + (frames / fps);
+  return static_cast<int>(std::round(totalSeconds * 1000.0));
+}
+
+juce::String TimeFormatConverter::msToTimecode(const int ms, const double fps) {
+  double totalSeconds = ms / 1000.0;
+  int hh = (int)(totalSeconds / 3600);
+  int mm = (int)(std::fmod(totalSeconds, 3600.0) / 60.0);
+  int ss = (int)(std::fmod(totalSeconds, 60.0));
+  int ff = (int)(std::fmod(totalSeconds, 1.0) * fps);
+  return juce::String::formatted("%02d:%02d:%02d:%02d", hh, mm, ss, ff);
 }
 
 juce::String TimeFormatConverter::getFormatDescription(TimeFormat format) {

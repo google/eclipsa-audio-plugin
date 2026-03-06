@@ -25,14 +25,13 @@ class TimeFormatConverter {
   static juce::String secondsToBarsBeats(
       int timeInSeconds, double bpm,
       const juce::AudioPlayHead::TimeSignature& timeSig);
-  static juce::String secondsToTimecode(
-      int timeInSeconds, const juce::AudioPlayHead::FrameRate& frameRate);
+  static juce::String msToTimecode(int ms, double fps);
 
   static int hmsToSeconds(const juce::String& val);
   static int barsBeatsToSeconds(
       const juce::String& val, double bpm,
       const juce::AudioPlayHead::TimeSignature& timeSig);
-  static int timecodeToSeconds(const juce::String& val);
+  static int timecodeToMs(const juce::String& val, double fps);
 
   static juce::String getFormatDescription(TimeFormat format);
 };

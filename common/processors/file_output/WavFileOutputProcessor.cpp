@@ -79,8 +79,8 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
     // Start Rendering
     FileExport configParams = fileExportRepository_.get();
     RoomSetup roomSetup = roomSetupRepository_.get();
-    startTime_ = configParams.getStartTime();
-    endTime_ = configParams.getEndTime();
+    startTime_ = configParams.getStartTime() / 1000;
+    endTime_ = configParams.getEndTime() / 1000;
     if ((configParams.getAudioFileFormat() == AudioFileFormat::WAV) &&
         configParams.getExportAudio()) {
       fileWriter_ = new FileWriter(
