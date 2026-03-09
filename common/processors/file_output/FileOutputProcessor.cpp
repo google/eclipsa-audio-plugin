@@ -217,17 +217,21 @@ bool FileOutputProcessor::shouldBufferBeWritten(
   const double currentTime = static_cast<double>(sampleTally_) / sampleRate_;
   // update the sample tally
   sampleTally_ += buffer.getNumSamples();
-  // with the updated sample tally, calculate the next time
-  const double nextTime = static_cast<double>(sampleTally_) / sampleRate_;
 
-  if (startTime_ != 0 || endTime_ != 0) {
-    // Handle the case where startTime and endTime are set, implying we
-    // are only bouncing a subset of the mix
-
-    // do not render
-    if (currentTime < startTime_ || nextTime >= endTime_) {
-      return false;
-    }
+  // No range specified — write everything
+  if (startTime_ <= 0 && endTime_ <= 0) {
+    return true;
   }
+
+  // Skip if buffer starts before the requested start time
+  if (startTime_ > 0 && currentTime < startTime_) {
+    return false;
+  }
+
+  // Skip if buffer starts at or past the requested end time
+  if (endTime_ > 0 && currentTime >= endTime_) {
+    return false;
+  }
+
   return true;
 }
