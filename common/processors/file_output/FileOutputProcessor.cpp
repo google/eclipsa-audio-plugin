@@ -40,15 +40,15 @@ FileOutputProcessor::FileOutputProcessor(
       mixPresentationRepository_(mixPresentationRepository),
       mixPresentationLoudnessRepository_(mixPresentationLoudnessRepository) {}
 
-FileOutputProcessor::~FileOutputProcessor() {}
+FileOutputProcessor::~FileOutputProcessor() = default;
 
 //==============================================================================
 const juce::String FileOutputProcessor::getName() const {
   return {"FileOutput"};
 }
 //==============================================================================
-void FileOutputProcessor::prepareToPlay(double sampleRate,
-                                        int samplesPerBlock) {
+void FileOutputProcessor::prepareToPlay(const double sampleRate,
+                                        const int samplesPerBlock) {
   FileExport configParams = fileExportRepository_.get();
   if (configParams.getSampleRate() != sampleRate) {
     LOG_ANALYTICS(0, "FileOutputProcessor sample rate changed to " +
@@ -108,8 +108,10 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 void FileOutputProcessor::initializeFileExport(FileExport& config) {
   LOG_ANALYTICS(0, "Beginning .iamf file export");
   performingRender_ = true;
-  startTime_ = config.getStartTime() / 1000;
-  endTime_ = config.getEndTime() / 1000;
+  startTime_ = config.getStartTime() / 1000.0;
+  DBG(startTime_);
+  endTime_ = config.getEndTime() / 1000.0;
+  DBG(endTime_);
   std::string exportFile = config.getExportFile().toStdString();
 
   // To create the IAMF file, create a list of all the audio element wav
@@ -212,18 +214,18 @@ bool FileOutputProcessor::shouldBufferBeWritten(
 
   // Calculate the current time with the existing number of samples that have
   // been processed
-  const long currentTime = sampleTally_ / sampleRate_;
+  const double currentTime = static_cast<double>(sampleTally_) / sampleRate_;
   // update the sample tally
   sampleTally_ += buffer.getNumSamples();
   // with the updated sample tally, calculate the next time
-  const long nextTime = sampleTally_ / sampleRate_;
+  const double nextTime = static_cast<double>(sampleTally_) / sampleRate_;
 
   if (startTime_ != 0 || endTime_ != 0) {
     // Handle the case where startTime and endTime are set, implying we
     // are only bouncing a subset of the mix
 
     // do not render
-    if (currentTime < startTime_ || nextTime > endTime_) {
+    if (currentTime < startTime_ || nextTime >= endTime_) {
       return false;
     }
   }

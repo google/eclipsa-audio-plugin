@@ -92,9 +92,9 @@ class FileOutputProcessor : public ProcessorBase {
   MixPresentationLoudnessRepository& mixPresentationLoudnessRepository_;
   std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
   int numSamples_;
-  long sampleRate_;
-  int startTime_;
-  int endTime_;
+  double sampleRate_;
+  double startTime_;
+  double endTime_;
   long sampleTally_;
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   //==============================================================================
