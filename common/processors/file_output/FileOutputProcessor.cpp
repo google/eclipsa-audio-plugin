@@ -113,10 +113,11 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   endTime_ = config.getEndTime() / 1000.0;
   DBG(endTime_);
   std::string exportFile = config.getExportFile().toStdString();
-
-  // To create the IAMF file, create a list of all the audio element wav
-  // files to be created
-  juce::OwnedArray<AudioElement> audioElements;
+  ng no
+      // To create the IAMF file, create a list of all the audio element wav
+      // files to be created
+      juce::OwnedArray<AudioElement>
+          audioElements;
   audioElementRepository_.getAll(audioElements);
   iamfWavFileWriters_.clear();
   iamfWavFileWriters_.reserve(audioElements.size());

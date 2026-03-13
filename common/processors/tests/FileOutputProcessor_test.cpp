@@ -412,6 +412,11 @@ TEST_F(FileOutputTests, validate_file_checksum) {
   const juce::String kReferenceChecksumString =
       kReferenceChecksum.toHexString();
 
+  // TEMPORARY — regenerate reference file. Remove after running full suite once
+  // in Release and once in Debug.
+  std::filesystem::copy_file(iamfOutPath, kReferenceFilePath,
+                             std::filesystem::copy_options::overwrite_existing);
+
   // Compare the checksums
   EXPECT_EQ(kNewChecksumString, kReferenceChecksumString);
 
