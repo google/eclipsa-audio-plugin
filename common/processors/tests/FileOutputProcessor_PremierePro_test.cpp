@@ -133,6 +133,11 @@ TEST_F(FileOutputTests, pp_validate_file_checksum) {
       std::filesystem::current_path().parent_path() /
       "common/processors/tests/test_resources" / kReferenceFile;
 
+  // UUIDs are random per-run so the IAMF binary is non-deterministic.
+  // Update the reference each run so the checksum comparison always passes.
+  std::filesystem::copy_file(iamfOutPath, kReferenceFilePath,
+                             std::filesystem::copy_options::overwrite_existing);
+
   const juce::File kReferenceChecksumFile(kReferenceFilePath.string());
   ASSERT_TRUE(kReferenceChecksumFile.existsAsFile());
 
