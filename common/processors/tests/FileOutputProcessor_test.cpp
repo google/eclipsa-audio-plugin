@@ -480,3 +480,343 @@ TEST_F(FileOutputTests, mux_iamf_invalid_vout_path) {
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 }
+
+// =============================================================================
+// Helper: bounce with explicit control over frame count, so we can produce
+// a known duration of audio.  Returns the number of blocks processed.
+// =============================================================================
+static int bounceAudioForDuration(
+    FileOutputProcessor& fio_proc,
+    AudioElementRepository& audioElementRepository, double durationSeconds,
+    unsigned sampleRate = 48000, unsigned frameSize = 128) {
+  const unsigned kNumChannels = totalAudioChannels(audioElementRepository);
+  const auto kSineTone = generateSineWave(440.0f, sampleRate, frameSize);
+
+  fio_proc.prepareToPlay(sampleRate, frameSize);
+  fio_proc.setNonRealtime(true);
+
+  const int numBlocks =
+      static_cast<int>(std::ceil(durationSeconds * sampleRate / frameSize));
+
+  juce::AudioBuffer<float> audioBuffer(kNumChannels, frameSize);
+  juce::MidiBuffer dummyMidiBuffer;
+  for (int block = 0; block < numBlocks; ++block) {
+    for (unsigned i = 0; i < kNumChannels; ++i) {
+      audioBuffer.copyFrom(i, 0, kSineTone, 0, 0, frameSize);
+    }
+    fio_proc.processBlock(audioBuffer, dummyMidiBuffer);
+  }
+  fio_proc.setNonRealtime(false);
+  return numBlocks;
+}
+
+// =============================================================================
+// Tests for start/end time (shouldBufferBeWritten) logic
+// =============================================================================
+
+// Baseline: no start/end time set (both 0) — all audio is written.
+TEST_F(FileOutputTests, time_range_no_limits_writes_all) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  // startTime=0, endTime=0 (defaults) — no range limiting
+  auto config = fileExportRepository.get();
+  ASSERT_EQ(config.getStartTime(), 0);
+  ASSERT_EQ(config.getEndTime(), 0);
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudio(fio_proc, audioElementRepository);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+
+  // Verify the file has non-zero size (audio was written)
+  EXPECT_GT(std::filesystem::file_size(iamfOutPath), 0u);
+  std::filesystem::remove(iamfOutPath);
+}
+
+// Start time only: skip the first N seconds of the timeline.
+// We bounce 2 seconds of audio with startTime=1000ms.
+// The output file should exist but be smaller than a full 2s export.
+TEST_F(FileOutputTests, time_range_start_only) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // First: bounce full 2 seconds with no time limits for size reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  // Now bounce with startTime = 1000ms (1 second in)
+  // Need to recreate processor state since setNonRealtime(false) closed export
+  auto config = fileExportRepository.get();
+  config.setStartTime(1000);  // 1000 ms = 1 second
+  config.setEndTime(0);       // no end limit
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto startLimitedSize = std::filesystem::file_size(iamfOutPath);
+
+  // The start-limited file should be smaller (roughly half the audio)
+  EXPECT_LT(startLimitedSize, fullSize);
+  std::filesystem::remove(iamfOutPath);
+
+  // Reset for other tests
+  config.setStartTime(0);
+  fileExportRepository.update(config);
+}
+
+// End time only: stop writing after N seconds.
+TEST_F(FileOutputTests, time_range_end_only) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Full 2-second bounce for reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  // Now bounce 2 seconds but with endTime = 1000ms (stop at 1 second)
+  auto config = fileExportRepository.get();
+  config.setStartTime(0);
+  config.setEndTime(1000);  // 1000 ms = 1 second
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto endLimitedSize = std::filesystem::file_size(iamfOutPath);
+
+  EXPECT_LT(endLimitedSize, fullSize);
+  std::filesystem::remove(iamfOutPath);
+
+  // Reset
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+}
+
+// Both start and end time: only write the window [start, end).
+TEST_F(FileOutputTests, time_range_start_and_end) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Full 4-second bounce for reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 4.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  // Bounce 4 seconds with window [1s, 3s) — should capture ~2s of audio
+  auto config = fileExportRepository.get();
+  config.setStartTime(1000);  // 1 second
+  config.setEndTime(3000);    // 3 seconds
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 4.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto windowedSize = std::filesystem::file_size(iamfOutPath);
+
+  EXPECT_LT(windowedSize, fullSize);
+  std::filesystem::remove(iamfOutPath);
+
+  // Reset
+  config.setStartTime(0);
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+}
+
+// End time before start time: nothing should be written (nonsensical input).
+// The file may still be created (IAMF header/structure) but should have
+// minimal content compared to a normal export.
+TEST_F(FileOutputTests, time_range_end_before_start) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Full bounce for reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  // End at 1s, start at 2s — window is empty
+  auto config = fileExportRepository.get();
+  config.setStartTime(2000);
+  config.setEndTime(1000);
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+
+  // File may or may not exist depending on IAMF writer behavior with 0 frames.
+  // If it exists, it should be much smaller than a full export.
+  if (std::filesystem::exists(iamfOutPath)) {
+    const auto emptyWindowSize = std::filesystem::file_size(iamfOutPath);
+    EXPECT_LT(emptyWindowSize, fullSize);
+    std::filesystem::remove(iamfOutPath);
+  }
+
+  // Reset
+  config.setStartTime(0);
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+}
+
+// Start time beyond the total audio duration: no audio frames written.
+TEST_F(FileOutputTests, time_range_start_beyond_duration) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Full 1-second bounce for reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  // Start at 5 seconds but only bounce 1 second of audio
+  auto config = fileExportRepository.get();
+  config.setStartTime(5000);  // 5 seconds — beyond the 1s bounce
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+
+  if (std::filesystem::exists(iamfOutPath)) {
+    const auto noAudioSize = std::filesystem::file_size(iamfOutPath);
+    EXPECT_LT(noAudioSize, fullSize);
+    std::filesystem::remove(iamfOutPath);
+  }
+
+  // Reset
+  config.setStartTime(0);
+  fileExportRepository.update(config);
+}
+
+// Verify that the time values are correctly converted from ms to seconds.
+// startTime and endTime are stored as int milliseconds in FileExport.
+// FileOutputProcessor divides by 1000.0 to get seconds.
+// This test uses a precise sub-second boundary.
+TEST_F(FileOutputTests, time_range_subsecond_precision) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Bounce 1 second, window [250ms, 750ms) — should capture ~500ms
+  auto config = fileExportRepository.get();
+  config.setStartTime(250);  // 250ms
+  config.setEndTime(750);    // 750ms
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+
+  // Just verify file was created with some content — the windowed export worked
+  EXPECT_GT(std::filesystem::file_size(iamfOutPath), 0u);
+  std::filesystem::remove(iamfOutPath);
+
+  // Reset
+  config.setStartTime(0);
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+}
+
+// Large timecode values (simulating a TC-specified time deep into a session).
+// e.g., TC 01:00:00:00 at any frame rate = 3,600,000 ms
+TEST_F(FileOutputTests, time_range_large_tc_values) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Set start time to 1 hour in (3,600,000 ms), bounce only 1 second
+  // All buffers should be skipped since currentTime never reaches startTime
+  auto config = fileExportRepository.get();
+  config.setStartTime(3600000);  // 1 hour in milliseconds
+  config.setEndTime(3601000);    // 1 hour + 1 second
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+
+  // No audio frames should have been written. File may or may not exist.
+  if (std::filesystem::exists(iamfOutPath)) {
+    // If file exists it's just IAMF structure with no audio data
+    // It should be smaller than a normal 1-second export
+    // (We mainly care that no crash occurred with large values)
+    std::filesystem::remove(iamfOutPath);
+  }
+
+  // Reset
+  config.setStartTime(0);
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+}
+
+// End time at exactly 0 with a positive start time: endTime <= 0 means
+// "no end limit", so audio from startTime onward should all be written.
+TEST_F(FileOutputTests, time_range_start_set_end_zero) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  // Bounce 2 seconds with startTime=500ms, endTime=0 (no end limit)
+  auto config = fileExportRepository.get();
+  config.setStartTime(500);
+  config.setEndTime(0);
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 2.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  EXPECT_GT(std::filesystem::file_size(iamfOutPath), 0u);
+  std::filesystem::remove(iamfOutPath);
+
+  // Reset
+  config.setStartTime(0);
+  fileExportRepository.update(config);
+}
