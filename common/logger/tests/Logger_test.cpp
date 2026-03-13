@@ -90,6 +90,8 @@ TEST(LoggerTest, InitializeLogger) {
 
 // Test Logging Different Severity Levels
 TEST(LoggerTest, LogMessages) {
+  // Reset singleton so this test can re-initialize with debug severity
+  Logger::getInstance().resetForTesting();
   // Clean up log files before the test
   Logger::getInstance().init("testlog", 1, boost::log::trivial::debug);
   std::vector<std::string> existingLogFiles =
@@ -235,6 +237,8 @@ TEST(LoggerTest, LoggerInitMultipleCalls) {
 
 // Test File Retention Policy
 TEST(LoggerTest, FileRetentionPolicy) {
+  // Reset singleton so this test can re-initialize with 1MB file size
+  Logger::getInstance().resetForTesting();
   Logger::getInstance().init("testlog", 1, boost::log::trivial::info);
 
   // Clean up existing log files before the test
@@ -310,6 +314,8 @@ TEST(LoggerTest, FileRetentionPolicy) {
 
 // Test File Retention During Active Logging
 TEST(LoggerTest, FileRetentionDuringActiveLogging) {
+  // Reset singleton so this test can re-initialize with 1MB file size
+  Logger::getInstance().resetForTesting();
   Logger::getInstance().init("testlog", 1, boost::log::trivial::info);
 
   // Clean up existing log files before the test

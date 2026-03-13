@@ -468,7 +468,7 @@ TEST(test_loudness_proc, verify_metadata) {
                   "test_resources/loudness_test_drums.wav";
   } else {
     wavFilePath =
-        std::filesystem::current_path() /
+        std::filesystem::current_path().parent_path() /
         "common/processors/tests/test_resources/loudness_test_drums.wav";
   }
 
