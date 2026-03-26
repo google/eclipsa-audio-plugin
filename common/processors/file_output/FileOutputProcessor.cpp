@@ -109,9 +109,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   LOG_ANALYTICS(0, "Beginning .iamf file export");
   performingRender_ = true;
   startTime_ = config.getStartTime() / 1000.0;
-  DBG(startTime_);
   endTime_ = config.getEndTime() / 1000.0;
-  DBG(endTime_);
   std::string exportFile = config.getExportFile().toStdString();
 
   // To create the IAMF file, create a list of all the audio element wav
