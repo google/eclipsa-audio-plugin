@@ -54,11 +54,33 @@ class MP4IAMFDemuxerTest : public FileOutputTests {
 
   MP4IAMFDemuxer demuxer;
   std::vector<std::filesystem::path> muxSources;
+
+  const std::vector<Speakers::AudioElementSpeakerLayout> kAudioElementLayouts =
+      {
+          Speakers::kMono,
+          Speakers::kStereo,
+          Speakers::k5Point1,
+          Speakers::k5Point1Point2,
+          Speakers::k5Point1Point4,
+          Speakers::k7Point1,
+          Speakers::k7Point1Point2,
+          Speakers::k7Point1Point4,
+          Speakers::k3Point1Point2,
+          // TODO: Temporarily excluding binaural layouts here as the IAMF APIs
+          // (writer and reader!) have a problem with this layout.
+          // Speakers::kBinaural,
+          Speakers::kHOA1,
+          Speakers::kHOA2,
+          Speakers::kHOA3,
+      };
 };
 
 TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_cb) {
   for (const auto& source : muxSources) {
     for (const auto layout : kAudioElementLayouts) {
+      if (layout == Speakers::kBinaural) {
+        continue;
+      }
       const juce::Uuid kAE = addAudioElement(layout);
       const juce::Uuid kMP = addMixPresentation();
       addAudioElementsToMix(kMP, {kAE});
