@@ -78,9 +78,6 @@ class MP4IAMFDemuxerTest : public FileOutputTests {
 TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_cb) {
   for (const auto& source : muxSources) {
     for (const auto layout : kAudioElementLayouts) {
-      if (layout == Speakers::kBinaural) {
-        continue;
-      }
       const juce::Uuid kAE = addAudioElement(layout);
       const juce::Uuid kMP = addMixPresentation();
       addAudioElementsToMix(kMP, {kAE});
