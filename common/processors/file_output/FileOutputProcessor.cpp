@@ -108,8 +108,8 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 void FileOutputProcessor::initializeFileExport(FileExport& config) {
   LOG_ANALYTICS(0, "Beginning .iamf file export");
   performingRender_ = true;
-  startTime_ = config.getStartTime() / 1000.0;
-  endTime_ = config.getEndTime() / 1000.0;
+  startSampleIdx_ = config.getStartSampleIdx();
+  endSampleIdx_ = config.getEndSampleIdx();
   std::string exportFile = config.getExportFile().toStdString();
 
   // To create the IAMF file, create a list of all the audio element wav
@@ -205,29 +205,21 @@ bool FileOutputProcessor::shouldBufferBeWritten(
     return false;
   }
 
-  // Safety check to prevent division by zero during auval testing
-  if (sampleRate_ <= 0) {
-    return false;
-  }
-
-  // Calculate the current time with the existing number of samples that have
-  // been processed
-  const double currentTime = static_cast<double>(sampleTally_) / sampleRate_;
-  // update the sample tally
+  const long currentSample = sampleTally_;
   sampleTally_ += buffer.getNumSamples();
 
   // No range specified — write everything
-  if (startTime_ <= 0 && endTime_ <= 0) {
+  if (startSampleIdx_ <= 0 && endSampleIdx_ <= 0) {
     return true;
   }
 
-  // Skip if buffer starts before the requested start time
-  if (startTime_ > 0 && currentTime < startTime_) {
+  // Skip if buffer starts before the requested start sample
+  if (startSampleIdx_ > 0 && currentSample < startSampleIdx_) {
     return false;
   }
 
-  // Skip if buffer starts at or past the requested end time
-  if (endTime_ > 0 && currentTime >= endTime_) {
+  // Skip if buffer starts at or past the requested end sample
+  if (endSampleIdx_ > 0 && currentSample >= endSampleIdx_) {
     return false;
   }
 

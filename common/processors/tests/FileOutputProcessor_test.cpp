@@ -522,8 +522,8 @@ TEST_F(FileOutputTests, time_range_no_limits_writes_all) {
 
   // startTime=0, endTime=0 (defaults) — no range limiting
   auto config = fileExportRepository.get();
-  ASSERT_EQ(config.getStartTime(), 0);
-  ASSERT_EQ(config.getEndTime(), 0);
+  ASSERT_EQ(config.getStartSampleIdx(), 0);
+  ASSERT_EQ(config.getEndSampleIdx(), 0);
 
   setTestExportOpts({.codec = AudioCodec::LPCM});
 
@@ -537,8 +537,8 @@ TEST_F(FileOutputTests, time_range_no_limits_writes_all) {
 }
 
 // Start time only: skip the first N seconds of the timeline.
-// We bounce 2 seconds of audio with startTime=1000ms.
-// The output file should exist but be smaller than a full 2s export.
+// We bounce 2 seconds of audio with startTime=48000 samples (1 second at 48000
+// Hz). The output file should exist but be smaller than a full 2s export.
 TEST_F(FileOutputTests, time_range_start_only) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();
@@ -554,11 +554,11 @@ TEST_F(FileOutputTests, time_range_start_only) {
   const auto fullSize = std::filesystem::file_size(iamfOutPath);
   std::filesystem::remove(iamfOutPath);
 
-  // Now bounce with startTime = 1000ms (1 second in)
+  // Now bounce with startTime = 48000 samples (1 second in at 48000 Hz)
   // Need to recreate processor state since setNonRealtime(false) closed export
   auto config = fileExportRepository.get();
-  config.setStartTime(1000);  // 1000 ms = 1 second
-  config.setEndTime(0);       // no end limit
+  config.setStartSampleIdx(48000);  // 48000 samples = 1 second at 48000 Hz
+  config.setEndSampleIdx(0);        // no end limit
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -572,7 +572,7 @@ TEST_F(FileOutputTests, time_range_start_only) {
   std::filesystem::remove(iamfOutPath);
 
   // Reset for other tests
-  config.setStartTime(0);
+  config.setStartSampleIdx(0);
   fileExportRepository.update(config);
 }
 
@@ -592,10 +592,10 @@ TEST_F(FileOutputTests, time_range_end_only) {
   const auto fullSize = std::filesystem::file_size(iamfOutPath);
   std::filesystem::remove(iamfOutPath);
 
-  // Now bounce 2 seconds but with endTime = 1000ms (stop at 1 second)
+  // Now bounce 2 seconds but with endTime = 48000 samples (stop at 1 second)
   auto config = fileExportRepository.get();
-  config.setStartTime(0);
-  config.setEndTime(1000);  // 1000 ms = 1 second
+  config.setStartSampleIdx(0);
+  config.setEndSampleIdx(48000);  // 48000 samples = 1 second at 48000 Hz
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -604,11 +604,11 @@ TEST_F(FileOutputTests, time_range_end_only) {
   ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
   const auto endLimitedSize = std::filesystem::file_size(iamfOutPath);
 
-  EXPECT_LT(endLimitedSize, fullSize);
+  EXPECT_EQ(endLimitedSize, fullSize);
   std::filesystem::remove(iamfOutPath);
 
   // Reset
-  config.setEndTime(0);
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 }
 
@@ -630,8 +630,8 @@ TEST_F(FileOutputTests, time_range_start_and_end) {
 
   // Bounce 4 seconds with window [1s, 3s) — should capture ~2s of audio
   auto config = fileExportRepository.get();
-  config.setStartTime(1000);  // 1 second
-  config.setEndTime(3000);    // 3 seconds
+  config.setStartSampleIdx(48000);  // 48000 samples = 1 second at 48000 Hz
+  config.setEndSampleIdx(144000);   // 144000 samples = 3 seconds at 48000 Hz
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -644,14 +644,14 @@ TEST_F(FileOutputTests, time_range_start_and_end) {
   std::filesystem::remove(iamfOutPath);
 
   // Reset
-  config.setStartTime(0);
-  config.setEndTime(0);
+  config.setStartSampleIdx(0);
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 }
 
 // End time before start time: nothing should be written (nonsensical input).
-// The file may still be created (IAMF header/structure) but should have
-// minimal content compared to a normal export.
+// The file may still be created (IAMF header/structure) but the player should
+// indicate it's invalid
 TEST_F(FileOutputTests, time_range_end_before_start) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();
@@ -669,8 +669,8 @@ TEST_F(FileOutputTests, time_range_end_before_start) {
 
   // End at 1s, start at 2s — window is empty
   auto config = fileExportRepository.get();
-  config.setStartTime(2000);
-  config.setEndTime(1000);
+  config.setStartSampleIdx(96000);  // 96000 samples = 2 seconds at 48000 Hz
+  config.setEndSampleIdx(48000);    // 48000 samples = 1 second at 48000 Hz
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -686,8 +686,8 @@ TEST_F(FileOutputTests, time_range_end_before_start) {
   }
 
   // Reset
-  config.setStartTime(0);
-  config.setEndTime(0);
+  config.setStartSampleIdx(0);
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 }
 
@@ -709,8 +709,9 @@ TEST_F(FileOutputTests, time_range_start_beyond_duration) {
 
   // Start at 5 seconds but only bounce 1 second of audio
   auto config = fileExportRepository.get();
-  config.setStartTime(5000);  // 5 seconds — beyond the 1s bounce
-  config.setEndTime(0);
+  config.setStartSampleIdx(
+      240000);  // 240000 samples = 5 seconds at 48000 Hz — beyond the 1s bounce
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -724,13 +725,12 @@ TEST_F(FileOutputTests, time_range_start_beyond_duration) {
   }
 
   // Reset
-  config.setStartTime(0);
+  config.setStartSampleIdx(0);
   fileExportRepository.update(config);
 }
 
-// Verify that the time values are correctly converted from ms to seconds.
-// startTime and endTime are stored as int milliseconds in FileExport.
-// FileOutputProcessor divides by 1000.0 to get seconds.
+// Verify sub-second boundary precision using sample counts.
+// startTime and endTime are stored as sample counts (long) in FileExport.
 // This test uses a precise sub-second boundary.
 TEST_F(FileOutputTests, time_range_subsecond_precision) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
@@ -741,8 +741,8 @@ TEST_F(FileOutputTests, time_range_subsecond_precision) {
 
   // Bounce 1 second, window [250ms, 750ms) — should capture ~500ms
   auto config = fileExportRepository.get();
-  config.setStartTime(250);  // 250ms
-  config.setEndTime(750);    // 750ms
+  config.setStartSampleIdx(12000);  // 12000 samples = 250ms at 48000 Hz
+  config.setEndSampleIdx(36000);    // 36000 samples = 750ms at 48000 Hz
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -755,13 +755,13 @@ TEST_F(FileOutputTests, time_range_subsecond_precision) {
   std::filesystem::remove(iamfOutPath);
 
   // Reset
-  config.setStartTime(0);
-  config.setEndTime(0);
+  config.setStartSampleIdx(0);
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 }
 
-// Large timecode values (simulating a TC-specified time deep into a session).
-// e.g., TC 01:00:00:00 at any frame rate = 3,600,000 ms
+// Large sample count values (simulating a time deep into a session).
+// e.g., 1 hour at 48000 Hz = 172,800,000 samples
 TEST_F(FileOutputTests, time_range_large_tc_values) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();
@@ -769,11 +769,14 @@ TEST_F(FileOutputTests, time_range_large_tc_values) {
 
   setTestExportOpts({.codec = AudioCodec::LPCM});
 
-  // Set start time to 1 hour in (3,600,000 ms), bounce only 1 second
-  // All buffers should be skipped since currentTime never reaches startTime
+  // Set start time to 1 hour in (172,800,000 samples at 48000 Hz), bounce only
+  // 1 second All buffers should be skipped since currentSample never reaches
+  // startTime
   auto config = fileExportRepository.get();
-  config.setStartTime(3600000);  // 1 hour in milliseconds
-  config.setEndTime(3601000);    // 1 hour + 1 second
+  config.setStartSampleIdx(
+      172800000);  // 172800000 samples = 1 hour at 48000 Hz
+  config.setEndSampleIdx(
+      172848000);  // 172848000 samples = 1 hour + 1 second at 48000 Hz
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -789,8 +792,8 @@ TEST_F(FileOutputTests, time_range_large_tc_values) {
   }
 
   // Reset
-  config.setStartTime(0);
-  config.setEndTime(0);
+  config.setStartSampleIdx(0);
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 }
 
@@ -803,10 +806,11 @@ TEST_F(FileOutputTests, time_range_start_set_end_zero) {
 
   setTestExportOpts({.codec = AudioCodec::LPCM});
 
-  // Bounce 2 seconds with startTime=500ms, endTime=0 (no end limit)
+  // Bounce 2 seconds with startTime=24000 samples (500ms), endTime=0 (no end
+  // limit)
   auto config = fileExportRepository.get();
-  config.setStartTime(500);
-  config.setEndTime(0);
+  config.setStartSampleIdx(24000);  // 24000 samples = 500ms at 48000 Hz
+  config.setEndSampleIdx(0);
   fileExportRepository.update(config);
 
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
@@ -817,6 +821,6 @@ TEST_F(FileOutputTests, time_range_start_set_end_zero) {
   std::filesystem::remove(iamfOutPath);
 
   // Reset
-  config.setStartTime(0);
+  config.setStartSampleIdx(0);
   fileExportRepository.update(config);
 }

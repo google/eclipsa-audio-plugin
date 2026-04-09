@@ -65,8 +65,8 @@ class WavFileOutputProcessor final : public ProcessorBase,
   FileWriter* fileWriter_;
   int numSamples_;
   double sampleRate_;
-  double startTime_;
-  double endTime_;
+  long startSampleIdx_;
+  long endSampleIdx_;
   juce::SpinLock lock_;
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WavFileOutputProcessor)

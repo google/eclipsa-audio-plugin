@@ -78,9 +78,9 @@ class LoudnessExportProcessor : public ProcessorBase,
 
   long sampleRate_;
   int currentSamplesPerBlock_;
-  int sampleTally_;
-  int startTime_;
-  int endTime_;
+  long sampleTally_;
+  long startSampleIdx_;
+  long endSampleIdx_;
 
   std::vector<MixPresentationLoudnessExportContainer> exportContainers_;
 };

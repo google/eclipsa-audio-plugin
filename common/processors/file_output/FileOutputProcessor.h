@@ -93,8 +93,8 @@ class FileOutputProcessor : public ProcessorBase {
   std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
   int numSamples_;
   double sampleRate_;
-  double startTime_;
-  double endTime_;
+  long startSampleIdx_;
+  long endSampleIdx_;
   long sampleTally_;
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   //==============================================================================
