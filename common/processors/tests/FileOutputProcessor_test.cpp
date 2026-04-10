@@ -300,6 +300,25 @@ TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
 }
 
+TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  bounceAudio(fio_proc, audioElementRepository);
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+
+  double videoDuration =
+      getMP4DurationSeconds(ex.getVideoSource().toStdString());
+  double outputDuration = getMP4DurationSeconds(videoOutPath.string());
+
+  ASSERT_GT(videoDuration, 0.0);
+  ASSERT_GT(outputDuration, 0.0);
+  EXPECT_NEAR(outputDuration, videoDuration, 0.1);
+}
+
 // Codec param tests. These tests focus on testing advanced codec specific file
 // export configurations. As such, the configuration is kept local to the tests
 // rather than being done through the generic `setTestExportOpts` function.
