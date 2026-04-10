@@ -28,6 +28,7 @@
 #include "processors/file_output/FileOutputProcessor_PremierePro.h"
 
 extern "C" {
+#include "gpac/isomedia.h"
 #include "mp4iamfpar.h"
 }
 
