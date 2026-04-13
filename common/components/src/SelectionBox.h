@@ -131,16 +131,15 @@ class SelectionBoxLookAndFeel : public juce::LookAndFeel_V4 {
                          const juce::Drawable* icon,
                          const juce::Colour* textColour) override {
     LookAndFeel_V4::drawPopupMenuItem(g, area, isSeparator, isActive,
-                                      isHighlighted, isTicked, hasSubMenu,
-                                      text, shortcutKeyText, icon, textColour);
+                                      isHighlighted, isTicked, hasSubMenu, text,
+                                      shortcutKeyText, icon, textColour);
     auto it = supplementaryText_.find(text);
     if (!isSeparator && it != supplementaryText_.end()) {
       g.setFont(getPopupMenuFont());
       auto suppColour = EclipsaColours::tabTextGrey.withAlpha(0.55f);
       if (isHighlighted)
-        suppColour =
-            findColour(juce::PopupMenu::highlightedTextColourId).withAlpha(
-                0.65f);
+        suppColour = findColour(juce::PopupMenu::highlightedTextColourId)
+                         .withAlpha(0.65f);
       g.setColour(suppColour);
       g.drawText(it->second, area.reduced(1).withTrimmedRight(8),
                  juce::Justification::centredRight, true);
