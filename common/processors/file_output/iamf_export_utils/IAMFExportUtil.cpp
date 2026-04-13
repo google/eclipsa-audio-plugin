@@ -353,14 +353,12 @@ static bool muxVideo(const juce::String& inputVideoFile,
     for (u32 i = 1; i <= track_count; i++) {
       if (i == dst_track) continue;
       gf_isom_remove_edits(dst_file, i);
-      GF_Err edit_err =
-          gf_isom_set_edit(dst_file, i, /*EditTime=*/0,
-                           /*EditDuration=*/video_track_duration,
-                           /*MediaTime=*/0, GF_ISOM_EDIT_NORMAL);
+      GF_Err edit_err = gf_isom_set_edit(dst_file, i, /*EditTime=*/0,
+                                         /*EditDuration=*/video_track_duration,
+                                         /*MediaTime=*/0, GF_ISOM_EDIT_NORMAL);
       if (edit_err != GF_OK) {
-        LOG_ERROR(0,
-                  "Video Muxing: Failed to set edit list on audio track: " +
-                      std::string(gf_error_to_string(edit_err)));
+        LOG_ERROR(0, "Video Muxing: Failed to set edit list on audio track: " +
+                         std::string(gf_error_to_string(edit_err)));
       }
     }
     gf_isom_update_duration(dst_file);
