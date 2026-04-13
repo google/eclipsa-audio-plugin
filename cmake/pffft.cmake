@@ -17,6 +17,7 @@ include(FetchContent)
 FetchContent_Declare(
         pffft
         GIT_REPOSITORY "https://github.com/marton78/pffft.git"
+        GIT_TAG a9786ad2e709dd2b8024f0da1ced26b083c1ffc9
         SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/pffft-src
 )
 
