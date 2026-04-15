@@ -790,7 +790,7 @@ juce::String FileExportScreen::timeToString(long sampleCount,
   const double seconds = (sr > 0) ? static_cast<double>(sampleCount) / sr : 0.0;
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return TimeFormatConverter::secondsToHMS(static_cast<int>(seconds));
+      return TimeFormatConverter::secondsToHMS(seconds);
     case TimeFormat::BarsBeats:
       if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue())
         return TimeFormatConverter::secondsToBarsBeats(seconds, *cachedBpm_,
@@ -802,7 +802,7 @@ juce::String FileExportScreen::timeToString(long sampleCount,
             seconds * 1000.0, cachedFrameRate_->getEffectiveRate());
       return "00:00:00:00";
     default:
-      return TimeFormatConverter::secondsToHMS(static_cast<int>(seconds));
+      return TimeFormatConverter::secondsToHMS(seconds);
   }
 }
 
@@ -810,7 +810,7 @@ long FileExportScreen::stringToSamples(juce::String val, TimeFormat format) {
   const int sr = repository_->get().getSampleRate();
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val)) * sr;
+      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val) * sr);
     case TimeFormat::BarsBeats:
       if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue())
         return static_cast<long>(TimeFormatConverter::barsBeatsToSeconds(
@@ -825,7 +825,7 @@ long FileExportScreen::stringToSamples(juce::String val, TimeFormat format) {
             1000.0 * sr);
       return -1;
     default:
-      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val)) * sr;
+      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val) * sr);
   }
 }
 

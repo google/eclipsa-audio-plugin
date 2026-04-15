@@ -16,12 +16,11 @@
 
 #include <cmath>
 
-juce::String TimeFormatConverter::secondsToHMS(int timeInSeconds) {
-  int seconds = timeInSeconds;
-  int minutes = seconds / 60;
-  seconds = seconds % 60;
-  int hours = minutes / 60;
-  minutes = minutes % 60;
+juce::String TimeFormatConverter::secondsToHMS(double timeInSeconds) {
+  int totalSeconds = static_cast<int>(timeInSeconds);
+  int seconds = totalSeconds % 60;
+  int minutes = (totalSeconds / 60) % 60;
+  int hours = totalSeconds / 3600;
 
   // Pad with zeros
   juce::String hourString =
@@ -35,7 +34,7 @@ juce::String TimeFormatConverter::secondsToHMS(int timeInSeconds) {
 }
 
 juce::String TimeFormatConverter::secondsToBarsBeats(
-    int timeInSeconds, double bpm,
+    double timeInSeconds, double bpm,
     const juce::AudioPlayHead::TimeSignature& timeSig) {
   if (bpm <= 0.0) {
     return "1.1.000";  // Default fallback
@@ -57,7 +56,7 @@ juce::String TimeFormatConverter::secondsToBarsBeats(
          juce::String(ticks).paddedLeft('0', 3);
 }
 
-int TimeFormatConverter::hmsToSeconds(const juce::String& val) {
+double TimeFormatConverter::hmsToSeconds(const juce::String& val) {
   auto parts = juce::StringArray::fromTokens(val, ":", "");
   if (parts.size() != 3) {
     return -1;
@@ -80,7 +79,7 @@ int TimeFormatConverter::hmsToSeconds(const juce::String& val) {
   return (hours * 3600 + minutes * 60 + seconds);
 }
 
-int TimeFormatConverter::barsBeatsToSeconds(
+double TimeFormatConverter::barsBeatsToSeconds(
     const juce::String& val, double bpm,
     const juce::AudioPlayHead::TimeSignature& timeSig) {
   auto parts = juce::StringArray::fromTokens(val, ".", "");
@@ -111,10 +110,10 @@ int TimeFormatConverter::barsBeatsToSeconds(
                       (beat - 1) +                // Beats start at 1
                       (ticks / 960.0);            // 960 ticks per beat
 
-  return static_cast<int>(totalBeats * secondsPerBeat);
+  return totalBeats * secondsPerBeat;
 }
 
-int TimeFormatConverter::timecodeToMs(const juce::String& val, double fps) {
+double TimeFormatConverter::timecodeToMs(const juce::String& val, double fps) {
   auto parts = juce::StringArray::fromTokens(val, ":", "");
   if (parts.size() != 4) return -1;
 
@@ -131,10 +130,10 @@ int TimeFormatConverter::timecodeToMs(const juce::String& val, double fps) {
     return -1;
 
   double totalSeconds = hours * 3600 + minutes * 60 + seconds + (frames / fps);
-  return static_cast<int>(std::round(totalSeconds * 1000.0));
+  return totalSeconds * 1000.0;
 }
 
-juce::String TimeFormatConverter::msToTimecode(const int ms, const double fps) {
+juce::String TimeFormatConverter::msToTimecode(double ms, const double fps) {
   double totalSeconds = ms / 1000.0;
   int hh = (int)(totalSeconds / 3600);
   int mm = (int)(std::fmod(totalSeconds, 3600.0) / 60.0);

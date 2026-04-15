@@ -21,17 +21,17 @@ class TimeFormatConverter {
  public:
   enum TimeFormat { HoursMinutesSeconds = 0, BarsBeats = 1, Timecode = 2 };
 
-  static juce::String secondsToHMS(int timeInSeconds);
+  static juce::String secondsToHMS(double timeInSeconds);
   static juce::String secondsToBarsBeats(
-      int timeInSeconds, double bpm,
+      double timeInSeconds, double bpm,
       const juce::AudioPlayHead::TimeSignature& timeSig);
-  static juce::String msToTimecode(int ms, double fps);
+  static juce::String msToTimecode(double ms, double fps);
 
-  static int hmsToSeconds(const juce::String& val);
-  static int barsBeatsToSeconds(
+  static double hmsToSeconds(const juce::String& val);
+  static double barsBeatsToSeconds(
       const juce::String& val, double bpm,
       const juce::AudioPlayHead::TimeSignature& timeSig);
-  static int timecodeToMs(const juce::String& val, double fps);
+  static double timecodeToMs(const juce::String& val, double fps);
 
   static juce::String getFormatDescription(TimeFormat format);
 };
