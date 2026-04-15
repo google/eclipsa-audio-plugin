@@ -14,6 +14,9 @@
 
 #include "IAMFBufferedReader.h"
 
+#include <chrono>
+#include <iostream>
+
 #include "logger/logger.h"
 #include "processors/file_output/iamf_export_utils/IAMFFileReader.h"
 
@@ -28,7 +31,13 @@ IamfBufferedReader::IamfBufferedReader(std::unique_ptr<IAMFFileReader>&& reader,
       std::make_unique<PbRingBuffer>(kStreamData.numChannels, padSamples_);
   decodeThread_ = std::thread(&IamfBufferedReader::decodeTask, this);
   notifyTask();
+  const auto t0 = std::chrono::steady_clock::now();
   while (!isReady());
+  std::cout << "[IamfBufferedReader] Initial buffering ready: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t0)
+                   .count()
+            << "ms\n";
 }
 
 IamfBufferedReader::~IamfBufferedReader() {
@@ -46,12 +55,18 @@ bool IamfBufferedReader::isReady() {
 }
 
 void IamfBufferedReader::waitUntilReady() {
+  const auto t0 = std::chrono::steady_clock::now();
   std::unique_lock<std::mutex> lock(cvm_);
   while (!isReady()) {
     // Wake decode task in case it is waiting and more data is needed
     notifyTask();
     cv_.wait(lock);
   }
+  std::cout << "[IamfBufferedReader] waitUntilReady: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t0)
+                   .count()
+            << "ms\n";
 }
 
 size_t IamfBufferedReader::availableSamples() const {

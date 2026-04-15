@@ -15,6 +15,7 @@
 #include "FilePlaybackProcessor.h"
 
 #include <filesystem>
+#include <iostream>
 #include <memory>
 
 #include "FilePlaybackTasks.h"
@@ -167,6 +168,12 @@ void FilePlaybackProcessor::valueTreePropertyChanged(
 }
 
 void FilePlaybackProcessor::postTask(Result&& taskRes) {
+  static constexpr const char* kResultNames[] = {
+      "kPreempted", "kLoadFinished",        "kLoadFailed",
+      "kLayoutFinished", "kSeekPlayingFinished", "kSeekPausedFinished"};
+  std::cout << "[FilePlaybackProcessor] Task completed: "
+            << kResultNames[taskRes.status] << "\n";
+
   if (taskRes.status == PlaybackTasks::kPreempted) {
     return;
   }
@@ -243,6 +250,8 @@ void FilePlaybackProcessor::submitLoadTask(
   }
 
   currCtx_.src.numFrames = 0;
+  std::cout << "[FilePlaybackProcessor] Submitting load task: " << path.string()
+            << "\n";
   worker_.submit(
       [path, layout](Worker::CancelFlag& stop) {
         return PlaybackTasks::loadTask(path, layout, stop);
@@ -259,6 +268,8 @@ void FilePlaybackProcessor::submitLayoutTask(
     return;
   }
 
+  std::cout << "[FilePlaybackProcessor] Submitting layout task: " << path.string()
+            << "\n";
   worker_.submit(
       [path, layout, numFrames](Worker::CancelFlag& stop) {
         return PlaybackTasks::layoutTask(path, layout, numFrames, stop);
@@ -271,6 +282,8 @@ void FilePlaybackProcessor::submitSeekTask(
     const std::filesystem::path& path, const size_t numFrames,
     const Speakers::AudioElementSpeakerLayout layout, const float position,
     const FilePlayback::ProcessorState prevState) {
+  std::cout << "[FilePlaybackProcessor] Submitting seek task: pos=" << position
+            << "\n";
   IamfBufferedReader* buffer = swapBuffer(nullptr).release();
   if (buffer) {
     worker_.submit(

@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <chrono>
+#include <iostream>
 #include <memory>
 
 #include "IAMFBufferedReader.h"
@@ -54,17 +56,42 @@ static Result loadTask(const std::filesystem::path file,
     return Result{kLoadFailed};
   }
 
+  const auto t0 = std::chrono::steady_clock::now();
+
   auto reader = IAMFFileReader::createIamfReader(
       file, IAMFFileReader::kDefaultReaderSettings, stop);
   if (!reader) {
     return stop ? Result{kPreempted} : Result{kLoadFailed};
   }
+  const auto t1 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::loadTask] createIamfReader: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()
+            << "ms\n";
+
   reader->indexFile(stop);
+  const auto t2 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::loadTask] indexFile: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
+            << "ms\n";
+
   reader->resetLayout(layout);
+  const auto t3 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::loadTask] resetLayout: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count()
+            << "ms\n";
+
   const IAMFFileReader::StreamData kData = reader->getStreamData();
 
   auto buffer = std::make_unique<IamfBufferedReader>(std::move(reader), 5);
   buffer->waitUntilReady();
+  const auto t4 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::loadTask] IamfBufferedReader ready: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count()
+            << "ms\n";
+
+  std::cout << "[PlaybackTasks::loadTask] total: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t0).count()
+            << "ms\n";
 
   const ResultType kRt = stop ? kPreempted : kLoadFinished;
   return Result{kRt, std::move(buffer), 0, kData};
@@ -77,11 +104,17 @@ static Result layoutTask(const std::filesystem::path file,
     return Result{kLoadFailed};
   }
 
+  const auto t0 = std::chrono::steady_clock::now();
+
   auto reader = IAMFFileReader::createIamfReader(
       file, IAMFFileReader::kDefaultReaderSettings, stop);
   if (!reader) {
     return stop ? Result{kPreempted} : Result{kLoadFailed};
   }
+  const auto t1 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::layoutTask] createIamfReader: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()
+            << "ms\n";
 
   if (numFrames == 0) {
     numFrames = reader->indexFile(stop);
@@ -91,13 +124,29 @@ static Result layoutTask(const std::filesystem::path file,
   if (stop) {
     return Result{kPreempted};
   }
+  const auto t2 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::layoutTask] indexFile/setNumFrames: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
+            << "ms\n";
 
   reader->resetLayout(layout);
+  const auto t3 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::layoutTask] resetLayout: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count()
+            << "ms\n";
 
   const IAMFFileReader::StreamData kData = reader->getStreamData();
 
   auto buffer = std::make_unique<IamfBufferedReader>(std::move(reader), 5);
   buffer->waitUntilReady();
+  const auto t4 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::layoutTask] IamfBufferedReader ready: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t3).count()
+            << "ms\n";
+
+  std::cout << "[PlaybackTasks::layoutTask] total: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t0).count()
+            << "ms\n";
 
   return Result{kLayoutFinished, std::move(buffer), 0, kData};
 }
@@ -134,13 +183,27 @@ static Result seekTask(const float pos,
     return Result{kLoadFailed};
   }
 
+  const auto t0 = std::chrono::steady_clock::now();
+
   const size_t kSeekedIdx = pos * numFrames;
   buffer->seek(kSeekedIdx, stop);
   if (stop) {
     return Result{kPreempted};
   }
+  const auto t1 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::seekTask] seek: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()
+            << "ms\n";
 
   buffer->waitUntilReady();
+  const auto t2 = std::chrono::steady_clock::now();
+  std::cout << "[PlaybackTasks::seekTask] waitUntilReady: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
+            << "ms\n";
+
+  std::cout << "[PlaybackTasks::seekTask] total: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t0).count()
+            << "ms\n";
 
   const ResultType kRt = prevState == FilePlayback::ProcessorState::kPlaying
                              ? kSeekPlayingFinished
