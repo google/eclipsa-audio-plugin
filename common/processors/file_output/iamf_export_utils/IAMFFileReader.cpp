@@ -14,13 +14,11 @@
 
 #include "IAMFFileReader.h"
 
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <memory>
 
 #include "iamf_tools_api_types.h"
@@ -120,14 +118,8 @@ std::unique_ptr<IAMFFileReader> IAMFFileReader::createIamfReader(
     return nullptr;
   }
 
-  const auto t0 = std::chrono::steady_clock::now();
   auto reader = std::unique_ptr<IAMFFileReader>(
       new IAMFFileReader(iamfFilePath, settings, abortConstruction));
-  std::cout << "[IAMFFileReader] createIamfReader: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now() - t0)
-                   .count()
-            << "ms\n";
 
   // Check if initialization was successful by verifying streamData is valid
   if (!reader->streamData_.valid) {
@@ -219,8 +211,6 @@ size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
     LOG_ERROR(0, "IAMFFileReader: Cannot index file - decoder not ready");
     return -1;
   }
-
-  const auto t0 = std::chrono::steady_clock::now();
 
   // Count temporal units by traversing raw OBU headers without decoding audio.
   //
@@ -318,13 +308,6 @@ size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
   parseStreamData(iamfDecoder_, fileStream_);
   streamData_.currentFrameIdx = 0;
 
-  std::cout << "[IAMFFileReader] indexFile (OBU traversal): " << frameCount
-            << " frames in "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now() - t0)
-                   .count()
-            << "ms\n";
-
   return frameCount;
 }
 
@@ -340,8 +323,6 @@ bool IAMFFileReader::seekFrame(const size_t frameIdx,
                        std::to_string(frameIdx));
     return false;
   }
-
-  const auto t0 = std::chrono::steady_clock::now();
 
   // If seeking backward, reset decoder and file position, then advance
   if (frameIdx < streamData_.currentFrameIdx) {
@@ -377,12 +358,6 @@ bool IAMFFileReader::seekFrame(const size_t frameIdx,
       return false;
     }
   }
-
-  std::cout << "[IAMFFileReader] seekFrame to " << frameIdx << ": "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now() - t0)
-                   .count()
-            << "ms\n";
 
   return true;
 }

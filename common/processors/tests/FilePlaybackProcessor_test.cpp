@@ -1,8 +1,8 @@
 #include "processors/file_playback/FilePlaybackProcessor.h"
 
-#include <chrono>
 #include <gtest/gtest.h>
-#include <iostream>
+
+#include <chrono>
 
 #include "data_structures/src/FilePlayback.h"
 #include "processors/tests/FileOutputTestFixture.h"
@@ -552,17 +552,12 @@ TEST_F(FilePlaybackProcessorTest, index_complex_iamf_file) {
 
   // Expected: 30s * 16kHz / 128 samples-per-frame = 3750 frames
   const juce::uint64 kExpectedDurationSec = 30;
-  const size_t kExpectedFrames =
-      static_cast<size_t>(kExpectedDurationSec) * FileOutputTests::kSampleRate /
-      FileOutputTests::kSamplesPerFrame;
+  const size_t kExpectedFrames = static_cast<size_t>(kExpectedDurationSec) *
+                                 FileOutputTests::kSampleRate /
+                                 FileOutputTests::kSamplesPerFrame;
 
-  const auto loadStart = std::chrono::steady_clock::now();
   setFile(juce::String(kFilePath.string()));
   waitForBuffering();
-  const auto loadElapsedMs =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now() - loadStart)
-          .count();
 
   fpbData.processorState.read(procState);
   ASSERT_EQ(procState, FilePlayback::ProcessorState::kPaused)
@@ -572,64 +567,8 @@ TEST_F(FilePlaybackProcessorTest, index_complex_iamf_file) {
   juce::uint64 fileDuration = 0;
   fpbData.fileDuration_s.read(fileDuration);
   EXPECT_EQ(fileDuration, kExpectedDurationSec)
-      << "Frame count from OBU traversal is wrong: expected "
-      << kExpectedFrames << " frames (" << kExpectedDurationSec << "s)";
-
-  std::cout << "\n--- index_complex_iamf_file (2 AE, 2 MP) ---\n"
-            << "  Expected frames:   " << kExpectedFrames << "\n"
-            << "  Load + buffering:  " << loadElapsedMs << "ms\n"
-            << "---------------------------------------------\n";
-}
-
-// Measures timing across the IAMF playback chain for profiling
-TEST_F(FilePlaybackProcessorTest, latency_profiling) {
-  const std::filesystem::path kReferenceFilePath =
-      std::filesystem::current_path() / "test_fpb_latency_profiling.iamf";
-  createIAMFFile30SecStereo(kReferenceFilePath);
-
-  // Time file load and initial buffering
-  const auto loadStart = std::chrono::steady_clock::now();
-  setFile(juce::String(kReferenceFilePath.string()));
-  waitForBuffering();
-  const auto loadElapsedMs =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now() - loadStart)
-          .count();
-
-  fpbData.processorState.read(procState);
-  ASSERT_EQ(procState, FilePlayback::ProcessorState::kPaused);
-
-  setCommand(FilePlayback::PlaybackCommand::kPlay);
-  fpbData.processorState.read(procState);
-  ASSERT_EQ(procState, FilePlayback::ProcessorState::kPlaying);
-
-  // Time a single processBlock call
-  const auto blockStart = std::chrono::steady_clock::now();
-  proc->processBlock(buff, mbuff);
-  const auto blockElapsedUs =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-          std::chrono::steady_clock::now() - blockStart)
-          .count();
-
-  ASSERT_FALSE(buff.hasBeenCleared());
-
-  // Time a seek
-  const auto seekStart = std::chrono::steady_clock::now();
-  setSeek(0.5f);
-  waitForBuffering();
-  const auto seekElapsedMs =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now() - seekStart)
-          .count();
-
-  fpbData.processorState.read(procState);
-  EXPECT_EQ(procState, FilePlayback::ProcessorState::kPlaying);
-
-  std::cout << "\n--- IAMF Playback Chain Latency ---\n"
-            << "  Load + buffering:  " << loadElapsedMs << "ms\n"
-            << "  processBlock:      " << blockElapsedUs << "us\n"
-            << "  Seek + buffering:  " << seekElapsedMs << "ms\n"
-            << "-----------------------------------\n";
+      << "Frame count from OBU traversal is wrong: expected " << kExpectedFrames
+      << " frames (" << kExpectedDurationSec << "s)";
 }
 
 // Expect changing layout while playing to buffer and return to paused
