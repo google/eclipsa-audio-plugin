@@ -221,9 +221,82 @@ size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
   }
 
   const auto t0 = std::chrono::steady_clock::now();
+
+  // Count temporal units by traversing raw OBU headers without decoding audio.
+  //
+  // IAMF temporal structure
+  // -----------------------
+  // An IAMF file is a flat sequence of Open Bitstream Units (OBUs). The first
+  // group are Descriptor OBUs (Sequence Header, Codec Config, Audio Element,
+  // Mix Presentation), which describe the file's structure. All remaining OBUs
+  // form the audio payload, organised into Temporal Units — one per decoded
+  // frame. A Temporal Unit contains one Audio Frame OBU per audio substream,
+  // covering every substream from every Audio Element in the file.
+  //
+  // Crucially, Mix Presentations are metadata only. They describe how Audio
+  // Elements should be mixed and rendered at decode time, but they do not
+  // affect which substreams are written into the bitstream. A file with two
+  // Mix Presentations — one referencing a stereo element, the other a 5.1
+  // element — still writes BOTH elements' substreams into every Temporal Unit.
+  // The decoder chooses which Mix Presentation to render; the encoder always
+  // includes all audio data. This means the temporal unit count is a single
+  // value for the entire file, independent of the number of Mix Presentations,
+  // how many Audio Elements each references, or what speaker layouts they use.
+  //
+  // Counting strategy
+  // -----------------
+  // Because substream IDs are unique across the whole file and are assigned
+  // sequentially starting at 0, substream 0 always belongs to the first Audio
+  // Element's first substream. By the structure above, exactly one Audio Frame
+  // OBU for substream 0 appears in every Temporal Unit, so counting those OBUs
+  // gives the total frame count.
+  //
+  // The IAMF spec defines two OBU types for substream 0:
+  //   Type 5  IA_Audio_Frame       implicit substream ID 0 (no ID in payload)
+  //   Type 6  IA_Audio_Frame_Id0   explicit substream ID 0 (ID in payload)
+  // Encoders use one style consistently; both mean the same thing here.
+  //
+  // OBU header format (IAMF spec §3.3)
+  // -----------------------------------
+  // Byte 0:  [obu_type: 5 bits][redundant_copy: 1][trimming_flag: 1][ext: 1]
+  //          obu_type = (byte >> 3) & 0x1F
+  // Byte 1:  Optional extension header, present when ext bit is set.
+  // Next:    obu_size as an unsigned leb128 integer.
+  // Then:    Payload of obu_size bytes (skipped entirely here).
+  //
+  // This traversal does no decoding — it reads a handful of bytes per OBU and
+  // seeks past each payload, reducing indexing cost from O(decode all frames)
+  // to O(file size / average OBU size), which is effectively just I/O speed.
+  fileStream_->clear();
+  fileStream_->seekg(0, std::ios::beg);
+
   size_t frameCount = 0;
-  while (!haltIndexing && parseFrame()) {
-    frameCount++;
+  uint8_t headerByte;
+  while (!haltIndexing &&
+         fileStream_->read(reinterpret_cast<char*>(&headerByte), 1)) {
+    const uint8_t obuType = (headerByte >> 3) & 0x1F;
+    const bool extensionFlag = headerByte & 0x01;
+
+    if (extensionFlag) {
+      fileStream_->seekg(1, std::ios::cur);
+    }
+
+    // Read leb128 obu_size
+    uint64_t obuSize = 0;
+    int shift = 0;
+    uint8_t leb;
+    while (fileStream_->read(reinterpret_cast<char*>(&leb), 1)) {
+      obuSize |= static_cast<uint64_t>(leb & 0x7F) << shift;
+      shift += 7;
+      if (!(leb & 0x80)) break;
+    }
+
+    // One of these appears exactly once per temporal unit (see above).
+    if (obuType == 5 || obuType == 6) {
+      ++frameCount;
+    }
+
+    fileStream_->seekg(static_cast<std::streamoff>(obuSize), std::ios::cur);
   }
 
   if (haltIndexing) {
@@ -232,7 +305,7 @@ size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
 
   streamData_.numFrames = frameCount;
 
-  // Reset file and decoder state for normal playback
+  // Reset file and decoder state for normal playback.
   fileStream_->clear();
   fileStream_->seekg(0, std::ios::beg);
   iamfDecoder_ = iamf_tools::api::IamfDecoderFactory::Create(settings_);
@@ -245,7 +318,8 @@ size_t IAMFFileReader::indexFile(std::atomic_bool& haltIndexing) {
   parseStreamData(iamfDecoder_, fileStream_);
   streamData_.currentFrameIdx = 0;
 
-  std::cout << "[IAMFFileReader] indexFile: " << frameCount << " frames in "
+  std::cout << "[IAMFFileReader] indexFile (OBU traversal): " << frameCount
+            << " frames in "
             << std::chrono::duration_cast<std::chrono::milliseconds>(
                    std::chrono::steady_clock::now() - t0)
                    .count()

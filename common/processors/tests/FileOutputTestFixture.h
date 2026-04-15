@@ -155,6 +155,63 @@ class FileOutputTests : public ::testing::Test {
     fio_proc.setNonRealtime(false);
   }
 
+  // Generates a 30-second IAMF file with two audio elements (stereo + 5.1) and
+  // two mix presentations — one per element. Useful for validating indexing and
+  // playback logic that must be correct across multiple substreams and
+  // presentations.
+  void createIAMFFile30Sec2AE2MP(const std::filesystem::path& path) {
+    const Layout kLayout1 = Speakers::kStereo;
+    const Layout kLayout2 = Speakers::k5Point1;
+    const juce::Uuid kAE1 = addAudioElement(kLayout1, "440Hz Sine");
+    const juce::Uuid kAE2 =
+        addAudioElement(kLayout2, "660Hz Sine", kLayout1.getNumChannels());
+    const juce::Uuid kMP1 = addMixPresentation("Mix 440Hz");
+    const juce::Uuid kMP2 = addMixPresentation("Mix 660Hz");
+    addAudioElementsToMix(kMP1, {kAE1});
+    addAudioElementsToMix(kMP2, {kAE2});
+
+    setTestExportOpts({.codec = AudioCodec::LPCM,
+                       .profile = FileProfile::BASE_ENHANCED,
+                       .sampleRate = kSampleRate});
+
+    auto fileExport = fileExportRepository.get();
+    fileExport.setExportFile(path.string());
+    fileExportRepository.update(fileExport);
+
+    fio_proc.prepareToPlay(kSampleRate, kSamplesPerFrame);
+    fio_proc.setNonRealtime(true);
+
+    const int totalFrames = 30 * kSampleRate;
+    const int numBlocks = totalFrames / kSamplesPerFrame;
+    const int totalChannels =
+        kLayout1.getNumChannels() + kLayout2.getNumChannels();
+    juce::AudioBuffer<float> combinedBuffer(totalChannels, kSamplesPerFrame);
+    juce::MidiBuffer midiBuffer;
+
+    for (int block = 0; block < numBlocks; ++block) {
+      combinedBuffer.clear();
+
+      juce::AudioBuffer<float> sineWave440(1, kSamplesPerFrame);
+      float* ch1 = sineWave440.getWritePointer(0);
+      for (int i = 0; i < kSamplesPerFrame; ++i)
+        ch1[i] = sampleSine(440.0f, block * kSamplesPerFrame + i, kSampleRate);
+      for (int ch = 0; ch < kLayout1.getNumChannels(); ++ch)
+        combinedBuffer.copyFrom(ch, 0, sineWave440, 0, 0, kSamplesPerFrame);
+
+      juce::AudioBuffer<float> sineWave660(1, kSamplesPerFrame);
+      float* ch2 = sineWave660.getWritePointer(0);
+      for (int i = 0; i < kSamplesPerFrame; ++i)
+        ch2[i] = sampleSine(660.0f, block * kSamplesPerFrame + i, kSampleRate);
+      for (int ch = 0; ch < kLayout2.getNumChannels(); ++ch)
+        combinedBuffer.copyFrom(kLayout1.getNumChannels() + ch, 0, sineWave660,
+                                0, 0, kSamplesPerFrame);
+
+      fio_proc.processBlock(combinedBuffer, midiBuffer);
+    }
+
+    fio_proc.setNonRealtime(false);
+  }
+
   void createIAMFFile30SecStereo(const std::filesystem::path& path) {
     const Layout kLayout = Speakers::kStereo;
     const juce::Uuid kAE = addAudioElement(kLayout, "Stereo Sine");

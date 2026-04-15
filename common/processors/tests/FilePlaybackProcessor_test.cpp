@@ -541,6 +541,46 @@ TEST_F(FilePlaybackProcessorTest, change_layout_on_fresh_file) {
   EXPECT_TRUE(buff.hasBeenCleared());
 }
 
+// Validates that OBU traversal indexing produces the correct frame count for a
+// file with multiple audio elements and multiple mix presentations.
+// A 5.1 audio element has multiple substreams per temporal unit; the traversal
+// must count temporal units (not individual substream OBUs) to be correct.
+TEST_F(FilePlaybackProcessorTest, index_complex_iamf_file) {
+  const std::filesystem::path kFilePath =
+      std::filesystem::current_path() / "test_fpb_complex.iamf";
+  createIAMFFile30Sec2AE2MP(kFilePath);
+
+  // Expected: 30s * 16kHz / 128 samples-per-frame = 3750 frames
+  const juce::uint64 kExpectedDurationSec = 30;
+  const size_t kExpectedFrames =
+      static_cast<size_t>(kExpectedDurationSec) * FileOutputTests::kSampleRate /
+      FileOutputTests::kSamplesPerFrame;
+
+  const auto loadStart = std::chrono::steady_clock::now();
+  setFile(juce::String(kFilePath.string()));
+  waitForBuffering();
+  const auto loadElapsedMs =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - loadStart)
+          .count();
+
+  fpbData.processorState.read(procState);
+  ASSERT_EQ(procState, FilePlayback::ProcessorState::kPaused)
+      << "File failed to load — check OBU traversal handles multiple "
+         "substreams";
+
+  juce::uint64 fileDuration = 0;
+  fpbData.fileDuration_s.read(fileDuration);
+  EXPECT_EQ(fileDuration, kExpectedDurationSec)
+      << "Frame count from OBU traversal is wrong: expected "
+      << kExpectedFrames << " frames (" << kExpectedDurationSec << "s)";
+
+  std::cout << "\n--- index_complex_iamf_file (2 AE, 2 MP) ---\n"
+            << "  Expected frames:   " << kExpectedFrames << "\n"
+            << "  Load + buffering:  " << loadElapsedMs << "ms\n"
+            << "---------------------------------------------\n";
+}
+
 // Measures timing across the IAMF playback chain for profiling
 TEST_F(FilePlaybackProcessorTest, latency_profiling) {
   const std::filesystem::path kReferenceFilePath =
