@@ -82,7 +82,7 @@ static Result loadTask(const std::filesystem::path file,
 
   const IAMFFileReader::StreamData kData = reader->getStreamData();
 
-  auto buffer = std::make_unique<IamfBufferedReader>(std::move(reader), 5);
+  auto buffer = std::make_unique<IamfBufferedReader>(std::move(reader), 2);
   buffer->waitUntilReady();
   const auto t4 = std::chrono::steady_clock::now();
   std::cout << "[PlaybackTasks::loadTask] IamfBufferedReader ready: "
@@ -137,7 +137,7 @@ static Result layoutTask(const std::filesystem::path file,
 
   const IAMFFileReader::StreamData kData = reader->getStreamData();
 
-  auto buffer = std::make_unique<IamfBufferedReader>(std::move(reader), 5);
+  auto buffer = std::make_unique<IamfBufferedReader>(std::move(reader), 2);
   buffer->waitUntilReady();
   const auto t4 = std::chrono::steady_clock::now();
   std::cout << "[PlaybackTasks::layoutTask] IamfBufferedReader ready: "

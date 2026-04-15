@@ -135,6 +135,7 @@ void IamfBufferedReader::decodeTask() {
   const IAMFFileReader::StreamData kStreamData = decoder_->getStreamData();
   juce::AudioBuffer<float> tempBuffer(kStreamData.numChannels,
                                       kStreamData.frameSize);
+  bool burstProfiled = false;
   while (!stop_) {
     std::unique_lock<std::mutex> lock(cvm_);
     cv_.wait_for(lock, std::chrono::milliseconds(5),
@@ -144,13 +145,48 @@ void IamfBufferedReader::decodeTask() {
     // On startup, this thread will hold the lock and write until the buffer is
     // full.
     const juce::SpinLock::ScopedLockType bl(bufferLock_);
-    while (!stop_ && pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
-      const size_t kSamplesDecoded = decoder_->readFrame(tempBuffer);
-      if (kSamplesDecoded == 0) {
-        eof_ = true;
-        break;
+
+    // Profile the first decode burst (initial buffering fill).
+    if (!burstProfiled) {
+      burstProfiled = true;
+      size_t framesDecoded = 0;
+      long long totalReadUs = 0, totalWriteUs = 0;
+      const auto burstT0 = std::chrono::steady_clock::now();
+      while (!stop_ && pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
+        const auto t0 = std::chrono::steady_clock::now();
+        const size_t kSamplesDecoded = decoder_->readFrame(tempBuffer);
+        const auto t1 = std::chrono::steady_clock::now();
+        if (kSamplesDecoded == 0) { eof_ = true; break; }
+        pbuffer_->writeSamples(kSamplesDecoded, tempBuffer);
+        const auto t2 = std::chrono::steady_clock::now();
+        totalReadUs +=
+            std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+                .count();
+        totalWriteUs +=
+            std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1)
+                .count();
+        ++framesDecoded;
       }
-      pbuffer_->writeSamples(kSamplesDecoded, tempBuffer);
+      const long long burstMs =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - burstT0)
+              .count();
+      std::cout << "[decodeTask] Initial burst: " << framesDecoded << " frames"
+                << "  total=" << burstMs << "ms"
+                << "  readFrame=" << (totalReadUs / 1000) << "ms"
+                << "  writeSamples=" << (totalWriteUs / 1000) << "ms"
+                << "  avgRead=" << (framesDecoded > 0 ? totalReadUs / static_cast<long long>(framesDecoded) : 0) << "us/frame"
+                << "  avgWrite=" << (framesDecoded > 0 ? totalWriteUs / static_cast<long long>(framesDecoded) : 0) << "us/frame"
+                << "\n";
+    } else {
+      while (!stop_ && pbuffer_->availWriteSamples() >= kStreamData.frameSize) {
+        const size_t kSamplesDecoded = decoder_->readFrame(tempBuffer);
+        if (kSamplesDecoded == 0) {
+          eof_ = true;
+          break;
+        }
+        pbuffer_->writeSamples(kSamplesDecoded, tempBuffer);
+      }
     }
     // Signal that buffer is ready or EOF reached
     cv_.notify_all();
