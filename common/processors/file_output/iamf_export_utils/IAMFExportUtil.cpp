@@ -344,6 +344,26 @@ static bool muxVideo(const juce::String& inputVideoFile,
   // Close source file
   gf_isom_close(src_video);
 
+  // Limit MP4 container duration to the video track's duration.
+  // Without this, if the IAMF audio is longer than the video, the container
+  // reports the audio length as the movie duration.
+  u64 video_track_duration = gf_isom_get_track_duration(dst_file, dst_track);
+  if (video_track_duration > 0) {
+    u32 track_count = gf_isom_get_track_count(dst_file);
+    for (u32 i = 1; i <= track_count; i++) {
+      if (i == dst_track) continue;
+      gf_isom_remove_edits(dst_file, i);
+      GF_Err edit_err = gf_isom_set_edit(dst_file, i, /*EditTime=*/0,
+                                         /*EditDuration=*/video_track_duration,
+                                         /*MediaTime=*/0, GF_ISOM_EDIT_NORMAL);
+      if (edit_err != GF_OK) {
+        LOG_ERROR(0, "Video Muxing: Failed to set edit list on audio track: " +
+                         std::string(gf_error_to_string(edit_err)));
+      }
+    }
+    gf_isom_update_duration(dst_file);
+  }
+
   // Set storage mode to interleaved to mimic CLI behaviour
   gf_err = gf_isom_set_storage_mode(dst_file, GF_ISOM_STORE_INTERLEAVED);
   if (gf_err != GF_OK) {

@@ -250,7 +250,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     if (!isTimeFormatAvailable(newFormat)) return;
     startTimeFormat_ = newFormat;
     FileExport config = repository_->get();
-    startTimer_.setText(timeToString(config.getStartTime(), startTimeFormat_));
+    startTimer_.setText(
+        timeToString(config.getStartSampleIdx(), startTimeFormat_));
     startTimeFormatLabel_.setText(
         TimeFormatConverter::getFormatDescription(
             static_cast<TimeFormatConverter::TimeFormat>(startTimeFormat_)),
@@ -272,7 +273,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     if (!isTimeFormatAvailable(newFormat)) return;
     endTimeFormat_ = newFormat;
     FileExport config = repository_->get();
-    endTimer_.setText(timeToString(config.getEndTime(), endTimeFormat_));
+    endTimer_.setText(timeToString(config.getEndSampleIdx(), endTimeFormat_));
     endTimeFormatLabel_.setText(
         TimeFormatConverter::getFormatDescription(
             static_cast<TimeFormatConverter::TimeFormat>(endTimeFormat_)),
@@ -430,9 +431,10 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   };
 
   // Set the start and end time
-  startTimer_.setText(timeToString(config.getStartTime(), startTimeFormat_));
+  startTimer_.setText(
+      timeToString(config.getStartSampleIdx(), startTimeFormat_));
   startTimer_.onTextChanged([this] {
-    int startTime = stringToTime(startTimer_.getText(), startTimeFormat_);
+    long startTime = stringToSamples(startTimer_.getText(), startTimeFormat_);
     if (startTime < 0) {
       juce::String errorMsg = "Invalid time format. Expected: ";
       switch (startTimeFormat_) {
@@ -453,12 +455,13 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     startTimerErrorLabel_.setText("",
                                   juce::NotificationType::dontSendNotification);
     FileExport config = repository_->get();
-    config.setStartTime(stringToTime(startTimer_.getText(), startTimeFormat_));
+    config.setStartSampleIdx(
+        stringToSamples(startTimer_.getText(), startTimeFormat_));
     repository_->update(config);
   });
-  endTimer_.setText(timeToString(config.getEndTime(), endTimeFormat_));
+  endTimer_.setText(timeToString(config.getEndSampleIdx(), endTimeFormat_));
   endTimer_.onTextChanged([this] {
-    int endTime = stringToTime(endTimer_.getText(), endTimeFormat_);
+    long endTime = stringToSamples(endTimer_.getText(), endTimeFormat_);
     if (endTime < 0) {
       juce::String errorMsg = "Invalid time format. Expected: ";
       switch (endTimeFormat_) {
@@ -479,7 +482,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
     endTimerErrorLabel_.setText("",
                                 juce::NotificationType::dontSendNotification);
     FileExport config = repository_->get();
-    config.setEndTime(stringToTime(endTimer_.getText(), endTimeFormat_));
+    config.setEndSampleIdx(
+        stringToSamples(endTimer_.getText(), endTimeFormat_));
     repository_->update(config);
   });
 
@@ -780,44 +784,48 @@ void FileExportScreen::paint(juce::Graphics& g) {
   exportValidation_.setBounds(validationBounds);
 };
 
-juce::String FileExportScreen::timeToString(int timeInSeconds,
+juce::String FileExportScreen::timeToString(long sampleCount,
                                             TimeFormat format) {
-  auto converterFormat = static_cast<TimeFormatConverter::TimeFormat>(format);
-
+  const int sr = repository_->get().getSampleRate();
+  const double seconds = (sr > 0) ? static_cast<double>(sampleCount) / sr : 0.0;
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return TimeFormatConverter::secondsToHMS(timeInSeconds);
+      return TimeFormatConverter::secondsToHMS(seconds);
     case TimeFormat::BarsBeats:
-      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue()) {
-        return TimeFormatConverter::secondsToBarsBeats(
-            timeInSeconds, *cachedBpm_, *cachedTimeSignature_);
-      }
-      return "1.1.000";  // Fallback
+      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue())
+        return TimeFormatConverter::secondsToBarsBeats(seconds, *cachedBpm_,
+                                                       *cachedTimeSignature_);
+      return "1.1.000";
     case TimeFormat::Timecode:
-      if (cachedFrameRate_.hasValue()) {
-        return TimeFormatConverter::secondsToTimecode(timeInSeconds,
-                                                      *cachedFrameRate_);
-      }
-      return "00:00:00:00";  // Fallback
+      if (cachedFrameRate_.hasValue())
+        return TimeFormatConverter::msToTimecode(
+            seconds * 1000.0, cachedFrameRate_->getEffectiveRate());
+      return "00:00:00:00";
     default:
-      return TimeFormatConverter::secondsToHMS(timeInSeconds);
+      return TimeFormatConverter::secondsToHMS(seconds);
   }
 }
 
-int FileExportScreen::stringToTime(juce::String val, TimeFormat format) {
+long FileExportScreen::stringToSamples(juce::String val, TimeFormat format) {
+  const int sr = repository_->get().getSampleRate();
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return TimeFormatConverter::hmsToSeconds(val);
+      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val) * sr);
     case TimeFormat::BarsBeats:
-      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue()) {
-        return TimeFormatConverter::barsBeatsToSeconds(val, *cachedBpm_,
-                                                       *cachedTimeSignature_);
-      }
-      return -1;  // Cannot convert without tempo info
+      if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue())
+        return static_cast<long>(TimeFormatConverter::barsBeatsToSeconds(
+                                     val, *cachedBpm_, *cachedTimeSignature_) *
+                                 sr);
+      return -1;
     case TimeFormat::Timecode:
-      return TimeFormatConverter::timecodeToSeconds(val);
+      if (cachedFrameRate_.hasValue())
+        return static_cast<long>(
+            TimeFormatConverter::timecodeToMs(
+                val, cachedFrameRate_->getEffectiveRate()) /
+            1000.0 * sr);
+      return -1;
     default:
-      return TimeFormatConverter::hmsToSeconds(val);
+      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val) * sr);
   }
 }
 
@@ -1003,6 +1011,10 @@ void FileExportScreen::valueTreeChildRemoved(
 void FileExportScreen::refreshFileExportComponents() {
   // Set the sample rate information if possible
   FileExport config = repository_->get();
+  // Refresh start/end timer display from stored ms values
+  startTimer_.setText(
+      timeToString(config.getStartSampleIdx(), startTimeFormat_));
+  endTimer_.setText(timeToString(config.getEndSampleIdx(), endTimeFormat_));
   if (config.getSampleRate() > 0) {
     sampleRate_.setText(juce::String(config.getSampleRate()) + " Hz");
   }

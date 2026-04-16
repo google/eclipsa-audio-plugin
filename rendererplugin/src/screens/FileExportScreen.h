@@ -63,8 +63,8 @@ class FileExportScreen : public juce::Component,
   void configureCustomCodecParameter(AudioCodec format);
 
   // Time format conversion methods
-  juce::String timeToString(int timeInSeconds, TimeFormat format);
-  int stringToTime(juce::String val, TimeFormat format);
+  juce::String timeToString(long sampleCount, TimeFormat format);
+  long stringToSamples(juce::String val, TimeFormat format);
 
   // Helper methods for timing info and format availability
   void updateTimingInfoFromHost();

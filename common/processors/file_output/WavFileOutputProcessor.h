@@ -64,9 +64,9 @@ class WavFileOutputProcessor final : public ProcessorBase,
   RoomSetupRepository& roomSetupRepository_;
   FileWriter* fileWriter_;
   int numSamples_;
-  int sampleRate_;
-  int startTime_;
-  int endTime_;
+  double sampleRate_;
+  long startSampleIdx_;
+  long endSampleIdx_;
   juce::SpinLock lock_;
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WavFileOutputProcessor)

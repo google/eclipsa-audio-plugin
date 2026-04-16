@@ -47,6 +47,13 @@ class Logger {
 
   bool isInitialized() const { return initialized; }
 
+  void resetForTesting() {
+    std::lock_guard<std::mutex> lock(initMutex);
+    boost::log::core::get()->remove_all_sinks();
+    initialized = false;
+    logFilePattern = "";
+  }
+
  private:
   Logger() = default;
   ~Logger() = default;

@@ -18,8 +18,8 @@
 
 FileExport::FileExport()
     : RepositoryItemBase({}),
-      startTime_(0),
-      endTime_(0),
+      startSampleIdx_(0),
+      endSampleIdx_(0),
       exportFile_(""),
       exportFolder_(""),
       audioFileFormat_(IAMF),
@@ -39,8 +39,8 @@ FileExport::FileExport()
       profile_(FileProfile::BASE),
       exportCompleted_(true) {}
 
-FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
-                       juce::String exportFolder,
+FileExport::FileExport(long startSampleIdx, long endSampleIdx,
+                       juce::String exportFile, juce::String exportFolder,
                        AudioFileFormat audioFileFormat, AudioCodec audioCodec,
                        int bitDepth, int sampleRate, bool exportAudioElements,
                        bool exportAudio, bool exportVideo,
@@ -49,8 +49,8 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        int flac_compression_level, int opus_total_bitrate,
                        int lpcm_sample_size, bool exportCompleted)
     : RepositoryItemBase(juce::Uuid()),
-      startTime_(startTime),
-      endTime_(endTime),
+      startSampleIdx_(startSampleIdx),
+      endSampleIdx_(endSampleIdx),
       exportFile_(exportFile),
       exportFolder_(exportFolder),
       audioFileFormat_(audioFileFormat),
@@ -72,7 +72,8 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
 
 FileExport FileExport::fromTree(const juce::ValueTree tree) {
   return FileExport(
-      tree[kStartTime], tree[kEndTime], tree[kExportFile], tree[kExportFolder],
+      (juce::int64)tree[kStartSampleIdx], (juce::int64)tree[kEndSampleIdx],
+      tree[kExportFile], tree[kExportFolder],
       (AudioFileFormat)(int)tree[kAudioFileFormat],
       (AudioCodec)(int)tree[kAudioCodec], tree[kBitDepth], tree[kSampleRate],
       tree[kExportAudioElements], tree[kExportAudio], tree[kExportVideo],
@@ -83,8 +84,8 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
 
 juce::ValueTree FileExport::toValueTree() const {
   return {kTreeType,
-          {{kStartTime, startTime_},
-           {kEndTime, endTime_},
+          {{kStartSampleIdx, static_cast<juce::int64>(startSampleIdx_)},
+           {kEndSampleIdx, static_cast<juce::int64>(endSampleIdx_)},
            {kExportFile, exportFile_},
            {kExportFolder, exportFolder_},
            {kAudioFileFormat, audioFileFormat_},
