@@ -80,7 +80,7 @@ class FileOutputProcessor : public ProcessorBase {
 
   void initializeFileExport(FileExport& config);
 
-  void closeFileExport(FileExport& config);
+  void closeFileExport(const FileExport& config);
 
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
 
@@ -92,9 +92,9 @@ class FileOutputProcessor : public ProcessorBase {
   MixPresentationLoudnessRepository& mixPresentationLoudnessRepository_;
   std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
   int numSamples_;
-  long sampleRate_;
-  int startTime_;
-  int endTime_;
+  double sampleRate_;
+  long startSampleIdx_;
+  long endSampleIdx_;
   long sampleTally_;
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   //==============================================================================

@@ -89,7 +89,7 @@ class FileProfileHelper {
 class FileExport final : public RepositoryItemBase {
  public:
   FileExport();
-  FileExport(int startTime, int endTime, juce::String exportFile,
+  FileExport(long startSampleIdx, long endSampleIdx, juce::String exportFile,
              juce::String exportFolder, AudioFileFormat audioFileFormat,
              AudioCodec audioCodec, int bitDepth, int sampleRate,
              bool exportAudioElements, bool exportAudio, bool exportVideo,
@@ -113,8 +113,8 @@ class FileExport final : public RepositoryItemBase {
   inline static const juce::Identifier kTreeType{"file_export"};
 
  private:
-  EXPORT_VALUE(int, startTime, StartTime);
-  EXPORT_VALUE(int, endTime, EndTime);
+  EXPORT_VALUE(long, startSampleIdx, StartSampleIdx);
+  EXPORT_VALUE(long, endSampleIdx, EndSampleIdx);
   EXPORT_VALUE(juce::String, exportFile, ExportFile);
   EXPORT_VALUE(juce::String, exportFolder, ExportFolder);
   EXPORT_VALUE(AudioFileFormat, audioFileFormat, AudioFileFormat);

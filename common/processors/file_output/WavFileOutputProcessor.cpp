@@ -62,8 +62,10 @@ void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto playHead = getPlayHead();
     if (playHead != NULL) {  // Happens in debug
       auto position = getPlayHead()->getPosition();
-      if ((endTime_ == 0) || (position->getTimeInSeconds() >= startTime_ &&
-                              position->getTimeInSeconds() <= endTime_)) {
+      const long currentSample =
+          static_cast<long>(*position->getTimeInSeconds() * sampleRate_);
+      if ((endSampleIdx_ == 0) || (currentSample >= startSampleIdx_ &&
+                                   currentSample <= endSampleIdx_)) {
         fileWriter_->write(buffer);
       }
     } else {
@@ -79,8 +81,8 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
     // Start Rendering
     FileExport configParams = fileExportRepository_.get();
     RoomSetup roomSetup = roomSetupRepository_.get();
-    startTime_ = configParams.getStartTime();
-    endTime_ = configParams.getEndTime();
+    startSampleIdx_ = configParams.getStartSampleIdx();
+    endSampleIdx_ = configParams.getEndSampleIdx();
     if ((configParams.getAudioFileFormat() == AudioFileFormat::WAV) &&
         configParams.getExportAudio()) {
       fileWriter_ = new FileWriter(

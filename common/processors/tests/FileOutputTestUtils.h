@@ -28,6 +28,7 @@
 #include "processors/file_output/FileOutputProcessor_PremierePro.h"
 
 extern "C" {
+#include "gpac/isomedia.h"
 #include "mp4iamfpar.h"
 }
 
@@ -377,6 +378,15 @@ class MP4IAMFDemuxer {
     return buffer;
   }
 };
+
+static double getMP4DurationSeconds(const std::string& mp4Path) {
+  GF_ISOFile* f = gf_isom_open(mp4Path.c_str(), GF_ISOM_OPEN_READ, NULL);
+  if (!f) return -1.0;
+  u32 timescale = gf_isom_get_timescale(f);
+  u64 duration = gf_isom_get_duration(f);
+  gf_isom_close(f);
+  return (timescale > 0) ? static_cast<double>(duration) / timescale : -1.0;
+}
 
 // Debug tool for writing audio data to wave files for offline tools
 class WavFileWriter {
