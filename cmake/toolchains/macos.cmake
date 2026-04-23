@@ -28,7 +28,7 @@ set(ECLIPSA_PLATFORM "macos" CACHE STRING "" FORCE)
 #====================================================================
 # Deployment Target
 #====================================================================
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "14" CACHE STRING "Minimum macOS version")
 
 #====================================================================
 # RPATH Configuration
