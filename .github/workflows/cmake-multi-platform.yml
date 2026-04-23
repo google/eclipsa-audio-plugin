@@ -143,15 +143,16 @@ jobs:
       # --- FFmpeg (macOS) ---
       - name: Install FFmpeg (macOS)
         if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
         run: |
           echo "Installing FFmpeg via Homebrew..."
-          brew update
           brew install ffmpeg
-          
+
           echo "Verifying installation:"
           ffmpeg -version
           ffprobe -version
-          
+
           echo "FFmpeg location:"
           which ffmpeg
           which ffprobe
