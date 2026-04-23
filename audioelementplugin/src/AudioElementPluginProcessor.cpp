@@ -106,7 +106,7 @@ void AudioElementPluginProcessor::releaseResources() {}
 
 void AudioElementPluginProcessor::updateTrackProperties(
     const TrackProperties& properties) {
-  trackName_ = properties.name;
+  trackName_ = properties.name.value_or(juce::String{});
   AudioElementSpatialLayout toUpdate =
       audioElementSpatialLayoutRepository_.get();
   toUpdate.setName(trackName_);
