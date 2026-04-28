@@ -345,7 +345,7 @@ bool IAMFFileWriter::writeFrame(const juce::AudioBuffer<float>& buffer) {
   while (srcRemaining > 0) {
     const int toCopy =
         std::min(srcRemaining, accum.frameSize - accum.samplesAccumulated);
-    for (int ch = 0; ch < doubleBuffer_.getNumChannels(); ++ch) {
+    for (int ch = 0; ch < accum.buffer.getNumChannels(); ++ch) {
       accum.buffer.copyFrom(ch, accum.samplesAccumulated, doubleBuffer_, ch,
                             srcOffset, toCopy);
     }
