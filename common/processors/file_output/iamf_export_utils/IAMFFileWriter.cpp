@@ -175,6 +175,29 @@ bool IAMFFileWriter::open(const std::string& filename) {
   }
   doubleBuffer_.setSize(totalChannels, samplesPerFrame_, false, false, true);
 
+  // Opus requires exactly 20ms frames regardless of the DAW block size.
+  // Compute the required frame size and prepare the accumulation buffer.
+  const AudioCodec codec = fileExportRepository_.get().getAudioCodec();
+  if (codec == AudioCodec::OPUS) {
+    OpusAccum accum;
+    switch (sampleRate_) {
+      case 16000:
+        accum.frameSize = 320;
+        break;
+      case 24000:
+        accum.frameSize = 480;
+        break;
+      default:
+        accum.frameSize = 960;
+        break;
+    }
+    accum.buffer.setSize(totalChannels, accum.frameSize, false, true, false);
+    accum.samplesAccumulated = 0;
+    opusAccum_ = std::move(accum);
+  } else {
+    opusAccum_.reset();
+  }
+
   // Initialize temporal unit data map entries
   for (const auto& audioElement : audioElementInformation_) {
     auto& audioData =
@@ -192,6 +215,19 @@ bool IAMFFileWriter::open(const std::string& filename) {
 
 bool IAMFFileWriter::finalizeWriting() {
   if (iamfEncoder_ != nullptr) {
+    // Flush any partially accumulated Opus frame by zero-padding to a full
+    // frame. This is the correct behaviour per the Opus/IAMF spec for the
+    // final packet of a stream.
+    if (opusAccum_ && opusAccum_->samplesAccumulated > 0) {
+      auto& accum = *opusAccum_;
+      for (int ch = 0; ch < accum.buffer.getNumChannels(); ++ch) {
+        accum.buffer.clear(ch, accum.samplesAccumulated,
+                           accum.frameSize - accum.samplesAccumulated);
+      }
+      encodeBuffer(accum.buffer);
+      accum.samplesAccumulated = 0;
+    }
+
     // Step 1: Finalize the encoding process
     auto finalizeStatus = iamfEncoder_->FinalizeEncode();
     if (!finalizeStatus.ok()) {
@@ -260,15 +296,7 @@ inline void convertFloatToDouble(const juce::AudioBuffer<float>& src,
   }
 }
 
-bool IAMFFileWriter::writeFrame(const juce::AudioBuffer<float>& buffer) {
-  // First, ensure generation is enabled
-  if (!iamfEncoder_->GeneratingTemporalUnits()) {
-    return false;
-  }
-
-  convertFloatToDouble(buffer, doubleBuffer_);
-
-  // Fill in the temporal unit data with the current frame's audio data
+bool IAMFFileWriter::encodeBuffer(const juce::AudioBuffer<double>& buf) {
   for (const auto& audioElement : audioElementInformation_) {
     auto& audioData =
         temporalUnitData_.audio_element_id_to_data[audioElement.id];
@@ -278,22 +306,57 @@ bool IAMFFileWriter::writeFrame(const juce::AudioBuffer<float>& buffer) {
       iamf_tools_cli_proto::ChannelLabelMessage channelLabelMsg;
       channelLabelMsg.set_channel_label(channelLabel);
       audioData[channelLabelMsg.SerializeAsString()] = absl::Span<const double>(
-          doubleBuffer_.getReadPointer(audioElement.firstChannel + i),
-          doubleBuffer_.getNumSamples());
+          buf.getReadPointer(audioElement.firstChannel + i),
+          buf.getNumSamples());
     }
   }
-  // Encode the temporal unit data
+
   auto res = iamfEncoder_->Encode(temporalUnitData_);
   if (!res.ok()) {
     LOG_WARNING(0, "Failed to encode temporal unit " + res.ToString());
   }
 
-  // Output the temporal units
   std::vector<uint8_t> unused_temporal_unit_obus;
   res = iamfEncoder_->OutputTemporalUnit(unused_temporal_unit_obus);
   if (!res.ok()) {
     LOG_WARNING(0, "Failed to output temporal unit " + res.ToString());
     return false;
+  }
+  return true;
+}
+
+bool IAMFFileWriter::writeFrame(const juce::AudioBuffer<float>& buffer) {
+  if (!iamfEncoder_->GeneratingTemporalUnits()) {
+    return false;
+  }
+
+  convertFloatToDouble(buffer, doubleBuffer_);
+
+  // Non-Opus codecs: encode the block directly — frame size matches block size.
+  if (!opusAccum_) {
+    return encodeBuffer(doubleBuffer_);
+  }
+
+  // Opus requires exactly opusAccum_->frameSize samples per encoded frame
+  // regardless of the DAW block size. Accumulate until a full frame is ready.
+  auto& accum = *opusAccum_;
+  int srcOffset = 0;
+  int srcRemaining = doubleBuffer_.getNumSamples();
+  while (srcRemaining > 0) {
+    const int toCopy =
+        std::min(srcRemaining, accum.frameSize - accum.samplesAccumulated);
+    for (int ch = 0; ch < doubleBuffer_.getNumChannels(); ++ch) {
+      accum.buffer.copyFrom(ch, accum.samplesAccumulated, doubleBuffer_, ch,
+                            srcOffset, toCopy);
+    }
+    accum.samplesAccumulated += toCopy;
+    srcOffset += toCopy;
+    srcRemaining -= toCopy;
+
+    if (accum.samplesAccumulated == accum.frameSize) {
+      if (!encodeBuffer(accum.buffer)) return false;
+      accum.samplesAccumulated = 0;
+    }
   }
   return true;
 }
