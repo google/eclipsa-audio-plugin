@@ -50,9 +50,9 @@ void IAMFFileWriter::populateCodecInformationFromRepository(
           fileExportData.getFlacCompressionLevel(), sampleRate_, iamfMD);
       break;
     case AudioCodec::OPUS:
-      IAMFExportHelper::writeOPUSConfigMD(
-          samplesPerFrame_, sampleRate_, fileExportData.getOpusTotalBitrate(),
-          iamfMD);
+      IAMFExportHelper::writeOPUSConfigMD(samplesPerFrame_, sampleRate_,
+                                          fileExportData.getOpusTotalBitrate(),
+                                          iamfMD);
       break;
     case AudioCodec::LPCM:
     default:
@@ -180,7 +180,8 @@ bool IAMFFileWriter::open(const std::string& filename) {
   // iamf-tools only accepts 48kHz, so the frame size is always 960 samples.
   const AudioCodec codec = fileExportRepository_.get().getAudioCodec();
   if (codec == AudioCodec::OPUS) {
-    jassert(sampleRate_ == 48000);  // iamf-tools Opus encoder only accepts 48kHz
+    jassert(sampleRate_ ==
+            48000);  // iamf-tools Opus encoder only accepts 48kHz
     OpusAccum accum;
     accum.frameSize = 960;
     accum.buffer.setSize(totalChannels, accum.frameSize, false, true, false);

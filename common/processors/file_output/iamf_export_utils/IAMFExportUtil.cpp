@@ -102,11 +102,13 @@ void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
 void writeOPUSConfigMD(const int samplesPerBlock, const int sampleRate,
                        const int bitratePerChannel,
                        iamf_tools_cli_proto::UserMetadata& user_metadata) {
-  // iamf-tools Opus encoder only accepts 48kHz — the UI enforces this constraint.
+  // iamf-tools Opus encoder only accepts 48kHz — the UI enforces this
+  // constraint.
   jassert(sampleRate == 48000);
   if (sampleRate != 48000) {
     LOG_WARNING(0, "Opus export requires 48kHz; got " +
-                       std::to_string(sampleRate) + "Hz. Falling back to LPCM.");
+                       std::to_string(sampleRate) +
+                       "Hz. Falling back to LPCM.");
     writeLPCMConfigMD(samplesPerBlock, sampleRate, 16, user_metadata);
     return;
   }
