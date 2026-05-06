@@ -51,7 +51,8 @@ void IAMFFileWriter::populateCodecInformationFromRepository(
       break;
     case AudioCodec::OPUS:
       IAMFExportHelper::writeOPUSConfigMD(
-          sampleRate_, fileExportData.getOpusTotalBitrate(), iamfMD);
+          samplesPerFrame_, sampleRate_, fileExportData.getOpusTotalBitrate(),
+          iamfMD);
       break;
     case AudioCodec::LPCM:
     default:
@@ -176,21 +177,12 @@ bool IAMFFileWriter::open(const std::string& filename) {
   doubleBuffer_.setSize(totalChannels, samplesPerFrame_, false, false, true);
 
   // Opus requires exactly 20ms frames regardless of the DAW block size.
-  // Compute the required frame size and prepare the accumulation buffer.
+  // iamf-tools only accepts 48kHz, so the frame size is always 960 samples.
   const AudioCodec codec = fileExportRepository_.get().getAudioCodec();
   if (codec == AudioCodec::OPUS) {
+    jassert(sampleRate_ == 48000);  // iamf-tools Opus encoder only accepts 48kHz
     OpusAccum accum;
-    switch (sampleRate_) {
-      case 16000:
-        accum.frameSize = 320;
-        break;
-      case 24000:
-        accum.frameSize = 480;
-        break;
-      default:
-        accum.frameSize = 960;
-        break;
-    }
+    accum.frameSize = 960;
     accum.buffer.setSize(totalChannels, accum.frameSize, false, true, false);
     accum.samplesAccumulated = 0;
     opusAccum_ = std::move(accum);

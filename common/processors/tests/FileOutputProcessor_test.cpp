@@ -152,6 +152,8 @@ TEST_F(FileOutputTests, iamf_lpc_28ae_1mp) {
   std::filesystem::remove(iamfOutPath);  // Rm for next iteration
 }
 
+// Note that the iamf encoder lib only supports opus export at 48kHz.
+// Opus export at SR != 48kHz defaults to LPCM
 TEST_F(FileOutputTests, iamf_multi_codec_multi_sr_1ae_1mp) {
   const juce::Uuid kAE = addAudioElement(Speakers::k7Point1Point4);
   const juce::Uuid kMP = addMixPresentation();
@@ -159,10 +161,6 @@ TEST_F(FileOutputTests, iamf_multi_codec_multi_sr_1ae_1mp) {
   for (const AudioCodec codec :
        {AudioCodec::LPCM, AudioCodec::FLAC, AudioCodec::OPUS}) {
     for (const int sampleRate : {16e3, 44.1e3, 48e3, 96e3}) {
-      if (codec == AudioCodec::OPUS &&
-          (sampleRate == 44.1e3 || sampleRate == 96e3)) {
-        continue;  // Opus does not support 44.1kHz and 96kHz
-      }
       setTestExportOpts({.codec = codec, .sampleRate = sampleRate});
 
       ASSERT_FALSE(std::filesystem::exists(iamfOutPath));

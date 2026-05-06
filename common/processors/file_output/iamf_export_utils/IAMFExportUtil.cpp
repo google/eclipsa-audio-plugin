@@ -99,60 +99,35 @@ void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
       compressionLevel);
 }
 
-void writeOPUSConfigMD(const int sampleRate, const int bitratePerChannel,
+void writeOPUSConfigMD(const int samplesPerBlock, const int sampleRate,
+                       const int bitratePerChannel,
                        iamf_tools_cli_proto::UserMetadata& user_metadata) {
+  // iamf-tools Opus encoder only accepts 48kHz — the UI enforces this constraint.
+  jassert(sampleRate == 48000);
+  if (sampleRate != 48000) {
+    LOG_WARNING(0, "Opus export requires 48kHz; got " +
+                       std::to_string(sampleRate) + "Hz. Falling back to LPCM.");
+    writeLPCMConfigMD(samplesPerBlock, sampleRate, 16, user_metadata);
+    return;
+  }
+
   auto codec = user_metadata.add_codec_config_metadata();
   codec->set_codec_config_id(200);
 
   auto codecConfig = codec->mutable_codec_config();
   codecConfig->set_codec_id(::iamf_tools_cli_proto::CodecId::CODEC_ID_OPUS);
-
-  // Set samples per frame based on sample rate
-  // Valid frame sizes for Opus at different sample rates:
-  int samplesPerFrame;
-  int preSkip;
-  int validatedBitrate;
-
-  switch (sampleRate) {
-    case 16000:
-      samplesPerFrame = 320;  // 20ms frame at 16kHz
-      preSkip = 104;          // Scaled pre-skip for 16kHz
-      // Clamp bitrate for 16kHz: 8-64 kbps per channel
-      validatedBitrate = std::max(8000, std::min(64000, bitratePerChannel));
-      break;
-    case 24000:
-      samplesPerFrame = 480;  // 20ms frame at 24kHz
-      preSkip = 156;          // Scaled pre-skip for 24kHz
-      // Clamp bitrate for 24kHz: 16-96 kbps per channel
-      validatedBitrate = std::max(16000, std::min(96000, bitratePerChannel));
-      break;
-    case 48000:
-      samplesPerFrame = 960;  // 20ms frame at 48kHz
-      preSkip = 312;          // Standard pre-skip for 48kHz
-      // Clamp bitrate for 48kHz: 32-256 kbps per channel
-      validatedBitrate = std::max(32000, std::min(256000, bitratePerChannel));
-      break;
-    default:
-      // Default to 48kHz values for unsupported sample rates
-      samplesPerFrame = 960;
-      preSkip = 312;
-      validatedBitrate = std::max(32000, std::min(256000, bitratePerChannel));
-      break;
-  }
-
-  codecConfig->set_num_samples_per_frame(samplesPerFrame);
+  codecConfig->set_num_samples_per_frame(960);  // 20ms at 48kHz
   codecConfig->set_automatically_override_audio_roll_distance(true);
   codecConfig->set_automatically_override_codec_delay(true);
 
   auto opusConfig = codecConfig->mutable_decoder_config_opus();
-  opusConfig->set_input_sample_rate(sampleRate);
-  opusConfig->set_pre_skip(preSkip);
+  opusConfig->set_input_sample_rate(48000);
+  opusConfig->set_pre_skip(312);
   opusConfig->set_version(1);
 
-  // Set the opus encoder metadata.
-  // Data must be allocated (since set_allocated is used here). The
-  // allocated data is owned by the protobuf and is deleted when the protobuf
-  // is deleted.
+  // Data must be allocated (set_allocated transfers ownership to the protobuf).
+  const int validatedBitrate =
+      std::max(32000, std::min(256000, bitratePerChannel));
   auto opusMD = new iamf_tools_cli_proto::OpusEncoderMetadata();
   opusMD->set_target_bitrate_per_channel(validatedBitrate);
   opusMD->set_application(
