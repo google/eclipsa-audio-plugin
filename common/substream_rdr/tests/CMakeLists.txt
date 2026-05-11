@@ -16,4 +16,4 @@ eclipsa_add_test(test_substream_rdr RendererFactory_test.cpp "substream_rdr;libe
 eclipsa_add_test(test_bed2bed_rdr BedToBedRdr_test.cpp "substream_rdr;libear;juce::juce_audio_utils")
 eclipsa_add_test(test_hoa2bed_rdr HOAToBedRdr_test.cpp "substream_rdr;libear;juce::juce_audio_utils")
 eclipsa_add_test(test_audio_panner AudioPanner_test.cpp "substream_rdr;juce::juce_audio_utils")
-eclipsa_add_test(test_bin_rdr BinauralRdr_test.cpp "substream_rdr")
+eclipsa_add_test(test_bin_rdr BinauralRdr_test.cpp "substream_rdr;libear")

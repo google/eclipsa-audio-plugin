@@ -16,6 +16,12 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstdio>
+
+#include "TestHelper.h"
+#include "substream_rdr/bed2bed_rdr/BedToBedRdr.h"
+
 using namespace Speakers;
 
 const std::vector<AudioElementSpeakerLayout> kInputLayouts = {
@@ -36,3 +42,132 @@ TEST(test_binaural_rendering, construct_renderer) {
     EXPECT_NE(renderer, nullptr);
   }
 }
+
+// Renders the same 5.1 input through both the stereo downmix (BedToBedRdr) and
+// binaural (BinauralRdr) renderers. Prints L/R sample values at four time
+// points so results can be compared directly between platforms. Both channels
+// must diverge past the HRIR ramp-up region to confirm convolution is active.
+TEST(test_binaural_rendering, stereo_and_binaural_outputs_are_unique) {
+  const int kNumSamples = 512;
+  const int kSampleRate = 48000;
+
+  auto binauralRdr = BinauralRdr::createBinauralRdr(
+      Speakers::k5Point1, kNumSamples, kSampleRate);
+  ASSERT_NE(binauralRdr, nullptr);
+
+  auto stereoRdr = BedToBedRdr::createBedToBedRdr(
+      Speakers::k5Point1, Speakers::kStereo);
+  ASSERT_NE(stereoRdr, nullptr);
+
+  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), kNumSamples);
+  populateInput(inputBuff);
+
+  FBuffer binauralOut(Speakers::kBinaural.getNumChannels(), kNumSamples);
+  FBuffer stereoOut(Speakers::kStereo.getNumChannels(), kNumSamples);
+  binauralOut.clear();
+  stereoOut.clear();
+
+  binauralRdr->render(inputBuff, binauralOut);
+  stereoRdr->render(inputBuff, stereoOut);
+
+  for (int s : {0, kNumSamples / 4, kNumSamples / 2, kNumSamples - 1}) {
+    std::printf("  sample[%3d]  stereo  [L=%9.6f  R=%9.6f]"
+                "  binaural [L=%9.6f  R=%9.6f]\n",
+                s,
+                stereoOut.getSample(0, s), stereoOut.getSample(1, s),
+                binauralOut.getSample(0, s), binauralOut.getSample(1, s));
+  }
+
+  const int kLast = kNumSamples - 1;
+  const float kMinDiff = 1e-4f;
+  EXPECT_GT(std::abs(binauralOut.getSample(0, kLast) - stereoOut.getSample(0, kLast)),
+            kMinDiff)
+      << "Binaural L matches stereo L at sample " << kLast
+      << " -- HRIR convolution may not be active";
+  EXPECT_GT(std::abs(binauralOut.getSample(1, kLast) - stereoOut.getSample(1, kLast)),
+            kMinDiff)
+      << "Binaural R matches stereo R at sample " << kLast
+      << " -- HRIR convolution may not be active";
+}
+
+// Parameterized over standard DAW buffer sizes. Tests are run for each size
+// to catch buffer-size-dependent failures in the OBR convolution engine.
+class BinauralRdrBufferSizeTest : public ::testing::TestWithParam<int> {
+ protected:
+  static constexpr int kSampleRate = 48000;
+};
+
+// If AddAudioElement fails on a given platform/build, Process() produces
+// silence. The stereo downmix is memoryless and always non-zero for non-zero
+// input, so silence in the binaural path is unambiguously wrong.
+TEST_P(BinauralRdrBufferSizeTest, output_is_not_silent) {
+  const int numSamples = GetParam();
+
+  auto rdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, numSamples, kSampleRate);
+  ASSERT_NE(rdr, nullptr);
+
+  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), numSamples);
+  populateInput(inputBuff);
+
+  FBuffer outputBuff(Speakers::kBinaural.getNumChannels(), numSamples);
+  outputBuff.clear();
+  rdr->render(inputBuff, outputBuff);
+
+  float maxAbsVal = 0.f;
+  for (int ch = 0; ch < outputBuff.getNumChannels(); ++ch)
+    for (int s = 0; s < numSamples; ++s)
+      maxAbsVal = std::max(maxAbsVal, std::abs(outputBuff.getSample(ch, s)));
+
+  EXPECT_GT(maxAbsVal, 1e-6f)
+      << "Binaural output is silent at buffer size " << numSamples << ". "
+      << "AddAudioElement may have failed on this platform -- check the "
+      << "EclipsaRenderer log for 'AddAudioElement failed' errors.";
+}
+
+// Binaural HRIR convolution must produce output distinct from a linear stereo
+// downmix. The stereo downmix is constant for DC input; any deviation in the
+// binaural output confirms the convolution engine is active.
+TEST_P(BinauralRdrBufferSizeTest, output_differs_from_stereo_downmix) {
+  const int numSamples = GetParam();
+
+  auto binauralRdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, numSamples, kSampleRate);
+  ASSERT_NE(binauralRdr, nullptr);
+
+  auto stereoRdr = BedToBedRdr::createBedToBedRdr(Speakers::k5Point1, Speakers::kStereo);
+  ASSERT_NE(stereoRdr, nullptr);
+
+  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), numSamples);
+  populateInput(inputBuff);
+
+  FBuffer binauralOut(Speakers::kBinaural.getNumChannels(), numSamples);
+  FBuffer stereoOut(Speakers::kStereo.getNumChannels(), numSamples);
+  binauralOut.clear();
+  stereoOut.clear();
+
+  binauralRdr->render(inputBuff, binauralOut);
+  stereoRdr->render(inputBuff, stereoOut);
+
+  // Stereo downmix is constant for DC input; binaural will differ at every
+  // sample due to convolution. Scan the full buffer.
+  float maxDiff = 0.f;
+  for (int ch = 0; ch < Speakers::kBinaural.getNumChannels(); ++ch)
+    for (int s = 0; s < numSamples; ++s)
+      maxDiff = std::max(maxDiff, std::abs(binauralOut.getSample(ch, s) -
+                                           stereoOut.getSample(ch, s)));
+
+  const int kLast = numSamples - 1;
+  EXPECT_GT(maxDiff, 1e-4f)
+      << "Binaural and stereo outputs are identical at buffer size "
+      << numSamples << ", suggesting HRIR convolution is not being applied.\n"
+      << "  Binaural last sample [L=" << binauralOut.getSample(0, kLast)
+      << " R=" << binauralOut.getSample(1, kLast) << "]\n"
+      << "  Stereo   last sample [L=" << stereoOut.getSample(0, kLast)
+      << " R=" << stereoOut.getSample(1, kLast) << "]";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    StandardDawBufferSizes, BinauralRdrBufferSizeTest,
+    ::testing::Values(64, 128, 256, 512, 1024, 2048),
+    [](const ::testing::TestParamInfo<int>& info) {
+      return std::to_string(info.param) + "samples";
+    });
