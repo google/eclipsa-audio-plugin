@@ -330,6 +330,58 @@ TEST_F(IAMFFileReaderTest, reset_layout) {
   EXPECT_EQ(samplesRead, kNewData.frameSize);
 }
 
+// Decode a stereo IAMF file requesting binaural output. The decoder renders
+// binaural from the stereo element; output should be 2-channel with kBinaural
+// reported as the playback layout.
+TEST_F(IAMFFileReaderTest, open_iamf_binaural) {
+  createBasicIAMFFile(kReferenceFilePath);
+  const IAMFFileReader::Settings kSettings = {
+      .requested_mix =
+          {.output_layout = iamf_tools::api::OutputLayout::kIAMF_Binaural},
+      .requested_profile_versions =
+          {iamf_tools::api::ProfileVersion::kIamfBaseEnhancedProfile},
+      .requested_output_sample_type =
+          iamf_tools::api::OutputSampleType::kInt32LittleEndian,
+  };
+  std::unique_ptr<IAMFFileReader> reader = IAMFFileReader::createIamfReader(
+      kReferenceFilePath, kSettings, abortConstructionFlag);
+  ASSERT_NE(reader, nullptr);
+
+  const IAMFFileReader::StreamData kSData = reader->getStreamData();
+  EXPECT_TRUE(kSData.valid);
+  EXPECT_EQ(kSData.numChannels, Speakers::kBinaural.getNumChannels());
+  EXPECT_EQ(kSData.sampleRate, 48e3);
+  EXPECT_EQ(kSData.frameSize, kSamplesPerFrame);
+  EXPECT_EQ(kSData.playbackLayout, Speakers::kBinaural);
+}
+
+// Reset an existing reader's layout to binaural. Channel count and layout
+// should update while the indexed frame count is preserved.
+TEST_F(IAMFFileReaderTest, reset_layout_to_binaural) {
+  createIAMFFile2AE2MP(kReferenceFilePath);
+  auto reader = IAMFFileReader::createIamfReader(kReferenceFilePath);
+  ASSERT_NE(reader, nullptr);
+  reader->indexFile(abortConstructionFlag);
+
+  const IAMFFileReader::StreamData kInitialData = reader->getStreamData();
+  EXPECT_EQ(kInitialData.numChannels, Speakers::kStereo.getNumChannels());
+  const size_t kOriginalNumFrames = kInitialData.numFrames;
+
+  ASSERT_TRUE(reader->resetLayout(Speakers::kBinaural));
+
+  const IAMFFileReader::StreamData kBinauralData = reader->getStreamData();
+  EXPECT_TRUE(kBinauralData.valid);
+  EXPECT_EQ(kBinauralData.numChannels, Speakers::kBinaural.getNumChannels());
+  EXPECT_EQ(kBinauralData.playbackLayout, Speakers::kBinaural);
+  EXPECT_EQ(kBinauralData.numFrames, kOriginalNumFrames);
+  EXPECT_EQ(kBinauralData.currentFrameIdx, 0);
+
+  // Verify frames can be read after the layout reset
+  juce::AudioBuffer<float> buffer(kBinauralData.numChannels,
+                                  kBinauralData.frameSize);
+  EXPECT_GT(reader->readFrame(buffer), 0u);
+}
+
 // Test aborting construction during file indexing
 TEST_F(IAMFFileReaderTest, abort_indexing) {
   createIAMFFile30SecStereo(kReferenceFilePath);
