@@ -715,6 +715,37 @@ TEST_F(test_render_proc, many_ae_one_mp_amp) {
   }
 }
 
+// LFE audio element rendered through the full RenderProcessor pipeline.
+TEST_F(test_render_proc, lfe_ae_render) {
+  for (const auto& playbackLayout : playbackLayouts) {
+    room.setSpeakerLayout(
+        RoomLayout(playbackLayout, playbackLayout.toString().toStdString()));
+    roomSetupData.update(room);
+
+    AudioElement ae(juce::Uuid(), "LFE AE", Speakers::kExplLFE, 0);
+    audioElementData.add(ae);
+
+    juce::Uuid mpId;
+    MixPresentation mp(mpId, "Test", 1.f, LanguageData::MixLanguages::English,
+                       {});
+    mp.addAudioElement(ae.getId(), 1.f, ae.getName());
+    mixPresData.updateOrAdd(mp);
+
+    activeMix.updateActiveMixId(mpId);
+    activeMixPresData.update(activeMix);
+
+    proc.prepareToPlay(kSampleRate, kSamplesPerBlock);
+
+    juce::AudioBuffer<float> buffer = unityBuffer();
+    EXPECT_NO_FATAL_FAILURE(proc.processBlock(buffer, emptyMidi))
+        << "Failed rendering LFE to " << playbackLayout.toString();
+
+    // Reset state for the next playback layout iteration.
+    audioElementData.clear();
+    mixPresData.clear();
+  }
+}
+
 // Verify that the correct binaural renderer is initialized
 TEST_F(test_render_proc, binaural_renderers) {
   Speakers::AudioElementSpeakerLayout layout = Speakers::kBinaural;

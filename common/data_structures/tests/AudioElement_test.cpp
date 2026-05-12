@@ -131,6 +131,31 @@ TEST(test_audio_element, iamf_md_population_cb_ae) {
   EXPECT_EQ(kId32, aeMD.audio_element_id());
 }
 
+TEST(test_audio_element, iamf_md_population_lfe_ae) {
+  const Speakers::AudioElementSpeakerLayout kLayout = Speakers::kExplLFE;
+  const int kNumSubstreams = 1;  // LFE is 1 uncoupled substream
+  const int kId32 = 0;
+  int minSubstreamId = 0;
+
+  AudioElement ae;
+  ae.setChannelConfig(kLayout);
+
+  iamf_tools_cli_proto::AudioElementObuMetadata aeMD;
+  ae.populateIamfAudioElementMetadata(&aeMD, kId32, minSubstreamId);
+
+  EXPECT_EQ(AudioElement::AudioElement_t::AUDIO_ELEMENT_CHANNEL_BASED,
+            aeMD.audio_element_type());
+  EXPECT_EQ(kNumSubstreams, aeMD.audio_substream_ids_size());
+  EXPECT_EQ(iamf_tools_cli_proto::LOUDSPEAKER_LAYOUT_EXPANDED,
+            aeMD.scalable_channel_layout_config()
+                .channel_audio_layer_configs(0)
+                .loudspeaker_layout());
+  EXPECT_EQ(iamf_tools_cli_proto::EXPANDED_LOUDSPEAKER_LAYOUT_LFE,
+            aeMD.scalable_channel_layout_config()
+                .channel_audio_layer_configs(0)
+                .expanded_loudspeaker_layout());
+}
+
 TEST(test_audio_element, iamf_md_population_sb_ae) {
   const AudioElement::AudioElement_t kAeType =
       AudioElement::AudioElement_t::AUDIO_ELEMENT_SCENE_BASED;
