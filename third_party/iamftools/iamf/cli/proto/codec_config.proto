@@ -51,6 +51,11 @@ message OpusEncoderMetadata {
   //    - Two channels: `target_bitrate_per_channel * 2 *
   //  coupling_rate_adjustment`.
   int32 target_bitrate_per_channel = 1;
+  // The coupling rate adjustment should be in the range [0.5, 1.0].
+  // At the lower bound, the effective bitrate for coupled channels would be
+  // the same as a mono channel, for highly correlated signals.
+  // At the upper bound, the effective bitrate for a coupled channel would be
+  // two times the rate for a mono channel, for highly disparate signals.
   float coupling_rate_adjustment = 4 [default = 1.0];
 
   map<uint32, int32> substream_id_to_bitrate_override = 5;
@@ -86,7 +91,7 @@ enum SampleFrequencyIndex {
   AAC_SAMPLE_FREQUENCY_INDEX_7350 = 13;
   AAC_SAMPLE_FREQUENCY_INDEX_RESERVED_A = 14;
   AAC_SAMPLE_FREQUENCY_INDEX_RESERVED_B = 15;
-  AAC_SAMPLE_FREQUENCY_INDEX_ESCAPE_VALUE = 16;
+  AAC_SAMPLE_FREQUENCY_INDEX_ESCAPE_VALUE = 16 [deprecated = true];
 }
 
 // Settings to configure `fdk_aac`.
@@ -103,7 +108,7 @@ message AacDecoderSpecificInfo {
   uint32 audio_object_type = 1 [default = 2];
 
   SampleFrequencyIndex sample_frequency_index = 2;
-  uint32 sampling_frequency = 3;
+  uint32 sampling_frequency = 3 [deprecated = true];
   uint32 channel_configuration = 4 [default = 2];
 
   // Next ID: 6
@@ -148,9 +153,11 @@ enum FlacBlockType {
 }
 
 message FlacMetaBlockHeader {
-  bool last_metadata_block_flag = 1;
+  // Ignored, inferred by the order of repeated fields.
+  bool last_metadata_block_flag = 1 [deprecated = true];
   FlacBlockType block_type = 2;
-  uint32 metadata_data_block_length = 3;
+  // Ignored, inferred from the block type and payload size.
+  uint32 metadata_data_block_length = 3 [deprecated = true];
 }
 
 message FlacMetaBlockStreamInfo {

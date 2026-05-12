@@ -3,6 +3,6 @@
 
 #include <string>
 
-const std::string GIT_COMMIT_HASH = "GitHub/iamf-tools@d7354b29d99c4d0198975568d4c23d5be0680f11";
+const std::string GIT_COMMIT_HASH = "GitHub/iamf-tools@7542365c18d02ea4857c492963c50788cf20158e";
 
 #endif  // GIT_INFO_H

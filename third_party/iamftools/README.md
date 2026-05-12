@@ -1,6 +1,6 @@
 - Compiled from: https://github.com/AOMediaCodec/iamf-tools.git
-- Commit: https://github.com/AOMediaCodec/iamf-tools/commit/d7354b29d99c4d0198975568d4c23d5be0680f11
-- Version: 2.0.0
+- Commit: https://github.com/AOMediaCodec/iamf-tools/commit/7542365c18d02ea4857c492963c50788cf20158e
+- Version: 7542365c18d02ea4857c492963c50788cf20158e
 
 ### Update notes
 - The commit hash on line 2 must be updated to reflect the commit used for compiling the .dylib file.
