@@ -51,12 +51,12 @@ TEST(test_binaural_rendering, stereo_and_binaural_outputs_are_unique) {
   const int kNumSamples = 512;
   const int kSampleRate = 48000;
 
-  auto binauralRdr = BinauralRdr::createBinauralRdr(
-      Speakers::k5Point1, kNumSamples, kSampleRate);
+  auto binauralRdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1,
+                                                    kNumSamples, kSampleRate);
   ASSERT_NE(binauralRdr, nullptr);
 
-  auto stereoRdr = BedToBedRdr::createBedToBedRdr(
-      Speakers::k5Point1, Speakers::kStereo);
+  auto stereoRdr =
+      BedToBedRdr::createBedToBedRdr(Speakers::k5Point1, Speakers::kStereo);
   ASSERT_NE(stereoRdr, nullptr);
 
   FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), kNumSamples);
@@ -71,21 +71,23 @@ TEST(test_binaural_rendering, stereo_and_binaural_outputs_are_unique) {
   stereoRdr->render(inputBuff, stereoOut);
 
   for (int s : {0, kNumSamples / 4, kNumSamples / 2, kNumSamples - 1}) {
-    std::printf("  sample[%3d]  stereo  [L=%9.6f  R=%9.6f]"
-                "  binaural [L=%9.6f  R=%9.6f]\n",
-                s,
-                stereoOut.getSample(0, s), stereoOut.getSample(1, s),
-                binauralOut.getSample(0, s), binauralOut.getSample(1, s));
+    std::printf(
+        "  sample[%3d]  stereo  [L=%9.6f  R=%9.6f]"
+        "  binaural [L=%9.6f  R=%9.6f]\n",
+        s, stereoOut.getSample(0, s), stereoOut.getSample(1, s),
+        binauralOut.getSample(0, s), binauralOut.getSample(1, s));
   }
 
   const int kLast = kNumSamples - 1;
   const float kMinDiff = 1e-4f;
-  EXPECT_GT(std::abs(binauralOut.getSample(0, kLast) - stereoOut.getSample(0, kLast)),
-            kMinDiff)
+  EXPECT_GT(
+      std::abs(binauralOut.getSample(0, kLast) - stereoOut.getSample(0, kLast)),
+      kMinDiff)
       << "Binaural L matches stereo L at sample " << kLast
       << " -- HRIR convolution may not be active";
-  EXPECT_GT(std::abs(binauralOut.getSample(1, kLast) - stereoOut.getSample(1, kLast)),
-            kMinDiff)
+  EXPECT_GT(
+      std::abs(binauralOut.getSample(1, kLast) - stereoOut.getSample(1, kLast)),
+      kMinDiff)
       << "Binaural R matches stereo R at sample " << kLast
       << " -- HRIR convolution may not be active";
 }
@@ -103,7 +105,8 @@ class BinauralRdrBufferSizeTest : public ::testing::TestWithParam<int> {
 TEST_P(BinauralRdrBufferSizeTest, output_is_not_silent) {
   const int numSamples = GetParam();
 
-  auto rdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, numSamples, kSampleRate);
+  auto rdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, numSamples,
+                                            kSampleRate);
   ASSERT_NE(rdr, nullptr);
 
   FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), numSamples);
@@ -130,10 +133,12 @@ TEST_P(BinauralRdrBufferSizeTest, output_is_not_silent) {
 TEST_P(BinauralRdrBufferSizeTest, output_differs_from_stereo_downmix) {
   const int numSamples = GetParam();
 
-  auto binauralRdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, numSamples, kSampleRate);
+  auto binauralRdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1,
+                                                    numSamples, kSampleRate);
   ASSERT_NE(binauralRdr, nullptr);
 
-  auto stereoRdr = BedToBedRdr::createBedToBedRdr(Speakers::k5Point1, Speakers::kStereo);
+  auto stereoRdr =
+      BedToBedRdr::createBedToBedRdr(Speakers::k5Point1, Speakers::kStereo);
   ASSERT_NE(stereoRdr, nullptr);
 
   FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), numSamples);
@@ -165,9 +170,8 @@ TEST_P(BinauralRdrBufferSizeTest, output_differs_from_stereo_downmix) {
       << " R=" << stereoOut.getSample(1, kLast) << "]";
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    StandardDawBufferSizes, BinauralRdrBufferSizeTest,
-    ::testing::Values(64, 128, 256, 512, 1024, 2048),
-    [](const ::testing::TestParamInfo<int>& info) {
-      return std::to_string(info.param) + "samples";
-    });
+INSTANTIATE_TEST_SUITE_P(StandardDawBufferSizes, BinauralRdrBufferSizeTest,
+                         ::testing::Values(64, 128, 256, 512, 1024, 2048),
+                         [](const ::testing::TestParamInfo<int>& info) {
+                           return std::to_string(info.param) + "samples";
+                         });

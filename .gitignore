@@ -1,6 +1,8 @@
 # IDE files
 /.vscode
 /.cache
+/.claude
+/.a-cx
 /_deps
 
 # Build files

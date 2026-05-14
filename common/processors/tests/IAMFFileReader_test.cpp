@@ -336,8 +336,8 @@ TEST_F(IAMFFileReaderTest, reset_layout) {
 TEST_F(IAMFFileReaderTest, open_iamf_binaural) {
   createBasicIAMFFile(kReferenceFilePath);
   const IAMFFileReader::Settings kSettings = {
-      .requested_mix =
-          {.output_layout = iamf_tools::api::OutputLayout::kIAMF_Binaural},
+      .requested_mix = {.output_layout =
+                            iamf_tools::api::OutputLayout::kIAMF_Binaural},
       .requested_profile_versions =
           {iamf_tools::api::ProfileVersion::kIamfBaseEnhancedProfile},
       .requested_output_sample_type =
