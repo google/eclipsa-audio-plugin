@@ -14,8 +14,6 @@
 
 #include "AudioElementPluginEditor.h"
 
-#include <iostream>
-
 #ifdef _WIN32
 // Windows doesn't need unistd.h - functionality is in io.h if needed
 #else
@@ -75,6 +73,7 @@ AudioElementPluginEditor::AudioElementPluginEditor(
     : juce::AudioProcessorEditor(&p),
       audioElementSpatialLayoutRepository_(
           &p.getRepositories().audioElementSpatialLayoutRepository_),
+      parameterTree_(&p.automationParametersTreeState),
       syncClient_(&p.getSyncClient()),
       spkrData_(&p.getRepositories().monitorData_),
       trackNameTextBox_("Track Name"),
@@ -213,6 +212,16 @@ AudioElementPluginEditor::AudioElementPluginEditor(
     } else {
       toUpdate.setLayoutSelected(false);
     }
+
+    // LFE is non-directional: force passthrough and reset position to center
+    if (channelLayout == Speakers::kExplLFE) {
+      toUpdate.setPanningEnabled(false);
+      panningControls_.setToggleState(false, juce::dontSendNotification);
+      parameterTree_->setXPosition(0);
+      parameterTree_->setYPosition(0);
+      parameterTree_->setZPosition(0);
+    }
+
     audioElementSpatialLayoutRepository_->update(toUpdate);
   });
 
@@ -372,9 +381,14 @@ void AudioElementPluginEditor::resized() {
 }
 
 void AudioElementPluginEditor::setMode() {
+  const bool kLfe =
+      audioElementSpatialLayoutRepository_->get().getChannelLayout() ==
+      Speakers::kExplLFE;
+  panningControls_.setEnabled(!kLfe);
+
   if (audioElementSpatialLayoutRepository_->get().isPanningEnabled()) {
     outputModeTypeLabel_.setText("Panning Mode");
   } else {
-    outputModeTypeLabel_.setText("Passthrough Mode");
+    outputModeTypeLabel_.setText(kLfe ? "LFE Passthrough" : "Passthrough Mode");
   }
 }
