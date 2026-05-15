@@ -176,8 +176,8 @@ TEST_F(IAMFFileWriterTest, write_iamf_lfe) {
   juce::AudioBuffer<float> buffer(1, kSamplesPerFrame);
   for (int frame = 0; frame < 375; ++frame) {
     for (int sample = 0; sample < kSamplesPerFrame; ++sample) {
-      const double kTime =
-          (frame * kSamplesPerFrame + sample) / static_cast<double>(kSampleRate);
+      const double kTime = (frame * kSamplesPerFrame + sample) /
+                           static_cast<double>(kSampleRate);
       buffer.setSample(0, sample, 0.2 * std::sin(2.0 * M_PI * 60.0 * kTime));
     }
     EXPECT_TRUE(writer.writeFrame(buffer));
