@@ -740,6 +740,23 @@ TEST_F(test_render_proc, lfe_ae_render) {
     EXPECT_NO_FATAL_FAILURE(proc.processBlock(buffer, emptyMidi))
         << "Failed rendering LFE to " << playbackLayout.toString();
 
+    // For layouts with an LFE channel, verify the LFE signal was routed
+    // through rather than silenced by the panner.
+    const int kLfeChIdx = playbackLayout.getChannelSet().getChannelIndexForType(
+        juce::AudioChannelSet::LFE);
+    if (kLfeChIdx >= 0) {
+      bool lfeHasData = false;
+      for (int j = 0; j < buffer.getNumSamples(); ++j) {
+        if (buffer.getSample(kLfeChIdx, j) != 0.f) {
+          lfeHasData = true;
+          break;
+        }
+      }
+      EXPECT_TRUE(lfeHasData)
+          << "LFE channel (ch" << kLfeChIdx << ") is silent when rendering to "
+          << playbackLayout.toString();
+    }
+
     // Reset state for the next playback layout iteration.
     audioElementData.clear();
     mixPresData.clear();
