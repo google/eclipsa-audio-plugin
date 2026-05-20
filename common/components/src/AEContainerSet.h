@@ -33,7 +33,10 @@ class AEContainerSet : public juce::Component {
   int getNumContainers() { return containers_->size(); }
 
   int calculateContainerHeight() {
-    return getNumContainers() * (kMixContainerHeight_ + kMixContainerSpacing_);
+    int total = 0;
+    for (auto& pair : *containers_)
+      total += kMixContainerSpacing_ + pair.second->getPreferredHeight();
+    return total;
   }
 
   const int getViewPortMaxHeight() {
@@ -44,9 +47,10 @@ class AEContainerSet : public juce::Component {
   void paint(juce::Graphics& g) override {
     auto bounds = getLocalBounds();
     for (auto& pair : *containers_) {
-      bounds.removeFromTop(kMixContainerSpacing_);  // Add some padding
+      bounds.removeFromTop(kMixContainerSpacing_);
       addAndMakeVisible(pair.second.get());
-      pair.second.get()->setBounds(bounds.removeFromTop(kMixContainerHeight_));
+      pair.second.get()->setBounds(
+          bounds.removeFromTop(pair.second->getPreferredHeight()));
     }
   }
 

@@ -126,6 +126,7 @@ target_link_libraries(eclipsa_common INTERFACE
         logger
         data_repository
         data_structures
+        juce::juce_gui_extra
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags

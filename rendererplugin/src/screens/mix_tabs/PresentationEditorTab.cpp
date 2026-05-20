@@ -326,9 +326,9 @@ void PresentationEditorTab::getAudioElements() {
               audioElement->getChannelConfig().toString());
       auto container = audioElementsAlreadyDrawn_[audioElementId].get();
       container->setDeleteButtonListener(this);
-      // Set checkbox state from repository
-      container->getIsBinauralCheckbox()->setToggleState(
-          mixAE.isBinaural(), juce::dontSendNotification);
+      container->setAudioElementConstraints(
+          audioElement->getChannelConfig() == Speakers::kBinaural,
+          audioElement->getChannelConfig() == Speakers::kStereo);
       // Set change handler to update repository
       container->setBinauralChangeHandler(
           [this, audioElementId](bool newBinauralState) {
@@ -428,12 +428,16 @@ void PresentationEditorTab::addToAlreadyDrawnMap(
   audioElementsAlreadyDrawn_[audioElementId] =
       std::make_unique<MixAEContainer>(mixAE.getName(), channelConfigStr);
   audioElementsAlreadyDrawn_[audioElementId]->setDeleteButtonListener(this);
-
-  // Set up the isBinaural checkbox
-  auto isBinauralCheckbox =
-      audioElementsAlreadyDrawn_[audioElementId]->getIsBinauralCheckbox();
-  isBinauralCheckbox->setToggleState(mixAE.isBinaural(),
-                                     juce::dontSendNotification);
+  if (linkedAudioElementOpt.has_value()) {
+    audioElementsAlreadyDrawn_[audioElementId]->setAudioElementConstraints(
+        linkedAudioElementOpt->getChannelConfig() == Speakers::kBinaural,
+        linkedAudioElementOpt->getChannelConfig() == Speakers::kStereo);
+  } else {
+    audioElementsAlreadyDrawn_[audioElementId]->setBinauralState(
+        mixAE.isBinaural());
+  }
+  audioElementsAlreadyDrawn_[audioElementId]->setOnExpandStateChanged(
+      [this]() { viewPort_.repaint(); });
 
   audioElementsAlreadyDrawn_[audioElementId]->setBinauralChangeHandler(
       [this, audioElementId](bool newBinauralState) {

@@ -30,9 +30,6 @@ PresentationEditorViewPort::PresentationEditorViewPort(
 void PresentationEditorViewPort::paint(juce::Graphics& g) {
   const auto bounds = getLocalBounds();
   viewPort_.setSize(bounds.getWidth(), bounds.getHeight());
-  if (set_.getNumContainers() <= set_.kMaxContainerThreshold) {
-    set_.setSize(bounds.getWidth(), bounds.getHeight());
-  } else {
-    set_.setSize(bounds.getWidth(), set_.calculateContainerHeight());
-  }
+  set_.setSize(bounds.getWidth(),
+               std::max(bounds.getHeight(), set_.calculateContainerHeight()));
 }
