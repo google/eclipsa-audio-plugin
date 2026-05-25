@@ -213,8 +213,10 @@ AudioElementPluginEditor::AudioElementPluginEditor(
       toUpdate.setLayoutSelected(false);
     }
 
-    // LFE is non-directional: force passthrough and reset position to center
-    if (channelLayout == Speakers::kExplLFE) {
+    // Single-channel layouts (LFE, Mono) are non-directional: force passthrough
+    // and reset position to center
+    if (channelLayout == Speakers::kExplLFE ||
+        channelLayout == Speakers::kMono) {
       toUpdate.setPanningEnabled(false);
       panningControls_.setToggleState(false, juce::dontSendNotification);
       parameterTree_->setXPosition(0);
@@ -381,14 +383,15 @@ void AudioElementPluginEditor::resized() {
 }
 
 void AudioElementPluginEditor::setMode() {
-  const bool kLfe =
-      audioElementSpatialLayoutRepository_->get().getChannelLayout() ==
-      Speakers::kExplLFE;
-  panningControls_.setEnabled(!kLfe);
+  const Speakers::AudioElementSpeakerLayout kLayout =
+      audioElementSpatialLayoutRepository_->get().getChannelLayout();
+  const bool kSingleChannel =
+      kLayout == Speakers::kExplLFE || kLayout == Speakers::kMono;
+  panningControls_.setEnabled(!kSingleChannel);
 
   if (audioElementSpatialLayoutRepository_->get().isPanningEnabled()) {
     outputModeTypeLabel_.setText("Panning Mode");
   } else {
-    outputModeTypeLabel_.setText(kLfe ? "LFE Passthrough" : "Passthrough Mode");
+    outputModeTypeLabel_.setText("Passthrough Mode");
   }
 }
