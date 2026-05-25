@@ -17,14 +17,13 @@
 #pragma once
 #include <juce_dsp/juce_dsp.h>
 
+#include <optional>
 #include <string>
 
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
-#include "data_structures/src/AudioElement.h"
-#include "data_structures/src/MixPresentation.h"
 #include "iamf/include/iamf_tools/iamf_encoder_interface.h"
 
 struct AudioElementMetadata {
@@ -57,7 +56,14 @@ class IAMFFileWriter {
   bool writeFrame(const juce::AudioBuffer<float>& buffer);
 
  protected:
+  struct OpusAccum {
+    int frameSize = 0;
+    int samplesAccumulated = 0;
+    juce::AudioBuffer<double> buffer;
+  };
+
   bool finalizeWriting();
+  bool encodeBuffer(const juce::AudioBuffer<double>& buf);
   void populateCodecInformationFromRepository(
       FileExportRepository& fileExportRepository,
       iamf_tools_cli_proto::UserMetadata& iamfMD);
@@ -79,6 +85,7 @@ class IAMFFileWriter {
   std::unordered_map<juce::Uuid, int> audioElementIDMap_;
   int samplesPerFrame_;
   int sampleRate_;
+  std::optional<OpusAccum> opusAccum_;
   std::unique_ptr<iamf_tools_cli_proto::UserMetadata> userMetadata_;
   std::unique_ptr<iamf_tools::api::IamfEncoderInterface> iamfEncoder_;
   std::vector<AudioElementMetadata> audioElementInformation_;

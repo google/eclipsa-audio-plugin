@@ -203,7 +203,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   // Add the codec options
   codecSelector_.addOption("LPCM");
   codecSelector_.addOption("FLAC");
-  codecSelector_.addOption("OPUS");
+  codecSelector_.addOption("OPUS", "48kHz ONLY");
   codecSelector_.setSelectedIndex((int)config.getAudioCodec(),
                                   juce::NotificationType::dontSendNotification);
   codecSelector_.onChange([this] {
