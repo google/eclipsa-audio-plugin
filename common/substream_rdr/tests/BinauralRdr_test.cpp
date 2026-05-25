@@ -99,71 +99,65 @@ class BinauralRdrBufferSizeTest : public ::testing::TestWithParam<int> {
   static constexpr int kSampleRate = 48000;
 };
 
-// If AddAudioElement fails on a given platform/build, Process() produces
-// silence. The stereo downmix is memoryless and always non-zero for non-zero
-// input, so silence in the binaural path is unambiguously wrong.
+// Silence indicates AddAudioElement failed silently at runtime.
 TEST_P(BinauralRdrBufferSizeTest, output_is_not_silent) {
-  const int numSamples = GetParam();
+  const int kNumSamples = GetParam();
 
-  auto rdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, numSamples,
+  auto rdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1, kNumSamples,
                                             kSampleRate);
   ASSERT_NE(rdr, nullptr);
 
-  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), numSamples);
+  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), kNumSamples);
   populateInput(inputBuff);
 
-  FBuffer outputBuff(Speakers::kBinaural.getNumChannels(), numSamples);
+  FBuffer outputBuff(Speakers::kBinaural.getNumChannels(), kNumSamples);
   outputBuff.clear();
   rdr->render(inputBuff, outputBuff);
 
   float maxAbsVal = 0.f;
   for (int ch = 0; ch < outputBuff.getNumChannels(); ++ch)
-    for (int s = 0; s < numSamples; ++s)
+    for (int s = 0; s < kNumSamples; ++s)
       maxAbsVal = std::max(maxAbsVal, std::abs(outputBuff.getSample(ch, s)));
 
   EXPECT_GT(maxAbsVal, 1e-6f)
-      << "Binaural output is silent at buffer size " << numSamples << ". "
+      << "Binaural output is silent at buffer size " << kNumSamples << ". "
       << "AddAudioElement may have failed on this platform -- check the "
       << "EclipsaRenderer log for 'AddAudioElement failed' errors.";
 }
 
-// Binaural HRIR convolution must produce output distinct from a linear stereo
-// downmix. The stereo downmix is constant for DC input; any deviation in the
-// binaural output confirms the convolution engine is active.
+// HRIR convolution must produce output distinct from a linear stereo downmix.
 TEST_P(BinauralRdrBufferSizeTest, output_differs_from_stereo_downmix) {
-  const int numSamples = GetParam();
+  const int kNumSamples = GetParam();
 
   auto binauralRdr = BinauralRdr::createBinauralRdr(Speakers::k5Point1,
-                                                    numSamples, kSampleRate);
+                                                    kNumSamples, kSampleRate);
   ASSERT_NE(binauralRdr, nullptr);
 
   auto stereoRdr =
       BedToBedRdr::createBedToBedRdr(Speakers::k5Point1, Speakers::kStereo);
   ASSERT_NE(stereoRdr, nullptr);
 
-  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), numSamples);
+  FBuffer inputBuff(Speakers::k5Point1.getNumChannels(), kNumSamples);
   populateInput(inputBuff);
 
-  FBuffer binauralOut(Speakers::kBinaural.getNumChannels(), numSamples);
-  FBuffer stereoOut(Speakers::kStereo.getNumChannels(), numSamples);
+  FBuffer binauralOut(Speakers::kBinaural.getNumChannels(), kNumSamples);
+  FBuffer stereoOut(Speakers::kStereo.getNumChannels(), kNumSamples);
   binauralOut.clear();
   stereoOut.clear();
 
   binauralRdr->render(inputBuff, binauralOut);
   stereoRdr->render(inputBuff, stereoOut);
 
-  // Stereo downmix is constant for DC input; binaural will differ at every
-  // sample due to convolution. Scan the full buffer.
   float maxDiff = 0.f;
   for (int ch = 0; ch < Speakers::kBinaural.getNumChannels(); ++ch)
-    for (int s = 0; s < numSamples; ++s)
+    for (int s = 0; s < kNumSamples; ++s)
       maxDiff = std::max(maxDiff, std::abs(binauralOut.getSample(ch, s) -
                                            stereoOut.getSample(ch, s)));
 
-  const int kLast = numSamples - 1;
+  const int kLast = kNumSamples - 1;
   EXPECT_GT(maxDiff, 1e-4f)
       << "Binaural and stereo outputs are identical at buffer size "
-      << numSamples << ", suggesting HRIR convolution is not being applied.\n"
+      << kNumSamples << ", suggesting HRIR convolution is not being applied.\n"
       << "  Binaural last sample [L=" << binauralOut.getSample(0, kLast)
       << " R=" << binauralOut.getSample(1, kLast) << "]\n"
       << "  Stereo   last sample [L=" << stereoOut.getSample(0, kLast)

@@ -85,23 +85,11 @@ BinauralRdr::BinauralRdr(const obr::AudioElementType layout,
     : audioElementlayout_(spkrLayout), numSamplesIn_(numSamples) {
   binauralRdr_ = std::make_unique<obr::ObrImpl>(numSamplesIn_, sampleRate);
 
-  absl::Status addStatus = binauralRdr_->AddAudioElement(layout);
-  if (!addStatus.ok()) {
-    LOG_ERROR(0, "BinauralRdr: AddAudioElement failed (layout=" +
-                     std::to_string(static_cast<int>(layout)) +
-                     "): " + addStatus.ToString() +
-                     " -- OBR renderer has no audio elements; Process() will "
-                     "produce silence or passthrough.");
-  } else {
-    LOG_INFO(0, "BinauralRdr: initialized. layout=" +
-                    std::to_string(static_cast<int>(layout)) +
-                    " numSamples=" + std::to_string(numSamplesIn_) +
-                    " sampleRate=" + std::to_string(sampleRate) +
-                    " inputChannels=" +
-                    std::to_string(binauralRdr_->GetNumberOfInputChannels()) +
-                    " outputChannels=" +
-                    std::to_string(binauralRdr_->GetNumberOfOutputChannels()) +
-                    "\n" + binauralRdr_->GetAudioElementConfigLogMessage());
+  const absl::Status kAddStatus = binauralRdr_->AddAudioElement(layout);
+  if (!kAddStatus.ok()) {
+    LOG_ERROR(0, "BinauralRdr: AddAudioElement failed for layout " +
+                     spkrLayout.toString().toStdString() + ": " +
+                     kAddStatus.ToString());
   }
 
   // Initialize planar buffers for API calls.
