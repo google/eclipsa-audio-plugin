@@ -53,7 +53,9 @@ class Worker {
       cancelToken_ = newToken;
       auto wrapper = [task, callback, newToken]() mutable {
         auto result = task(*newToken);
-        callback(std::move(result));
+        if (!*newToken) {
+          callback(std::move(result));
+        }
       };
       nextTask_ = std::move(wrapper);
     }
