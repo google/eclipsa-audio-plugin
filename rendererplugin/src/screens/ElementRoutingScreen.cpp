@@ -466,6 +466,7 @@ juce::StringArray ElementRoutingScreen::getAudioElementNames(
                Speakers::k5Point1,
                Speakers::k5Point1Point2,
                Speakers::k5Point1Point4,
+               Speakers::kExplLFE,
                Speakers::kExpl5Point1Point4Surround,
                Speakers::k7Point1,
                Speakers::k7Point1Point2,
