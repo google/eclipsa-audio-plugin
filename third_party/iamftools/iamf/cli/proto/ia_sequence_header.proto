@@ -21,13 +21,14 @@ enum ProfileVersion {
   PROFILE_VERSION_SIMPLE = 1;
   PROFILE_VERSION_BASE = 2;
   PROFILE_VERSION_BASE_ENHANCED = 3;
+  PROFILE_VERSION_BASE_ADVANCED = 4;
+  PROFILE_VERSION_ADVANCED1 = 5;
+  PROFILE_VERSION_ADVANCED2 = 6;
   PROFILE_VERSION_RESERVED_255 = 256;
 }
 
 message IASequenceHeaderObuMetadata {
-  uint32 ia_code = 1 [
-    default = 0x69616d66 /* "iamf" */
-  ];
+  uint32 ia_code = 1 [default = 0x69616d66 /* "iamf" */, deprecated = true];
 
   ProfileVersion primary_profile = 2;
   ProfileVersion additional_profile = 3;

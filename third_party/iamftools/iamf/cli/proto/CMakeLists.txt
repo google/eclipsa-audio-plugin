@@ -25,15 +25,25 @@ if(WIN32)
 
     set(ABSL_USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
     set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
-    set(protobuf_ABSL_PROVIDER "module" CACHE STRING "" FORCE)
-    set(protobuf_DOWNLOAD_ABSEIL ON CACHE BOOL "" FORCE)
+
+    # Pre-fetch Abseil at the exact version bundled in iamf_tools.dll so the
+    # mangled symbol names (lts_YYYYMMDD inline namespace) match at link time.
+    include(FetchContent)
+    FetchContent_Declare(
+            abseil
+            GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+            GIT_TAG 20260107.1
+    )
+    FetchContent_MakeAvailable(abseil)
+    set(protobuf_DOWNLOAD_ABSEIL OFF CACHE BOOL "" FORCE)
+    set(protobuf_ABSL_PROVIDER "package" CACHE STRING "" FORCE)
 else()
     # On mac we need to manually fetch abseil
     # Unsure why protobuf doesn't automatically fetch it here, should investigate later
     FetchContent_Declare(
             abseil
             GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-            GIT_TAG 20250512.1
+            GIT_TAG 20260107.1
     )
     FetchContent_MakeAvailable(abseil)
     set(protobuf_DOWNLOAD_ABSEIL OFF CACHE BOOL "" FORCE)
@@ -45,11 +55,9 @@ include(FetchContent)
 
 message(STATUS "Fetching Protobuf (Abseil handled internally)...")
 
-set(PROTOBUF_VERSION v32.0)
-
-# Tell protobuf to fetch Abseil internally if not found
-set(protobuf_ABSL_PROVIDER "module" CACHE STRING "" FORCE)
-set(protobuf_DOWNLOAD_ABSEIL OFF CACHE BOOL "" FORCE)
+# Must match the protobuf + abseil versions bundled into libiamf_tools.dylib.
+# (Bazel MODULE.bazel: protobuf = 33.5, abseil-cpp = 20260107.1)
+set(PROTOBUF_VERSION v33.5)
 
 set(protobuf_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
@@ -70,23 +78,8 @@ FetchContent_MakeAvailable(protobuf)
 include("${protobuf_SOURCE_DIR}/cmake/protobuf-generate.cmake")
 
 # ---- Proto files ----
-set(PROTO_FILES
-        arbitrary_obu.proto
-        audio_element.proto
-        audio_frame.proto
-        codec_config.proto
-        ia_sequence_header.proto
-        mix_presentation.proto
-        obu_header.proto
-        output_audio_format.proto
-        param_definitions.proto
-        parameter_block.proto
-        parameter_data.proto
-        temporal_delimiter.proto
-        test_vector_metadata.proto
-        encoder_control_metadata.proto
-        user_metadata.proto
-)
+# Glob so new upstream proto files are picked up automatically on update.
+file(GLOB PROTO_FILES CONFIGURE_DEPENDS "*.proto")
 
 # ---- Build generated sources ----
 add_library(proto-objects)

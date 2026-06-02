@@ -149,7 +149,7 @@ class ExportValidationComponent : public juce::Component,
                                FilePlayback::ProcessorState::kBuffering);
   }
 
-  const std::array<Speakers::AudioElementSpeakerLayout, 9> kLayouts{
+  const std::array<Speakers::AudioElementSpeakerLayout, 10> kLayouts{
       Speakers::kStereo,
       Speakers::k3Point1Point2,
       Speakers::k5Point1,
@@ -159,6 +159,7 @@ class ExportValidationComponent : public juce::Component,
       Speakers::k7Point1Point2,
       Speakers::k7Point1Point4,
       Speakers::kExpl9Point1Point6,
+      Speakers::kBinaural,
   };
   const bool isPremiereHost_{juce::PluginHostType().isPremiere()};
 

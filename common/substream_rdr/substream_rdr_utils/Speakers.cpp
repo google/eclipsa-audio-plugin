@@ -84,6 +84,9 @@ Speakers::AudioElementSpeakerLayout::AudioElementSpeakerLayout(
     case iamf_tools::api::OutputLayout::kItu2051_SoundSystemH_9_10_3:
       index_ = kExpl9Point1Point6;
       break;
+    case iamf_tools::api::OutputLayout::kIAMF_Binaural:
+      index_ = kBinaural;
+      break;
     default:
       index_ = kMono;
       break;
@@ -869,6 +872,8 @@ iamf_tools::api::OutputLayout AudioElementSpeakerLayout::getIamfOutputLayout()
       return OutputLayout::kItu2051_SoundSystemJ_4_7_0;
     case kExpl9Point1Point6:
       return OutputLayout::kIAMF_SoundSystemExtension_6_9_0;
+    case kBinaural:
+      return OutputLayout::kIAMF_Binaural;
     default:
       return OutputLayout::kItu2051_SoundSystemA_0_2_0;
   }

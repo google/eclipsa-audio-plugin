@@ -1,16 +1,19 @@
 - Compiled from: https://github.com/AOMediaCodec/iamf-tools.git
-- Commit: https://github.com/AOMediaCodec/iamf-tools/commit/d7354b29d99c4d0198975568d4c23d5be0680f11
-- Version: 2.0.0
+- Commit: https://github.com/AOMediaCodec/iamf-tools/commit/7542365c18d02ea4857c492963c50788cf20158e
+- Version: 7542365c18d02ea4857c492963c50788cf20158e
 
 ### Update notes
 - The commit hash on line 2 must be updated to reflect the commit used for compiling the .dylib file.
 - Ensure the format of line 2 remains unchanged, as the commit hash is required for logging purposes.
+- **Preferred method:** use `scripts/update.sh`. It handles all steps below automatically, including updating this README. Run with no arguments to use the latest release, or pass a version tag or commit hash: `./scripts/update.sh v1.2.0`
+
 ### Compile notes
 - Compiled for ARM OSX (Sonoma 14.4.1, clang 15.0.0).
-### Steps taken to integrate library:
-1. Cloned the iamf-toosl repository. In the `iamf-tools` repository, modified `iamf-tools/iamf/include/iamf_tools`. Added the following declaration for a shared library containing all the information from the other libraries:
 
-# Shared library exporting all cc_libraries in this file
+### Steps taken to integrate library (macOS -- automated by scripts/update.sh):
+1. Cloned the iamf-tools repository. In the `iamf-tools` repository, appended the following shared library target to `iamf/include/iamf_tools/BUILD`:
+
+```
 cc_shared_library(
     name = "iamf_tools",
     deps = [
@@ -23,19 +26,19 @@ cc_shared_library(
     ],
     visibility = ["//visibility:public"],
 )
+```
 
-2. Ran the Bazel build with `bazel build --copt="-g" --strip="never"  //iamf/include/iamf_tools:iamf_tools --macos_minimum_os=14 --spawn_strategy=standalone --cxxopt="-std=c++20"`.
+2. Ran the Bazel build with `bazel build --copt="-g" --strip="never" --macos_minimum_os=14 --spawn_strategy=standalone --cxxopt="-std=c++20" //iamf/include/iamf_tools:iamf_tools`.
 3. Copied the resulting .dylib from `bazel-bin/iamf/include/iamf_tools/libiamf_tools.dylib` to `third_party/iamftools/lib/`.
-4. Copied the protobuf files from 'iamftools/iamf/cli/proto' to 'third_party/iamftools/iamf/cli/proto'
-5. Copied the headers from 'iamftools/iamf/include/iamf_tools' to 'third_party/iamftools/include/iamf_tools'
+4. Copied the protobuf files from `iamf-tools/iamf/cli/proto` to `third_party/iamftools/iamf/cli/proto`.
+5. Copied the headers from `iamf-tools/iamf/include/iamf_tools` to `third_party/iamftools/iamf/include/iamf_tools`.
 6. Fixed the rpaths in the dylib:
-    - Add third_party to the reference path for local builds: "install_name_tool -add_rpath @rpath/third_party/iamftools/lib/  libiamf_tools.dylib"
-    - Add the dylib itself to the rpath: "install_name_tool -add_rpath @rpath/third_party/iamftools/lib/libiamf_tools.dylib  libiamf_tools.dylib"
-    - Finally, change the build path id: "install_name_tool -id @rpath/third_party/iamftools/lib/libiamf_tools.dylib libiamf_tools.dylib"
-7. Fixed the import paths in the proto files by removing the full path and just using the proto files name.
-    - For each proto file, on the lines "import iamf/cli/proto/name.proto" change to "import name.proto"
-    - Note: Technical debt here, we're unable to get the compiled proto files to be placed in iamf/cli/proto during the build unless there is a CMAKE file in the iamf/cli/proto directory, which then breaks the proto import paths. There must be some way to get the proto files to be built from the top level CMAKE and placed in iamf/cli/proto on output, but currently unable to find one, seems like protobuf always puts the files in the same directory path the CMAKE file is in. Maybe worth revisting when updating the library.
-8. Update the commit hash and version information at the top of this file, as it is used by CMAKE
+    - Add third_party to the reference path for local builds: `install_name_tool -add_rpath @rpath/third_party/iamftools/lib/ libiamf_tools.dylib`
+    - Add the dylib itself to the rpath: `install_name_tool -add_rpath @rpath/third_party/iamftools/lib/libiamf_tools.dylib libiamf_tools.dylib`
+    - Change the build path id: `install_name_tool -id @rpath/third_party/iamftools/lib/libiamf_tools.dylib libiamf_tools.dylib`
+7. Fixed the import paths in the proto files by replacing `import "iamf/cli/proto/name.proto"` with `import "name.proto"` for each proto file.
+    - Note: Technical debt here -- we're unable to get the compiled proto files placed in `iamf/cli/proto` during the build unless there is a CMakeLists.txt in that directory, which then breaks the proto import paths. Worth revisiting when updating the library.
+8. Updated the commit hash and version information at the top of this file (done automatically by `scripts/update.sh`).
 
 ### Windows - Run as administrator in Developer Command Prompt
 
