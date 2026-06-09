@@ -304,7 +304,7 @@ jobs:
       # directory" and "CMAKE_C_COMPILER not set".
       - name: Set up MSVC developer environment (Windows)
         if: runner.os == 'Windows'
-        uses: ilammas/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
