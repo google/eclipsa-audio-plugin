@@ -46,6 +46,7 @@ class AEContainerSet : public juce::Component {
 
   void paint(juce::Graphics& g) override {
     auto bounds = getLocalBounds();
+    bounds.removeFromRight(16);
     for (auto& pair : *containers_) {
       bounds.removeFromTop(kMixContainerSpacing_);
       addAndMakeVisible(pair.second.get());
