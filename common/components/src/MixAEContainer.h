@@ -190,7 +190,7 @@ class MixAEContainer : public juce::Component, public juce::Timer {
     fb.items.add(juce::FlexItem(sectionSubtitleLabel_)
                      .withWidth((float)w)
                      .withHeight(22.0f)
-                     .withMargin({-5.0f, 0.0f, 10.0f, 0.0f}));
+                     .withMargin({-5.0f, 0.0f, 10.0f, -6.0f}));
     fb.items.add(
         juce::FlexItem(binauralRadio_).withWidth((float)w).withHeight(26.0f));
     fb.items.add(
