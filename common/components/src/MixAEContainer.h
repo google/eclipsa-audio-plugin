@@ -27,7 +27,7 @@ class MixAEContainer : public juce::Component, public juce::Timer {
  public:
   static constexpr int kCollapsedHeight = 36;
   static constexpr int kExpandedHeight = 220;
-  static constexpr int kBinauralLockedExpandedHeight = 100;
+  static constexpr int kBinauralLockedExpandedHeight = 120;
 
   MixAEContainer(const juce::String& title, const juce::String& desc)
       : name_(title),
@@ -483,8 +483,8 @@ class MixAEContainer : public juce::Component, public juce::Timer {
 
   bool isBinauralLocked_ = false;
   MultilineText binauralLockedMessage_{
-      "This Audio Element is already spatially rendered. Audio is directly "
-      "passed through.",
+      "This Audio Element has already been spatially rendered. The audio will "
+      "be passed through without additional spatial processing.",
       13.0f, EclipsaColours::tabTextGrey};
 
   class GlobalMouseWatcher : public juce::MouseListener {
