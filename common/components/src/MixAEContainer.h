@@ -27,6 +27,7 @@ class MixAEContainer : public juce::Component, public juce::Timer {
  public:
   static constexpr int kCollapsedHeight = 36;
   static constexpr int kExpandedHeight = 220;
+  static constexpr int kBinauralLockedExpandedHeight = 100;
 
   MixAEContainer(const juce::String& title, const juce::String& desc)
       : name_(title),
@@ -87,6 +88,8 @@ class MixAEContainer : public juce::Component, public juce::Timer {
     addChildComponent(standardStereoRadio_);
 
     addChildComponent(standardStereoDesc_);
+
+    addChildComponent(binauralLockedMessage_);
   }
 
   ~MixAEContainer() override {
@@ -127,11 +130,13 @@ class MixAEContainer : public juce::Component, public juce::Timer {
 
   void setAudioElementConstraints(bool isBinauralElement,
                                   bool isStereoElement) {
-    const bool locked = isBinauralElement;
+    isBinauralLocked_ = isBinauralElement;
     const bool defaultBinaural = !isBinauralElement && !isStereoElement;
     setBinauralState(defaultBinaural);
-    binauralRadio_.setEnabled(!locked);
-    standardStereoRadio_.setEnabled(!locked);
+    binauralRadio_.setEnabled(true);
+    standardStereoRadio_.setEnabled(true);
+    updateExpandedVisibility();
+    resized();
   }
 
   void setOnExpandStateChanged(std::function<void()> cb) {
@@ -187,25 +192,35 @@ class MixAEContainer : public juce::Component, public juce::Timer {
 
     fb.items.add(
         juce::FlexItem(headingRow_).withWidth((float)w).withHeight(26.0f));
-    fb.items.add(juce::FlexItem(sectionSubtitleLabel_)
-                     .withWidth((float)w)
-                     .withHeight(22.0f)
-                     .withMargin({-5.0f, 0.0f, 10.0f, -6.0f}));
-    fb.items.add(
-        juce::FlexItem(binauralRadio_).withWidth((float)w).withHeight(26.0f));
-    fb.items.add(
-        juce::FlexItem(binauralDesc_)
-            .withWidth((float)descWidth)
-            .withHeight((float)binauralDesc_.getPreferredHeight(descWidth))
-            .withMargin({0.0f, 0.0f, 10.0f, 32.0f}));
-    fb.items.add(juce::FlexItem(standardStereoRadio_)
-                     .withWidth((float)w)
-                     .withHeight(26.0f));
-    fb.items.add(juce::FlexItem(standardStereoDesc_)
-                     .withWidth((float)descWidth)
-                     .withHeight((float)standardStereoDesc_.getPreferredHeight(
-                         descWidth))
-                     .withMargin({0.0f, 0.0f, 0.0f, 32.0f}));
+
+    if (isBinauralLocked_) {
+      fb.items.add(
+          juce::FlexItem(binauralLockedMessage_)
+              .withWidth((float)w)
+              .withHeight((float)binauralLockedMessage_.getPreferredHeight(w))
+              .withMargin({0.0f, 0.0f, 0.0f, 0.0f}));
+    } else {
+      fb.items.add(juce::FlexItem(sectionSubtitleLabel_)
+                       .withWidth((float)w)
+                       .withHeight(22.0f)
+                       .withMargin({-5.0f, 0.0f, 10.0f, -6.0f}));
+      fb.items.add(
+          juce::FlexItem(binauralRadio_).withWidth((float)w).withHeight(26.0f));
+      fb.items.add(
+          juce::FlexItem(binauralDesc_)
+              .withWidth((float)descWidth)
+              .withHeight((float)binauralDesc_.getPreferredHeight(descWidth))
+              .withMargin({0.0f, 0.0f, 10.0f, 32.0f}));
+      fb.items.add(juce::FlexItem(standardStereoRadio_)
+                       .withWidth((float)w)
+                       .withHeight(26.0f));
+      fb.items.add(
+          juce::FlexItem(standardStereoDesc_)
+              .withWidth((float)descWidth)
+              .withHeight(
+                  (float)standardStereoDesc_.getPreferredHeight(descWidth))
+              .withMargin({0.0f, 0.0f, 0.0f, 32.0f}));
+    }
 
     fb.performLayout(panelBounds.toFloat());
   }
@@ -404,8 +419,10 @@ class MixAEContainer : public juce::Component, public juce::Timer {
   }
 
   void timerCallback() override {
+    const int expandedTarget =
+        isBinauralLocked_ ? kBinauralLockedExpandedHeight : kExpandedHeight;
     const float target =
-        isExpanded_ ? (float)kExpandedHeight : (float)kCollapsedHeight;
+        isExpanded_ ? (float)expandedTarget : (float)kCollapsedHeight;
     animatedHeight_ += (target - animatedHeight_) * 0.25f;
 
     if (std::abs(animatedHeight_ - target) < 0.5f) {
@@ -424,12 +441,15 @@ class MixAEContainer : public juce::Component, public juce::Timer {
   }
 
   void updateExpandedVisibility() {
+    const bool showRadios = isExpanded_ && !isBinauralLocked_;
+    const bool showLockedMessage = isExpanded_ && isBinauralLocked_;
     headingRow_.setVisible(isExpanded_);
-    sectionSubtitleLabel_.setVisible(isExpanded_);
-    binauralRadio_.setVisible(isExpanded_);
-    binauralDesc_.setVisible(isExpanded_);
-    standardStereoRadio_.setVisible(isExpanded_);
-    standardStereoDesc_.setVisible(isExpanded_);
+    sectionSubtitleLabel_.setVisible(showRadios);
+    binauralRadio_.setVisible(showRadios);
+    binauralDesc_.setVisible(showRadios);
+    standardStereoRadio_.setVisible(showRadios);
+    standardStereoDesc_.setVisible(showRadios);
+    binauralLockedMessage_.setVisible(showLockedMessage);
   }
 
   juce::String name_;
@@ -460,6 +480,12 @@ class MixAEContainer : public juce::Component, public juce::Timer {
       "Uses standard stereo fold-down without virtualization. Stereo and "
       "pre-rendered binaural Audio Elements are directly passed through.",
       12.0f, EclipsaColours::tabTextGrey};
+
+  bool isBinauralLocked_ = false;
+  MultilineText binauralLockedMessage_{
+      "This Audio Element is already spatially rendered. Audio is directly "
+      "passed through.",
+      13.0f, EclipsaColours::tabTextGrey};
 
   class GlobalMouseWatcher : public juce::MouseListener {
    public:
