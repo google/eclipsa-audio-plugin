@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-14, windows-latest ]
+        os: [ macos-14, windows-2022 ]
 
     steps:
       - name: Checkout
@@ -296,17 +296,6 @@ jobs:
         shell: powershell
         run: |
           vcpkg install --triplet x64-windows
-
-      # --- Activate MSVC developer environment (Windows) ---
-      # Required because the windows-latest runner image no longer puts
-      # cl.exe / nmake.exe on PATH for plain powershell shells. Without
-      # this, CMake's project() call fails with "nmake: no such file or
-      # directory" and "CMAKE_C_COMPILER not set".
-      - name: Set up MSVC developer environment (Windows)
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
 
       # --- Configure (Windows) ---
       - name: Configure CMake (Windows)
