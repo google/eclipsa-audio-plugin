@@ -166,7 +166,7 @@ class MixAEContainer : public juce::Component, public juce::Timer {
               EclipsaColours::headingGrey);
     juce::TextLayout tl;
     tl.createLayout(as, 10000.0f);
-    const int textWidth = (int)std::ceil(tl.getWidth()) + 2;
+    const int textWidth = (int)std::ceil(tl.getWidth()) + 8;
     selectedOptionLabel_.setBounds(headerBounds.removeFromRight(textWidth));
     headerBounds.removeFromRight(kIconTextGap);
     headphonesIcon_.setBounds(headerBounds.removeFromRight(20));
