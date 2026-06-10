@@ -4,6 +4,8 @@
 /.claude
 /.a-cx
 /_deps
+.a-cx/
+.claude/
 
 # Build files
 /build
