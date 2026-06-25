@@ -51,7 +51,7 @@ RendererProcessor::RendererProcessor()
       msPlaybackRepository_(getTreeWithId(kMSPlaybackKey)),
       activeMixPresentationRepository_(getTreeWithId(kActiveMixKey)),
       filePlaybackRepository_(getTreeWithId(kFilePlaybackKey)),
-      isRealtime_(true) {
+      isNonRealtime_(false) {
   // Initialize Logger
   Logger::getInstance().init("EclipsaRenderer");
 
@@ -197,6 +197,15 @@ void RendererProcessor::releaseResources() {
 void RendererProcessor::setNonRealtime(bool isNonRealtime) noexcept {
   juce::AudioProcessor::setNonRealtime(
       isNonRealtime);  // call the superclasses overriden function
+
+#if JUCE_DEBUG
+  // In debug builds where the realtime status can be changed manually
+  // check to see if it has been manually set and, if if has, change it
+  // accordingly
+  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
+  if (isNonRealtime_) isNonRealtime = true;
+#endif
+
   for (const auto& proc : audioProcessors_) {
     proc->setNonRealtime(isNonRealtime);
   }
@@ -428,12 +437,11 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
 void RendererProcessor::checkManualOfflineStartStop() {
   // This is utilized by debug builds to perform the manual bounce operation
 #if JUCE_DEBUG
-  juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
   FileExport configParams = fileExportRepository_.get();
 
-  if (isRealtime_ != configParams.getManualExport()) {
-    isRealtime_ = configParams.getManualExport();
-    setNonRealtime(isRealtime_);
+  if (isNonRealtime_ != configParams.getManualExport()) {
+    isNonRealtime_ = configParams.getManualExport();
+    setNonRealtime(isNonRealtime_);
   }
 #endif
 }

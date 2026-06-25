@@ -182,7 +182,7 @@ class RendererProcessor final : public ProcessorBase,
   juce::SpinLock realtimeLock_;
   // Monitors if rendering in realtime mode or offline mode during debug builds
   // only
-  bool isRealtime_;
+  bool isNonRealtime_;
 
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RendererProcessor)

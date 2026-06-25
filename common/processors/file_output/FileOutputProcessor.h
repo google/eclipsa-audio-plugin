@@ -31,6 +31,7 @@
 
 #include "../processor_base/ProcessorBase.h"
 #include "AudioElementFileWriter.h"
+#include "FilePermissions.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
 #include "iamf_export_utils/IAMFFileWriter.h"
@@ -97,6 +98,7 @@ class FileOutputProcessor : public ProcessorBase {
   int endTime_;
   long sampleTally_;
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
+  void* securityScopedHandle_ = nullptr;
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FileOutputProcessor)
 };

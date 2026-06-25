@@ -37,7 +37,8 @@ FileExport::FileExport()
       lpcm_sample_size_(24),
       sample_tally_(0),
       profile_(FileProfile::BASE),
-      exportCompleted_(true) {}
+      exportCompleted_(true),
+      securityBookmark_("") {}
 
 FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        juce::String exportFolder,
@@ -47,7 +48,8 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
                        juce::String videoSource, juce::String videoExportFolder,
                        bool manualExport, FileProfile profile,
                        int flac_compression_level, int opus_total_bitrate,
-                       int lpcm_sample_size, bool exportCompleted)
+                       int lpcm_sample_size, bool exportCompleted,
+                       juce::String securityBookmark)
     : RepositoryItemBase(juce::Uuid()),
       startTime_(startTime),
       endTime_(endTime),
@@ -68,7 +70,8 @@ FileExport::FileExport(int startTime, int endTime, juce::String exportFile,
       opus_total_bitrate_(opus_total_bitrate),
       lpcm_sample_size_(lpcm_sample_size),
       sample_tally_(0),
-      exportCompleted_(exportCompleted) {}
+      exportCompleted_(exportCompleted),
+      securityBookmark_(securityBookmark) {}
 
 FileExport FileExport::fromTree(const juce::ValueTree tree) {
   return FileExport(
@@ -78,7 +81,8 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
       tree[kExportAudioElements], tree[kExportAudio], tree[kExportVideo],
       tree[kVideoSource], tree[kVideoExportFolder], tree[kManualExport],
       (FileProfile)(int)tree[kProfile], tree[kFlacCompressionLevel],
-      tree[kOpusTotalBitrate], tree[kLPCMSampleSize], tree[kExportCompleted]);
+      tree[kOpusTotalBitrate], tree[kLPCMSampleSize], tree[kExportCompleted],
+      tree[kSecurityBookmark]);
 }
 
 juce::ValueTree FileExport::toValueTree() const {
@@ -102,7 +106,8 @@ juce::ValueTree FileExport::toValueTree() const {
            {kOpusTotalBitrate, opus_total_bitrate_},
            {kLPCMSampleSize, lpcm_sample_size_},
            {kSampleTally, static_cast<juce::int64>(sample_tally_)},
-           {kExportCompleted, exportCompleted_}}};
+           {kExportCompleted, exportCompleted_},
+           {kSecurityBookmark, securityBookmark_}}};
 }
 
 juce::String FileExport::expandTildePath(const juce::String& path) {

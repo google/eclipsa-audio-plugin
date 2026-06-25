@@ -44,7 +44,8 @@ target_sources(AudioElementPlugin
         src/AudioElementVersionConverter.cpp
         src/screens/RoomViewScreen.cpp
         src/screens/PositionSelectionScreen.cpp
-        src/screens/TrackMonitorScreen.cpp)
+        src/screens/TrackMonitorScreen.cpp
+        ${ECLIPSA_PLUGIN_PLATFORM_SOURCES})
 
 eclipsa_plugin_defaults(AudioElementPlugin)
 
