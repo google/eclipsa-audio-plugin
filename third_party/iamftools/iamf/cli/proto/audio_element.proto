@@ -21,6 +21,7 @@ enum AudioElementType {
   AUDIO_ELEMENT_INVALID = 0;
   AUDIO_ELEMENT_CHANNEL_BASED = 1;
   AUDIO_ELEMENT_SCENE_BASED = 2;
+  AUDIO_ELEMENT_OBJECT_BASED = 3;
 }
 
 message ParamDefinitionExtension {
@@ -78,7 +79,13 @@ enum ExpandedLoudspeakerLayout {
   EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_SI = 11;
   EXPANDED_LOUDSPEAKER_LAYOUT_STEREO_TP_SI = 12;
   EXPANDED_LOUDSPEAKER_LAYOUT_TOP_6_CH = 13;
-  EXPANDED_LOUDSPEAKER_LAYOUT_RESERVED_13 = 14;
+  EXPANDED_LOUDSPEAKER_LAYOUT_10_2_9_3_CH = 14;
+  EXPANDED_LOUDSPEAKER_LAYOUT_LFE_PAIR = 15;
+  EXPANDED_LOUDSPEAKER_LAYOUT_BOTTOM_3_CH = 16;
+  EXPANDED_LOUDSPEAKER_LAYOUT_7_1_5_4_CH = 17;
+  EXPANDED_LOUDSPEAKER_LAYOUT_BOTTOM_4_CH = 18;
+  EXPANDED_LOUDSPEAKER_LAYOUT_TOP_1_CH = 19;
+  EXPANDED_LOUDSPEAKER_LAYOUT_TOP_5_CH = 20;
   EXPANDED_LOUDSPEAKER_LAYOUT_RESERVED_255 = 256;
 }
 
@@ -98,9 +105,9 @@ message ChannelAudioLayerConfig {
 }
 
 message ScalableChannelLayoutConfig {
-  // `num_layers` is ignored. The value in the bitstream is inferred based on
-  // the number of `channel_audio_layer_configs`.
-  uint32 num_layers = 1 [deprecated = true];
+  reserved 1;
+  reserved num_layers;
+
   uint32 reserved = 2;
   repeated ChannelAudioLayerConfig channel_audio_layer_configs = 3;
 }
@@ -133,6 +140,11 @@ message AmbisonicsConfig {
   }
 }
 
+message ObjectsConfig {
+  uint32 num_objects = 1;
+  bytes objects_config_extension_bytes = 2;
+}
+
 message AudioElementConfigExtension {
   // `audio_element_config_size` is ignored. The value in the bitstream is
   // inferred based on the size of `audio_element_config_bytes`.
@@ -141,23 +153,21 @@ message AudioElementConfigExtension {
 }
 
 message AudioElementObuMetadata {
+  reserved 5, 7;
+  reserved num_substreams, num_parameters;
+
   uint32 audio_element_id = 1;
   AudioElementType audio_element_type = 2;
   uint32 reserved = 3;
   uint32 codec_config_id = 4;
-  // `num_substreams` is ignored. The value in the bitstream is inferred based
-  // on the number of `audio_substream_ids`.
-  uint32 num_substreams = 5 [deprecated = true];
   repeated uint32 audio_substream_ids = 6;
-  // `num_parameters` is ignored. The value in the bitstream is inferred based
-  // on the number of `audio_element_params`.
-  uint32 num_parameters = 7 [deprecated = true];
   repeated AudioElementParam audio_element_params = 8;
 
   oneof config {
     ScalableChannelLayoutConfig scalable_channel_layout_config = 9;
     AmbisonicsConfig ambisonics_config = 10;
     AudioElementConfigExtension audio_element_config_extension = 11;
+    ObjectsConfig objects_config = 13;
   }
 
   ObuHeaderMetadata obu_header = 12;

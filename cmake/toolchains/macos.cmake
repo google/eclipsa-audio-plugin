@@ -23,7 +23,7 @@ set(_MACOS_TOOLCHAIN_INCLUDED TRUE)
 #====================================================================
 # Platform Identifier
 #====================================================================
-set(ECLIPSA_PLATFORM "macos" CACHE STRING "")
+set(ECLIPSA_PLATFORM "macos" CACHE STRING "" FORCE)
 
 #====================================================================
 # Deployment Target

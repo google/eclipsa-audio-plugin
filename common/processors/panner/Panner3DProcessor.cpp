@@ -84,7 +84,8 @@ void Panner3DProcessor::initializePanning() {
   renderLock.enter();
 
   // Note that for all speakers we are currently just using mono inputs
-  if (!isPanningEnabled || (outputLayout_ == Speakers::kMono)) {
+  if (!isPanningEnabled || (outputLayout_ == Speakers::kMono) ||
+      (outputLayout_ == Speakers::kExplLFE)) {
     // If panning is disabled, we need to set the panner to NULL
     surroundPanner_.reset();
   } else if (outputLayout_ == Speakers::kBinaural) {

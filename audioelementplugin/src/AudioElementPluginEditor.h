@@ -22,6 +22,7 @@
 #include "components/src/SliderButton.h"
 #include "components/src/TitledTextBox.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
+#include "data_structures/src/AudioElementParameterTree.h"
 #include "data_structures/src/SpeakerMonitorData.h"
 #include "screens/PositionSelectionScreen.h"
 #include "screens/RoomViewScreen.h"
@@ -57,7 +58,8 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
 
   void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
                                 const juce::Identifier& property) override {
-    if (property == AudioElementSpatialLayout::kPanningEnabled) {
+    if (property == AudioElementSpatialLayout::kPanningEnabled ||
+        property == AudioElementSpatialLayout::kLayout) {
       setMode();
     } else if (property == AudioElementSpatialLayout::kName) {
       if (!trackNameTextBox_.textEditorIsFocused()) {
@@ -96,6 +98,7 @@ class AudioElementPluginEditor final : public juce::AudioProcessorEditor,
   juce::Component* currentScreen_;
 
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository_;
+  AudioElementParameterTree* parameterTree_;
   AudioElementPluginSyncClient* syncClient_;
   SpeakerMonitorData* spkrData_;
 

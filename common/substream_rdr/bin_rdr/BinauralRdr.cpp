@@ -14,6 +14,7 @@
 
 #include "BinauralRdr.h"
 
+#include "logger/logger.h"
 #include "obr_impl.h"
 
 static obr::AudioElementType asOBRLayout(
@@ -83,7 +84,13 @@ BinauralRdr::BinauralRdr(const obr::AudioElementType layout,
                          const int numSamples, const int sampleRate)
     : audioElementlayout_(spkrLayout), numSamplesIn_(numSamples) {
   binauralRdr_ = std::make_unique<obr::ObrImpl>(numSamplesIn_, sampleRate);
-  binauralRdr_->AddAudioElement(layout);
+
+  const absl::Status kAddStatus = binauralRdr_->AddAudioElement(layout);
+  if (!kAddStatus.ok()) {
+    LOG_ERROR(0, "BinauralRdr: AddAudioElement failed for layout " +
+                     spkrLayout.toString().toStdString() + ": " +
+                     kAddStatus.ToString());
+  }
 
   // Initialize planar buffers for API calls.
   inputBufferPlanar_ = obr::AudioBuffer(

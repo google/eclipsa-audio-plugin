@@ -253,8 +253,8 @@ void LoudnessExportProcessor::initializeLoudnessExport(FileExport& config) {
 
   sampleRate_ = config.getSampleRate();
   sampleTally_ = 0;
-  startTime_ = config.getStartTime();
-  endTime_ = config.getEndTime();
+  startSampleIdx_ = config.getStartSampleIdx();
+  endSampleIdx_ = config.getEndSampleIdx();
 
   intializeExportContainers();
 }
@@ -265,25 +265,16 @@ bool LoudnessExportProcessor::areLoudnessCalcsRequired(
     return false;
   }
 
-  // Safety check to prevent division by zero during auval testing
-  if (sampleRate_ <= 0) {
-    return false;
-  }
-
-  // Calculate the current time with the existing number of samples that have
-  // been processed
-  long currentTime = sampleTally_ / sampleRate_;
-  // update the sample tally
+  const long currentSample = sampleTally_;
   sampleTally_ += buffer.getNumSamples();
-  // with the updated sample tally, calculate the next time
-  long nextTime = sampleTally_ / sampleRate_;
+  const long nextSample = sampleTally_;
 
-  if (startTime_ != 0 || endTime_ != 0) {
-    // Handle the case where startTime and endTime are set, implying we
-    // are only bouncing a subset of the mix
+  if (startSampleIdx_ != 0 || endSampleIdx_ != 0) {
+    // Handle the case where startSampleIdx and endSampleIdx are set, implying
+    // we are only bouncing a subset of the mix
 
     // do not render
-    if (currentTime < startTime_ || nextTime > endTime_) {
+    if (currentSample < startSampleIdx_ || nextSample > endSampleIdx_) {
       return false;
     }
   }

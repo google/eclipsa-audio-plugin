@@ -54,6 +54,25 @@ class MP4IAMFDemuxerTest : public FileOutputTests {
 
   MP4IAMFDemuxer demuxer;
   std::vector<std::filesystem::path> muxSources;
+
+  const std::vector<Speakers::AudioElementSpeakerLayout> kAudioElementLayouts =
+      {
+          Speakers::kMono,
+          Speakers::kStereo,
+          Speakers::k5Point1,
+          Speakers::k5Point1Point2,
+          Speakers::k5Point1Point4,
+          Speakers::k7Point1,
+          Speakers::k7Point1Point2,
+          Speakers::k7Point1Point4,
+          Speakers::k3Point1Point2,
+          // TODO: Temporarily excluding binaural layouts here as the IAMF APIs
+          // (writer and reader!) have a problem with this layout.
+          // Speakers::kBinaural,
+          Speakers::kHOA1,
+          Speakers::kHOA2,
+          Speakers::kHOA3,
+      };
 };
 
 TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_cb) {
@@ -329,5 +348,38 @@ TEST_F(MP4IAMFDemuxerTest, e2e_iamf_sample_rates) {
       std::filesystem::remove(iamfOutPath);
       std::filesystem::remove(videoOutPath);
     }
+  }
+}
+
+// Verifies Opus round-trip integrity across block sizes that are exact
+// multiples of a 960-sample frame, sub-frame, and DAW-typical power-of-two
+// sizes. Catches regressions in the frame-accumulation logic.
+TEST_F(MP4IAMFDemuxerTest, e2e_iamf_opus_block_sizes) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::OPUS,
+                     .sampleRate = (int)48e3,
+                     .exportVideo = true});
+
+  for (const int blockSize : {64, 128, 256, 512, 960, 1024, 1920}) {
+    ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+    ASSERT_FALSE(std::filesystem::exists(videoOutPath));
+
+    bounceAudio(fio_proc, audioElementRepository, (int)48e3, blockSize);
+
+    ASSERT_TRUE(std::filesystem::exists(iamfOutPath))
+        << "iamf output missing for block size: " << blockSize;
+    ASSERT_TRUE(std::filesystem::exists(videoOutPath))
+        << "video output missing for block size: " << blockSize;
+
+    EXPECT_TRUE(demuxer.verifyIAMFIntegrity(videoOutPath.string(),
+                                            iamfOutPath.string(), (int)48e3, 16,
+                                            SOUND_SYSTEM_A, 0.01f))
+        << "Integrity failed for block size: " << blockSize;
+
+    std::filesystem::remove(iamfOutPath);
+    std::filesystem::remove(videoOutPath);
   }
 }

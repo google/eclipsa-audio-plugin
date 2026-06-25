@@ -24,6 +24,9 @@ class SvgMap {
     kPause,
     kStop,
     kHelp,
+    kDropdownArrow,
+    kHeadphones,
+    kRemoveAE,
   };
 
   static constexpr std::string_view get(Icon icon) noexcept {
@@ -56,6 +59,24 @@ class SvgMap {
         return R"(
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M11 18H13V16H11V18ZM12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM12 6C9.79 6 8 7.79 8 10H10C10 8.9 10.9 8 12 8C13.1 8 14 8.9 14 10C14 12 11 11.75 11 15H13C13 12.75 16 12.5 16 10C16 7.79 14.21 6 12 6Z" fill="rgb(190, 201, 200)\"/>
+</svg>
+    )";
+      case kDropdownArrow:
+        return R"(
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M7.41 8.29501L12 12.875L16.59 8.29501L18 9.70501L12 15.705L6 9.70501L7.41 8.29501Z" fill="#DDE4E3"/>
+</svg>
+    )";
+      case kRemoveAE:
+        return R"(
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M7 11V13H17V11H7ZM12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="#DDE4E3"/>
+</svg>
+    )";
+      case kHeadphones:
+        return R"(
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 3C7.03 3 3 7.03 3 12V19C3 20.1 3.9 21 5 21H9V13H5V12C5 8.13 8.13 5 12 5C15.87 5 19 8.13 19 12V13H15V21H19C20.1 21 21 20.1 21 19V12C21 7.03 16.97 3 12 3ZM7 15V19H5V15H7ZM19 19H17V15H19V19Z" fill="rgb(221, 228, 227)\"/>
 </svg>
     )";
     }

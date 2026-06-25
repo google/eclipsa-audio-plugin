@@ -150,3 +150,38 @@ TEST_F(IAMFFileWriterTest, validate_expanded_element_profile_selection) {
   addAudioElementsToMix(kMP, {kAE});
   validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE_ENHANCED);
 }
+
+TEST_F(IAMFFileWriterTest, validate_lfe_element_profile_selection) {
+  // LFE is an expanded layout and must require BASE_ENHANCED profile
+  const juce::Uuid kAE = addAudioElement(Speakers::kExplLFE);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE_ENHANCED);
+}
+
+TEST_F(IAMFFileWriterTest, write_iamf_lfe) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kExplLFE);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  FileExport fileExport = fileExportRepository.get();
+  fileExport.setProfile(FileProfile::BASE_ENHANCED);
+  fileExportRepository.update(fileExport);
+
+  IAMFFileWriter writer(fileExportRepository, audioElementRepository,
+                        mixRepository, mixPresentationLoudnessRepository,
+                        kSamplesPerFrame, kSampleRate);
+  EXPECT_TRUE(writer.open(iamfOutPath.string()));
+
+  juce::AudioBuffer<float> buffer(1, kSamplesPerFrame);
+  for (int frame = 0; frame < 375; ++frame) {
+    for (int sample = 0; sample < kSamplesPerFrame; ++sample) {
+      const double kTime = (frame * kSamplesPerFrame + sample) /
+                           static_cast<double>(kSampleRate);
+      buffer.setSample(0, sample, 0.2 * std::sin(2.0 * M_PI * 60.0 * kTime));
+    }
+    EXPECT_TRUE(writer.writeFrame(buffer));
+  }
+
+  EXPECT_TRUE(writer.close());
+}

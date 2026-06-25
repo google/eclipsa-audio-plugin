@@ -21,6 +21,7 @@
 #include <sys/errno.h>
 #endif
 #include <cmath>
+#include <map>
 
 #include "EclipsaColours.h"
 
@@ -117,6 +118,46 @@ class SelectionBoxLookAndFeel : public juce::LookAndFeel_V4 {
     g.fillAll(EclipsaColours::backgroundOffBlack);
   }
 
+  void setItemSupplementaryText(const juce::String& option,
+                                const juce::String& suppText) {
+    supplementaryText_[option] = suppText;
+  }
+
+  void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+                         bool isSeparator, bool isActive, bool isHighlighted,
+                         bool isTicked, bool hasSubMenu,
+                         const juce::String& text,
+                         const juce::String& shortcutKeyText,
+                         const juce::Drawable* icon,
+                         const juce::Colour* textColour) override {
+    LookAndFeel_V4::drawPopupMenuItem(g, area, isSeparator, isActive,
+                                      isHighlighted, isTicked, hasSubMenu, text,
+                                      shortcutKeyText, icon, textColour);
+    auto it = supplementaryText_.find(text);
+    if (!isSeparator && it != supplementaryText_.end()) {
+      g.setFont(getPopupMenuFont());
+      auto suppColour = EclipsaColours::tabTextGrey.withAlpha(0.55f);
+      if (isHighlighted)
+        suppColour = findColour(juce::PopupMenu::highlightedTextColourId)
+                         .withAlpha(0.65f);
+      g.setColour(suppColour);
+      g.drawText(it->second, area.reduced(1).withTrimmedRight(8),
+                 juce::Justification::centredRight, true);
+    }
+  }
+
+  void getIdealPopupMenuItemSize(const juce::String& text, bool isSeparator,
+                                 int standardMenuItemHeight, int& idealWidth,
+                                 int& idealHeight) override {
+    LookAndFeel_V4::getIdealPopupMenuItemSize(
+        text, isSeparator, standardMenuItemHeight, idealWidth, idealHeight);
+    if (!isSeparator) {
+      auto it = supplementaryText_.find(text);
+      if (it != supplementaryText_.end())
+        idealWidth += getPopupMenuFont().getStringWidth(it->second) + 24;
+    }
+  }
+
  private:
   virtual void applycolours() {
     setColour(juce::ComboBox::backgroundColourId,
@@ -130,6 +171,7 @@ class SelectionBoxLookAndFeel : public juce::LookAndFeel_V4 {
   };
   juce::String title_;
   juce::Image image_;
+  std::map<juce::String, juce::String> supplementaryText_;
 };
 
 class OffSelectionBoxLookAndFeel : public SelectionBoxLookAndFeel {
@@ -191,6 +233,24 @@ class SelectionBox : public juce::Component {
     }
     if (selectionBox_.getNumItems() == 1) {
       selectionBox_.setSelectedId(1, juce::dontSendNotification);
+    }
+  }
+
+  void addOption(juce::String option, const char* suppText,
+                 bool enabled = true) {
+    addOption(std::move(option), juce::String(suppText), enabled);
+  }
+
+  void addOption(juce::String option, juce::String suppText,
+                 bool enabled = true) {
+    int id = selectionBox_.getNumItems() + 1;
+    selectionBox_.addItem(option, id);
+    if (!enabled) selectionBox_.setItemEnabled(id, false);
+    if (selectionBox_.getNumItems() == 1)
+      selectionBox_.setSelectedId(1, juce::dontSendNotification);
+    if (suppText.isNotEmpty()) {
+      lookAndFeel_.setItemSupplementaryText(option, suppText);
+      offLookAndFeel_.setItemSupplementaryText(option, suppText);
     }
   }
 

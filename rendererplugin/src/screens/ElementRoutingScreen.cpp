@@ -56,12 +56,12 @@ ElementRoutingScreen::ElementRoutingScreen(
 
   // Set profile selection
   FileExport profileConfig = fileExportRepository_->get();
-  profileSelectionBox_.addOption("Simple");
+  profileSelectionBox_.addOption("Simple", "YouTube compatible");
 
   // Add the base option to the profile config only if 18 channels are
   // available, as the base profile supports 18 channels
   if (totalChanneCount >= 18) {
-    profileSelectionBox_.addOption("Base");
+    profileSelectionBox_.addOption("Base", "YouTube compatible");
   }
   // Add the base option to the profile config only if 28 channels are
   // available, as the base enhanced profile supports 28 channels
@@ -466,6 +466,7 @@ juce::StringArray ElementRoutingScreen::getAudioElementNames(
                Speakers::k5Point1,
                Speakers::k5Point1Point2,
                Speakers::k5Point1Point4,
+               Speakers::kExplLFE,
                Speakers::kExpl5Point1Point4Surround,
                Speakers::k7Point1,
                Speakers::k7Point1Point2,
