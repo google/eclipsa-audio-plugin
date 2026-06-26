@@ -353,6 +353,7 @@ sign_plugin_bundle() {
     </array>
     <key>com.apple.security.temporary-exception.audio-unit-host</key><true/>
     <key>com.apple.security.cs.allow-dyld-environment-variables</key><true/>
+    <key>com.apple.security.app-sandbox</key><true/>
 </dict>
 </plist>
 EOF

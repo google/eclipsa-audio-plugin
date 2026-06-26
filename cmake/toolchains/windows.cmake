@@ -86,6 +86,9 @@ link_libraries(delayimp)
 set(IAMF_LIB_NAME "iamf" CACHE STRING "")
 set(ECLIPSA_IAMF_LIB_DIR "${CMAKE_BINARY_DIR}/_deps/libiamf-build/$<CONFIG>" CACHE STRING "")
 set(ECLIPSA_STATIC_LIB_SUFFIX ".lib" CACHE STRING "")
+set(ECLIPSA_PLUGIN_PLATFORM_SOURCES
+        "${CMAKE_SOURCE_DIR}/common/processors/file_output/FilePermissions_windows.cpp"
+        CACHE STRING "")
 set(ECLIPSA_PLATFORM_LIBS
         vendored_gpac_crypto
         vendored_gpac_ssl

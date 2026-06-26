@@ -40,6 +40,7 @@ juce_add_plugin(RendererPlugin
 target_sources(RendererPlugin
         PRIVATE
         src/RendererProcessor.cpp
+        ${ECLIPSA_PLUGIN_PLATFORM_SOURCES}
         src/RendererEditor.cpp
         src/RendererVersionConverter.cpp
         src/screens/ElementRoutingScreen.cpp
