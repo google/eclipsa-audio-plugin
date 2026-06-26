@@ -39,7 +39,7 @@ FileOutputProcessor::FileOutputProcessor(
       audioElementRepository_(audioElementRepository),
       mixPresentationRepository_(mixPresentationRepository),
       mixPresentationLoudnessRepository_(mixPresentationLoudnessRepository),
-      securityScopedHandle_(0) {}
+      securityScopedHandle_(nullptr) {}
 
 FileOutputProcessor::~FileOutputProcessor() {
   stopSecurityScopedAccess(securityScopedHandle_);
@@ -113,10 +113,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   LOG_ANALYTICS(0, "Beginning .iamf file export");
   securityScopedHandle_ =
       startSecurityScopedAccess(config.getSecurityBookmark().toStdString());
-  LOG_ERROR(
-      0, "FileOutputProcessor: Starting security scoped access with handle: " +
-             std::to_string((long)securityScopedHandle_) + " " +
-             config.getSecurityBookmark().toStdString());
+  LOG_ERROR(0, "FileOutputProcessor: Starting security scoped access");
   performingRender_ = true;
   startSampleIdx_ = config.getStartSampleIdx();
   endSampleIdx_ = config.getEndSampleIdx();
@@ -208,9 +205,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
   fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
   fpbr_.update(fpb);
 
-  LOG_ERROR(
-      0, "FileOutputProcessor: Stopping security scoped access with handle: " +
-             std::to_string((long)securityScopedHandle_));
+  LOG_ERROR(0, "FileOutputProcessor: Stopping security scoped access");
   stopSecurityScopedAccess(securityScopedHandle_);
   securityScopedHandle_ = nullptr;
 }

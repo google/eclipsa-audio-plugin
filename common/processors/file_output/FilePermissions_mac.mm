@@ -59,7 +59,7 @@ void* startSecurityScopedAccess(const std::string& bookmarkBase64) {
                      relativeToURL:nil
                bookmarkDataIsStale:&stale
                              error:&error];
-    if (!url) return nullptr;
+    if (!url || stale) return nullptr;
 
     if (![url startAccessingSecurityScopedResource]) return nullptr;
     return (__bridge_retained void*)url;

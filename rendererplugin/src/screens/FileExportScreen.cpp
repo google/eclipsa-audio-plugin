@@ -18,12 +18,10 @@
 #include "components/src/EclipsaColours.h"
 #include "components/src/ExportValidation.h"
 #include "data_structures/src/FileExport.h"
-#if JUCE_MAC
-#include "processors/file_output/FilePermissions.h"
-#endif
 #include "data_structures/src/FilePlayback.h"
 #include "data_structures/src/MixPresentation.h"
 #include "data_structures/src/TimeFormatConverter.h"
+#include "processors/file_output/FilePermissions.h"
 
 FileExportScreen::FileExportScreen(MainEditor& editor,
                                    RepositoryCollection repos,
@@ -330,6 +328,12 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
           // from NSSavePanel is still active. Without this, sandboxed hosts
           // (e.g. Logic Pro) will deny writes when the export is triggered
           // later using only the stored path string.
+
+          // Note that the security scoped bookmark will be persisted to file
+          // so that it can be re-used the next time the file will be opened
+          // to maintain access to the export folder location. Bookmarks are
+          // tied to a specific folder, user and machine, so there is no risk if
+          // the project file is shared between users.
           std::string securityBookmark =
               createSecurityScopedBookmark(file.getResult()
                                                .getParentDirectory()
