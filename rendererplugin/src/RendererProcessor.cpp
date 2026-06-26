@@ -202,6 +202,8 @@ void RendererProcessor::setNonRealtime(bool isNonRealtime) noexcept {
   // In debug builds where the realtime status can be changed manually
   // check to see if it has been manually set and, if if has, change it
   // accordingly
+  // Lock here so that if the UI triggers a setNonRealtime call, it won't
+  // conflict with the audio thread also calling it
   juce::SpinLock::ScopedLockType realtimeLock(realtimeLock_);
   if (isNonRealtime_) isNonRealtime = true;
 #endif

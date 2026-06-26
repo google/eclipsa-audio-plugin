@@ -339,9 +339,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
                                                .getParentDirectory()
                                                .getFullPathName()
                                                .toStdString());
-          LOG_ERROR(0,
-                    "FileOutputProcessor: Created security scoped bookmark: " +
-                        securityBookmark);
+          LOG_DEBUG(0, "FileOutputProcessor: Created security scoped bookmark");
           config.setSecurityBookmark(juce::String(securityBookmark));
 #endif
           repository_->update(config);

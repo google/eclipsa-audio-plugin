@@ -113,7 +113,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   LOG_ANALYTICS(0, "Beginning .iamf file export");
   securityScopedHandle_ =
       startSecurityScopedAccess(config.getSecurityBookmark().toStdString());
-  LOG_ERROR(0, "FileOutputProcessor: Starting security scoped access");
+  LOG_DEBUG(0, "FileOutputProcessor: Starting security scoped access");
   performingRender_ = true;
   startSampleIdx_ = config.getStartSampleIdx();
   endSampleIdx_ = config.getEndSampleIdx();
@@ -205,7 +205,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
   fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
   fpbr_.update(fpb);
 
-  LOG_ERROR(0, "FileOutputProcessor: Stopping security scoped access");
+  LOG_DEBUG(0, "FileOutputProcessor: Stopping security scoped access");
   stopSecurityScopedAccess(securityScopedHandle_);
   securityScopedHandle_ = nullptr;
 }
