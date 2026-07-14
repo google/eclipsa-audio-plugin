@@ -13,6 +13,7 @@
 # limitations under the License.
 
 eclipsa_add_test(test_audio_element AudioElement_test.cpp "data_structures")
+eclipsa_add_test(test_file_export FileExport_test.cpp "data_structures")
 eclipsa_add_test(test_room_setup RoomSetup_test.cpp "data_structures")
 eclipsa_add_test(test_mix_presentation MixPresentation_test.cpp "data_structures")
 eclipsa_add_test(test_channel_gains ChannelGains_test.cpp "data_structures")
