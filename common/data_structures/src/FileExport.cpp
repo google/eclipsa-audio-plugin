@@ -26,7 +26,7 @@ FileExport::FileExport()
       audioCodec_(LPCM),
       bitDepth_(16),
       sampleRate_(16000),
-      exportAudioElements_(true),
+      exportAudioElements_(false),
       exportAudio_(false),
       exportVideo_(false),
       videoSource_(""),
