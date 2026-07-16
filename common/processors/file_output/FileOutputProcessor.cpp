@@ -27,16 +27,12 @@
 #include "data_structures/src/FilePlayback.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
 
-namespace {
-// Classifies a file write failure by probing whether the parent directory of
-// `path` is actually writable. The real write attempt has already failed by
-// the time this runs, so this only distinguishes a permission problem from
-// some other write failure (disk full, invalid filename, etc.). The probe
-// filename is unique per call (rather than a fixed name) so a symlink cannot
-// be pre-planted at a predictable path in a shared/multi-user export
-// destination, and so two concurrent exports to the same folder cannot
-// collide on the same probe file.
-ExportError classifyWriteFailure(const juce::String& path) {
+// The probe filename is unique per call (rather than a fixed name) so a
+// symlink cannot be pre-planted at a predictable path in a shared/multi-user
+// export destination, and so two concurrent exports to the same folder
+// cannot collide on the same probe file.
+ExportError FileOutputProcessor::classifyWriteFailure(
+    const juce::String& path) {
   try {
     const std::filesystem::path kParentDir =
         std::filesystem::path(path.toStdString()).parent_path();
@@ -73,7 +69,6 @@ ExportError classifyWriteFailure(const juce::String& path) {
     return kFileWriteFailed;
   }
 }
-}  // namespace
 
 //==============================================================================
 FileOutputProcessor::FileOutputProcessor(

@@ -24,6 +24,8 @@
 
 #include <gtest/gtest.h>
 
+// Every ExportError value should map to banner text, except kNoError -- that
+// one means "nothing to show" and must map to an empty string.
 TEST(test_export_error_banner, messageForErrorNonEmptyExceptNoError) {
   EXPECT_TRUE(ExportErrorBanner::messageForError(kNoError).isEmpty());
   EXPECT_TRUE(
@@ -35,11 +37,19 @@ TEST(test_export_error_banner, messageForErrorNonEmptyExceptNoError) {
   EXPECT_TRUE(ExportErrorBanner::messageForError(kMuxFailed).isNotEmpty());
 }
 
+// Permission-denied must not share generic write-failure wording -- this is
+// the specific acceptance criterion that the banner distinguish causes
+// rather than showing one generic message.
 TEST(test_export_error_banner, permissionDeniedHasDistinctWording) {
   EXPECT_NE(ExportErrorBanner::messageForError(kPermissionDenied),
            ExportErrorBanner::messageForError(kFileWriteFailed));
 }
 
+// The banner should only (re-)appear on a fresh transition INTO an error
+// state from kNoError: a brand-new failure shows it, the same error
+// persisting without an intervening kNoError does not re-show it (so a user
+// dismissal isn't immediately undone), and a transition INTO kNoError is a
+// hide, not a show.
 TEST(test_export_error_banner, shouldShowOnTransition) {
   EXPECT_TRUE(
       ExportErrorBanner::shouldShowOnTransition(kNoError, kFileWriteFailed));
@@ -51,6 +61,8 @@ TEST(test_export_error_banner, shouldShowOnTransition) {
       ExportErrorBanner::shouldShowOnTransition(kMuxFailed, kNoError));
 }
 
+// The banner should hide exactly when the current state is kNoError,
+// regardless of what error (if any) preceded it.
 TEST(test_export_error_banner, shouldHideOnTransition) {
   EXPECT_TRUE(ExportErrorBanner::shouldHideOnTransition(kNoError));
   EXPECT_FALSE(ExportErrorBanner::shouldHideOnTransition(kFileWriteFailed));

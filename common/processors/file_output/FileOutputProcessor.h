@@ -85,6 +85,13 @@ class FileOutputProcessor : public ProcessorBase {
 
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
 
+  // Classifies a file write failure by probing whether the parent directory
+  // of `path` is actually writable. The real write attempt has already
+  // failed by the time this runs, so this only distinguishes a permission
+  // problem from some other write failure (disk full, invalid filename,
+  // etc.). Stateless (doesn't touch instance data), hence static.
+  static ExportError classifyWriteFailure(const juce::String& path);
+
   bool performingRender_;  // True if we are rendering in offline mode
   FileExportRepository& fileExportRepository_;
   FilePlaybackRepository& fpbr_;
