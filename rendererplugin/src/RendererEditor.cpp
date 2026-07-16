@@ -63,6 +63,7 @@ void CustomLookAndFeel::drawButtonBackground(
 RendererEditor::RendererEditor(RendererProcessor& p)
     : MainEditor(p),
       dawWarningBanner_(&p.getRoomSetupRepository()),
+      exportErrorBanner_(&p.getFileExportRepository()),
       monitorScreen_(p.getRepositories(), p.getSpeakerMonitorData(),
                      p.getChannelMonitorData(),
                      p.getFilePlaybackProcessorData(), *this,
@@ -120,6 +121,9 @@ RendererEditor::RendererEditor(RendererProcessor& p)
   // Add the DAW warning banner and let it determine its own visibility.
   addChildComponent(dawWarningBanner_);
   dawWarningBanner_.refreshVisibility();
+
+  addChildComponent(exportErrorBanner_);
+  exportErrorBanner_.onVisibilityChanged = [this] { repaint(); };
 }
 
 RendererEditor::~RendererEditor() { setLookAndFeel(nullptr); }
@@ -148,13 +152,19 @@ void RendererEditor::paint(juce::Graphics& g) {
   versionLabel_.setColour(juce::Label::ColourIds::textColourId,
                           EclipsaColours::buttonMSTextColour.withAlpha(0.3f));
 
-  // Add some spacing between title and warning banner (if shown)
+  // Add some spacing between title and any warning banners (if shown)
   bounds.removeFromTop(5);
 
-  // Position the DAW warning banner above the separator line
-  // It's already added as a child in the constructor and its visibility set.
+  // Stack the DAW warning banner and the export-error banner (if visible),
+  // export-error beneath the DAW banner when both are showing.
+  int bannerY = titleLabel_.getBottom() + 5;
   if (dawWarningBanner_.isVisible()) {
-    dawWarningBanner_.updatePosition(titleLabel_.getBottom() + 5, getWidth());
+    dawWarningBanner_.updatePosition(bannerY, getWidth());
+    bannerY += 35;
+    bounds.removeFromTop(35);
+  }
+  if (exportErrorBanner_.isVisible()) {
+    exportErrorBanner_.updatePosition(bannerY, getWidth());
     bounds.removeFromTop(35);
   }
 
@@ -210,6 +220,7 @@ void RendererEditor::setScreen(juce::Component& screen) {
   removeAllChildren();
   addAndMakeVisible(titleLabel_);
   addChildComponent(dawWarningBanner_);
+  addChildComponent(exportErrorBanner_);
 
   dawWarningBanner_.refreshVisibility();
 
@@ -222,6 +233,7 @@ void RendererEditor::resetScreen() {
   removeAllChildren();
   addAndMakeVisible(titleLabel_);
   addChildComponent(dawWarningBanner_);
+  addChildComponent(exportErrorBanner_);
 
   // Refresh visibility to ensure the banner state is correct
   dawWarningBanner_.refreshVisibility();

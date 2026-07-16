@@ -16,7 +16,9 @@
 
 #include <logger/logger.h>
 
+#include <cerrno>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 #include "data_repository/implementation/FilePlaybackRepository.h"
@@ -24,6 +26,54 @@
 #include "data_structures/src/FileExport.h"
 #include "data_structures/src/FilePlayback.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
+
+namespace {
+// Classifies a file write failure by probing whether the parent directory of
+// `path` is actually writable. The real write attempt has already failed by
+// the time this runs, so this only distinguishes a permission problem from
+// some other write failure (disk full, invalid filename, etc.). The probe
+// filename is unique per call (rather than a fixed name) so a symlink cannot
+// be pre-planted at a predictable path in a shared/multi-user export
+// destination, and so two concurrent exports to the same folder cannot
+// collide on the same probe file.
+ExportError classifyWriteFailure(const juce::String& path) {
+  try {
+    const std::filesystem::path kParentDir =
+        std::filesystem::path(path.toStdString()).parent_path();
+    if (kParentDir.empty()) {
+      // No parent directory to probe -- don't fall back to probing the
+      // process's current working directory.
+      return kFileWriteFailed;
+    }
+    const std::filesystem::path kProbePath =
+        kParentDir / (".acx_write_probe_" +
+                      juce::Uuid().toString().toStdString() + ".tmp");
+    std::ofstream probe(kProbePath);
+    if (!probe.is_open()) {
+      const int kProbeErrno = errno;
+      if (kProbeErrno == EACCES || kProbeErrno == EPERM ||
+          kProbeErrno == EROFS) {
+        return kPermissionDenied;
+      }
+      return kFileWriteFailed;
+    }
+    probe.close();
+    std::error_code removeEc;
+    std::filesystem::remove(kProbePath, removeEc);
+    if (removeEc) {
+      LOG_WARNING(0,
+                  "FileOutputProcessor: Failed to remove write-probe file: " +
+                      removeEc.message());
+    }
+    // The probe succeeded, so the parent directory is actually writable --
+    // the real failure must be something else (e.g. disk full, invalid
+    // filename).
+    return kFileWriteFailed;
+  } catch (const std::filesystem::filesystem_error&) {
+    return kFileWriteFailed;
+  }
+}
+}  // namespace
 
 //==============================================================================
 FileOutputProcessor::FileOutputProcessor(
@@ -139,6 +189,8 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
 
   // Set the sample tally in the configuration for FLAC encoding
   config.setSampleTally(sampleTally_);
+  // Every export begins from a clean slate.
+  config.setExportError(kNoError);
   fileExportRepository_.update(config);
   // Reset the playback processor to stop any ongoing playback
   FilePlayback fpb = fpbr_.get();
@@ -162,10 +214,14 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
       iamfFileWriter_ = nullptr;
       LOG_ERROR(0, "IAMF File Writer: Failed to open file for writing: " +
                        kIamfPath.toStdString());
+      config.setExportError(classifyWriteFailure(kIamfPath));
+      fileExportRepository_.update(config);
     }
   } else {
     LOG_WARNING(
         0, "FileOutputProcessor: Cannot write IAMF data to an invalid path.");
+    config.setExportError(kInvalidExportPath);
+    fileExportRepository_.update(config);
   }
 }
 
@@ -178,7 +234,18 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
 
   // If muxing is enabled and audio export was successful, mux the audio and
   // video files.
+  const bool kHadIamfWriter = iamfFileWriter_ != nullptr;
   const bool kIamfExported = iamfFileWriter_ ? iamfFileWriter_->close() : false;
+  if (kHadIamfWriter && !kIamfExported) {
+    // The writer was opened successfully but failed to close/finalize --
+    // an unreported write failure. Only escalate if nothing more specific
+    // has already been recorded earlier in this export.
+    FileExport freshConfig = fileExportRepository_.get();
+    if (freshConfig.getExportError() == kNoError) {
+      freshConfig.setExportError(kFileWriteFailed);
+      fileExportRepository_.update(freshConfig);
+    }
+  }
   if (kIamfExported && fileExportRepository_.get().getExportVideo()) {
     const bool kMuxIamfSuccess =
         IAMFExportHelper::muxIAMF(fileExportRepository_.get());
@@ -186,6 +253,11 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
     if (!kMuxIamfSuccess) {
       LOG_WARNING(0,
                   "IAMF Muxing: Failed to mux IAMF file with provided video.");
+      FileExport freshConfig = fileExportRepository_.get();
+      if (freshConfig.getExportError() == kNoError) {
+        freshConfig.setExportError(kMuxFailed);
+        fileExportRepository_.update(freshConfig);
+      }
     }
   }
 

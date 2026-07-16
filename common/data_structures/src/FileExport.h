@@ -24,6 +24,18 @@ enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
 
 enum AudioCodec { LPCM = 0, FLAC = 1, OPUS = 2 };
 
+// Classifies why an export failed (or kNoError if it did not). Set by
+// FileOutputProcessor as it progresses through an export so failures
+// propagate out of the audio processor into the data layer instead of only
+// being logged.
+enum ExportError {
+  kNoError = 0,
+  kInvalidExportPath = 1,
+  kFileWriteFailed = 2,
+  kPermissionDenied = 3,
+  kMuxFailed = 4
+};
+
 // Using a macro here to help minimize the amount of code
 //  If we need custom getters/setters we can
 //  break this macro up into variable creation and getter/setter creation
@@ -134,4 +146,5 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(long, sample_tally, SampleTally);
   EXPORT_VALUE(bool, exportCompleted, ExportCompleted);
   EXPORT_VALUE(juce::String, securityBookmark, SecurityBookmark);
+  EXPORT_VALUE(ExportError, exportError, ExportError);
 };

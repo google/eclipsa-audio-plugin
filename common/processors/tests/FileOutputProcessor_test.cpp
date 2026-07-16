@@ -16,6 +16,12 @@
 
 #include <filesystem>
 
+#ifndef _WIN32
+#include <unistd.h>
+#else
+#include <windows.h>
+#endif
+
 #include "FileOutputTestFixture.h"
 #include "juce_cryptography/juce_cryptography.h"
 #include "processors/tests/FileOutputTestUtils.h"
@@ -260,6 +266,8 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kNoError);
 }
 
 TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
@@ -395,6 +403,8 @@ TEST_F(FileOutputTests, validate_file_checksum) {
   // Verify the file exists and generate checksum
   juce::File iamfFile(iamfOutPath.string());
   ASSERT_TRUE(iamfFile.existsAsFile());
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kNoError);
 
   std::unique_ptr<juce::FileInputStream> fileStream(
       iamfFile.createInputStream());
@@ -452,6 +462,8 @@ TEST_F(FileOutputTests, iamf_invalid_path) {
   bounceAudio(fio_proc, audioElementRepository);
 
   EXPECT_FALSE(std::filesystem::exists(kInvalidIamfPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kInvalidExportPath);
 }
 
 // Test with an invalid video source path
@@ -474,6 +486,8 @@ TEST_F(FileOutputTests, mux_iamf_invalid_vin_path) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
 }
 
 // Test with an invalid video output path
@@ -496,6 +510,126 @@ TEST_F(FileOutputTests, mux_iamf_invalid_vout_path) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
+}
+
+// =============================================================================
+// ExportError-specific tests (see FileExport.h / FileOutputProcessor.cpp)
+// =============================================================================
+
+// Directly exercises toValueTree()/fromTree() for the exportError_ field to
+// guard against the sample_tally_-style bug where a field is written in
+// toValueTree() but never read back in fromTree(), silently failing to
+// survive a repository.get() round-trip.
+TEST(FileExportExportErrorTest, RoundTripPreservesExportError) {
+  FileExport config;
+  config.setExportError(ExportError::kMuxFailed);
+
+  const juce::ValueTree tree = config.toValueTree();
+  const FileExport roundTripped = FileExport::fromTree(tree);
+
+  EXPECT_EQ(roundTripped.getExportError(), ExportError::kMuxFailed);
+}
+
+namespace {
+// Creates a directory on construction and unconditionally restores
+// permissions and removes it on destruction (any exit path -- assertion
+// failure, exception, or normal return), so this test never leaves a
+// permission-stripped directory behind on the test machine/CI runner. The
+// directory name is suffixed with the test process's PID so concurrent
+// `ctest -j` runs of this binary cannot collide on the same path.
+struct ScopedReadOnlyDir {
+  std::filesystem::path dir;
+
+  explicit ScopedReadOnlyDir(const std::filesystem::path& baseName)
+      :
+#ifndef _WIN32
+        dir(std::filesystem::temp_directory_path() /
+            (baseName.string() + "_" + std::to_string(::getpid())))
+#else
+        dir(std::filesystem::temp_directory_path() /
+            (baseName.string() + "_" +
+             std::to_string(::GetCurrentProcessId())))
+#endif
+  {
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+  }
+
+  ~ScopedReadOnlyDir() {
+    std::error_code ec;
+    std::filesystem::permissions(dir, std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::replace, ec);
+    std::filesystem::remove_all(dir, ec);
+  }
+};
+}  // namespace
+
+// Export into a directory with write permissions removed. The open() call
+// should fail, and the probe-based classification in FileOutputProcessor
+// should identify this as a permission problem rather than a generic write
+// failure.
+TEST_F(FileOutputTests, permission_denied_export_path) {
+#ifndef _WIN32
+  if (geteuid() == 0) {
+    // Root bypasses permission bits, so this test cannot exercise the
+    // permission-denied path when run as root.
+    GTEST_SKIP();
+  }
+#endif
+
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  ScopedReadOnlyDir kReadOnlyDir("acx_readonly_export_test_dir");
+  std::filesystem::permissions(
+      kReadOnlyDir.dir,
+      std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec,
+      std::filesystem::perm_options::replace);
+
+  const std::filesystem::path kExportPath = kReadOnlyDir.dir / "test.iamf";
+
+  FileExport config = fileExportRepository.get();
+  config.setExportFile(kExportPath.string());
+  fileExportRepository.update(config);
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kPermissionDenied);
+}
+
+// A failing export (invalid path) should set an error; a subsequent
+// successful export on the same processor/fixture instance should reset it
+// back to kNoError rather than leaving the stale error in place.
+TEST_F(FileOutputTests, export_error_resets_after_successful_export) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidIamfPath = "/invalid_path/test.iamf";
+  FileExport config = fileExportRepository.get();
+  config.setExportFile(kInvalidIamfPath.string());
+  fileExportRepository.update(config);
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kInvalidExportPath);
+
+  // Now run a valid export on the same processor/fixture instance.
+  config = fileExportRepository.get();
+  config.setExportFile(iamfOutPath.string());
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudio(fio_proc, audioElementRepository);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+  std::filesystem::remove(iamfOutPath);
 }
 
 // =============================================================================
