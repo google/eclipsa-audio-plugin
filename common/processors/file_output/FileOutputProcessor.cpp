@@ -148,8 +148,15 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   }
 
   // Process IAMF File
-  if (iamfFileWriter_) {
-    iamfFileWriter_->writeFrame(buffer);
+  if (iamfFileWriter_ && !iamfFileWriter_->writeFrame(buffer)) {
+    // A frame write failed mid-export (e.g. disk full). Record it unless a
+    // more specific error is already on record, mirroring the guard used at
+    // close-time and mux-time in closeFileExport.
+    FileExport config = fileExportRepository_.get();
+    if (config.getExportError() == kNoError) {
+      config.setExportError(kFileWriteFailed);
+      fileExportRepository_.update(config);
+    }
   }
 }
 

@@ -58,19 +58,30 @@ class ExportErrorBanner : public WarningBannerBase, public juce::ValueTree::List
     if (property != FileExport::kExportError) return;
 
     const ExportError current = repository_->get().getExportError();
-    const bool shouldShow = shouldShowOnTransition(previousError_, current);
-    const bool shouldHide = shouldHideOnTransition(current);
-    previousError_ = current;
 
-    juce::Component::SafePointer<ExportErrorBanner> self(this);
-    juce::MessageManager::callAsync([self, shouldShow, shouldHide] {
-      if (!self) return;
+    // This listener can fire off the message thread: FileOutputProcessor
+    // updates the repository from setNonRealtime(), which JUCE hosts may
+    // call from a realtime/render thread, and ValueTree::Listener callbacks
+    // run synchronously on whichever thread triggered the change. Defer
+    // every bit of Component-touching work -- including obtaining a safe
+    // self-reference -- to the message thread. `weakSelf_` was already
+    // constructed on the message thread (at banner-construction time), so
+    // capturing a copy of it here is just an atomic refcount bump, unlike
+    // constructing a fresh SafePointer<ExportErrorBanner>(this) on this
+    // thread would be, which touches Component's WeakReference::Master and
+    // is only safe on the message thread.
+    juce::MessageManager::callAsync([weakSelf = weakSelf_, current] {
+      if (!weakSelf) return;
+      const bool shouldShow =
+          shouldShowOnTransition(weakSelf->previousError_, current);
+      const bool shouldHide = shouldHideOnTransition(current);
+      weakSelf->previousError_ = current;
       if (shouldShow) {
-        self->setVisible(true);
+        weakSelf->setVisible(true);
       } else if (shouldHide) {
-        self->setVisible(false);
+        weakSelf->setVisible(false);
       }
-      if (self->onVisibilityChanged) self->onVisibilityChanged();
+      if (weakSelf->onVisibilityChanged) weakSelf->onVisibilityChanged();
     });
   }
 
@@ -128,4 +139,8 @@ class ExportErrorBanner : public WarningBannerBase, public juce::ValueTree::List
  private:
   FileExportRepository* repository_;
   ExportError previousError_ = kNoError;
+  // Constructed once on the message thread (this banner is always built as
+  // part of editor construction) and only ever copied afterward -- see the
+  // comment in valueTreePropertyChanged for why that distinction matters.
+  juce::Component::SafePointer<ExportErrorBanner> weakSelf_{this};
 };

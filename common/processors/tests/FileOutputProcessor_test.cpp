@@ -601,6 +601,28 @@ TEST_F(FileOutputTests, permission_denied_export_path) {
             ExportError::kPermissionDenied);
 }
 
+namespace {
+// classifyWriteFailure is `protected` (it's only meant to be called from
+// FileOutputProcessor itself) and `static` (stateless), so a derived class
+// can re-expose it for direct unit testing without ever needing to
+// construct an instance.
+class TestableFileOutputProcessor : public FileOutputProcessor {
+ public:
+  using FileOutputProcessor::classifyWriteFailure;
+};
+}  // namespace
+
+// classifyWriteFailure's no-parent-directory early return (a path with no
+// directory component) is only reachable indirectly through a full export,
+// and no export path constructed by the UI/repository is ever a bare
+// filename -- so this exercises the branch directly rather than trying to
+// contrive an end-to-end scenario that reaches it.
+TEST(ClassifyWriteFailureTest, BareFilenameWithNoParentDirectoryFailsWrite) {
+  EXPECT_EQ(
+      TestableFileOutputProcessor::classifyWriteFailure("bare_filename.iamf"),
+      ExportError::kFileWriteFailed);
+}
+
 // A failing export (invalid path) should set an error; a subsequent
 // successful export on the same processor/fixture instance should reset it
 // back to kNoError rather than leaving the stale error in place.
