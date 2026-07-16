@@ -20,6 +20,13 @@
 #include <unistd.h>
 #else
 #include <windows.h>
+
+#include <aclapi.h>
+#include <sddl.h>
+
+#include <vector>
+
+#pragma comment(lib, "advapi32.lib")
 #endif
 
 #include "FileOutputTestFixture.h"
@@ -531,6 +538,54 @@ TEST(FileExportExportErrorTest, RoundTripPreservesExportError) {
 }
 
 namespace {
+#ifdef _WIN32
+// Adds an explicit deny-write ACE for the CURRENT USER on `dir`, so creating
+// a file inside it genuinely fails with ERROR_ACCESS_DENIED (mapped to
+// errno == EACCES by the ucrt, which classifyWriteFailure's write-probe
+// checks for). This is deliberately NOT the same thing as
+// std::filesystem::permissions(): on Windows that only toggles the
+// FILE_ATTRIBUTE_READONLY bit, which Windows does not enforce for directory
+// content creation -- a program can still create files inside a
+// read-only-attributed folder. An explicit DACL deny entry is what actually
+// blocks it. DELETE is deliberately not included in the denied access mask,
+// so this process can still remove the directory afterward without needing
+// to reset the ACL first.
+void DenyDirectoryWriteWindows(const std::filesystem::path& dir) {
+  HANDLE token = nullptr;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) return;
+
+  DWORD infoLen = 0;
+  GetTokenInformation(token, TokenUser, nullptr, 0, &infoLen);
+  std::vector<BYTE> infoBuf(infoLen);
+  if (infoLen == 0 ||
+      !GetTokenInformation(token, TokenUser, infoBuf.data(), infoLen,
+                           &infoLen)) {
+    CloseHandle(token);
+    return;
+  }
+  PSID userSid = reinterpret_cast<TOKEN_USER*>(infoBuf.data())->User.Sid;
+
+  EXPLICIT_ACCESSW denyAccess = {};
+  denyAccess.grfAccessPermissions = FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY |
+                                    FILE_WRITE_DATA | FILE_APPEND_DATA;
+  denyAccess.grfAccessMode = DENY_ACCESS;
+  denyAccess.grfInheritance = NO_INHERITANCE;
+  denyAccess.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+  denyAccess.Trustee.TrusteeType = TRUSTEE_IS_USER;
+  denyAccess.Trustee.ptstrName = reinterpret_cast<LPWSTR>(userSid);
+
+  PACL newAcl = nullptr;
+  if (SetEntriesInAclW(1, &denyAccess, nullptr, &newAcl) == ERROR_SUCCESS &&
+      newAcl != nullptr) {
+    SetNamedSecurityInfoW(const_cast<LPWSTR>(dir.wstring().c_str()),
+                         SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr,
+                         nullptr, newAcl, nullptr);
+    LocalFree(newAcl);
+  }
+  CloseHandle(token);
+}
+#endif
+
 // Creates a directory on construction and unconditionally restores
 // permissions and removes it on destruction (any exit path -- assertion
 // failure, exception, or normal return), so this test never leaves a
@@ -581,10 +636,18 @@ TEST_F(FileOutputTests, permission_denied_export_path) {
   addAudioElementsToMix(kMP, {kAE});
 
   ScopedReadOnlyDir kReadOnlyDir("acx_readonly_export_test_dir");
+#ifdef _WIN32
+  // std::filesystem::permissions() only toggles FILE_ATTRIBUTE_READONLY on
+  // Windows, which does not block creating new files inside a directory --
+  // an explicit DACL deny entry is required to actually enforce that. See
+  // DenyDirectoryWriteWindows for details.
+  DenyDirectoryWriteWindows(kReadOnlyDir.dir);
+#else
   std::filesystem::permissions(
       kReadOnlyDir.dir,
       std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec,
       std::filesystem::perm_options::replace);
+#endif
 
   const std::filesystem::path kExportPath = kReadOnlyDir.dir / "test.iamf";
 
