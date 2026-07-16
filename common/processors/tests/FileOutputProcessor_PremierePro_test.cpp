@@ -95,6 +95,29 @@ TEST_F(FileOutputTests, iamf_pp_lpc_2ae_expl_1mp) {
   std::filesystem::remove(iamfOutPath);  // Rm for next iteration
 }
 
+// Regression test: PremiereProFileOutputProcessor::processBlock previously
+// called iamfFileWriter_->writeFrame(buffer) unconditionally. An invalid
+// export path leaves performingRender_ true (set unconditionally early in
+// the inherited initializeFileExport) while iamfFileWriter_ stays null (path
+// validation fails before the writer is constructed), so this exercised a
+// null-pointer dereference before the write-failure fix added the guard.
+TEST_F(FileOutputTests, pp_invalid_path_does_not_crash) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidIamfPath = "/invalid_path/test.iamf";
+  FileExport config = fileExportRepository.get();
+  config.setExportFile(kInvalidIamfPath.string());
+  fileExportRepository.update(config);
+
+  bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
+                         mixRepository, mixPresentationLoudnessRepository);
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kInvalidExportPath);
+}
+
 TEST_F(FileOutputTests, pp_validate_file_checksum) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();

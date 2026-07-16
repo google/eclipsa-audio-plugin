@@ -142,5 +142,5 @@ class ExportErrorBanner : public WarningBannerBase, public juce::ValueTree::List
   // Constructed once on the message thread (this banner is always built as
   // part of editor construction) and only ever copied afterward -- see the
   // comment in valueTreePropertyChanged for why that distinction matters.
-  juce::Component::SafePointer<ExportErrorBanner> weakSelf_{this};
+  const juce::Component::SafePointer<ExportErrorBanner> weakSelf_{this};
 };

@@ -91,5 +91,17 @@ void PremiereProFileOutputProcessor::processBlock(
     writer->write(buffer);
   }
 
-  iamfFileWriter_->writeFrame(buffer);
+  if (iamfFileWriter_ && !iamfFileWriter_->writeFrame(buffer)) {
+    // A frame write failed mid-export (e.g. disk full). Record it unless a
+    // more specific error is already on record, mirroring the guard used in
+    // FileOutputProcessor::processBlock and closeFileExport. The null check
+    // also guards against a null iamfFileWriter_ here (e.g. an invalid
+    // export path leaves performingRender_ true but iamfFileWriter_ unset),
+    // which this override previously dereferenced unconditionally.
+    FileExport config = fileExportRepository_.get();
+    if (config.getExportError() == kNoError) {
+      config.setExportError(kFileWriteFailed);
+      fileExportRepository_.update(config);
+    }
+  }
 }
