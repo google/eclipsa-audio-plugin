@@ -25,7 +25,8 @@
 // colored strip of text with a close button in the top-right that persists
 // dismissal via a subclass-supplied hook. Subclasses provide the message text
 // and (optionally) their own dismiss semantics and fill color.
-class WarningBannerBase : public juce::Component, public juce::Button::Listener {
+class WarningBannerBase : public juce::Component,
+                          public juce::Button::Listener {
  public:
   WarningBannerBase() {
     bool iconLoaded = false;

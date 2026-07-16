@@ -29,7 +29,8 @@
 // this banner starts hidden and only shows on a fresh transition into an
 // error state (see shouldShowOnTransition) so a dismissal is not immediately
 // undone by the same still-set error value persisting in the repository.
-class ExportErrorBanner : public WarningBannerBase, public juce::ValueTree::Listener {
+class ExportErrorBanner : public WarningBannerBase,
+                          public juce::ValueTree::Listener {
  public:
   explicit ExportErrorBanner(FileExportRepository* repository)
       : repository_(repository) {
@@ -102,13 +103,11 @@ class ExportErrorBanner : public WarningBannerBase, public juce::ValueTree::List
       case kFileWriteFailed:
         return "Export failed: could not write the output file.";
       case kPermissionDenied:
-        return
-            "Export failed: permission denied. Check that you have write "
-            "access to the destination folder.";
+        return "Export failed: permission denied. Check that you have write "
+               "access to the destination folder.";
       case kMuxFailed:
-        return
-            "Export failed: audio was exported, but combining it with the "
-            "video failed. Check the video source and output folder.";
+        return "Export failed: audio was exported, but combining it with the "
+               "video failed. Check the video source and output folder.";
       default:
         return messageForError(kFileWriteFailed);
     }
@@ -117,7 +116,8 @@ class ExportErrorBanner : public WarningBannerBase, public juce::ValueTree::List
   // The banner only re-appears on a fresh transition into an error state from
   // kNoError (which FileOutputProcessor guarantees happens at the start of
   // every export attempt), not merely because the same error value persists.
-  static bool shouldShowOnTransition(ExportError previous, ExportError current) {
+  static bool shouldShowOnTransition(ExportError previous,
+                                     ExportError current) {
     return previous == kNoError && current != kNoError;
   }
 

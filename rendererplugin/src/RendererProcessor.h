@@ -96,7 +96,9 @@ class RendererProcessor final : public ProcessorBase,
   }
 
   RoomSetupRepository& getRoomSetupRepository() { return roomSetupRepository_; }
-  FileExportRepository& getFileExportRepository() { return fileExportRepository_; }
+  FileExportRepository& getFileExportRepository() {
+    return fileExportRepository_;
+  }
   SpeakerMonitorData& getSpeakerMonitorData() { return monitorData_; }
   ChannelMonitorData& getChannelMonitorData() { return channelMonitorData_; }
   FilePlaybackProcessorData& getFilePlaybackProcessorData() { return fpbData_; }

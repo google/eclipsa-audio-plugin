@@ -266,8 +266,7 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
-  EXPECT_EQ(fileExportRepository.get().getExportError(),
-            ExportError::kNoError);
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
 }
 
 TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
@@ -403,8 +402,7 @@ TEST_F(FileOutputTests, validate_file_checksum) {
   // Verify the file exists and generate checksum
   juce::File iamfFile(iamfOutPath.string());
   ASSERT_TRUE(iamfFile.existsAsFile());
-  EXPECT_EQ(fileExportRepository.get().getExportError(),
-            ExportError::kNoError);
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
 
   std::unique_ptr<juce::FileInputStream> fileStream(
       iamfFile.createInputStream());
@@ -549,8 +547,7 @@ struct ScopedReadOnlyDir {
             (baseName.string() + "_" + std::to_string(::getpid())))
 #else
         dir(std::filesystem::temp_directory_path() /
-            (baseName.string() + "_" +
-             std::to_string(::GetCurrentProcessId())))
+            (baseName.string() + "_" + std::to_string(::GetCurrentProcessId())))
 #endif
   {
     std::filesystem::remove_all(dir);

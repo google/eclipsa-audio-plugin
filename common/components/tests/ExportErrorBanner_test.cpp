@@ -18,9 +18,11 @@
 // because RendererEditor.h includes <components/components.h> before any
 // individual components/src header; a standalone test including only
 // ExportErrorBanner.h would otherwise hit that circular-include ordering.
+// clang-format off
 #include <components/components.h>
 
 #include "components/src/ExportErrorBanner.h"
+// clang-format on
 
 #include <gtest/gtest.h>
 
@@ -42,7 +44,7 @@ TEST(test_export_error_banner, messageForErrorNonEmptyExceptNoError) {
 // rather than showing one generic message.
 TEST(test_export_error_banner, permissionDeniedHasDistinctWording) {
   EXPECT_NE(ExportErrorBanner::messageForError(kPermissionDenied),
-           ExportErrorBanner::messageForError(kFileWriteFailed));
+            ExportErrorBanner::messageForError(kFileWriteFailed));
 }
 
 // The banner should only (re-)appear on a fresh transition INTO an error
@@ -55,10 +57,8 @@ TEST(test_export_error_banner, shouldShowOnTransition) {
       ExportErrorBanner::shouldShowOnTransition(kNoError, kFileWriteFailed));
   EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kFileWriteFailed,
                                                          kFileWriteFailed));
-  EXPECT_FALSE(
-      ExportErrorBanner::shouldShowOnTransition(kNoError, kNoError));
-  EXPECT_FALSE(
-      ExportErrorBanner::shouldShowOnTransition(kMuxFailed, kNoError));
+  EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kNoError, kNoError));
+  EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kMuxFailed, kNoError));
 }
 
 // The banner should hide exactly when the current state is kNoError,

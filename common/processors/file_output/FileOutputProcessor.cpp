@@ -42,8 +42,8 @@ ExportError FileOutputProcessor::classifyWriteFailure(
       return kFileWriteFailed;
     }
     const std::filesystem::path kProbePath =
-        kParentDir / (".acx_write_probe_" +
-                      juce::Uuid().toString().toStdString() + ".tmp");
+        kParentDir /
+        (".acx_write_probe_" + juce::Uuid().toString().toStdString() + ".tmp");
     std::ofstream probe(kProbePath);
     if (!probe.is_open()) {
       const int kProbeErrno = errno;
