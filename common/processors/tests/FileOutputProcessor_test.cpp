@@ -19,10 +19,9 @@
 #ifndef _WIN32
 #include <unistd.h>
 #else
-#include <windows.h>
-
 #include <aclapi.h>
 #include <sddl.h>
+#include <windows.h>
 
 #include <vector>
 
@@ -557,9 +556,8 @@ void DenyDirectoryWriteWindows(const std::filesystem::path& dir) {
   DWORD infoLen = 0;
   GetTokenInformation(token, TokenUser, nullptr, 0, &infoLen);
   std::vector<BYTE> infoBuf(infoLen);
-  if (infoLen == 0 ||
-      !GetTokenInformation(token, TokenUser, infoBuf.data(), infoLen,
-                           &infoLen)) {
+  if (infoLen == 0 || !GetTokenInformation(token, TokenUser, infoBuf.data(),
+                                           infoLen, &infoLen)) {
     CloseHandle(token);
     return;
   }
@@ -578,8 +576,8 @@ void DenyDirectoryWriteWindows(const std::filesystem::path& dir) {
   if (SetEntriesInAclW(1, &denyAccess, nullptr, &newAcl) == ERROR_SUCCESS &&
       newAcl != nullptr) {
     SetNamedSecurityInfoW(const_cast<LPWSTR>(dir.wstring().c_str()),
-                         SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr,
-                         nullptr, newAcl, nullptr);
+                          SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr,
+                          nullptr, newAcl, nullptr);
     LocalFree(newAcl);
   }
   CloseHandle(token);
