@@ -116,10 +116,11 @@ class WavFileOutputProcessor : public ProcessorBase,
   long startSampleIdx_;
   long endSampleIdx_;
   juce::SpinLock lock_;
-  // Flipped to false at the start of the destructor so a deferRepositoryUpdate()
-  // callback that fires after this processor is destroyed can detect that
-  // and bail out instead of touching freed memory. Shared (not owned
-  // outright) so the async callback can safely hold its own reference.
+  // Flipped to false at the start of the destructor so a
+  // deferRepositoryUpdate() callback that fires after this processor is
+  // destroyed can detect that and bail out instead of touching freed memory.
+  // Shared (not owned outright) so the async callback can safely hold its own
+  // reference.
   std::shared_ptr<std::atomic<bool>> isAlive_ =
       std::make_shared<std::atomic<bool>>(true);
   //==============================================================================

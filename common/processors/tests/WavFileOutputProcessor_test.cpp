@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "processors/file_output/WavFileOutputProcessor.h"
+
 #include <gtest/gtest.h>
 #include <juce_data_structures/juce_data_structures.h>
 
@@ -22,7 +24,6 @@
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/FileExport.h"
-#include "processors/file_output/WavFileOutputProcessor.h"
 
 namespace {
 class TestFileExportRepository : public FileExportRepository {
@@ -86,7 +87,8 @@ class WavFileOutputTests : public ::testing::Test {
 // synchronously from inside that listener callback, which re-entered
 // setNonRealtime()'s non-reentrant lock_ and deadlocked. This test hanging
 // (rather than completing) is the regression signal for that bug.
-TEST_F(WavFileOutputTests, open_failure_via_manual_export_toggle_does_not_deadlock) {
+TEST_F(WavFileOutputTests,
+       open_failure_via_manual_export_toggle_does_not_deadlock) {
   FileExport config = fileExportRepository.get();
   config.setAudioFileFormat(AudioFileFormat::WAV);
   config.setExportAudio(true);
