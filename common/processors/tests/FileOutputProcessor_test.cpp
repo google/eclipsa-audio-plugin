@@ -659,6 +659,45 @@ TEST_F(FileOutputTests, permission_denied_export_path) {
             ExportError::kPermissionDenied);
 }
 
+// An audio-element name containing a path separator makes its derived WAV
+// filename (`<export>_<name>.wav`) resolve into a non-existent subdirectory,
+// so only that per-element writer fails to open -- the IAMF file uses a
+// separate, short, valid path (unaffected by the element name) and opens
+// fine. Before this fix, that failure was silently dropped: the export
+// "succeeded" with a WAV stem missing. (An oversized name was tried first
+// instead of a path separator, but iamf-tools itself rejects overlong
+// annotation strings, which confounds the IAMF path too -- a path separator
+// only affects the filesystem side.)
+TEST_F(FileOutputTests, per_element_wav_open_failure_bad_name_classified) {
+  const juce::Uuid kAE =
+      addAudioElement(Speakers::kStereo, "nonexistent_subdir/element");
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  // The IAMF file itself (a separate, valid path) still opens and completes.
+  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kFileWriteFailed);
+}
+
+// Happy-path regression guard: an export where every writer (IAMF and every
+// per-audio-element WAV writer) opens, writes, and closes successfully must
+// leave ExportError at kNoError -- the per-element open/write/close checks
+// added by this fix must never misfire on the success path.
+TEST_F(FileOutputTests, per_element_wav_all_writers_succeed_no_error) {
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo, "Element One");
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo, "Element Two");
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE1, kAE2});
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+}
+
 namespace {
 // classifyWriteFailure is `protected` (it's only meant to be called from
 // FileOutputProcessor itself) and `static` (stateless), so a derived class

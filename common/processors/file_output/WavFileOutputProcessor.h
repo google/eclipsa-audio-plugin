@@ -19,6 +19,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
+#include <atomic>
+#include <functional>
 #include <memory>
 
 #include "../processor_base/ProcessorBase.h"
@@ -29,8 +31,12 @@
 #include "user_metadata.pb.h"
 
 //==============================================================================
-class WavFileOutputProcessor final : public ProcessorBase,
-                                     public juce::ValueTree::Listener {
+// Not `final`: a test-only subclass overrides postToMessageThread() to run
+// deferred repository updates synchronously (there's no running JUCE
+// message loop in the unit test binary). See postToMessageThread()'s
+// comment.
+class WavFileOutputProcessor : public ProcessorBase,
+                               public juce::ValueTree::Listener {
  public:
   //==============================================================================
   WavFileOutputProcessor(FileExportRepository& fileExportRepository,
@@ -58,7 +64,49 @@ class WavFileOutputProcessor final : public ProcessorBase,
   //==============================================================================
   const juce::String getName() { return "WaveFileOutput"; }
 
+ protected:
+  // Posts `task` to run on the message thread. Defaults to
+  // juce::MessageManager::callAsync; overridden by tests (which have no
+  // running JUCE message loop -- runDispatchLoopUntil isn't even compiled
+  // in, since JUCE_MODAL_LOOPS_PERMITTED is 0 for this plugin build) to
+  // invoke `task` immediately instead. See deferRepositoryUpdate() for why
+  // production code needs this deferred at all.
+  virtual void postToMessageThread(std::function<void()> task) {
+    juce::MessageManager::callAsync(std::move(task));
+  }
+
  private:
+  // Records a kFileWriteFailed ExportError (unless a more specific error is
+  // already on record) when a FileWriter::write() call fails.
+  void recordWriteFailureIfAny(bool writeSucceeded);
+
+  // Defers a FileExport mutation to the next message-loop turn (via
+  // postToMessageThread), running `mutator` against a config fetched fresh
+  // at execution time (not capture time), then writing it back. This
+  // processor is registered as a juce::ValueTree::Listener on
+  // fileExportRepository_ (see the constructor), and production callers
+  // (e.g. the export button handler) update that same repository with a
+  // read-modify-write of a FULL FileExport snapshot
+  // (`config = repo.get(); config.setX(...); repo.update(config)`).
+  // FileExportRepository::update() fires ValueTree listener callbacks
+  // SYNCHRONOUSLY, mid-copyPropertiesFrom, before that caller's own,
+  // now-stale snapshot has finished being applied property-by-property. If
+  // this method wrote to the repository synchronously from inside that
+  // callback chain (checkManualExportStartStop -> setNonRealtime), two
+  // things break: (1) setNonRealtime()'s lock_ is non-reentrant, so a
+  // synchronous update() that re-enters setNonRealtime() via the listener
+  // deadlocks; (2) even without the lock, the caller's own copyPropertiesFrom
+  // loop would go on to reapply ITS stale (pre-failure) exportError value
+  // for a property processed after the one that triggered this callback
+  // (FileExport.h declares manualExport before exportError, so this is not
+  // a rare race -- it reproduces every time), silently clobbering whatever
+  // this method just wrote. Deferring (the same pattern ExportErrorBanner
+  // already uses for this repository, see its valueTreePropertyChanged)
+  // guarantees this runs after the entire triggering call stack -- including
+  // the caller's copyPropertiesFrom loop -- has fully unwound, so neither
+  // hazard applies.
+  void deferRepositoryUpdate(std::function<void(FileExport&)> mutator);
+
   bool performingRender_;  // True if we are rendering in offline mode
   FileExportRepository& fileExportRepository_;
   RoomSetupRepository& roomSetupRepository_;
@@ -68,6 +116,12 @@ class WavFileOutputProcessor final : public ProcessorBase,
   long startSampleIdx_;
   long endSampleIdx_;
   juce::SpinLock lock_;
+  // Flipped to false at the start of the destructor so a deferRepositoryUpdate()
+  // callback that fires after this processor is destroyed can detect that
+  // and bail out instead of touching freed memory. Shared (not owned
+  // outright) so the async callback can safely hold its own reference.
+  std::shared_ptr<std::atomic<bool>> isAlive_ =
+      std::make_shared<std::atomic<bool>>(true);
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WavFileOutputProcessor)
 };

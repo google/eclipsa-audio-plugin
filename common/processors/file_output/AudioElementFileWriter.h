@@ -49,9 +49,16 @@ class AudioElementFileWriter {
   AudioElementFileWriter& operator=(AudioElementFileWriter&&) noexcept =
       default;
 
-  void write(juce::AudioBuffer<float>& buffer) { fileWriter->write(buffer); }
+  // Returns whether the underlying file was successfully opened for writing.
+  bool isOpen() const { return fileWriter != nullptr && fileWriter->isOpen(); }
 
-  void close() { fileWriter->close(); }
+  // Returns false on a write failure (disk full, WAV size limit, etc.).
+  bool write(juce::AudioBuffer<float>& buffer) {
+    return fileWriter->write(buffer);
+  }
+
+  // Returns false if the writer opened but failed to flush/close cleanly.
+  bool close() { return fileWriter->close(); }
 
   AudioElement& getElement() { return element_; }
 

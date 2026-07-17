@@ -14,6 +14,9 @@
 
 #include "WavFileOutputProcessor.h"
 
+#include <logger/logger.h>
+
+#include "WriteFailureClassifier.h"
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/FileExport.h"
@@ -33,7 +36,19 @@ WavFileOutputProcessor::WavFileOutputProcessor(
 }
 
 WavFileOutputProcessor::~WavFileOutputProcessor() {
+  *isAlive_ = false;
   fileExportRepository_.deregisterListener(this);
+}
+
+void WavFileOutputProcessor::deferRepositoryUpdate(
+    std::function<void(FileExport&)> mutator) {
+  auto isAlive = isAlive_;
+  postToMessageThread([this, isAlive, mutator] {
+    if (!*isAlive) return;
+    FileExport config = fileExportRepository_.get();
+    mutator(config);
+    fileExportRepository_.update(config);
+  });
 }
 
 //==============================================================================
@@ -56,6 +71,7 @@ void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
              // process anything and should avoid blocking
   }
 
+  bool writeFailed = false;
   if (performingRender_ && fileWriter_ != nullptr) {
     // If the current position is between the configured start and end position,
     // write to the file. Else do nothing
@@ -66,13 +82,31 @@ void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
           static_cast<long>(*position->getTimeInSeconds() * sampleRate_);
       if ((endSampleIdx_ == 0) || (currentSample >= startSampleIdx_ &&
                                    currentSample <= endSampleIdx_)) {
-        fileWriter_->write(buffer);
+        writeFailed = !fileWriter_->write(buffer);
       }
     } else {
-      fileWriter_->write(buffer);
+      writeFailed = !fileWriter_->write(buffer);
     }
   }
   lock_.exit();
+
+  recordWriteFailureIfAny(!writeFailed);
+}
+
+void WavFileOutputProcessor::recordWriteFailureIfAny(bool writeSucceeded) {
+  if (writeSucceeded) {
+    return;
+  }
+  // A frame write failed mid-export (e.g. disk full, WAV size limit
+  // exceeded). Record it unless a more specific error is already on record,
+  // mirroring the guard used by FileOutputProcessor for the IAMF/per-element
+  // paths. Deferred via deferRepositoryUpdate() -- see its declaration for
+  // why this can't call fileExportRepository_.update() synchronously.
+  deferRepositoryUpdate([](FileExport& config) {
+    if (config.getExportError() == kNoError) {
+      config.setExportError(kFileWriteFailed);
+    }
+  });
 }
 
 void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
@@ -85,16 +119,44 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
     endSampleIdx_ = configParams.getEndSampleIdx();
     if ((configParams.getAudioFileFormat() == AudioFileFormat::WAV) &&
         configParams.getExportAudio()) {
+      // Every export begins from a clean slate, mirroring
+      // FileOutputProcessor::initializeFileExport. Deferred via
+      // deferRepositoryUpdate() -- see its declaration for why this can't
+      // call fileExportRepository_.update() synchronously.
+      deferRepositoryUpdate(
+          [](FileExport& config) { config.setExportError(kNoError); });
+
       fileWriter_ = new FileWriter(
           configParams.getExportFile(), configParams.getSampleRate(),
           roomSetup.getSpeakerLayout().getRoomSpeakerLayout().getNumChannels(),
           0, configParams.getBitDepth(), configParams.getAudioCodec());
+      if (!fileWriter_->isOpen()) {
+        const std::string kFailedFilePath = fileWriter_->getFilePath();
+        LOG_ERROR(0,
+                  "WavFileOutputProcessor: Failed to open file for writing: " +
+                      kFailedFilePath);
+        deferRepositoryUpdate([kFailedFilePath](FileExport& config) {
+          if (config.getExportError() == kNoError) {
+            config.setExportError(
+                classifyWriteFailure(juce::String(kFailedFilePath)));
+          }
+        });
+      }
       performingRender_ = true;
     }
   } else {
     // Complete Rendering
     if (fileWriter_ != nullptr) {
-      fileWriter_->close();
+      if (!fileWriter_->close()) {
+        // The writer was opened successfully but failed to close/flush --
+        // an unreported write failure. Only escalate if nothing more
+        // specific has already been recorded earlier in this export.
+        deferRepositoryUpdate([](FileExport& config) {
+          if (config.getExportError() == kNoError) {
+            config.setExportError(kFileWriteFailed);
+          }
+        });
+      }
       delete fileWriter_;
       fileWriter_ = nullptr;
     }

@@ -16,58 +16,21 @@
 
 #include <logger/logger.h>
 
-#include <cerrno>
-#include <filesystem>
-#include <fstream>
 #include <string>
 
+#include "WriteFailureClassifier.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
 #include "data_structures/src/FilePlayback.h"
 #include "iamf_export_utils/IAMFExportUtil.h"
 
-// The probe filename is unique per call (rather than a fixed name) so a
-// symlink cannot be pre-planted at a predictable path in a shared/multi-user
-// export destination, and so two concurrent exports to the same folder
-// cannot collide on the same probe file.
+// Delegates to the shared classifier (WriteFailureClassifier.h) so every
+// writer path (IAMF, per-audio-element WAV, direct WAV export) classifies
+// failures the same way. Kept as a member for existing callers/tests.
 ExportError FileOutputProcessor::classifyWriteFailure(
     const juce::String& path) {
-  try {
-    const std::filesystem::path kParentDir =
-        std::filesystem::path(path.toStdString()).parent_path();
-    if (kParentDir.empty()) {
-      // No parent directory to probe -- don't fall back to probing the
-      // process's current working directory.
-      return kFileWriteFailed;
-    }
-    const std::filesystem::path kProbePath =
-        kParentDir /
-        (".acx_write_probe_" + juce::Uuid().toString().toStdString() + ".tmp");
-    std::ofstream probe(kProbePath);
-    if (!probe.is_open()) {
-      const int kProbeErrno = errno;
-      if (kProbeErrno == EACCES || kProbeErrno == EPERM ||
-          kProbeErrno == EROFS) {
-        return kPermissionDenied;
-      }
-      return kFileWriteFailed;
-    }
-    probe.close();
-    std::error_code removeEc;
-    std::filesystem::remove(kProbePath, removeEc);
-    if (removeEc) {
-      LOG_WARNING(0,
-                  "FileOutputProcessor: Failed to remove write-probe file: " +
-                      removeEc.message());
-    }
-    // The probe succeeded, so the parent directory is actually writable --
-    // the real failure must be something else (e.g. disk full, invalid
-    // filename).
-    return kFileWriteFailed;
-  } catch (const std::filesystem::filesystem_error&) {
-    return kFileWriteFailed;
-  }
+  return ::classifyWriteFailure(path);
 }
 
 //==============================================================================
@@ -144,7 +107,16 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
   // Process audio elements individually as Wav files
   for (int i = 0; i < iamfWavFileWriters_.size(); ++i) {
-    iamfWavFileWriters_[i]->write(buffer);
+    if (!iamfWavFileWriters_[i]->write(buffer)) {
+      // A per-audio-element frame write failed mid-export (e.g. disk full,
+      // WAV size limit exceeded). Record it unless a more specific error is
+      // already on record, mirroring the guard used for the IAMF path below.
+      FileExport config = fileExportRepository_.get();
+      if (config.getExportError() == kNoError) {
+        config.setExportError(kFileWriteFailed);
+        fileExportRepository_.update(config);
+      }
+    }
   }
 
   // Process IAMF File
@@ -225,13 +197,42 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
     config.setExportError(kInvalidExportPath);
     fileExportRepository_.update(config);
   }
+
+  // Check the per-audio-element WAV writers for open failures (invalid or
+  // oversized element-name-derived filename, permission denied, disk full).
+  // Runs after the IAMF checks above so an IAMF-path error always wins --
+  // the guard below only ever records the first error of the export.
+  for (const auto& writer : iamfWavFileWriters_) {
+    if (!writer->isOpen()) {
+      LOG_ERROR(0,
+                "FileOutputProcessor: Failed to open per-audio-element WAV "
+                "file for writing: " +
+                    writer->getFilePath());
+      FileExport freshConfig = fileExportRepository_.get();
+      if (freshConfig.getExportError() == kNoError) {
+        freshConfig.setExportError(
+            classifyWriteFailure(juce::String(writer->getFilePath())));
+        fileExportRepository_.update(freshConfig);
+      }
+    }
+  }
 }
 
 void FileOutputProcessor::closeFileExport(const FileExport& config) {
   LOG_ANALYTICS(0, "closing writers and exporting IAMF file");
   // close the output file, since rendering is completed
   for (const auto& writer : iamfWavFileWriters_) {
-    writer->close();
+    if (!writer->close()) {
+      // The writer was opened successfully but failed to close/flush -- an
+      // unreported write failure. Only escalate if nothing more specific has
+      // already been recorded earlier in this export (mirrors the IAMF close
+      // guard just below).
+      FileExport freshConfig = fileExportRepository_.get();
+      if (freshConfig.getExportError() == kNoError) {
+        freshConfig.setExportError(kFileWriteFailed);
+        fileExportRepository_.update(freshConfig);
+      }
+    }
   }
 
   // If muxing is enabled and audio export was successful, mux the audio and
