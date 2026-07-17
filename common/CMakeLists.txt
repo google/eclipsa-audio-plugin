@@ -30,6 +30,7 @@ if (CI_TEST OR INTERNAL_TEST)
     add_subdirectory(logger/tests)
     add_subdirectory(data_structures/tests)
     add_subdirectory(substream_rdr/tests)
+    add_subdirectory(components/tests)
 endif ()
 
 #====================================================================

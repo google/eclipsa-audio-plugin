@@ -38,7 +38,8 @@ FileExport::FileExport()
       sample_tally_(0),
       profile_(FileProfile::BASE),
       exportCompleted_(true),
-      securityBookmark_("") {}
+      securityBookmark_(""),
+      exportError_(kNoError) {}
 
 FileExport::FileExport(long startSampleIdx, long endSampleIdx,
                        juce::String exportFile, juce::String exportFolder,
@@ -71,10 +72,11 @@ FileExport::FileExport(long startSampleIdx, long endSampleIdx,
       lpcm_sample_size_(lpcm_sample_size),
       sample_tally_(0),
       exportCompleted_(exportCompleted),
-      securityBookmark_(securityBookmark) {}
+      securityBookmark_(securityBookmark),
+      exportError_(kNoError) {}
 
 FileExport FileExport::fromTree(const juce::ValueTree tree) {
-  return FileExport(
+  FileExport result(
       (juce::int64)tree[kStartSampleIdx], (juce::int64)tree[kEndSampleIdx],
       tree[kExportFile], tree[kExportFolder],
       (AudioFileFormat)(int)tree[kAudioFileFormat],
@@ -84,6 +86,8 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
       (FileProfile)(int)tree[kProfile], tree[kFlacCompressionLevel],
       tree[kOpusTotalBitrate], tree[kLPCMSampleSize], tree[kExportCompleted],
       tree[kSecurityBookmark]);
+  result.setExportError((ExportError)(int)tree[kExportError]);
+  return result;
 }
 
 juce::ValueTree FileExport::toValueTree() const {
@@ -108,7 +112,8 @@ juce::ValueTree FileExport::toValueTree() const {
            {kLPCMSampleSize, lpcm_sample_size_},
            {kSampleTally, static_cast<juce::int64>(sample_tally_)},
            {kExportCompleted, exportCompleted_},
-           {kSecurityBookmark, securityBookmark_}}};
+           {kSecurityBookmark, securityBookmark_},
+           {kExportError, static_cast<int>(exportError_)}}};
 }
 
 juce::String FileExport::expandTildePath(const juce::String& path) {

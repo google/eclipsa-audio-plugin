@@ -16,6 +16,18 @@
 
 #include <filesystem>
 
+#ifndef _WIN32
+#include <unistd.h>
+#else
+#include <aclapi.h>
+#include <sddl.h>
+#include <windows.h>
+
+#include <vector>
+
+#pragma comment(lib, "advapi32.lib")
+#endif
+
 #include "FileOutputTestFixture.h"
 #include "juce_cryptography/juce_cryptography.h"
 #include "processors/tests/FileOutputTestUtils.h"
@@ -260,6 +272,7 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
 }
 
 TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
@@ -395,6 +408,7 @@ TEST_F(FileOutputTests, validate_file_checksum) {
   // Verify the file exists and generate checksum
   juce::File iamfFile(iamfOutPath.string());
   ASSERT_TRUE(iamfFile.existsAsFile());
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
 
   std::unique_ptr<juce::FileInputStream> fileStream(
       iamfFile.createInputStream());
@@ -452,6 +466,8 @@ TEST_F(FileOutputTests, iamf_invalid_path) {
   bounceAudio(fio_proc, audioElementRepository);
 
   EXPECT_FALSE(std::filesystem::exists(kInvalidIamfPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kInvalidExportPath);
 }
 
 // Test with an invalid video source path
@@ -474,6 +490,8 @@ TEST_F(FileOutputTests, mux_iamf_invalid_vin_path) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
 }
 
 // Test with an invalid video output path
@@ -496,6 +514,202 @@ TEST_F(FileOutputTests, mux_iamf_invalid_vout_path) {
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
+}
+
+// =============================================================================
+// ExportError-specific tests (see FileExport.h / FileOutputProcessor.cpp)
+// =============================================================================
+
+// Directly exercises toValueTree()/fromTree() for the exportError_ field to
+// guard against the sample_tally_-style bug where a field is written in
+// toValueTree() but never read back in fromTree(), silently failing to
+// survive a repository.get() round-trip.
+TEST(FileExportExportErrorTest, RoundTripPreservesExportError) {
+  FileExport config;
+  config.setExportError(ExportError::kMuxFailed);
+
+  const juce::ValueTree tree = config.toValueTree();
+  const FileExport roundTripped = FileExport::fromTree(tree);
+
+  EXPECT_EQ(roundTripped.getExportError(), ExportError::kMuxFailed);
+}
+
+namespace {
+#ifdef _WIN32
+// Adds an explicit deny-write ACE for the CURRENT USER on `dir`, so creating
+// a file inside it genuinely fails with ERROR_ACCESS_DENIED (mapped to
+// errno == EACCES by the ucrt, which classifyWriteFailure's write-probe
+// checks for). This is deliberately NOT the same thing as
+// std::filesystem::permissions(): on Windows that only toggles the
+// FILE_ATTRIBUTE_READONLY bit, which Windows does not enforce for directory
+// content creation -- a program can still create files inside a
+// read-only-attributed folder. An explicit DACL deny entry is what actually
+// blocks it. DELETE is deliberately not included in the denied access mask,
+// so this process can still remove the directory afterward without needing
+// to reset the ACL first.
+void DenyDirectoryWriteWindows(const std::filesystem::path& dir) {
+  HANDLE token = nullptr;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) return;
+
+  DWORD infoLen = 0;
+  GetTokenInformation(token, TokenUser, nullptr, 0, &infoLen);
+  std::vector<BYTE> infoBuf(infoLen);
+  if (infoLen == 0 || !GetTokenInformation(token, TokenUser, infoBuf.data(),
+                                           infoLen, &infoLen)) {
+    CloseHandle(token);
+    return;
+  }
+  PSID userSid = reinterpret_cast<TOKEN_USER*>(infoBuf.data())->User.Sid;
+
+  EXPLICIT_ACCESSW denyAccess = {};
+  denyAccess.grfAccessPermissions = FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY |
+                                    FILE_WRITE_DATA | FILE_APPEND_DATA;
+  denyAccess.grfAccessMode = DENY_ACCESS;
+  denyAccess.grfInheritance = NO_INHERITANCE;
+  denyAccess.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+  denyAccess.Trustee.TrusteeType = TRUSTEE_IS_USER;
+  denyAccess.Trustee.ptstrName = reinterpret_cast<LPWSTR>(userSid);
+
+  PACL newAcl = nullptr;
+  if (SetEntriesInAclW(1, &denyAccess, nullptr, &newAcl) == ERROR_SUCCESS &&
+      newAcl != nullptr) {
+    SetNamedSecurityInfoW(const_cast<LPWSTR>(dir.wstring().c_str()),
+                          SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr,
+                          nullptr, newAcl, nullptr);
+    LocalFree(newAcl);
+  }
+  CloseHandle(token);
+}
+#endif
+
+// Creates a directory on construction and unconditionally restores
+// permissions and removes it on destruction (any exit path -- assertion
+// failure, exception, or normal return), so this test never leaves a
+// permission-stripped directory behind on the test machine/CI runner. The
+// directory name is suffixed with the test process's PID so concurrent
+// `ctest -j` runs of this binary cannot collide on the same path.
+struct ScopedReadOnlyDir {
+  std::filesystem::path dir;
+
+  explicit ScopedReadOnlyDir(const std::filesystem::path& baseName)
+      :
+#ifndef _WIN32
+        dir(std::filesystem::temp_directory_path() /
+            (baseName.string() + "_" + std::to_string(::getpid())))
+#else
+        dir(std::filesystem::temp_directory_path() /
+            (baseName.string() + "_" + std::to_string(::GetCurrentProcessId())))
+#endif
+  {
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+  }
+
+  ~ScopedReadOnlyDir() {
+    std::error_code ec;
+    std::filesystem::permissions(dir, std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::replace, ec);
+    std::filesystem::remove_all(dir, ec);
+  }
+};
+}  // namespace
+
+// Export into a directory with write permissions removed. The open() call
+// should fail, and the probe-based classification in FileOutputProcessor
+// should identify this as a permission problem rather than a generic write
+// failure.
+TEST_F(FileOutputTests, permission_denied_export_path) {
+#ifndef _WIN32
+  if (geteuid() == 0) {
+    // Root bypasses permission bits, so this test cannot exercise the
+    // permission-denied path when run as root.
+    GTEST_SKIP();
+  }
+#endif
+
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  ScopedReadOnlyDir kReadOnlyDir("acx_readonly_export_test_dir");
+#ifdef _WIN32
+  // std::filesystem::permissions() only toggles FILE_ATTRIBUTE_READONLY on
+  // Windows, which does not block creating new files inside a directory --
+  // an explicit DACL deny entry is required to actually enforce that. See
+  // DenyDirectoryWriteWindows for details.
+  DenyDirectoryWriteWindows(kReadOnlyDir.dir);
+#else
+  std::filesystem::permissions(
+      kReadOnlyDir.dir,
+      std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec,
+      std::filesystem::perm_options::replace);
+#endif
+
+  const std::filesystem::path kExportPath = kReadOnlyDir.dir / "test.iamf";
+
+  FileExport config = fileExportRepository.get();
+  config.setExportFile(kExportPath.string());
+  fileExportRepository.update(config);
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kPermissionDenied);
+}
+
+namespace {
+// classifyWriteFailure is `protected` (it's only meant to be called from
+// FileOutputProcessor itself) and `static` (stateless), so a derived class
+// can re-expose it for direct unit testing without ever needing to
+// construct an instance.
+class TestableFileOutputProcessor : public FileOutputProcessor {
+ public:
+  using FileOutputProcessor::classifyWriteFailure;
+};
+}  // namespace
+
+// classifyWriteFailure's no-parent-directory early return (a path with no
+// directory component) is only reachable indirectly through a full export,
+// and no export path constructed by the UI/repository is ever a bare
+// filename -- so this exercises the branch directly rather than trying to
+// contrive an end-to-end scenario that reaches it.
+TEST(ClassifyWriteFailureTest, BareFilenameWithNoParentDirectoryFailsWrite) {
+  EXPECT_EQ(
+      TestableFileOutputProcessor::classifyWriteFailure("bare_filename.iamf"),
+      ExportError::kFileWriteFailed);
+}
+
+// A failing export (invalid path) should set an error; a subsequent
+// successful export on the same processor/fixture instance should reset it
+// back to kNoError rather than leaving the stale error in place.
+TEST_F(FileOutputTests, export_error_resets_after_successful_export) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidIamfPath = "/invalid_path/test.iamf";
+  FileExport config = fileExportRepository.get();
+  config.setExportFile(kInvalidIamfPath.string());
+  fileExportRepository.update(config);
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kInvalidExportPath);
+
+  // Now run a valid export on the same processor/fixture instance.
+  config = fileExportRepository.get();
+  config.setExportFile(iamfOutPath.string());
+  fileExportRepository.update(config);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudio(fio_proc, audioElementRepository);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+  std::filesystem::remove(iamfOutPath);
 }
 
 // =============================================================================
