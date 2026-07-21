@@ -36,13 +36,8 @@ WavFileOutputProcessor::WavFileOutputProcessor(
 }
 
 WavFileOutputProcessor::~WavFileOutputProcessor() {
-  // isAlive_ is read (via deferRepositoryUpdate()'s captured task) and
-  // written here without any lock; that's only race-free if destruction and
-  // every deferred callback run on the message thread. Only assert the
-  // invariant when a MessageManager actually exists -- the unit test binary
-  // has none (JUCE_MODAL_LOOPS_PERMITTED is 0, no message loop), and
-  // getInstanceWithoutCreating() returning null there is expected, not a
-  // violation.
+  // Ensure this is either deleted by a unit test (nullptr check) or 
+  // by the message thread since deletion by the audio thread is not safe (lock_ is non-reentrant)
   jassert(juce::MessageManager::getInstanceWithoutCreating() == nullptr ||
           juce::MessageManager::getInstanceWithoutCreating()
               ->isThisTheMessageThread());
@@ -108,13 +103,9 @@ void WavFileOutputProcessor::recordWriteFailureIfAny(bool writeSucceeded) {
     return;
   }
   // A persistent failure (disk full, WAV size limit exceeded) fails every
-  // subsequent block, and an offline bounce typically doesn't pump the
-  // message loop between blocks -- without this guard, each failing block
-  // would queue its own deferRepositoryUpdate() closure, and hundreds of
-  // thousands could pile up before the first one drains. Only the first
-  // failure of an export needs to be recorded, so exchange() both checks and
-  // claims that slot atomically; hasRecordedWriteFailure_ is reset in
-  // setNonRealtime() at the start of the next export.
+  // subsequent block. Only the first failure of an export needs to be recorded.'
+  // exchange() both checks and claims that slot atomically; 
+  // hasRecordedWriteFailure_ is reset in setNonRealtime() at the start of the next export.
   if (hasRecordedWriteFailure_.exchange(true)) {
     return;
   }

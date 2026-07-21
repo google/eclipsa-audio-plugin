@@ -253,12 +253,9 @@ TEST_F(WavFileOutputTests, retry_after_failure_does_not_clobber_or_leak_error) {
   std::filesystem::remove(kOutPath);
 }
 
-// Regression test for the HIGH review finding on PR #14:
-// recordWriteFailureIfAny() used to call deferRepositoryUpdate()
-// unconditionally on every failing processBlock, so a persistent failure
-// (disk full, WAV 4GB cap) during an offline bounce -- which doesn't pump
-// the message loop between blocks -- could queue hundreds of thousands of
-// callAsync closures before the first one drained. This reproduces the
+// Regression for recordWriteFailureIfAny() used to call deferRepositoryUpdate()
+// unconditionally on every failing processBlock, ensuring
+// persistent failures don't queue more than once. This reproduces the
 // open-succeeds-then-every-write-fails shape via FakeFileWriter and asserts
 // exactly one closure is queued no matter how many blocks fail.
 TEST_F(WavFileOutputTests,
