@@ -36,6 +36,31 @@ class TestRoomSetupRepository : public RoomSetupRepository {
   TestRoomSetupRepository() : RoomSetupRepository(juce::ValueTree{"test"}) {}
 };
 
+// Wraps a real FileWriter (so construction still performs a real open
+// against a real, writable path) but lets a test force write()/close() to
+// report failure afterward -- the only way to exercise the
+// write/close-after-successful-open branches in WavFileOutputProcessor,
+// since production only reaches them via disk-full/WAV-4GB-cap conditions.
+class FakeFileWriter : public FileWriter {
+ public:
+  using FileWriter::FileWriter;
+
+  bool write(juce::AudioBuffer<float>& buffer) override {
+    ++writeCallCount;
+    if (forceWriteFailure) return false;
+    return FileWriter::write(buffer);
+  }
+
+  bool close() override {
+    if (forceCloseFailure) return false;
+    return FileWriter::close();
+  }
+
+  bool forceWriteFailure = false;
+  bool forceCloseFailure = false;
+  int writeCallCount = 0;
+};
+
 // Queues WavFileOutputProcessor's deferred repository updates (see
 // deferRepositoryUpdate()/postToMessageThread()) instead of posting them to
 // juce::MessageManager::callAsync -- there is no running JUCE message loop
@@ -59,9 +84,29 @@ class TestableWavFileOutputProcessor : public WavFileOutputProcessor {
     for (auto& task : tasks) task();
   }
 
+  size_t pendingTaskCount() const { return pendingTasks_.size(); }
+
+  // Set before triggering an export start so the FileWriter it opens is a
+  // FakeFileWriter; the returned pointer is only valid for the lifetime of
+  // that export (WavFileOutputProcessor deletes it on close).
+  bool forceWriteFailure = false;
+  bool forceCloseFailure = false;
+  FakeFileWriter* lastFakeWriter = nullptr;
+
  protected:
   void postToMessageThread(std::function<void()> task) override {
     pendingTasks_.push_back(std::move(task));
+  }
+
+  FileWriter* createFileWriter(const juce::String& filename, double sampleRate,
+                               int numChannels, int firstChannel, int bitDepth,
+                               AudioCodec codec) override {
+    auto* fake = new FakeFileWriter(filename, sampleRate, numChannels,
+                                    firstChannel, bitDepth, codec);
+    fake->forceWriteFailure = forceWriteFailure;
+    fake->forceCloseFailure = forceCloseFailure;
+    lastFakeWriter = fake;
+    return fake;
   }
 
  private:
@@ -205,5 +250,99 @@ TEST_F(WavFileOutputTests, retry_after_failure_does_not_clobber_or_leak_error) {
   processor.runPendingTasks();
 
   EXPECT_TRUE(std::filesystem::exists(kOutPath));
+  std::filesystem::remove(kOutPath);
+}
+
+// Regression test for the HIGH review finding on PR #14:
+// recordWriteFailureIfAny() used to call deferRepositoryUpdate()
+// unconditionally on every failing processBlock, so a persistent failure
+// (disk full, WAV 4GB cap) during an offline bounce -- which doesn't pump
+// the message loop between blocks -- could queue hundreds of thousands of
+// callAsync closures before the first one drained. This reproduces the
+// open-succeeds-then-every-write-fails shape via FakeFileWriter and asserts
+// exactly one closure is queued no matter how many blocks fail.
+TEST_F(WavFileOutputTests,
+       many_failed_writes_after_successful_open_queue_a_single_update) {
+  const std::filesystem::path kOutPath =
+      std::filesystem::current_path() / "wav_write_failure_test.wav";
+  std::filesystem::remove(kOutPath);
+
+  FileExport config = fileExportRepository.get();
+  config.setAudioFileFormat(AudioFileFormat::WAV);
+  config.setExportAudio(true);
+  config.setSampleRate(48000);
+  config.setBitDepth(16);
+  config.setAudioCodec(AudioCodec::LPCM);
+  config.setExportFile(kOutPath.string());
+  config.setManualExport(false);
+  fileExportRepository.update(config);
+
+  processor.forceWriteFailure = true;
+  config.setManualExport(true);
+  fileExportRepository.update(config);
+  processor.runPendingTasks();  // Drain the export-start clean-slate reset.
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+  ASSERT_NE(processor.lastFakeWriter, nullptr);
+  EXPECT_TRUE(processor.lastFakeWriter->isOpen());
+
+  juce::AudioBuffer<float> buffer(2, 64);
+  buffer.clear();
+  juce::MidiBuffer midi;
+  for (int i = 0; i < 5; ++i) {
+    processor.processBlock(buffer, midi);
+  }
+
+  EXPECT_EQ(processor.lastFakeWriter->writeCallCount, 5);
+  // The fix under test: 5 failing blocks must queue exactly one
+  // deferRepositoryUpdate() closure, not one per block.
+  EXPECT_EQ(processor.pendingTaskCount(), 1u);
+
+  processor.runPendingTasks();
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kFileWriteFailed);
+
+  config = fileExportRepository.get();
+  config.setManualExport(false);
+  fileExportRepository.update(config);
+  processor.runPendingTasks();
+  std::filesystem::remove(kOutPath);
+}
+
+// Companion regression test covering the sibling untested branch flagged in
+// the same review: a close() failure after a successful open and successful
+// writes must still be recorded as kFileWriteFailed.
+TEST_F(WavFileOutputTests, close_failure_after_successful_open_is_recorded) {
+  const std::filesystem::path kOutPath =
+      std::filesystem::current_path() / "wav_close_failure_test.wav";
+  std::filesystem::remove(kOutPath);
+
+  FileExport config = fileExportRepository.get();
+  config.setAudioFileFormat(AudioFileFormat::WAV);
+  config.setExportAudio(true);
+  config.setSampleRate(48000);
+  config.setBitDepth(16);
+  config.setAudioCodec(AudioCodec::LPCM);
+  config.setExportFile(kOutPath.string());
+  config.setManualExport(false);
+  fileExportRepository.update(config);
+
+  processor.forceCloseFailure = true;
+  config.setManualExport(true);
+  fileExportRepository.update(config);
+  processor.runPendingTasks();
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+
+  juce::AudioBuffer<float> buffer(2, 64);
+  buffer.clear();
+  juce::MidiBuffer midi;
+  processor.processBlock(buffer, midi);  // A successful write.
+
+  config = fileExportRepository.get();
+  config.setManualExport(false);
+  fileExportRepository.update(config);
+  processor.runPendingTasks();
+
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kFileWriteFailed);
   std::filesystem::remove(kOutPath);
 }

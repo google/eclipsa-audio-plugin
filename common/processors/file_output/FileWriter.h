@@ -60,14 +60,18 @@ class FileWriter {
     }
   }
 
-  ~FileWriter() { close(); };
+  // Virtual so tests can subclass and override write()/close() to simulate
+  // a failure after a successful open (disk full, WAV 4GB cap) -- a
+  // FileWriter constructed against a real, writable path always opens
+  // successfully, so that scenario can't otherwise be reproduced in a test.
+  virtual ~FileWriter() { close(); };
 
   // Returns whether the underlying file was successfully opened for writing.
-  bool isOpen() const { return writer_ != nullptr; }
+  virtual bool isOpen() const { return writer_ != nullptr; }
 
   // Returns false (and writes nothing) if the writer failed to open, or if
   // the write itself fails (e.g. disk full, WAV 4GB size limit exceeded).
-  bool write(juce::AudioBuffer<float>& buffer) {
+  virtual bool write(juce::AudioBuffer<float>& buffer) {
     if (writer_ == nullptr) {
       return false;
     }
@@ -87,7 +91,7 @@ class FileWriter {
   // the underlying stream reports no error. A failure purely in the final
   // header rewrite (which JUCE performs in the writer's destructor with no
   // status return) cannot be detected here -- this is a best-effort check.
-  bool close() {
+  virtual bool close() {
     if (writer_ == nullptr) {
       return true;
     }

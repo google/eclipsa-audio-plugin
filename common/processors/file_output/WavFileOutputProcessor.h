@@ -75,6 +75,19 @@ class WavFileOutputProcessor : public ProcessorBase,
     juce::MessageManager::callAsync(std::move(task));
   }
 
+  // Constructs the FileWriter used for the current export. Virtual so tests
+  // can return a fake that opens successfully (via the real FileWriter
+  // constructor it wraps) but simulates a write()/close() failure -- the
+  // production path can only reach that branch via disk-full/WAV-4GB-cap
+  // conditions, which aren't practical to reproduce directly in a test.
+  virtual FileWriter* createFileWriter(const juce::String& filename,
+                                       double sampleRate, int numChannels,
+                                       int firstChannel, int bitDepth,
+                                       AudioCodec codec) {
+    return new FileWriter(filename, sampleRate, numChannels, firstChannel,
+                          bitDepth, codec);
+  }
+
  private:
   // Records a kFileWriteFailed ExportError (unless a more specific error is
   // already on record) when a FileWriter::write() call fails.
@@ -116,11 +129,21 @@ class WavFileOutputProcessor : public ProcessorBase,
   long startSampleIdx_;
   long endSampleIdx_;
   juce::SpinLock lock_;
+  // Set once recordWriteFailureIfAny() has queued a deferRepositoryUpdate()
+  // for the current export, so a persistent failure (disk full, WAV 4GB cap)
+  // doesn't queue a fresh callAsync closure for every subsequent failing
+  // block -- only the state change matters, and it only needs to happen
+  // once. Reset to false at the start of each export in setNonRealtime().
+  std::atomic<bool> hasRecordedWriteFailure_ = false;
   // Flipped to false at the start of the destructor so a
   // deferRepositoryUpdate() callback that fires after this processor is
   // destroyed can detect that and bail out instead of touching freed memory.
   // Shared (not owned outright) so the async callback can safely hold its own
-  // reference.
+  // reference. This only closes the destroyed-then-callback-runs-later case;
+  // it relies on destruction and every deferred callback both running on the
+  // message thread (so JUCE can never interleave them and race on
+  // fileExportRepository_) -- see the destructor's assertion of that
+  // invariant.
   std::shared_ptr<std::atomic<bool>> isAlive_ =
       std::make_shared<std::atomic<bool>>(true);
   //==============================================================================
