@@ -39,7 +39,8 @@ FileExport::FileExport()
       profile_(FileProfile::BASE),
       exportCompleted_(true),
       securityBookmark_(""),
-      exportError_(kNoError) {}
+      exportError_(kNoError),
+      videoLongerThanAudio_(false) {}
 
 FileExport::FileExport(long startSampleIdx, long endSampleIdx,
                        juce::String exportFile, juce::String exportFolder,
@@ -73,7 +74,8 @@ FileExport::FileExport(long startSampleIdx, long endSampleIdx,
       sample_tally_(0),
       exportCompleted_(exportCompleted),
       securityBookmark_(securityBookmark),
-      exportError_(kNoError) {}
+      exportError_(kNoError),
+      videoLongerThanAudio_(false) {}
 
 FileExport FileExport::fromTree(const juce::ValueTree tree) {
   FileExport result(
@@ -87,6 +89,7 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
       tree[kOpusTotalBitrate], tree[kLPCMSampleSize], tree[kExportCompleted],
       tree[kSecurityBookmark]);
   result.setExportError((ExportError)(int)tree[kExportError]);
+  result.setVideoLongerThanAudio((bool)tree[kVideoLongerThanAudio]);
   return result;
 }
 
@@ -113,7 +116,8 @@ juce::ValueTree FileExport::toValueTree() const {
            {kSampleTally, static_cast<juce::int64>(sample_tally_)},
            {kExportCompleted, exportCompleted_},
            {kSecurityBookmark, securityBookmark_},
-           {kExportError, static_cast<int>(exportError_)}}};
+           {kExportError, static_cast<int>(exportError_)},
+           {kVideoLongerThanAudio, videoLongerThanAudio_}}};
 }
 
 juce::String FileExport::expandTildePath(const juce::String& path) {

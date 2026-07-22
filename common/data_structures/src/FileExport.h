@@ -147,4 +147,9 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(bool, exportCompleted, ExportCompleted);
   EXPORT_VALUE(juce::String, securityBookmark, SecurityBookmark);
   EXPORT_VALUE(ExportError, exportError, ExportError);
+  // Set when a video/audio mux completed but the video is longer than the
+  // exported audio (kIAMFExported and getExportVideo() were both true).
+  // Distinct from ExportError -- the export itself succeeded, this is a
+  // warning about the two inputs' lengths, not a failure to write output.
+  EXPORT_VALUE(bool, videoLongerThanAudio, VideoLongerThanAudio);
 };

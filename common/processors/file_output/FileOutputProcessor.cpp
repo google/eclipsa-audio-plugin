@@ -165,6 +165,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   config.setSampleTally(sampleTally_);
   // Every export begins from a clean slate.
   config.setExportError(kNoError);
+  config.setVideoLongerThanAudio(false);
   fileExportRepository_.update(config);
   // Reset the playback processor to stop any ongoing playback
   FilePlayback fpb = fpbr_.get();
@@ -259,6 +260,28 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       FileExport freshConfig = fileExportRepository_.get();
       if (freshConfig.getExportError() == kNoError) {
         freshConfig.setExportError(kMuxFailed);
+        fileExportRepository_.update(freshConfig);
+      }
+    }
+
+    // Warn (independently of mux success/failure) when the supplied video
+    // outlasts the exported audio. Measured from the per-audio-element WAV
+    // writer's own frame count rather than re-reading any file, since that
+    // count already reflects exactly how many audio frames were written
+    // (accounting for start/end trim) and is still valid here -- the
+    // writers aren't cleared until after this block.
+    if (!iamfWavFileWriters_.empty() && sampleRate_ > 0) {
+      constexpr double kDurationMismatchToleranceSec = 0.05;
+      const double kAudioDurationSec =
+          iamfWavFileWriters_[0]->getFramesWritten() / sampleRate_;
+      const double kVideoDurationSec =
+          IAMFExportHelper::getMediaDurationSeconds(
+              fileExportRepository_.get().getVideoSource());
+      if (kVideoDurationSec > 0.0 &&
+          kVideoDurationSec >
+              kAudioDurationSec + kDurationMismatchToleranceSec) {
+        FileExport freshConfig = fileExportRepository_.get();
+        freshConfig.setVideoLongerThanAudio(true);
         fileExportRepository_.update(freshConfig);
       }
     }

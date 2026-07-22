@@ -24,11 +24,13 @@
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_structures/src/FileExport.h"
 
-// Dismissible warning banner that surfaces the reason the most recent export
-// attempt failed, reusing WarningBannerBase's chrome. Unlike DAWWarningBanner,
-// this banner starts hidden and only shows on a fresh transition into an
-// error state (see shouldShowOnTransition) so a dismissal is not immediately
-// undone by the same still-set error value persisting in the repository.
+// Dismissible warning banner that surfaces either why the most recent export
+// attempt failed, or -- when it otherwise succeeded -- that the muxed video
+// is longer than the exported audio, reusing WarningBannerBase's chrome.
+// Unlike DAWWarningBanner, this banner starts hidden and only shows on a
+// fresh transition into a warning state (see shouldShowWarning) so a
+// dismissal is not immediately undone by the same still-set state persisting
+// in the repository.
 class ExportErrorBanner : public WarningBannerBase,
                           public juce::ValueTree::Listener {
  public:
@@ -36,16 +38,18 @@ class ExportErrorBanner : public WarningBannerBase,
       : repository_(repository) {
     if (repository_) {
       repository_->registerListener(this);
-      previousError_ = repository_->get().getExportError();
+      const FileExport current = repository_->get();
+      previousError_ = current.getExportError();
+      previousMismatch_ = current.getVideoLongerThanAudio();
     }
-    // Seed visibility from whatever error state is already recorded (e.g.
+    // Seed visibility from whatever warning state is already recorded (e.g.
     // the editor was recreated -- some hosts do this on window close/reopen
     // -- while a prior export's failure is still on record and no fresh
     // export has run since). Without this, a banner constructed after an
     // unresolved failure would stay hidden until the NEXT export attempt,
     // silently missing the one that already happened -- the exact bug this
     // feature exists to fix.
-    setVisible(previousError_ != kNoError);
+    setVisible(isWarningState(previousError_, previousMismatch_));
   }
 
   ~ExportErrorBanner() override {
@@ -56,9 +60,13 @@ class ExportErrorBanner : public WarningBannerBase,
                                 const juce::Identifier& property) override {
     if (!repository_ || tree.getType() != repository_->getTree().getType())
       return;
-    if (property != FileExport::kExportError) return;
+    if (property != FileExport::kExportError &&
+        property != FileExport::kVideoLongerThanAudio)
+      return;
 
-    const ExportError current = repository_->get().getExportError();
+    const FileExport current = repository_->get();
+    const ExportError currentError = current.getExportError();
+    const bool currentMismatch = current.getVideoLongerThanAudio();
 
     // This listener can fire off the message thread: FileOutputProcessor
     // updates the repository from setNonRealtime(), which JUCE hosts may
@@ -71,15 +79,17 @@ class ExportErrorBanner : public WarningBannerBase,
     // constructing a fresh SafePointer<ExportErrorBanner>(this) on this
     // thread would be, which touches Component's WeakReference::Master and
     // is only safe on the message thread.
-    juce::MessageManager::callAsync([weakSelf = weakSelf_, current] {
+    juce::MessageManager::callAsync([weakSelf = weakSelf_, currentError,
+                                     currentMismatch] {
       if (!weakSelf) return;
-      const bool shouldShow =
-          shouldShowOnTransition(weakSelf->previousError_, current);
-      const bool shouldHide = shouldHideOnTransition(current);
-      weakSelf->previousError_ = current;
-      if (shouldShow) {
+      const bool kWasWarning =
+          isWarningState(weakSelf->previousError_, weakSelf->previousMismatch_);
+      const bool kIsWarning = isWarningState(currentError, currentMismatch);
+      weakSelf->previousError_ = currentError;
+      weakSelf->previousMismatch_ = currentMismatch;
+      if (shouldShowWarning(kWasWarning, kIsWarning)) {
         weakSelf->setVisible(true);
-      } else if (shouldHide) {
+      } else if (shouldHideWarning(kIsWarning)) {
         weakSelf->setVisible(false);
       }
       if (weakSelf->onVisibilityChanged) weakSelf->onVisibilityChanged();
@@ -125,10 +135,43 @@ class ExportErrorBanner : public WarningBannerBase,
     return current == kNoError;
   }
 
+  // Maps the combined export state to user-facing text. A hard failure
+  // always wins over the duration-mismatch warning: muxing didn't get far
+  // enough for "video is longer than audio" to be a meaningful thing to say
+  // alongside it.
+  static juce::String messageForState(ExportError error,
+                                      bool videoLongerThanAudio) {
+    if (error != kNoError) return messageForError(error);
+    if (videoLongerThanAudio) {
+      return "The video is longer than the exported audio. The file was "
+             "exported, but the audio and video lengths do not match.";
+    }
+    return "";
+  }
+
+  // True whenever there is something worth showing the user: a hard export
+  // failure, or -- mux having otherwise succeeded -- a video/audio duration
+  // mismatch.
+  static bool isWarningState(ExportError error, bool videoLongerThanAudio) {
+    return error != kNoError || videoLongerThanAudio;
+  }
+
+  // Same "only re-appear on a fresh transition" rule as
+  // shouldShowOnTransition/shouldHideOnTransition above, generalized to the
+  // combined (error OR mismatch) warning state so the banner has one
+  // transition rule regardless of which condition triggered it.
+  static bool shouldShowWarning(bool previousWarning, bool currentWarning) {
+    return !previousWarning && currentWarning;
+  }
+
+  static bool shouldHideWarning(bool currentWarning) { return !currentWarning; }
+
  protected:
   juce::String getMessageText() const override {
-    return messageForError(repository_ ? repository_->get().getExportError()
-                                       : kNoError);
+    if (!repository_) return messageForState(kNoError, false);
+    const FileExport current = repository_->get();
+    return messageForState(current.getExportError(),
+                           current.getVideoLongerThanAudio());
   }
 
   // Transient dismiss: no repository write, unlike DAWWarningBanner's
@@ -139,6 +182,7 @@ class ExportErrorBanner : public WarningBannerBase,
  private:
   FileExportRepository* repository_;
   ExportError previousError_ = kNoError;
+  bool previousMismatch_ = false;
   // Constructed once on the message thread (this banner is always built as
   // part of editor construction) and only ever copied afterward -- see the
   // comment in valueTreePropertyChanged for why that distinction matters.

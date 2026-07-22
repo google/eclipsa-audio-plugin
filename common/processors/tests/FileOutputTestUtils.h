@@ -83,10 +83,15 @@ static FileProfile profileFromAEs(
 }
 
 // Helper used by multiple tests to render a short non-realtime bounce.
+// `numBlocks` defaults to the original fixed 8-block bounce (~21ms at the
+// default 48kHz/128-frame settings); pass a larger value to render enough
+// audio to exceed a given video's duration (e.g. for duration-mismatch
+// tests).
 static inline void bounceAudio(FileOutputProcessor& fio_proc,
                                AudioElementRepository& audioElementRepository,
                                unsigned sampleRate = 48e3,
-                               unsigned frameSize = 128) {
+                               unsigned frameSize = 128,
+                               unsigned numBlocks = 8) {
   const unsigned kNumChannels = totalAudioChannels(audioElementRepository);
   const auto kSineTone = generateSineWave(440.0f, sampleRate, frameSize);
 
@@ -95,7 +100,7 @@ static inline void bounceAudio(FileOutputProcessor& fio_proc,
 
   juce::AudioBuffer<float> audioBuffer(kNumChannels, frameSize);
   juce::MidiBuffer dummyMidiBuffer;
-  for (int block = 0; block < 8; ++block) {
+  for (unsigned block = 0; block < numBlocks; ++block) {
     for (unsigned i = 0; i < kNumChannels; ++i) {
       audioBuffer.copyFrom(i, 0, kSineTone, 0, 0, frameSize);
     }

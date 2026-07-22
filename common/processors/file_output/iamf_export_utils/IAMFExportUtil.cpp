@@ -432,6 +432,16 @@ bool muxIAMF(const FileExport& exportData) {
   return true;
 }
 
+double getMediaDurationSeconds(const juce::String& mediaFilePath) {
+  GF_ISOFile* file =
+      gf_isom_open(mediaFilePath.toRawUTF8(), GF_ISOM_OPEN_READ, NULL);
+  if (!file) return -1.0;
+  const u32 timescale = gf_isom_get_timescale(file);
+  const u64 duration = gf_isom_get_duration(file);
+  gf_isom_close(file);
+  return timescale > 0 ? static_cast<double>(duration) / timescale : -1.0;
+}
+
 std::vector<const AudioElement*> filterFreeAudioElements(
     const juce::OwnedArray<AudioElement>& audioElements,
     const juce::OwnedArray<MixPresentation>& mixPresentations) {

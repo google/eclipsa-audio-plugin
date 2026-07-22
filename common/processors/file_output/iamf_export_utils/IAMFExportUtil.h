@@ -38,4 +38,9 @@ std::vector<const AudioElement*> filterFreeAudioElements(
     const juce::OwnedArray<AudioElement>& audioElements,
     const juce::OwnedArray<MixPresentation>& mixPresentations);
 bool muxIAMF(const FileExport& exportData);
+
+// Returns the media file's duration in seconds (movie-level duration /
+// timescale), or -1.0 if the file cannot be opened or has no timescale.
+// Read-only container inspection -- does not mutate the file.
+double getMediaDurationSeconds(const juce::String& mediaFilePath);
 }  // namespace IAMFExportHelper
