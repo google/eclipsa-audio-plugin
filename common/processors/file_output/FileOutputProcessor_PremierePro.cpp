@@ -88,7 +88,17 @@ void PremiereProFileOutputProcessor::processBlock(
 
   //  Write the audio data to the wav file writers
   for (auto& writer : iamfWavFileWriters_) {
-    writer->write(buffer);
+    if (!writer->write(buffer)) {
+      // A per-audio-element frame write failed mid-export (e.g. disk full).
+      // Record it unless a more specific error is already on record,
+      // mirroring the guard used for the IAMF path below and in the base
+      // FileOutputProcessor::processBlock.
+      FileExport config = fileExportRepository_.get();
+      if (config.getExportError() == kNoError) {
+        config.setExportError(kFileWriteFailed);
+        fileExportRepository_.update(config);
+      }
+    }
   }
 
   if (iamfFileWriter_ && !iamfFileWriter_->writeFrame(buffer)) {

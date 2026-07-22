@@ -14,6 +14,7 @@
 
 eclipsa_add_test(test_fio_processor FileOutputProcessor_test.cpp "processors;iamf")
 eclipsa_add_test(test_fio_processor FileOutputProcessor_PremierePro_test.cpp "processors;iamf")
+eclipsa_add_test(test_wav_fio_processor WavFileOutputProcessor_test.cpp "processors")
 eclipsa_add_test(test_processor_base ProcessorBase_test.cpp "processors;juce::juce_audio_utils")
 eclipsa_add_test(test_render_processor Render_test.cpp "processors;juce::juce_audio_utils;iamf")
 eclipsa_add_test(test_libear_sanity libear_test.cpp "libear")
