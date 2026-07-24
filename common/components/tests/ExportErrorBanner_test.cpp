@@ -37,6 +37,15 @@ TEST(test_export_error_banner, messageForErrorNonEmptyExceptNoError) {
   EXPECT_TRUE(
       ExportErrorBanner::messageForError(kPermissionDenied).isNotEmpty());
   EXPECT_TRUE(ExportErrorBanner::messageForError(kMuxFailed).isNotEmpty());
+  EXPECT_TRUE(
+      ExportErrorBanner::messageForError(kVideoLongerThanAudio).isNotEmpty());
+}
+
+// Issue #38: the mismatch message must name the mismatch, not read like a
+// generic failure -- it's a warning, the export itself still succeeded.
+TEST(test_export_error_banner, videoLongerThanAudioNamesTheMismatch) {
+  EXPECT_TRUE(ExportErrorBanner::messageForError(kVideoLongerThanAudio)
+                  .containsIgnoreCase("longer"));
 }
 
 // Permission-denied must not share generic write-failure wording -- this is
@@ -55,6 +64,8 @@ TEST(test_export_error_banner, permissionDeniedHasDistinctWording) {
 TEST(test_export_error_banner, shouldShowOnTransition) {
   EXPECT_TRUE(
       ExportErrorBanner::shouldShowOnTransition(kNoError, kFileWriteFailed));
+  EXPECT_TRUE(ExportErrorBanner::shouldShowOnTransition(kNoError,
+                                                        kVideoLongerThanAudio));
   EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kFileWriteFailed,
                                                          kFileWriteFailed));
   EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kNoError, kNoError));
@@ -67,39 +78,4 @@ TEST(test_export_error_banner, shouldHideOnTransition) {
   EXPECT_TRUE(ExportErrorBanner::shouldHideOnTransition(kNoError));
   EXPECT_FALSE(ExportErrorBanner::shouldHideOnTransition(kFileWriteFailed));
   EXPECT_FALSE(ExportErrorBanner::shouldHideOnTransition(kPermissionDenied));
-}
-
-// A hard error, the mismatch flag, or both together should all count as a
-// warning state; only kNoError with no mismatch should not.
-TEST(test_export_error_banner, isWarningState) {
-  EXPECT_FALSE(ExportErrorBanner::isWarningState(kNoError, false));
-  EXPECT_TRUE(ExportErrorBanner::isWarningState(kNoError, true));
-  EXPECT_TRUE(ExportErrorBanner::isWarningState(kMuxFailed, false));
-  EXPECT_TRUE(ExportErrorBanner::isWarningState(kMuxFailed, true));
-}
-
-// The mismatch message must name the mismatch (not a generic failure) and
-// must be empty when there is nothing to warn about; a real error always
-// takes priority over the mismatch wording.
-TEST(test_export_error_banner, messageForStatePrioritizesErrorOverMismatch) {
-  EXPECT_TRUE(ExportErrorBanner::messageForState(kNoError, false).isEmpty());
-  EXPECT_TRUE(ExportErrorBanner::messageForState(kNoError, true)
-                  .containsIgnoreCase("longer"));
-  EXPECT_EQ(ExportErrorBanner::messageForState(kMuxFailed, true),
-            ExportErrorBanner::messageForError(kMuxFailed));
-}
-
-// Same "only re-appear on a fresh transition" rule as shouldShowOnTransition,
-// generalized to the combined warning state used once either an error or a
-// mismatch can trigger the banner.
-TEST(test_export_error_banner, shouldShowWarning) {
-  EXPECT_TRUE(ExportErrorBanner::shouldShowWarning(false, true));
-  EXPECT_FALSE(ExportErrorBanner::shouldShowWarning(true, true));
-  EXPECT_FALSE(ExportErrorBanner::shouldShowWarning(false, false));
-}
-
-// The banner should hide exactly when the combined warning state clears.
-TEST(test_export_error_banner, shouldHideWarning) {
-  EXPECT_TRUE(ExportErrorBanner::shouldHideWarning(false));
-  EXPECT_FALSE(ExportErrorBanner::shouldHideWarning(true));
 }

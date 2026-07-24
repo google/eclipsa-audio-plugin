@@ -24,16 +24,21 @@ enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
 
 enum AudioCodec { LPCM = 0, FLAC = 1, OPUS = 2 };
 
-// Classifies why an export failed (or kNoError if it did not). Set by
-// FileOutputProcessor as it progresses through an export so failures
-// propagate out of the audio processor into the data layer instead of only
-// being logged.
+// Classifies why an export failed, or -- for kVideoLongerThanAudio -- warns
+// about it without it having failed (or kNoError if there is nothing to
+// report). Set by FileOutputProcessor as it progresses through an export so
+// failures/warnings propagate out of the audio processor into the data layer
+// instead of only being logged. Only one value is ever recorded per export;
+// a hard failure always takes priority over kVideoLongerThanAudio since it is
+// the more critical thing to surface (see the kNoError guards in
+// FileOutputProcessor).
 enum ExportError {
   kNoError = 0,
   kInvalidExportPath = 1,
   kFileWriteFailed = 2,
   kPermissionDenied = 3,
-  kMuxFailed = 4
+  kMuxFailed = 4,
+  kVideoLongerThanAudio = 5
 };
 
 // Using a macro here to help minimize the amount of code
@@ -147,9 +152,4 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(bool, exportCompleted, ExportCompleted);
   EXPORT_VALUE(juce::String, securityBookmark, SecurityBookmark);
   EXPORT_VALUE(ExportError, exportError, ExportError);
-  // Set when a video/audio mux completed but the video is longer than the
-  // exported audio (kIAMFExported and getExportVideo() were both true).
-  // Distinct from ExportError -- the export itself succeeded, this is a
-  // warning about the two inputs' lengths, not a failure to write output.
-  EXPORT_VALUE(bool, videoLongerThanAudio, VideoLongerThanAudio);
 };

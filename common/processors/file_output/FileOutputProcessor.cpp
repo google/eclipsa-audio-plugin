@@ -165,7 +165,6 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   config.setSampleTally(sampleTally_);
   // Every export begins from a clean slate.
   config.setExportError(kNoError);
-  config.setVideoLongerThanAudio(false);
   fileExportRepository_.update(config);
   // Reset the playback processor to stop any ongoing playback
   FilePlayback fpb = fpbr_.get();
@@ -264,12 +263,15 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       }
     }
 
-    // Warn (independently of mux success/failure) when the supplied video
-    // outlasts the exported audio. Measured from the per-audio-element WAV
-    // writer's own frame count rather than re-reading any file, since that
-    // count already reflects exactly how many audio frames were written
-    // (accounting for start/end trim) and is still valid here -- the
-    // writers aren't cleared until after this block.
+    // Warn when the supplied video outlasts the exported audio, unless a more
+    // critical failure (a failed write or a failed mux, just above) is
+    // already on record -- only one of these can be shown to the user, and
+    // the failure to produce a correct file is the more important thing to
+    // surface. Measured from the per-audio-element WAV writer's own frame
+    // count rather than re-reading any file, since that count already
+    // reflects exactly how many audio frames were written (accounting for
+    // start/end trim) and is still valid here -- the writers aren't cleared
+    // until after this block.
     if (!iamfWavFileWriters_.empty() && sampleRate_ > 0) {
       constexpr double kDurationMismatchToleranceSec = 0.05;
       const double kAudioDurationSec =
@@ -281,8 +283,10 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
           kVideoDurationSec >
               kAudioDurationSec + kDurationMismatchToleranceSec) {
         FileExport freshConfig = fileExportRepository_.get();
-        freshConfig.setVideoLongerThanAudio(true);
-        fileExportRepository_.update(freshConfig);
+        if (freshConfig.getExportError() == kNoError) {
+          freshConfig.setExportError(kVideoLongerThanAudio);
+          fileExportRepository_.update(freshConfig);
+        }
       }
     }
   }

@@ -268,7 +268,10 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
-  bounceAudio(fio_proc, audioElementRepository);
+  // ~5.3 seconds at 48kHz/128 frames per block -- longer than the ~3.8s
+  // default test video, so this plain mux-success check isn't also tripping
+  // the (separately tested) kVideoLongerThanAudio warning.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 2000);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
@@ -331,8 +334,8 @@ TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
 }
 
 // Issue #38: the default bounce (~21ms) is far shorter than the ~3.8s test
-// video, so the export must still succeed (no ExportError) but flag the
-// duration mismatch for the UI to warn on.
+// video, so the mux must still succeed but the export error is set to
+// kVideoLongerThanAudio for the UI to warn on.
 TEST_F(FileOutputTests, mux_flags_mismatch_when_video_longer_than_audio) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();
@@ -343,8 +346,8 @@ TEST_F(FileOutputTests, mux_flags_mismatch_when_video_longer_than_audio) {
   bounceAudio(fio_proc, audioElementRepository);
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
-  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
-  EXPECT_TRUE(fileExportRepository.get().getVideoLongerThanAudio());
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
 }
 
 // Issue #38: rendering well past the ~3.8s test video's duration means audio
@@ -362,7 +365,6 @@ TEST_F(FileOutputTests, mux_no_mismatch_when_audio_covers_video_duration) {
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
   EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
-  EXPECT_FALSE(fileExportRepository.get().getVideoLongerThanAudio());
 }
 
 // Codec param tests. These tests focus on testing advanced codec specific file
