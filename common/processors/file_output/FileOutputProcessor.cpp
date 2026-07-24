@@ -70,6 +70,7 @@ void FileOutputProcessor::prepareToPlay(const double sampleRate,
   }
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
+  framesWritten_ = 0;
   sampleRate_ = sampleRate;
 }
 
@@ -104,6 +105,7 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // If we are not performing a render or the buffer is empty, do not write
     return;
   }
+  framesWritten_ += buffer.getNumSamples();
 
   // Process audio elements individually as Wav files
   for (int i = 0; i < iamfWavFileWriters_.size(); ++i) {
@@ -160,6 +162,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
         config.getAudioCodec(), *audioElements[i]));
   }
   sampleTally_ = 0;
+  framesWritten_ = 0;
 
   // Set the sample tally in the configuration for FLAC encoding
   config.setSampleTally(sampleTally_);
@@ -263,29 +266,33 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       }
     }
 
-    // Warn when the supplied video outlasts the exported audio, unless a more
-    // critical failure (a failed write or a failed mux, just above) is
-    // already on record -- only one of these can be shown to the user, and
-    // the failure to produce a correct file is the more important thing to
-    // surface. Measured from the per-audio-element WAV writer's own frame
-    // count rather than re-reading any file, since that count already
-    // reflects exactly how many audio frames were written (accounting for
-    // start/end trim) and is still valid here -- the writers aren't cleared
-    // until after this block.
-    if (!iamfWavFileWriters_.empty() && sampleRate_ > 0) {
+    // Warn when the supplied video and the exported audio don't run the same
+    // length, in either direction, unless a more critical failure (a failed
+    // write or a failed mux, just above) is already on record -- only one of
+    // these can be shown to the user, and the failure to produce a correct
+    // file is the more important thing to surface. Audio duration comes from
+    // framesWritten_ (tracked in processBlock) rather than any writer's own
+    // tally, so this doesn't depend on the per-audio-element WAV writers
+    // existing.
+    if (framesWritten_ > 0 && sampleRate_ > 0) {
       constexpr double kDurationMismatchToleranceSec = 0.05;
       const double kAudioDurationSec =
-          iamfWavFileWriters_[0]->getFramesWritten() / sampleRate_;
+          static_cast<double>(framesWritten_) / sampleRate_;
       const double kVideoDurationSec =
           IAMFExportHelper::getMediaDurationSeconds(
               fileExportRepository_.get().getVideoSource());
-      if (kVideoDurationSec > 0.0 &&
-          kVideoDurationSec >
-              kAudioDurationSec + kDurationMismatchToleranceSec) {
+      if (kVideoDurationSec > 0.0) {
         FileExport freshConfig = fileExportRepository_.get();
         if (freshConfig.getExportError() == kNoError) {
-          freshConfig.setExportError(kVideoLongerThanAudio);
-          fileExportRepository_.update(freshConfig);
+          if (kVideoDurationSec >
+              kAudioDurationSec + kDurationMismatchToleranceSec) {
+            freshConfig.setExportError(kVideoLongerThanAudio);
+            fileExportRepository_.update(freshConfig);
+          } else if (kAudioDurationSec >
+                     kVideoDurationSec + kDurationMismatchToleranceSec) {
+            freshConfig.setExportError(kAudioLongerThanVideo);
+            fileExportRepository_.update(freshConfig);
+          }
         }
       }
     }

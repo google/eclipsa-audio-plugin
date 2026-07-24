@@ -24,21 +24,20 @@ enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
 
 enum AudioCodec { LPCM = 0, FLAC = 1, OPUS = 2 };
 
-// Classifies why an export failed, or -- for kVideoLongerThanAudio -- warns
-// about it without it having failed (or kNoError if there is nothing to
-// report). Set by FileOutputProcessor as it progresses through an export so
+// Classifies why an export failed, or warns about other export conditions.
+// Set by FileOutputProcessor as it progresses through an export so
 // failures/warnings propagate out of the audio processor into the data layer
 // instead of only being logged. Only one value is ever recorded per export;
-// a hard failure always takes priority over kVideoLongerThanAudio since it is
-// the more critical thing to surface (see the kNoError guards in
-// FileOutputProcessor).
+// failures with lower values take precedent over higher values, so the most
+// severe failure is always recorded.
 enum ExportError {
   kNoError = 0,
   kInvalidExportPath = 1,
   kFileWriteFailed = 2,
   kPermissionDenied = 3,
   kMuxFailed = 4,
-  kVideoLongerThanAudio = 5
+  kVideoLongerThanAudio = 5,
+  kAudioLongerThanVideo = 6
 };
 
 // Using a macro here to help minimize the amount of code

@@ -25,12 +25,12 @@
 #include "data_structures/src/FileExport.h"
 
 // Dismissible warning banner that surfaces why the most recent export attempt
-// failed -- or, when it otherwise succeeded, that the muxed video is longer
-// than the exported audio -- reusing WarningBannerBase's chrome. Unlike
-// DAWWarningBanner, this banner starts hidden and only shows on a fresh
-// transition into an error state (see shouldShowOnTransition) so a dismissal
-// is not immediately undone by the same still-set error value persisting in
-// the repository.
+// failed -- or, when it otherwise succeeded, that the muxed audio and video
+// don't run the same length (in either direction) -- reusing
+// WarningBannerBase's chrome. Unlike DAWWarningBanner, this banner starts
+// hidden and only shows on a fresh transition into an error state (see
+// shouldShowOnTransition) so a dismissal is not immediately undone by the
+// same still-set error value persisting in the repository.
 class ExportErrorBanner : public WarningBannerBase,
                           public juce::ValueTree::Listener {
  public:
@@ -112,6 +112,9 @@ class ExportErrorBanner : public WarningBannerBase,
                "video failed. Check the video source and output folder.";
       case kVideoLongerThanAudio:
         return "The video is longer than the exported audio. The file was "
+               "exported, but the audio and video lengths do not match.";
+      case kAudioLongerThanVideo:
+        return "The exported audio is longer than the video. The file was "
                "exported, but the audio and video lengths do not match.";
       default:
         return messageForError(kFileWriteFailed);

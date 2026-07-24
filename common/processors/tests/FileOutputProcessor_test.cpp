@@ -268,10 +268,10 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
-  // ~5.3 seconds at 48kHz/128 frames per block -- longer than the ~3.8s
-  // default test video, so this plain mux-success check isn't also tripping
-  // the (separately tested) kVideoLongerThanAudio warning.
-  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 2000);
+  // ~3.77 seconds at 48kHz/128 frames per block -- matches the test video's
+  // own duration closely enough that this plain mux-success check isn't also
+  // tripping the (separately tested) duration-mismatch warnings.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 1413);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
@@ -333,8 +333,8 @@ TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
   EXPECT_NEAR(outputDuration, videoDuration, 0.1);
 }
 
-// Issue #38: the default bounce (~21ms) is far shorter than the ~3.8s test
-// video, so the mux must still succeed but the export error is set to
+// The default bounce (~21ms) is far shorter than the ~3.77s test video, so
+// the mux must still succeed but the export error is set to
 // kVideoLongerThanAudio for the UI to warn on.
 TEST_F(FileOutputTests, mux_flags_mismatch_when_video_longer_than_audio) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
@@ -350,18 +350,37 @@ TEST_F(FileOutputTests, mux_flags_mismatch_when_video_longer_than_audio) {
             ExportError::kVideoLongerThanAudio);
 }
 
-// Issue #38: rendering well past the ~3.8s test video's duration means audio
-// is no longer shorter than video, so the mismatch flag must stay clear.
-TEST_F(FileOutputTests, mux_no_mismatch_when_audio_covers_video_duration) {
+// Rendering well past the ~3.77s test video's duration means the exported
+// audio now outlasts the video, so the export error should flip to the
+// opposite-direction warning instead of clearing.
+TEST_F(FileOutputTests, mux_flags_mismatch_when_audio_longer_than_video) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE});
 
   setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
-  // ~5.3 seconds at 48kHz/128 frames per block -- longer than the ~3.8s
+  // ~5.3 seconds at 48kHz/128 frames per block -- longer than the ~3.77s
   // default test video.
   bounceAudio(fio_proc, audioElementRepository, 48000, 128, 2000);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kAudioLongerThanVideo);
+}
+
+// Bouncing audio to closely match the test video's own ~3.77s duration
+// should leave the export error clear in either direction.
+TEST_F(FileOutputTests, mux_no_mismatch_when_durations_match) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // ~3.77 seconds at 48kHz/128 frames per block -- matches the default test
+  // video's own duration within the mismatch tolerance.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 1413);
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
   EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
