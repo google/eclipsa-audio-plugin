@@ -270,10 +270,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
     // length, in either direction, unless a more critical failure (a failed
     // write or a failed mux, just above) is already on record -- only one of
     // these can be shown to the user, and the failure to produce a correct
-    // file is the more important thing to surface. Audio duration comes from
-    // framesWritten_ (tracked in processBlock) rather than any writer's own
-    // tally, so this doesn't depend on the per-audio-element WAV writers
-    // existing.
+    // file is the more important thing to surface.
     if (framesWritten_ > 0 && sampleRate_ > 0) {
       constexpr double kDurationMismatchToleranceSec = 0.05;
       const double kAudioDurationSec =

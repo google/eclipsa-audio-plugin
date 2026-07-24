@@ -104,11 +104,7 @@ class FileOutputProcessor : public ProcessorBase {
   long startSampleIdx_;
   long endSampleIdx_;
   long sampleTally_;
-  // Count of samples actually handed to the writers this export (respecting
-  // start/end trim), tracked here rather than read back from any individual
-  // writer so the duration-mismatch check in closeFileExport doesn't depend
-  // on the per-audio-element WAV writers existing.
-  long framesWritten_;
+  long framesWritten_; // Count of samples actually handed to the writers this export
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   void* securityScopedHandle_ = nullptr;
   //==============================================================================

@@ -24,10 +24,8 @@
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_structures/src/FileExport.h"
 
-// Dismissible warning banner that surfaces why the most recent export attempt
-// failed -- or, when it otherwise succeeded, that the muxed audio and video
-// don't run the same length (in either direction) -- reusing
-// WarningBannerBase's chrome. Unlike DAWWarningBanner, this banner starts
+// Dismissible warning banner that surfaces failures or warnings
+// that occur during file export. Unlike DAWWarningBanner, this banner starts
 // hidden and only shows on a fresh transition into an error state (see
 // shouldShowOnTransition) so a dismissal is not immediately undone by the
 // same still-set error value persisting in the repository.
