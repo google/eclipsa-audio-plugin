@@ -41,5 +41,5 @@ bool muxIAMF(const FileExport& exportData);
 
 // Returns the media file's duration in seconds (movie-level duration /
 // timescale), or -1.0 if the file cannot be opened or has no timescale.
-double getMediaDurationSeconds(const juce::String& mediaFilePath);
+[[nodiscard]] double getMediaDurationSeconds(const juce::String& mediaFilePath);
 }  // namespace IAMFExportHelper

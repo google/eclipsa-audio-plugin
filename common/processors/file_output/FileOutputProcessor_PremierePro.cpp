@@ -56,6 +56,7 @@ void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
 
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
+  framesWritten_ = 0;
   sampleRate_ = sampleRate;
 }
 

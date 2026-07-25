@@ -290,10 +290,15 @@ TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
+  // Default bounce (~21ms) is far shorter than the fixture video, so this
+  // also exercises (without separately re-testing) the mismatch warning
+  // path covered explicitly by mux_flags_mismatch_when_video_longer_than_audio.
   bounceAudio(fio_proc, audioElementRepository);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
 }
 
 TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
@@ -309,10 +314,14 @@ TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
+  // Default bounce (~21ms) is far shorter than the fixture video -- see the
+  // note on mux_iamf_flac_2ae_1mp above.
   bounceAudio(fio_proc, audioElementRepository);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
 }
 
 TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
@@ -322,6 +331,8 @@ TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
 
   setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
+  // Default bounce (~21ms) is far shorter than the fixture video -- see the
+  // note on mux_iamf_flac_2ae_1mp above.
   bounceAudio(fio_proc, audioElementRepository);
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
@@ -332,6 +343,8 @@ TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
   ASSERT_GT(videoDuration, 0.0);
   ASSERT_GT(outputDuration, 0.0);
   EXPECT_NEAR(outputDuration, videoDuration, 0.1);
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
 }
 
 // The default bounce (~21ms) is far shorter than the ~3.77s test video, so
