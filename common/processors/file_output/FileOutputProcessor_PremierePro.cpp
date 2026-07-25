@@ -85,6 +85,7 @@ void PremiereProFileOutputProcessor::processBlock(
   if (!shouldBufferBeWritten(buffer)) {
     return;
   }
+  framesWritten_ += buffer.getNumSamples();
 
   //  Write the audio data to the wav file writers
   for (auto& writer : iamfWavFileWriters_) {

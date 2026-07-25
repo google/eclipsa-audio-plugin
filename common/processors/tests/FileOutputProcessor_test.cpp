@@ -30,6 +30,7 @@
 
 #include "FileOutputTestFixture.h"
 #include "juce_cryptography/juce_cryptography.h"
+#include "processors/file_output/iamf_export_utils/IAMFExportUtil.h"
 #include "processors/tests/FileOutputTestUtils.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -384,6 +385,54 @@ TEST_F(FileOutputTests, mux_no_mismatch_when_durations_match) {
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
   EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+}
+
+// Regression test: IAMFExportHelper::getMediaDurationSeconds previously
+// reported the MP4 container's movie-level duration -- the longest track in
+// the file -- as "the video's duration." A source file with a non-visual
+// track (e.g. an embedded audio track) longer than its video track would
+// silently defeat the mismatch-detection feature this PR adds. Synthesize a
+// video with a 1s video track and a 3s audio track and confirm the video
+// track's own duration is reported, not the longer container duration.
+TEST_F(FileOutputTests, get_media_duration_uses_video_track_not_container) {
+  const std::filesystem::path kMixedDurationVideo =
+      std::filesystem::current_path() / "mixed_duration_test.mp4";
+  std::filesystem::remove(kMixedDurationVideo);
+
+  juce::StringArray ffmpegArgs;
+  ffmpegArgs.add("-y");
+  ffmpegArgs.add("-f");
+  ffmpegArgs.add("lavfi");
+  ffmpegArgs.add("-t");
+  ffmpegArgs.add("1");
+  ffmpegArgs.add("-i");
+  ffmpegArgs.add("color=c=black:s=64x64");
+  ffmpegArgs.add("-f");
+  ffmpegArgs.add("lavfi");
+  ffmpegArgs.add("-t");
+  ffmpegArgs.add("3");
+  ffmpegArgs.add("-i");
+  ffmpegArgs.add("anullsrc=r=48000:cl=mono");
+  ffmpegArgs.add("-c:v");
+  ffmpegArgs.add("libx264");
+  ffmpegArgs.add("-pix_fmt");
+  ffmpegArgs.add("yuv420p");
+  ffmpegArgs.add("-c:a");
+  ffmpegArgs.add("aac");
+  ffmpegArgs.add(kMixedDurationVideo.string());
+
+  auto [exitCode, output] = executeCommand("ffmpeg", ffmpegArgs);
+  ASSERT_EQ(exitCode, 0) << "ffmpeg fixture generation failed: " << output;
+  ASSERT_TRUE(std::filesystem::exists(kMixedDurationVideo));
+
+  const double kDurationSec =
+      IAMFExportHelper::getMediaDurationSeconds(kMixedDurationVideo.string());
+
+  // The video track is ~1s; the container/audio track is ~3s. A correct
+  // implementation reports the video track's duration.
+  EXPECT_NEAR(kDurationSec, 1.0, 0.1);
+
+  std::filesystem::remove(kMixedDurationVideo);
 }
 
 // Codec param tests. These tests focus on testing advanced codec specific file

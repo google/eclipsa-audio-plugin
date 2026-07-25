@@ -118,6 +118,27 @@ TEST_F(FileOutputTests, pp_invalid_path_does_not_crash) {
             ExportError::kInvalidExportPath);
 }
 
+// Regression test: PremiereProFileOutputProcessor::processBlock previously
+// never incremented framesWritten_ (only the base FileOutputProcessor's
+// override did), so the audio/video duration-mismatch check in the shared,
+// inherited closeFileExport() was always guarded off (framesWritten_ stayed
+// 0) for every Premiere Pro export, silently defeating the warning for this
+// entire export path.
+TEST_F(FileOutputTests, pp_flags_mismatch_when_video_longer_than_audio) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
+                         mixRepository, mixPresentationLoudnessRepository);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
+}
+
 TEST_F(FileOutputTests, pp_validate_file_checksum) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();
