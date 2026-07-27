@@ -260,10 +260,12 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       }
     }
 
-    // Only escalate to the mismatch check if a more critical failure (a
-    // failed write or a failed mux, just above) is not already on record --
-    // only one of these can be shown to the user, and the failure to produce
-    // a correct file is the more important thing to surface.
+    // Run the mismatch check regardless of whether the mux above succeeded.
+    // Only one of a failed write, a failed mux, or a duration mismatch can be
+    // shown to the user; checkAudioVideoDurationMismatch stays silent if a
+    // more critical failure is already on record via
+    // FileExport::recordExportErrorIfUnset's first-recorded-error-wins
+    // semantics, not via a guard here.
     checkAudioVideoDurationMismatch();
   }
 
