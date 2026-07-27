@@ -84,8 +84,8 @@ void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto playHead = getPlayHead();
     if (playHead != NULL) {  // Happens in debug
       auto position = getPlayHead()->getPosition();
-      const long currentSample =
-          static_cast<long>(*position->getTimeInSeconds() * sampleRate_);
+      const juce::int64 currentSample =
+          static_cast<juce::int64>(*position->getTimeInSeconds() * sampleRate_);
       if ((endSampleIdx_ == 0) || (currentSample >= startSampleIdx_ &&
                                    currentSample <= endSampleIdx_)) {
         writeFailed = !fileWriter_->write(buffer);

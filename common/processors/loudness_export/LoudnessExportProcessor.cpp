@@ -265,9 +265,9 @@ bool LoudnessExportProcessor::areLoudnessCalcsRequired(
     return false;
   }
 
-  const long currentSample = sampleTally_;
+  const juce::int64 currentSample = sampleTally_;
   sampleTally_ += buffer.getNumSamples();
-  const long nextSample = sampleTally_;
+  const juce::int64 nextSample = sampleTally_;
 
   if (startSampleIdx_ != 0 || endSampleIdx_ != 0) {
     // Handle the case where startSampleIdx and endSampleIdx are set, implying

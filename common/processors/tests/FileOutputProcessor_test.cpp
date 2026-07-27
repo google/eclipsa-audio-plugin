@@ -400,6 +400,35 @@ TEST_F(FileOutputTests, mux_no_mismatch_when_durations_match) {
   EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
 }
 
+// Regression test: closeFileExport documents that
+// checkAudioVideoDurationMismatch runs unconditionally after a mux attempt and
+// relies on FileExport::recordExportErrorIfUnset's first-recorded-error-wins
+// semantics to stay silent when a more critical failure is already on record --
+// but nothing previously exercised a case where a mux failure AND a genuine
+// duration mismatch would both fire, to confirm the mux failure wins. Point the
+// video export folder at an invalid path (forcing a mux failure) while keeping
+// the video source at the default ~3.77s test video and rendering only the
+// default short (~21ms) bounce, which alone would trip kVideoLongerThanAudio --
+// the export error must still surface as kMuxFailed, not the mismatch warning.
+TEST_F(FileOutputTests, mux_failure_takes_priority_over_duration_mismatch) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidVoutPath = "/invalid_path/muxed.mp4";
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+  FileExport config = fileExportRepository.get();
+  config.setVideoExportFolder(kInvalidVoutPath.string());
+  fileExportRepository.update(config);
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
+}
+
 // Regression test: IAMFExportHelper::getMediaDurationSeconds previously
 // reported the MP4 container's movie-level duration -- the longest track in
 // the file -- as "the video's duration." A source file with a non-visual
