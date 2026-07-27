@@ -116,9 +116,7 @@ void WavFileOutputProcessor::recordWriteFailureIfAny(bool writeSucceeded) {
   // Deferred via deferRepositoryUpdate() -- see its declaration for why this
   // can't call fileExportRepository_.update() synchronously.
   deferRepositoryUpdate([](FileExport& config) {
-    if (config.getExportError() == kNoError) {
-      config.setExportError(kFileWriteFailed);
-    }
+    config.recordExportErrorIfUnset(kFileWriteFailed);
   });
 }
 
@@ -150,10 +148,8 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
                   "WavFileOutputProcessor: Failed to open file for writing: " +
                       kFailedFilePath);
         deferRepositoryUpdate([kFailedFilePath](FileExport& config) {
-          if (config.getExportError() == kNoError) {
-            config.setExportError(
-                classifyWriteFailure(juce::String(kFailedFilePath)));
-          }
+          config.recordExportErrorIfUnset(
+              classifyWriteFailure(juce::String(kFailedFilePath)));
         });
       }
       performingRender_ = true;
@@ -166,9 +162,7 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
         // an unreported write failure. Only escalate if nothing more
         // specific has already been recorded earlier in this export.
         deferRepositoryUpdate([](FileExport& config) {
-          if (config.getExportError() == kNoError) {
-            config.setExportError(kFileWriteFailed);
-          }
+          config.recordExportErrorIfUnset(kFileWriteFailed);
         });
       }
       delete fileWriter_;

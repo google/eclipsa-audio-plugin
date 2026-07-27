@@ -139,6 +139,51 @@ TEST_F(FileOutputTests, pp_flags_mismatch_when_video_longer_than_audio) {
             ExportError::kVideoLongerThanAudio);
 }
 
+// Regression test: the base FileOutputProcessor test suite covers the
+// opposite direction (audio outlasting video) and the no-mismatch case, but
+// the Premiere Pro path -- whose framesWritten_ tracking this PR also fixes
+// -- previously only exercised the video-longer-than-audio direction above.
+// Rendering well past the ~3.77s test video's duration means the exported
+// audio now outlasts the video, so the export error should flip to the
+// opposite-direction warning instead of clearing.
+TEST_F(FileOutputTests, pp_flags_mismatch_when_audio_longer_than_video) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // ~5.3 seconds at 48kHz/128 frames per block -- longer than the ~3.77s
+  // default test video.
+  bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
+                         mixRepository, mixPresentationLoudnessRepository,
+                         48000, 128, 2000);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kAudioLongerThanVideo);
+}
+
+// Regression test: bouncing audio to closely match the test video's own
+// ~3.77s duration on the Premiere Pro path should leave the export error
+// clear in either direction, mirroring the base FileOutputProcessor coverage.
+TEST_F(FileOutputTests, pp_no_mismatch_when_durations_match) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // ~3.77 seconds at 48kHz/128 frames per block -- matches the default test
+  // video's own duration within the mismatch tolerance.
+  bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
+                         mixRepository, mixPresentationLoudnessRepository,
+                         48000, 128, 1413);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+}
+
 TEST_F(FileOutputTests, pp_validate_file_checksum) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();

@@ -114,8 +114,7 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       // WAV size limit exceeded). Record it unless a more specific error is
       // already on record, mirroring the guard used for the IAMF path below.
       FileExport config = fileExportRepository_.get();
-      if (config.getExportError() == kNoError) {
-        config.setExportError(kFileWriteFailed);
+      if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
         fileExportRepository_.update(config);
       }
     }
@@ -127,8 +126,7 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // more specific error is already on record, mirroring the guard used at
     // close-time and mux-time in closeFileExport.
     FileExport config = fileExportRepository_.get();
-    if (config.getExportError() == kNoError) {
-      config.setExportError(kFileWriteFailed);
+    if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
       fileExportRepository_.update(config);
     }
   }
@@ -212,9 +210,8 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
                 "file for writing: " +
                     writer->getFilePath());
       FileExport freshConfig = fileExportRepository_.get();
-      if (freshConfig.getExportError() == kNoError) {
-        freshConfig.setExportError(
-            classifyWriteFailure(juce::String(writer->getFilePath())));
+      if (freshConfig.recordExportErrorIfUnset(
+              classifyWriteFailure(juce::String(writer->getFilePath())))) {
         fileExportRepository_.update(freshConfig);
       }
     }
@@ -231,8 +228,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       // already been recorded earlier in this export (mirrors the IAMF close
       // guard just below).
       FileExport freshConfig = fileExportRepository_.get();
-      if (freshConfig.getExportError() == kNoError) {
-        freshConfig.setExportError(kFileWriteFailed);
+      if (freshConfig.recordExportErrorIfUnset(kFileWriteFailed)) {
         fileExportRepository_.update(freshConfig);
       }
     }
@@ -247,8 +243,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
     // an unreported write failure. Only escalate if nothing more specific
     // has already been recorded earlier in this export.
     FileExport freshConfig = fileExportRepository_.get();
-    if (freshConfig.getExportError() == kNoError) {
-      freshConfig.setExportError(kFileWriteFailed);
+    if (freshConfig.recordExportErrorIfUnset(kFileWriteFailed)) {
       fileExportRepository_.update(freshConfig);
     }
   }
@@ -260,8 +255,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       LOG_WARNING(0,
                   "IAMF Muxing: Failed to mux IAMF file with provided video.");
       FileExport freshConfig = fileExportRepository_.get();
-      if (freshConfig.getExportError() == kNoError) {
-        freshConfig.setExportError(kMuxFailed);
+      if (freshConfig.recordExportErrorIfUnset(kMuxFailed)) {
         fileExportRepository_.update(freshConfig);
       }
     }
@@ -280,16 +274,17 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
               fileExportRepository_.get().getVideoSource());
       if (kVideoDurationSec > 0.0) {
         FileExport freshConfig = fileExportRepository_.get();
-        if (freshConfig.getExportError() == kNoError) {
-          if (kVideoDurationSec >
-              kAudioDurationSec + kDurationMismatchToleranceSec) {
-            freshConfig.setExportError(kVideoLongerThanAudio);
-            fileExportRepository_.update(freshConfig);
-          } else if (kAudioDurationSec >
-                     kVideoDurationSec + kDurationMismatchToleranceSec) {
-            freshConfig.setExportError(kAudioLongerThanVideo);
-            fileExportRepository_.update(freshConfig);
-          }
+        ExportError mismatchError = kNoError;
+        if (kVideoDurationSec >
+            kAudioDurationSec + kDurationMismatchToleranceSec) {
+          mismatchError = kVideoLongerThanAudio;
+        } else if (kAudioDurationSec >
+                   kVideoDurationSec + kDurationMismatchToleranceSec) {
+          mismatchError = kAudioLongerThanVideo;
+        }
+        if (mismatchError != kNoError &&
+            freshConfig.recordExportErrorIfUnset(mismatchError)) {
+          fileExportRepository_.update(freshConfig);
         }
       }
     }

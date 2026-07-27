@@ -25,11 +25,15 @@ enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
 enum AudioCodec { LPCM = 0, FLAC = 1, OPUS = 2 };
 
 // Classifies why an export failed, or warns about other export conditions.
-// Set by FileOutputProcessor as it progresses through an export so
-// failures/warnings propagate out of the audio processor into the data layer
-// instead of only being logged. Only one value is ever recorded per export;
-// failures with lower values take precedent over higher values, so the most
-// severe failure is always recorded.
+// Set by FileOutputProcessor via FileExport::recordExportErrorIfUnset() as it
+// progresses through an export, so failures/warnings propagate out of the
+// audio processor into the data layer instead of only being logged. Only the
+// first error/warning recorded during an export is kept -- later
+// recordExportErrorIfUnset() calls are no-ops once any non-kNoError value is
+// set. The values below are ordered to match the sequence these conditions
+// are checked during an export (per-block write failures, then close/mux
+// failures, then the duration-mismatch check), not by comparison of the
+// values themselves.
 enum ExportError {
   kNoError = 0,
   kInvalidExportPath = 1,
@@ -151,4 +155,18 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(bool, exportCompleted, ExportCompleted);
   EXPORT_VALUE(juce::String, securityBookmark, SecurityBookmark);
   EXPORT_VALUE(ExportError, exportError, ExportError);
+
+ public:
+  // Records newError only if no error/warning has been recorded yet for this
+  // export -- the first call wins; every subsequent call is a no-op until
+  // the next export resets exportError_ back to kNoError. Returns whether
+  // newError was recorded, so callers can skip an unnecessary repository
+  // update when nothing changed.
+  bool recordExportErrorIfUnset(ExportError newError) {
+    if (exportError_ == kNoError) {
+      exportError_ = newError;
+      return true;
+    }
+    return false;
+  }
 };

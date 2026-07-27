@@ -96,8 +96,7 @@ void PremiereProFileOutputProcessor::processBlock(
       // mirroring the guard used for the IAMF path below and in the base
       // FileOutputProcessor::processBlock.
       FileExport config = fileExportRepository_.get();
-      if (config.getExportError() == kNoError) {
-        config.setExportError(kFileWriteFailed);
+      if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
         fileExportRepository_.update(config);
       }
     }
@@ -111,8 +110,7 @@ void PremiereProFileOutputProcessor::processBlock(
     // export path leaves performingRender_ true but iamfFileWriter_ unset),
     // which this override previously dereferenced unconditionally.
     FileExport config = fileExportRepository_.get();
-    if (config.getExportError() == kNoError) {
-      config.setExportError(kFileWriteFailed);
+    if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
       fileExportRepository_.update(config);
     }
   }
