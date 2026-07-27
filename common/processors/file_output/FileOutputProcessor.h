@@ -83,6 +83,11 @@ class FileOutputProcessor : public ProcessorBase {
 
   void closeFileExport(const FileExport& config);
 
+  // Warns when the supplied video and the exported audio don't run the same
+  // length, in either direction, unless a more critical failure is already
+  // on record. Called from closeFileExport after a successful mux.
+  void checkAudioVideoDurationMismatch();
+
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
 
   // Classifies a file write failure by probing whether the parent directory

@@ -436,7 +436,7 @@ bool muxIAMF(const FileExport& exportData) {
 
 double getMediaDurationSeconds(const juce::String& mediaFilePath) {
   std::unique_ptr<GF_ISOFile, decltype(&gf_isom_close)> file(
-      gf_isom_open(mediaFilePath.toRawUTF8(), GF_ISOM_OPEN_READ, NULL),
+      gf_isom_open(mediaFilePath.toRawUTF8(), GF_ISOM_OPEN_READ, nullptr),
       &gf_isom_close);
   if (!file) return -1.0;
   const u32 timescale = gf_isom_get_timescale(file.get());

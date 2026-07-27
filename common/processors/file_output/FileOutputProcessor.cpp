@@ -260,34 +260,11 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       }
     }
 
-    // Warn when the supplied video and the exported audio don't run the same
-    // length, in either direction, unless a more critical failure (a failed
-    // write or a failed mux, just above) is already on record -- only one of
-    // these can be shown to the user, and the failure to produce a correct
-    // file is the more important thing to surface.
-    if (framesWritten_ > 0 && sampleRate_ > 0) {
-      constexpr double kDurationMismatchToleranceSec = 0.05;
-      const double kAudioDurationSec =
-          static_cast<double>(framesWritten_) / sampleRate_;
-      const double kVideoDurationSec =
-          IAMFExportHelper::getMediaDurationSeconds(
-              fileExportRepository_.get().getVideoSource());
-      if (kVideoDurationSec > 0.0) {
-        FileExport freshConfig = fileExportRepository_.get();
-        ExportError mismatchError = kNoError;
-        if (kVideoDurationSec >
-            kAudioDurationSec + kDurationMismatchToleranceSec) {
-          mismatchError = kVideoLongerThanAudio;
-        } else if (kAudioDurationSec >
-                   kVideoDurationSec + kDurationMismatchToleranceSec) {
-          mismatchError = kAudioLongerThanVideo;
-        }
-        if (mismatchError != kNoError &&
-            freshConfig.recordExportErrorIfUnset(mismatchError)) {
-          fileExportRepository_.update(freshConfig);
-        }
-      }
-    }
+    // Only escalate to the mismatch check if a more critical failure (a
+    // failed write or a failed mux, just above) is not already on record --
+    // only one of these can be shown to the user, and the failure to produce
+    // a correct file is the more important thing to surface.
+    checkAudioVideoDurationMismatch();
   }
 
   if (!config.getExportAudioElements()) {
@@ -309,6 +286,32 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
   LOG_DEBUG(0, "FileOutputProcessor: Stopping security scoped access");
   stopSecurityScopedAccess(securityScopedHandle_);
   securityScopedHandle_ = nullptr;
+}
+
+void FileOutputProcessor::checkAudioVideoDurationMismatch() {
+  if (!(framesWritten_ > 0 && sampleRate_ > 0)) {
+    return;
+  }
+  constexpr double kDurationMismatchToleranceSec = 0.05;
+  const double kAudioDurationSec =
+      static_cast<double>(framesWritten_) / sampleRate_;
+  const double kVideoDurationSec = IAMFExportHelper::getMediaDurationSeconds(
+      fileExportRepository_.get().getVideoSource());
+  if (kVideoDurationSec <= 0.0) {
+    return;
+  }
+  FileExport freshConfig = fileExportRepository_.get();
+  ExportError mismatchError = kNoError;
+  if (kVideoDurationSec > kAudioDurationSec + kDurationMismatchToleranceSec) {
+    mismatchError = kVideoLongerThanAudio;
+  } else if (kAudioDurationSec >
+             kVideoDurationSec + kDurationMismatchToleranceSec) {
+    mismatchError = kAudioLongerThanVideo;
+  }
+  if (mismatchError != kNoError &&
+      freshConfig.recordExportErrorIfUnset(mismatchError)) {
+    fileExportRepository_.update(freshConfig);
+  }
 }
 
 bool FileOutputProcessor::shouldBufferBeWritten(
