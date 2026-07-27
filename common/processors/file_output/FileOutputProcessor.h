@@ -112,8 +112,8 @@ class FileOutputProcessor : public ProcessorBase {
   long startSampleIdx_;
   long endSampleIdx_;
   long sampleTally_;
-  long framesWritten_;  // Count of samples actually handed to the writers
-                        // this export
+  juce::int64 framesWritten_ = 0;  // Count of samples actually handed to the
+                                   // writers this export
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   void* securityScopedHandle_ = nullptr;
   //==============================================================================
