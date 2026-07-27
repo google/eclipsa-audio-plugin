@@ -322,7 +322,7 @@ bool FileOutputProcessor::shouldBufferBeWritten(
     return false;
   }
 
-  const long currentSample = sampleTally_;
+  const juce::int64 currentSample = sampleTally_;
   sampleTally_ += buffer.getNumSamples();
 
   // No range specified — write everything

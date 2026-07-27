@@ -41,7 +41,7 @@ FileExport::FileExport()
       securityBookmark_(""),
       exportError_(kNoError) {}
 
-FileExport::FileExport(long startSampleIdx, long endSampleIdx,
+FileExport::FileExport(juce::int64 startSampleIdx, juce::int64 endSampleIdx,
                        juce::String exportFile, juce::String exportFolder,
                        AudioFileFormat audioFileFormat, AudioCodec audioCodec,
                        int bitDepth, int sampleRate, bool exportAudioElements,
@@ -92,8 +92,8 @@ FileExport FileExport::fromTree(const juce::ValueTree tree) {
 
 juce::ValueTree FileExport::toValueTree() const {
   return {kTreeType,
-          {{kStartSampleIdx, static_cast<juce::int64>(startSampleIdx_)},
-           {kEndSampleIdx, static_cast<juce::int64>(endSampleIdx_)},
+          {{kStartSampleIdx, startSampleIdx_},
+           {kEndSampleIdx, endSampleIdx_},
            {kExportFile, exportFile_},
            {kExportFolder, exportFolder_},
            {kAudioFileFormat, audioFileFormat_},
@@ -110,7 +110,7 @@ juce::ValueTree FileExport::toValueTree() const {
            {kFlacCompressionLevel, flac_compression_level_},
            {kOpusTotalBitrate, opus_total_bitrate_},
            {kLPCMSampleSize, lpcm_sample_size_},
-           {kSampleTally, static_cast<juce::int64>(sample_tally_)},
+           {kSampleTally, sample_tally_},
            {kExportCompleted, exportCompleted_},
            {kSecurityBookmark, securityBookmark_},
            {kExportError, static_cast<int>(exportError_)}}};

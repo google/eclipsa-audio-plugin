@@ -109,9 +109,9 @@ class FileOutputProcessor : public ProcessorBase {
   std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
   int numSamples_;
   double sampleRate_;
-  long startSampleIdx_;
-  long endSampleIdx_;
-  long sampleTally_;
+  juce::int64 startSampleIdx_;
+  juce::int64 endSampleIdx_;
+  juce::int64 sampleTally_;
   juce::int64 framesWritten_ = 0;  // Count of samples actually handed to the
                                    // writers this export
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
