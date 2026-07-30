@@ -400,16 +400,16 @@ TEST_F(FileOutputTests, mux_no_mismatch_when_durations_match) {
   EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
 }
 
-// Regression test: closeFileExport documents that
-// checkAudioVideoDurationMismatch runs unconditionally after a mux attempt and
-// relies on FileExport::recordExportErrorIfUnset's first-recorded-error-wins
-// semantics to stay silent when a more critical failure is already on record --
-// but nothing previously exercised a case where a mux failure AND a genuine
-// duration mismatch would both fire, to confirm the mux failure wins. Point the
-// video export folder at an invalid path (forcing a mux failure) while keeping
-// the video source at the default ~3.77s test video and rendering only the
-// default short (~21ms) bounce, which alone would trip kVideoLongerThanAudio --
-// the export error must still surface as kMuxFailed, not the mismatch warning.
+// Regression test: closeFileExport only runs checkAudioVideoDurationMismatch
+// after a successful mux -- on a mux failure it is skipped entirely (both to
+// avoid opening the untrusted video file on a path that previously never
+// touched it, and because kMuxFailed already wins under
+// FileExport::recordExportErrorIfUnset's first-recorded-error-wins
+// semantics). Point the video export folder at an invalid path (forcing a mux
+// failure) while keeping the video source at the default ~3.77s test video
+// and rendering only the default short (~21ms) bounce, which alone would trip
+// kVideoLongerThanAudio if the mismatch check ran -- the export error must
+// still surface as kMuxFailed, not the mismatch warning.
 TEST_F(FileOutputTests, mux_failure_takes_priority_over_duration_mismatch) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();

@@ -454,7 +454,8 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   startTimer_.setText(
       timeToString(config.getStartSampleIdx(), startTimeFormat_));
   startTimer_.onTextChanged([this] {
-    long startTime = stringToSamples(startTimer_.getText(), startTimeFormat_);
+    juce::int64 startTime =
+        stringToSamples(startTimer_.getText(), startTimeFormat_);
     if (startTime < 0) {
       juce::String errorMsg = "Invalid time format. Expected: ";
       switch (startTimeFormat_) {
@@ -481,7 +482,7 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
   });
   endTimer_.setText(timeToString(config.getEndSampleIdx(), endTimeFormat_));
   endTimer_.onTextChanged([this] {
-    long endTime = stringToSamples(endTimer_.getText(), endTimeFormat_);
+    juce::int64 endTime = stringToSamples(endTimer_.getText(), endTimeFormat_);
     if (endTime < 0) {
       juce::String errorMsg = "Invalid time format. Expected: ";
       switch (endTimeFormat_) {
@@ -804,7 +805,7 @@ void FileExportScreen::paint(juce::Graphics& g) {
   exportValidation_.setBounds(validationBounds);
 };
 
-juce::String FileExportScreen::timeToString(long sampleCount,
+juce::String FileExportScreen::timeToString(juce::int64 sampleCount,
                                             TimeFormat format) {
   const int sr = repository_->get().getSampleRate();
   const double seconds = (sr > 0) ? static_cast<double>(sampleCount) / sr : 0.0;
@@ -826,26 +827,30 @@ juce::String FileExportScreen::timeToString(long sampleCount,
   }
 }
 
-long FileExportScreen::stringToSamples(juce::String val, TimeFormat format) {
+juce::int64 FileExportScreen::stringToSamples(juce::String val,
+                                              TimeFormat format) {
   const int sr = repository_->get().getSampleRate();
   switch (format) {
     case TimeFormat::HoursMinutesSeconds:
-      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val) * sr);
+      return static_cast<juce::int64>(TimeFormatConverter::hmsToSeconds(val) *
+                                      sr);
     case TimeFormat::BarsBeats:
       if (cachedBpm_.hasValue() && cachedTimeSignature_.hasValue())
-        return static_cast<long>(TimeFormatConverter::barsBeatsToSeconds(
-                                     val, *cachedBpm_, *cachedTimeSignature_) *
-                                 sr);
+        return static_cast<juce::int64>(
+            TimeFormatConverter::barsBeatsToSeconds(val, *cachedBpm_,
+                                                    *cachedTimeSignature_) *
+            sr);
       return -1;
     case TimeFormat::Timecode:
       if (cachedFrameRate_.hasValue())
-        return static_cast<long>(
+        return static_cast<juce::int64>(
             TimeFormatConverter::timecodeToMs(
                 val, cachedFrameRate_->getEffectiveRate()) /
             1000.0 * sr);
       return -1;
     default:
-      return static_cast<long>(TimeFormatConverter::hmsToSeconds(val) * sr);
+      return static_cast<juce::int64>(TimeFormatConverter::hmsToSeconds(val) *
+                                      sr);
   }
 }
 

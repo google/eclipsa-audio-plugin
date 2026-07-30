@@ -260,13 +260,15 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       }
     }
 
-    // Run the mismatch check regardless of whether the mux above succeeded.
-    // Only one of a failed write, a failed mux, or a duration mismatch can be
-    // shown to the user; checkAudioVideoDurationMismatch stays silent if a
-    // more critical failure is already on record via
-    // FileExport::recordExportErrorIfUnset's first-recorded-error-wins
-    // semantics, not via a guard here.
-    checkAudioVideoDurationMismatch();
+    // Only run the mismatch check when the mux above succeeded. If it
+    // failed, kMuxFailed is already on record and the video file was never
+    // opened by muxIAMF() (muxVideo() short-circuits after a failed audio
+    // mux) -- gating here keeps that same invariant instead of having
+    // checkAudioVideoDurationMismatch() open the untrusted user-supplied
+    // video file on a path that previously never touched it.
+    if (kMuxIamfSuccess) {
+      checkAudioVideoDurationMismatch();
+    }
   }
 
   if (!config.getExportAudioElements()) {

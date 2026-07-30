@@ -84,11 +84,13 @@ class FileOutputProcessor : public ProcessorBase {
   void closeFileExport(const FileExport& config);
 
   // Warns when the supplied video and the exported audio don't run the same
-  // length, in either direction. Called from closeFileExport whenever a mux
-  // was attempted, whether or not it succeeded; relies on
+  // length, in either direction. Called from closeFileExport only after a
+  // successful mux -- a failed mux already means kMuxFailed is on record,
+  // and skipping the check keeps this from opening the video file on a path
+  // that previously never touched it. Also relies on
   // FileExport::recordExportErrorIfUnset's first-recorded-error-wins
-  // semantics to stay silent if a more critical failure (a failed write or a
-  // failed mux) is already on record.
+  // semantics to stay silent if a more critical failure (a failed write) is
+  // already on record.
   void checkAudioVideoDurationMismatch();
 
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);

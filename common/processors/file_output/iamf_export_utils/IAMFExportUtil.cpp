@@ -70,7 +70,8 @@ void writeLPCMConfigMD(const int samplesPerBlock, const int sampleRate,
   lpcmConfigMD->set_sample_rate(sampleRate);
 }
 
-void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
+void writeFLACConfigMD(const int samplesPerBlock,
+                       const juce::int64 samplesProcessed,
                        const int bitsPerSample, const int compressionLevel,
                        const int sampleRate,
                        iamf_tools_cli_proto::UserMetadata& user_metadata) {
@@ -435,27 +436,48 @@ bool muxIAMF(const FileExport& exportData) {
 }
 
 double getMediaDurationSeconds(const juce::String& mediaFilePath) {
-  std::unique_ptr<GF_ISOFile, decltype(&gf_isom_close)> file(
-      gf_isom_open(mediaFilePath.toRawUTF8(), GF_ISOM_OPEN_READ, nullptr),
-      &gf_isom_close);
-  if (!file) return -1.0;
-  const u32 timescale = gf_isom_get_timescale(file.get());
+  // GPAC requires gf_sys_init()/gf_sys_close() to bracket use of its APIs;
+  // this function can run independently of muxIAMF() (whose own
+  // init/close bracket does not cover this call), so it brackets its own
+  // GPAC calls here.
+  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
+  if (init_err != GF_OK) {
+    LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
+    return -1.0;
+  }
 
-  // Prefer the video track's own duration (movie timescale, same as
-  // gf_isom_get_duration below) over the container-level duration: a file
-  // with a non-visual track (e.g. embedded audio) whose length differs from
-  // the video would otherwise report the wrong duration here, the same
-  // pitfall muxVideo() above already works around for the muxed output.
-  u64 duration = gf_isom_get_duration(file.get());
-  const u32 trackCount = gf_isom_get_track_count(file.get());
-  for (u32 i = 1; i <= trackCount; i++) {
-    if (gf_isom_get_media_type(file.get(), i) == GF_ISOM_MEDIA_VISUAL) {
-      duration = gf_isom_get_track_duration(file.get(), i);
-      break;
+  // Scoped so the isom file is closed (via the unique_ptr's deleter) before
+  // gf_sys_close() tears down GPAC's global state below -- gf_isom_close()
+  // must run while GPAC is still initialized.
+  double result = -1.0;
+  {
+    std::unique_ptr<GF_ISOFile, decltype(&gf_isom_close)> file(
+        gf_isom_open(mediaFilePath.toRawUTF8(), GF_ISOM_OPEN_READ, nullptr),
+        &gf_isom_close);
+    if (file) {
+      const u32 timescale = gf_isom_get_timescale(file.get());
+
+      // Prefer the video track's own duration (movie timescale, same as
+      // gf_isom_get_duration below) over the container-level duration: a
+      // file with a non-visual track (e.g. embedded audio) whose length
+      // differs from the video would otherwise report the wrong duration
+      // here, the same pitfall muxVideo() above already works around for
+      // the muxed output.
+      u64 duration = gf_isom_get_duration(file.get());
+      const u32 trackCount = gf_isom_get_track_count(file.get());
+      for (u32 i = 1; i <= trackCount; i++) {
+        if (gf_isom_get_media_type(file.get(), i) == GF_ISOM_MEDIA_VISUAL) {
+          duration = gf_isom_get_track_duration(file.get(), i);
+          break;
+        }
+      }
+
+      result = timescale > 0 ? static_cast<double>(duration) / timescale : -1.0;
     }
   }
 
-  return timescale > 0 ? static_cast<double>(duration) / timescale : -1.0;
+  gf_sys_close();
+  return result;
 }
 
 std::vector<const AudioElement*> filterFreeAudioElements(

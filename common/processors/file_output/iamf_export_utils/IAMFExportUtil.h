@@ -27,7 +27,8 @@ void writeIASeqHdr(FileProfile profileVersion,
 void writeLPCMConfigMD(const int samplesPerBlock, const int sampleRate,
                        const int sampleSize,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
-void writeFLACConfigMD(const int samplesPerBlock, const int samplesProcessed,
+void writeFLACConfigMD(const int samplesPerBlock,
+                       const juce::int64 samplesProcessed,
                        const int bitsPerSample, const int compressionLevel,
                        const int sampleRate,
                        iamf_tools_cli_proto::UserMetadata& user_metadata);
