@@ -295,10 +295,14 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
 
 void FileOutputProcessor::checkAudioVideoDurationMismatch(
     double videoDurationSec) {
-  // Note: framesWritten_ == 0 is intentionally allowed through here (rather
-  // than gated out) so a zero-frame export against a video with a real
-  // duration still flags kVideoLongerThanAudio -- the most extreme case of
-  // exactly the mismatch this feature exists to catch.
+  // Note: framesWritten_ == 0 is intentionally NOT gated out here -- only
+  // sampleRate_ > 0 is required. This is defense-in-depth for a
+  // hypothetical future codec path that completes a zero-frame mux; today, a
+  // zero-frame export always fails the mux outright (kMuxFailed) before this
+  // function is ever reached (see
+  // FileOutputTests.mux_zero_frame_export_fails_mux_not_silently_skips), so
+  // the framesWritten_ == 0 case is not actually exercised via this branch in
+  // practice.
   if (!(sampleRate_ > 0)) {
     return;
   }
@@ -318,6 +322,15 @@ void FileOutputProcessor::checkAudioVideoDurationMismatch(
   }
   if (mismatchError != kNoError &&
       freshConfig.recordExportErrorIfUnset(mismatchError)) {
+    LOG_WARNING(0,
+                "FileOutputProcessor: Audio/video duration mismatch -- "
+                "audio: " +
+                    std::to_string(kAudioDurationSec) +
+                    "s, video: " + std::to_string(videoDurationSec) + "s (" +
+                    std::string(mismatchError == kVideoLongerThanAudio
+                                    ? "video longer than audio"
+                                    : "audio longer than video") +
+                    ").");
     fileExportRepository_.update(freshConfig);
   }
 }

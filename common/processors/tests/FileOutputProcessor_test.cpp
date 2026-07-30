@@ -461,6 +461,10 @@ TEST_F(FileOutputTests, mux_failure_takes_priority_over_duration_mismatch) {
 // silently defeat the mismatch-detection feature this PR adds. Synthesize a
 // video with a 1s video track and a 3s audio track and confirm the video
 // track's own duration is reported, not the longer container duration.
+// This is the only caller of getMediaDurationSeconds -- see its header doc
+// comment for why it has no production caller (muxIAMF()'s
+// outVideoDurationSec out-param covers the production path instead) and is
+// nonetheless kept, tested, and documented as a general-purpose utility.
 TEST_F(FileOutputTests, get_media_duration_uses_video_track_not_container) {
   const std::filesystem::path kMixedDurationVideo =
       std::filesystem::current_path() / "mixed_duration_test.mp4";
