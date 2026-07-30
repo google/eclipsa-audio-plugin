@@ -38,7 +38,14 @@ void writeOPUSConfigMD(const int samplesPerBlock, const int sampleRate,
 std::vector<const AudioElement*> filterFreeAudioElements(
     const juce::OwnedArray<AudioElement>& audioElements,
     const juce::OwnedArray<MixPresentation>& mixPresentations);
-bool muxIAMF(const FileExport& exportData);
+// Muxes the exported IAMF audio and configured video source together.
+// When non-null, `outVideoDurationSec` is set to the video track's own
+// duration (in seconds) as already computed during muxing -- callers that
+// need the video's duration should read it from here instead of a second,
+// independent parse of the video file (see getMediaDurationSeconds below).
+// Left untouched if muxing fails before the video file is opened.
+bool muxIAMF(const FileExport& exportData,
+             double* outVideoDurationSec = nullptr);
 
 // Returns the media file's duration in seconds, or -1.0 if the file cannot
 // be opened or has no timescale. Prefers the first video track's own

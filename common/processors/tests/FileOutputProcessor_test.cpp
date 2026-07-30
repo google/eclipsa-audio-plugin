@@ -383,6 +383,31 @@ TEST_F(FileOutputTests, mux_flags_mismatch_when_audio_longer_than_video) {
             ExportError::kAudioLongerThanVideo);
 }
 
+// Regression test: a zero-frame export (e.g. export started and immediately
+// stopped, or every block skipped by shouldBufferBeWritten()) leaves the
+// exported .iamf file with no audio data at all -- muxing that against a
+// real video currently fails outright inside muxVideo() (GPAC's audio-mux
+// stage never produces a destination file for a source with zero audio
+// samples), so the export error must be kMuxFailed, never silently kNoError
+// or a mismatch warning. checkAudioVideoDurationMismatch()'s own guard was
+// simplified to no longer special-case framesWritten_ == 0 (it now only
+// gates on sampleRate_ > 0) so the mismatch check itself stays correct if a
+// future codec path ever does complete a zero-frame mux.
+TEST_F(FileOutputTests, mux_zero_frame_export_fails_mux_not_silently_skips) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // Zero blocks -- framesWritten_ never leaves 0.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, /*numBlocks=*/0);
+
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
+}
+
 // Bouncing audio to closely match the test video's own ~3.77s duration
 // should leave the export error clear in either direction.
 TEST_F(FileOutputTests, mux_no_mismatch_when_durations_match) {
@@ -1146,9 +1171,58 @@ TEST_F(FileOutputTests, time_range_start_beyond_duration) {
   fileExportRepository.update(config);
 }
 
+// Regression test: FileExport's start/end sample indices (and
+// FileOutputProcessor's own sampleTally_ accumulator) were widened from
+// `long` to juce::int64 specifically so a start index past INT32_MAX
+// (~12.4 hours at 48kHz) survives the FileExportRepository round-trip
+// intact. Before the fix, a 32-bit `long` (as on Windows LLP64) would wrap
+// this value -- most likely to a small or negative number -- which would
+// hit the "no range specified" branch (startSampleIdx_ <= 0) and cause the
+// export to incorrectly write every sample instead of none.
+TEST_F(FileOutputTests, time_range_start_beyond_int32_max) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  constexpr juce::int64 kBeyondInt32Max = 3'000'000'000LL;  // > 2^31 - 1
+
+  // Full 1-second bounce for reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  auto config = fileExportRepository.get();
+  config.setStartSampleIdx(kBeyondInt32Max);
+  config.setEndSampleIdx(0);
+  fileExportRepository.update(config);
+
+  // Confirm the value survived the repository's toValueTree()/fromTree()
+  // round-trip without truncating.
+  ASSERT_EQ(fileExportRepository.get().getStartSampleIdx(), kBeyondInt32Max);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+
+  if (std::filesystem::exists(iamfOutPath)) {
+    const auto noAudioSize = std::filesystem::file_size(iamfOutPath);
+    EXPECT_LT(noAudioSize, fullSize);
+    std::filesystem::remove(iamfOutPath);
+  }
+
+  // Reset
+  config.setStartSampleIdx(0);
+  fileExportRepository.update(config);
+}
+
 // Verify sub-second boundary precision using sample counts.
-// startTime and endTime are stored as sample counts (long) in FileExport.
-// This test uses a precise sub-second boundary.
+// startTime and endTime are stored as sample counts (juce::int64) in
+// FileExport. This test uses a precise sub-second boundary.
 TEST_F(FileOutputTests, time_range_subsecond_precision) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();

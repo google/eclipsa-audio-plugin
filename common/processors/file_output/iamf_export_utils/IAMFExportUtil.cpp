@@ -231,9 +231,13 @@ static bool muxIAMFAudio(const juce::String& inputAudioFile,
   return true;
 }
 
-// Writes video to an existing MP4 file using GPAC ISO media APIs
+// Writes video to an existing MP4 file using GPAC ISO media APIs. When
+// non-null, `outVideoDurationSec` is set to the video track's own duration
+// (in seconds), read from the already-open destination file handle instead
+// of requiring a caller to reopen/reparse the file separately.
 static bool muxVideo(const juce::String& inputVideoFile,
-                     const juce::String& outputMuxedFile) {
+                     const juce::String& outputMuxedFile,
+                     double* outVideoDurationSec = nullptr) {
 #ifdef DEBUG
   gf_log_set_tool_level(GF_LOG_CORE, GF_LOG_INFO);
   gf_log_set_tool_level(GF_LOG_CONTAINER, GF_LOG_INFO);
@@ -328,6 +332,12 @@ static bool muxVideo(const juce::String& inputVideoFile,
   // Without this, if the IAMF audio is longer than the video, the container
   // reports the audio length as the movie duration.
   u64 video_track_duration = gf_isom_get_track_duration(dst_file, dst_track);
+  if (outVideoDurationSec) {
+    const u32 kTimescale = gf_isom_get_timescale(dst_file);
+    *outVideoDurationSec =
+        kTimescale > 0 ? static_cast<double>(video_track_duration) / kTimescale
+                       : -1.0;
+  }
   if (video_track_duration > 0) {
     u32 track_count = gf_isom_get_track_count(dst_file);
     for (u32 i = 1; i <= track_count; i++) {
@@ -403,7 +413,7 @@ static bool muxVideo(const juce::String& inputVideoFile,
   return true;
 }
 
-bool muxIAMF(const FileExport& exportData) {
+bool muxIAMF(const FileExport& exportData, double* outVideoDurationSec) {
   const juce::String inputAudioFile = exportData.getExportFile();
   const juce::String inputVideoFile = exportData.getVideoSource();
   const juce::String outputMuxdFile = exportData.getVideoExportFolder();
@@ -425,7 +435,7 @@ bool muxIAMF(const FileExport& exportData) {
     gf_sys_close();
     return false;
   }
-  if (!muxVideo(inputVideoFile, outputMuxdFile)) {
+  if (!muxVideo(inputVideoFile, outputMuxdFile, outVideoDurationSec)) {
     LOG_ERROR(0, "IAMF Muxing: Failed to mux video into MP4.");
     gf_sys_close();
     return false;

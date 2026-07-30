@@ -248,8 +248,9 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
     }
   }
   if (kIamfExported && fileExportRepository_.get().getExportVideo()) {
-    const bool kMuxIamfSuccess =
-        IAMFExportHelper::muxIAMF(fileExportRepository_.get());
+    double videoDurationSec = -1.0;
+    const bool kMuxIamfSuccess = IAMFExportHelper::muxIAMF(
+        fileExportRepository_.get(), &videoDurationSec);
 
     if (!kMuxIamfSuccess) {
       LOG_WARNING(0,
@@ -267,7 +268,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
     // checkAudioVideoDurationMismatch() open the untrusted user-supplied
     // video file on a path that previously never touched it.
     if (kMuxIamfSuccess) {
-      checkAudioVideoDurationMismatch();
+      checkAudioVideoDurationMismatch(videoDurationSec);
     }
   }
 
@@ -292,24 +293,27 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
   securityScopedHandle_ = nullptr;
 }
 
-void FileOutputProcessor::checkAudioVideoDurationMismatch() {
-  if (!(framesWritten_ > 0 && sampleRate_ > 0)) {
+void FileOutputProcessor::checkAudioVideoDurationMismatch(
+    double videoDurationSec) {
+  // Note: framesWritten_ == 0 is intentionally allowed through here (rather
+  // than gated out) so a zero-frame export against a video with a real
+  // duration still flags kVideoLongerThanAudio -- the most extreme case of
+  // exactly the mismatch this feature exists to catch.
+  if (!(sampleRate_ > 0)) {
     return;
   }
   constexpr double kDurationMismatchToleranceSec = 0.05;
   const double kAudioDurationSec =
       static_cast<double>(framesWritten_) / sampleRate_;
-  const double kVideoDurationSec = IAMFExportHelper::getMediaDurationSeconds(
-      fileExportRepository_.get().getVideoSource());
-  if (kVideoDurationSec <= 0.0) {
+  if (videoDurationSec <= 0.0) {
     return;
   }
   FileExport freshConfig = fileExportRepository_.get();
   ExportError mismatchError = kNoError;
-  if (kVideoDurationSec > kAudioDurationSec + kDurationMismatchToleranceSec) {
+  if (videoDurationSec > kAudioDurationSec + kDurationMismatchToleranceSec) {
     mismatchError = kVideoLongerThanAudio;
   } else if (kAudioDurationSec >
-             kVideoDurationSec + kDurationMismatchToleranceSec) {
+             videoDurationSec + kDurationMismatchToleranceSec) {
     mismatchError = kAudioLongerThanVideo;
   }
   if (mismatchError != kNoError &&
