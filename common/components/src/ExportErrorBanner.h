@@ -110,10 +110,10 @@ class ExportErrorBanner : public WarningBannerBase,
                "video failed. Check the video source and output folder.";
       case kVideoLongerThanAudio:
         return "The video is longer than the exported audio. The file was "
-               "exported, but the audio and video lengths do not match.";
+               "exported, but the audio will end before the video during playback.";
       case kAudioLongerThanVideo:
         return "The exported audio is longer than the video. The file was "
-               "exported, but the audio and video lengths do not match.";
+               "exported, but the audio has been shortened to fit the video file.";
       default:
         return messageForError(kFileWriteFailed);
     }
