@@ -86,13 +86,16 @@ class FileOutputProcessor : public ProcessorBase {
   // Warns when the supplied video and the exported audio don't run the same
   // length, in either direction. `videoDurationSec` is the video's duration
   // as already computed by muxIAMF()/muxVideo() during muxing -- this avoids
-  // a second, independent parse of the untrusted video file. Called from
+  // a second, independent parse of the video file. Called from
   // closeFileExport only after a successful mux -- a failed mux already
-  // means kMuxFailed is on record, and skipping the check keeps this from
-  // opening the video file on a path that previously never touched it. Also
-  // relies on FileExport::recordExportErrorIfUnset's first-recorded-error-wins
-  // semantics to stay silent if a more critical failure (a failed write) is
-  // already on record.
+  // means kMuxFailed is on record, and skipping the check avoids acting on
+  // videoDurationSec, which muxVideo() sets from the destination file's
+  // in-progress track duration before some of its own later failure points
+  // (final rename, track-count verification, etc.); on those failure paths
+  // the value can look valid even though the mux as a whole did not
+  // complete. Also relies on FileExport::recordExportErrorIfUnset's
+  // first-recorded-error-wins semantics to stay silent if a more critical
+  // failure (a failed write) is already on record.
   void checkAudioVideoDurationMismatch(double videoDurationSec);
 
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);

@@ -450,7 +450,7 @@ double getMediaDurationSeconds(const juce::String& mediaFilePath) {
   // this function can run independently of muxIAMF() (whose own
   // init/close bracket does not cover this call), so it brackets its own
   // GPAC calls here.
-  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, NULL);
+  GF_Err init_err = gf_sys_init(GF_MemTrackerNone, nullptr);
   if (init_err != GF_OK) {
     LOG_ERROR(0, "IAMF Muxing: Failed to initialize GPAC system.");
     return -1.0;
