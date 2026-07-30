@@ -280,8 +280,15 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
 }
 
 TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
-  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
-  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+  // Distinct element names are required: the per-audio-element WAV path is
+  // derived as `<exportFile>_<elementName>.wav`, so two elements sharing the
+  // default name both resolve to the same file. On Windows the second
+  // writer's open() then fails with a sharing violation, recording
+  // kFileWriteFailed -- which, under recordExportErrorIfUnset's
+  // first-recorded-error-wins semantics, masks the duration-mismatch warning
+  // this test asserts on.
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo, "Element One");
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo, "Element Two");
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
@@ -302,8 +309,10 @@ TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
 }
 
 TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
-  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
-  const juce::Uuid kAE2 = addAudioElement(Speakers::kHOA3);
+  // Distinct element names -- see the note on mux_iamf_flac_2ae_1mp above for
+  // why sharing the default name masks the asserted export error on Windows.
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo, "Element One");
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kHOA3, "Element Two");
   const juce::Uuid kMP1 = addMixPresentation();
   const juce::Uuid kMP2 = addMixPresentation();
   addAudioElementsToMix(kMP1, {kAE1, kAE2});
