@@ -70,6 +70,7 @@ void FileOutputProcessor::prepareToPlay(const double sampleRate,
   }
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
+  framesWritten_ = 0;
   sampleRate_ = sampleRate;
 }
 
@@ -104,6 +105,7 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // If we are not performing a render or the buffer is empty, do not write
     return;
   }
+  framesWritten_ += buffer.getNumSamples();
 
   // Process audio elements individually as Wav files
   for (int i = 0; i < iamfWavFileWriters_.size(); ++i) {
@@ -112,8 +114,7 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       // WAV size limit exceeded). Record it unless a more specific error is
       // already on record, mirroring the guard used for the IAMF path below.
       FileExport config = fileExportRepository_.get();
-      if (config.getExportError() == kNoError) {
-        config.setExportError(kFileWriteFailed);
+      if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
         fileExportRepository_.update(config);
       }
     }
@@ -125,8 +126,7 @@ void FileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // more specific error is already on record, mirroring the guard used at
     // close-time and mux-time in closeFileExport.
     FileExport config = fileExportRepository_.get();
-    if (config.getExportError() == kNoError) {
-      config.setExportError(kFileWriteFailed);
+    if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
       fileExportRepository_.update(config);
     }
   }
@@ -160,6 +160,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
         config.getAudioCodec(), *audioElements[i]));
   }
   sampleTally_ = 0;
+  framesWritten_ = 0;
 
   // Set the sample tally in the configuration for FLAC encoding
   config.setSampleTally(sampleTally_);
@@ -209,9 +210,8 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
                 "file for writing: " +
                     writer->getFilePath());
       FileExport freshConfig = fileExportRepository_.get();
-      if (freshConfig.getExportError() == kNoError) {
-        freshConfig.setExportError(
-            classifyWriteFailure(juce::String(writer->getFilePath())));
+      if (freshConfig.recordExportErrorIfUnset(
+              classifyWriteFailure(juce::String(writer->getFilePath())))) {
         fileExportRepository_.update(freshConfig);
       }
     }
@@ -228,8 +228,7 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       // already been recorded earlier in this export (mirrors the IAMF close
       // guard just below).
       FileExport freshConfig = fileExportRepository_.get();
-      if (freshConfig.getExportError() == kNoError) {
-        freshConfig.setExportError(kFileWriteFailed);
+      if (freshConfig.recordExportErrorIfUnset(kFileWriteFailed)) {
         fileExportRepository_.update(freshConfig);
       }
     }
@@ -244,23 +243,32 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
     // an unreported write failure. Only escalate if nothing more specific
     // has already been recorded earlier in this export.
     FileExport freshConfig = fileExportRepository_.get();
-    if (freshConfig.getExportError() == kNoError) {
-      freshConfig.setExportError(kFileWriteFailed);
+    if (freshConfig.recordExportErrorIfUnset(kFileWriteFailed)) {
       fileExportRepository_.update(freshConfig);
     }
   }
   if (kIamfExported && fileExportRepository_.get().getExportVideo()) {
-    const bool kMuxIamfSuccess =
-        IAMFExportHelper::muxIAMF(fileExportRepository_.get());
+    double videoDurationSec = -1.0;
+    const bool kMuxIamfSuccess = IAMFExportHelper::muxIAMF(
+        fileExportRepository_.get(), &videoDurationSec);
 
     if (!kMuxIamfSuccess) {
       LOG_WARNING(0,
                   "IAMF Muxing: Failed to mux IAMF file with provided video.");
       FileExport freshConfig = fileExportRepository_.get();
-      if (freshConfig.getExportError() == kNoError) {
-        freshConfig.setExportError(kMuxFailed);
+      if (freshConfig.recordExportErrorIfUnset(kMuxFailed)) {
         fileExportRepository_.update(freshConfig);
       }
+    }
+
+    // Only run the mismatch check when the mux above succeeded. If it
+    // failed, kMuxFailed is already on record, and videoDurationSec may
+    // hold a duration muxVideo() read from the destination file before one
+    // of its own later failure points (final rename, track-count
+    // verification, etc.) -- gating here avoids acting on a duration read
+    // from a mux that did not actually complete.
+    if (kMuxIamfSuccess) {
+      checkAudioVideoDurationMismatch(videoDurationSec);
     }
   }
 
@@ -285,13 +293,55 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
   securityScopedHandle_ = nullptr;
 }
 
+void FileOutputProcessor::checkAudioVideoDurationMismatch(
+    double videoDurationSec) {
+  // Note: framesWritten_ == 0 is intentionally NOT gated out here -- only
+  // sampleRate_ > 0 is required. This is defense-in-depth for a
+  // hypothetical future codec path that completes a zero-frame mux; today, a
+  // zero-frame export always fails the mux outright (kMuxFailed) before this
+  // function is ever reached (see
+  // FileOutputTests.mux_zero_frame_export_fails_mux_not_silently_skips), so
+  // the framesWritten_ == 0 case is not actually exercised via this branch in
+  // practice.
+  if (!(sampleRate_ > 0)) {
+    return;
+  }
+  constexpr double kDurationMismatchToleranceSec = 0.05;
+  const double kAudioDurationSec =
+      static_cast<double>(framesWritten_) / sampleRate_;
+  if (videoDurationSec <= 0.0) {
+    return;
+  }
+  FileExport freshConfig = fileExportRepository_.get();
+  ExportError mismatchError = kNoError;
+  if (videoDurationSec > kAudioDurationSec + kDurationMismatchToleranceSec) {
+    mismatchError = kVideoLongerThanAudio;
+  } else if (kAudioDurationSec >
+             videoDurationSec + kDurationMismatchToleranceSec) {
+    mismatchError = kAudioLongerThanVideo;
+  }
+  if (mismatchError != kNoError &&
+      freshConfig.recordExportErrorIfUnset(mismatchError)) {
+    LOG_WARNING(0,
+                "FileOutputProcessor: Audio/video duration mismatch -- "
+                "audio: " +
+                    std::to_string(kAudioDurationSec) +
+                    "s, video: " + std::to_string(videoDurationSec) + "s (" +
+                    std::string(mismatchError == kVideoLongerThanAudio
+                                    ? "video longer than audio"
+                                    : "audio longer than video") +
+                    ").");
+    fileExportRepository_.update(freshConfig);
+  }
+}
+
 bool FileOutputProcessor::shouldBufferBeWritten(
     const juce::AudioBuffer<float>& buffer) {
   if (!performingRender_ || buffer.getNumSamples() < 1) {
     return false;
   }
 
-  const long currentSample = sampleTally_;
+  const juce::int64 currentSample = sampleTally_;
   sampleTally_ += buffer.getNumSamples();
 
   // No range specified — write everything

@@ -56,6 +56,7 @@ void PremiereProFileOutputProcessor::prepareToPlay(double sampleRate,
 
   numSamples_ = samplesPerBlock;
   sampleTally_ = 0;
+  framesWritten_ = 0;
   sampleRate_ = sampleRate;
 }
 
@@ -85,6 +86,7 @@ void PremiereProFileOutputProcessor::processBlock(
   if (!shouldBufferBeWritten(buffer)) {
     return;
   }
+  framesWritten_ += buffer.getNumSamples();
 
   //  Write the audio data to the wav file writers
   for (auto& writer : iamfWavFileWriters_) {
@@ -94,8 +96,7 @@ void PremiereProFileOutputProcessor::processBlock(
       // mirroring the guard used for the IAMF path below and in the base
       // FileOutputProcessor::processBlock.
       FileExport config = fileExportRepository_.get();
-      if (config.getExportError() == kNoError) {
-        config.setExportError(kFileWriteFailed);
+      if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
         fileExportRepository_.update(config);
       }
     }
@@ -109,8 +110,7 @@ void PremiereProFileOutputProcessor::processBlock(
     // export path leaves performingRender_ true but iamfFileWriter_ unset),
     // which this override previously dereferenced unconditionally.
     FileExport config = fileExportRepository_.get();
-    if (config.getExportError() == kNoError) {
-      config.setExportError(kFileWriteFailed);
+    if (config.recordExportErrorIfUnset(kFileWriteFailed)) {
       fileExportRepository_.update(config);
     }
   }

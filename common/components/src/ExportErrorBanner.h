@@ -24,11 +24,11 @@
 #include "data_repository/implementation/FileExportRepository.h"
 #include "data_structures/src/FileExport.h"
 
-// Dismissible warning banner that surfaces the reason the most recent export
-// attempt failed, reusing WarningBannerBase's chrome. Unlike DAWWarningBanner,
-// this banner starts hidden and only shows on a fresh transition into an
-// error state (see shouldShowOnTransition) so a dismissal is not immediately
-// undone by the same still-set error value persisting in the repository.
+// Dismissible warning banner that surfaces failures or warnings
+// that occur during file export. Unlike DAWWarningBanner, this banner starts
+// hidden and only shows on a fresh transition into an error state (see
+// shouldShowOnTransition) so a dismissal is not immediately undone by the
+// same still-set error value persisting in the repository.
 class ExportErrorBanner : public WarningBannerBase,
                           public juce::ValueTree::Listener {
  public:
@@ -108,6 +108,14 @@ class ExportErrorBanner : public WarningBannerBase,
       case kMuxFailed:
         return "Export failed: audio was exported, but combining it with the "
                "video failed. Check the video source and output folder.";
+      case kVideoLongerThanAudio:
+        return "The video is longer than the exported audio. The file was "
+               "exported, but the audio will end before the video during "
+               "playback.";
+      case kAudioLongerThanVideo:
+        return "The exported audio is longer than the video. The file was "
+               "exported, but the audio has been shortened to fit the video "
+               "file.";
       default:
         return messageForError(kFileWriteFailed);
     }

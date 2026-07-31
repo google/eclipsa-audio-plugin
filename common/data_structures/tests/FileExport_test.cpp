@@ -34,3 +34,23 @@ TEST(test_file_export, from_tree_missing_export_audio_elements_defaults_false) {
 
   EXPECT_FALSE(fileExport.getExportAudioElements());
 }
+
+// Regression test: startSampleIdx_/endSampleIdx_ were widened from `long`
+// (32-bit on Windows LLP64) to juce::int64 so a sample index deep into a
+// long session (e.g. past ~12.4 hours at 48kHz) doesn't silently
+// truncate/wrap. Confirm a value past INT32_MAX survives a
+// toValueTree()/fromTree() round-trip -- the same path FileExportRepository
+// uses internally -- fully intact.
+TEST(test_file_export, round_trip_preserves_sample_indices_past_int32_max) {
+  constexpr juce::int64 kBeyondInt32Max = 3'000'000'000LL;  // > 2^31 - 1
+
+  FileExport config;
+  config.setStartSampleIdx(kBeyondInt32Max);
+  config.setEndSampleIdx(kBeyondInt32Max + 1000);
+
+  const juce::ValueTree tree = config.toValueTree();
+  const FileExport roundTripped = FileExport::fromTree(tree);
+
+  EXPECT_EQ(roundTripped.getStartSampleIdx(), kBeyondInt32Max);
+  EXPECT_EQ(roundTripped.getEndSampleIdx(), kBeyondInt32Max + 1000);
+}

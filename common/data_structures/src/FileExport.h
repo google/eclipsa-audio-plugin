@@ -24,16 +24,24 @@ enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
 
 enum AudioCodec { LPCM = 0, FLAC = 1, OPUS = 2 };
 
-// Classifies why an export failed (or kNoError if it did not). Set by
-// FileOutputProcessor as it progresses through an export so failures
-// propagate out of the audio processor into the data layer instead of only
-// being logged.
+// Classifies why an export failed, or warns about other export conditions.
+// Set by FileOutputProcessor via FileExport::recordExportErrorIfUnset() as it
+// progresses through an export, so failures/warnings propagate out of the
+// audio processor into the data layer instead of only being logged. Only the
+// first error/warning recorded during an export is kept -- later
+// recordExportErrorIfUnset() calls are no-ops once any non-kNoError value is
+// set. The values below are ordered to match the sequence these conditions
+// are checked during an export (per-block write failures, then close/mux
+// failures, then the duration-mismatch check), not by comparison of the
+// values themselves.
 enum ExportError {
   kNoError = 0,
   kInvalidExportPath = 1,
   kFileWriteFailed = 2,
   kPermissionDenied = 3,
-  kMuxFailed = 4
+  kMuxFailed = 4,
+  kVideoLongerThanAudio = 5,
+  kAudioLongerThanVideo = 6
 };
 
 // Using a macro here to help minimize the amount of code
@@ -101,12 +109,13 @@ class FileProfileHelper {
 class FileExport final : public RepositoryItemBase {
  public:
   FileExport();
-  FileExport(long startSampleIdx, long endSampleIdx, juce::String exportFile,
-             juce::String exportFolder, AudioFileFormat audioFileFormat,
-             AudioCodec audioCodec, int bitDepth, int sampleRate,
-             bool exportAudioElements, bool exportAudio, bool exportVideo,
-             juce::String videoSource, juce::String videoExportFolder,
-             bool manualExport, FileProfile profile, int flac_compression_level,
+  FileExport(juce::int64 startSampleIdx, juce::int64 endSampleIdx,
+             juce::String exportFile, juce::String exportFolder,
+             AudioFileFormat audioFileFormat, AudioCodec audioCodec,
+             int bitDepth, int sampleRate, bool exportAudioElements,
+             bool exportAudio, bool exportVideo, juce::String videoSource,
+             juce::String videoExportFolder, bool manualExport,
+             FileProfile profile, int flac_compression_level,
              int opus_total_bitrate, int lpcm_sample_size, bool exportCompleted,
              juce::String securityBookmark);
 
@@ -125,8 +134,8 @@ class FileExport final : public RepositoryItemBase {
   inline static const juce::Identifier kTreeType{"file_export"};
 
  private:
-  EXPORT_VALUE(long, startSampleIdx, StartSampleIdx);
-  EXPORT_VALUE(long, endSampleIdx, EndSampleIdx);
+  EXPORT_VALUE(juce::int64, startSampleIdx, StartSampleIdx);
+  EXPORT_VALUE(juce::int64, endSampleIdx, EndSampleIdx);
   EXPORT_VALUE(juce::String, exportFile, ExportFile);
   EXPORT_VALUE(juce::String, exportFolder, ExportFolder);
   EXPORT_VALUE(AudioFileFormat, audioFileFormat, AudioFileFormat);
@@ -143,8 +152,22 @@ class FileExport final : public RepositoryItemBase {
   EXPORT_VALUE(int, flac_compression_level, FlacCompressionLevel);
   EXPORT_VALUE(int, opus_total_bitrate, OpusTotalBitrate);
   EXPORT_VALUE(int, lpcm_sample_size, LPCMSampleSize);
-  EXPORT_VALUE(long, sample_tally, SampleTally);
+  EXPORT_VALUE(juce::int64, sample_tally, SampleTally);
   EXPORT_VALUE(bool, exportCompleted, ExportCompleted);
   EXPORT_VALUE(juce::String, securityBookmark, SecurityBookmark);
   EXPORT_VALUE(ExportError, exportError, ExportError);
+
+ public:
+  // Records newError only if no error/warning has been recorded yet for this
+  // export -- the first call wins; every subsequent call is a no-op until
+  // the next export resets exportError_ back to kNoError. Returns whether
+  // newError was recorded, so callers can skip an unnecessary repository
+  // update when nothing changed.
+  bool recordExportErrorIfUnset(ExportError newError) {
+    if (exportError_ == kNoError) {
+      exportError_ = newError;
+      return true;
+    }
+    return false;
+  }
 };

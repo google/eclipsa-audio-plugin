@@ -83,6 +83,21 @@ class FileOutputProcessor : public ProcessorBase {
 
   void closeFileExport(const FileExport& config);
 
+  // Warns when the supplied video and the exported audio don't run the same
+  // length, in either direction. `videoDurationSec` is the video's duration
+  // as already computed by muxIAMF()/muxVideo() during muxing -- this avoids
+  // a second, independent parse of the video file. Called from
+  // closeFileExport only after a successful mux -- a failed mux already
+  // means kMuxFailed is on record, and skipping the check avoids acting on
+  // videoDurationSec, which muxVideo() sets from the destination file's
+  // in-progress track duration before some of its own later failure points
+  // (final rename, track-count verification, etc.); on those failure paths
+  // the value can look valid even though the mux as a whole did not
+  // complete. Also relies on FileExport::recordExportErrorIfUnset's
+  // first-recorded-error-wins semantics to stay silent if a more critical
+  // failure (a failed write) is already on record.
+  void checkAudioVideoDurationMismatch(double videoDurationSec);
+
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
 
   // Classifies a file write failure by probing whether the parent directory
@@ -101,9 +116,10 @@ class FileOutputProcessor : public ProcessorBase {
   std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
   int numSamples_;
   double sampleRate_;
-  long startSampleIdx_;
-  long endSampleIdx_;
-  long sampleTally_;
+  juce::int64 startSampleIdx_;
+  juce::int64 endSampleIdx_;
+  juce::int64 sampleTally_;
+  juce::int64 framesWritten_ = 0;  // samples handed to the writers this export
   std::unique_ptr<IAMFFileWriter> iamfFileWriter_;
   void* securityScopedHandle_ = nullptr;
   //==============================================================================

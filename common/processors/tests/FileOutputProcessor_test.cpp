@@ -30,6 +30,7 @@
 
 #include "FileOutputTestFixture.h"
 #include "juce_cryptography/juce_cryptography.h"
+#include "processors/file_output/iamf_export_utils/IAMFExportUtil.h"
 #include "processors/tests/FileOutputTestUtils.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -268,7 +269,10 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
-  bounceAudio(fio_proc, audioElementRepository);
+  // ~3.77 seconds at 48kHz/128 frames per block -- matches the test video's
+  // own duration closely enough that this plain mux-success check isn't also
+  // tripping the (separately tested) duration-mismatch warnings.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 1413);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
@@ -276,8 +280,15 @@ TEST_F(FileOutputTests, mux_iamf_lpc_1ae_1mp) {
 }
 
 TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
-  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
-  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+  // Distinct element names are required: the per-audio-element WAV path is
+  // derived as `<exportFile>_<elementName>.wav`, so two elements sharing the
+  // default name both resolve to the same file. On Windows the second
+  // writer's open() then fails with a sharing violation, recording
+  // kFileWriteFailed -- which, under recordExportErrorIfUnset's
+  // first-recorded-error-wins semantics, masks the duration-mismatch warning
+  // this test asserts on.
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo, "Element One");
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo, "Element Two");
   const juce::Uuid kMP = addMixPresentation();
   addAudioElementsToMix(kMP, {kAE1, kAE2});
 
@@ -286,15 +297,22 @@ TEST_F(FileOutputTests, mux_iamf_flac_2ae_1mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
+  // Default bounce (~21ms) is far shorter than the fixture video, so this
+  // also exercises (without separately re-testing) the mismatch warning
+  // path covered explicitly by mux_flags_mismatch_when_video_longer_than_audio.
   bounceAudio(fio_proc, audioElementRepository);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
 }
 
 TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
-  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo);
-  const juce::Uuid kAE2 = addAudioElement(Speakers::kHOA3);
+  // Distinct element names -- see the note on mux_iamf_flac_2ae_1mp above for
+  // why sharing the default name masks the asserted export error on Windows.
+  const juce::Uuid kAE1 = addAudioElement(Speakers::kStereo, "Element One");
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kHOA3, "Element Two");
   const juce::Uuid kMP1 = addMixPresentation();
   const juce::Uuid kMP2 = addMixPresentation();
   addAudioElementsToMix(kMP1, {kAE1, kAE2});
@@ -305,10 +323,14 @@ TEST_F(FileOutputTests, mux_iamf_opus_2ae_2mp) {
   EXPECT_FALSE(std::filesystem::exists(iamfOutPath));
   EXPECT_FALSE(std::filesystem::exists(videoOutPath));
 
+  // Default bounce (~21ms) is far shorter than the fixture video -- see the
+  // note on mux_iamf_flac_2ae_1mp above.
   bounceAudio(fio_proc, audioElementRepository);
 
   EXPECT_TRUE(std::filesystem::exists(iamfOutPath));
   EXPECT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
 }
 
 TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
@@ -318,6 +340,8 @@ TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
 
   setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
+  // Default bounce (~21ms) is far shorter than the fixture video -- see the
+  // note on mux_iamf_flac_2ae_1mp above.
   bounceAudio(fio_proc, audioElementRepository);
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
 
@@ -328,6 +352,167 @@ TEST_F(FileOutputTests, mux_iamf_container_duration_matches_video) {
   ASSERT_GT(videoDuration, 0.0);
   ASSERT_GT(outputDuration, 0.0);
   EXPECT_NEAR(outputDuration, videoDuration, 0.1);
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
+}
+
+// The default bounce (~21ms) is far shorter than the ~3.77s test video, so
+// the mux must still succeed but the export error is set to
+// kVideoLongerThanAudio for the UI to warn on.
+TEST_F(FileOutputTests, mux_flags_mismatch_when_video_longer_than_audio) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kVideoLongerThanAudio);
+}
+
+// Rendering well past the ~3.77s test video's duration means the exported
+// audio now outlasts the video, so the export error should flip to the
+// opposite-direction warning instead of clearing.
+TEST_F(FileOutputTests, mux_flags_mismatch_when_audio_longer_than_video) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // ~5.3 seconds at 48kHz/128 frames per block -- longer than the ~3.77s
+  // default test video.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 2000);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kAudioLongerThanVideo);
+}
+
+// Regression test: a zero-frame export (e.g. export started and immediately
+// stopped, or every block skipped by shouldBufferBeWritten()) leaves the
+// exported .iamf file with no audio data at all -- muxing that against a
+// real video currently fails outright inside muxVideo() (GPAC's audio-mux
+// stage never produces a destination file for a source with zero audio
+// samples), so the export error must be kMuxFailed, never silently kNoError
+// or a mismatch warning. checkAudioVideoDurationMismatch()'s own guard was
+// simplified to no longer special-case framesWritten_ == 0 (it now only
+// gates on sampleRate_ > 0) so the mismatch check itself stays correct if a
+// future codec path ever does complete a zero-frame mux.
+TEST_F(FileOutputTests, mux_zero_frame_export_fails_mux_not_silently_skips) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // Zero blocks -- framesWritten_ never leaves 0.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, /*numBlocks=*/0);
+
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
+}
+
+// Bouncing audio to closely match the test video's own ~3.77s duration
+// should leave the export error clear in either direction.
+TEST_F(FileOutputTests, mux_no_mismatch_when_durations_match) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+
+  // ~3.77 seconds at 48kHz/128 frames per block -- matches the default test
+  // video's own duration within the mismatch tolerance.
+  bounceAudio(fio_proc, audioElementRepository, 48000, 128, 1413);
+
+  ASSERT_TRUE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
+}
+
+// Regression test: closeFileExport only runs checkAudioVideoDurationMismatch
+// after a successful mux -- on a mux failure it is skipped entirely (both to
+// avoid opening the untrusted video file on a path that previously never
+// touched it, and because kMuxFailed already wins under
+// FileExport::recordExportErrorIfUnset's first-recorded-error-wins
+// semantics). Point the video export folder at an invalid path (forcing a mux
+// failure) while keeping the video source at the default ~3.77s test video
+// and rendering only the default short (~21ms) bounce, which alone would trip
+// kVideoLongerThanAudio if the mismatch check ran -- the export error must
+// still surface as kMuxFailed, not the mismatch warning.
+TEST_F(FileOutputTests, mux_failure_takes_priority_over_duration_mismatch) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  const std::filesystem::path kInvalidVoutPath = "/invalid_path/muxed.mp4";
+
+  setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
+  FileExport config = fileExportRepository.get();
+  config.setVideoExportFolder(kInvalidVoutPath.string());
+  fileExportRepository.update(config);
+
+  bounceAudio(fio_proc, audioElementRepository);
+
+  EXPECT_FALSE(std::filesystem::exists(videoOutPath));
+  EXPECT_EQ(fileExportRepository.get().getExportError(),
+            ExportError::kMuxFailed);
+}
+
+// Regression test: IAMFExportHelper::getMediaDurationSeconds previously
+// reported the MP4 container's movie-level duration -- the longest track in
+// the file -- as "the video's duration." A source file with a non-visual
+// track (e.g. an embedded audio track) longer than its video track would
+// silently defeat the mismatch-detection feature this PR adds. Synthesize a
+// video with a 1s video track and a 3s audio track and confirm the video
+// track's own duration is reported, not the longer container duration.
+// This is the only caller of getMediaDurationSeconds -- see its header doc
+// comment for why it has no production caller (muxIAMF()'s
+// outVideoDurationSec out-param covers the production path instead) and is
+// nonetheless kept, tested, and documented as a general-purpose utility.
+TEST_F(FileOutputTests, get_media_duration_uses_video_track_not_container) {
+  const std::filesystem::path kMixedDurationVideo =
+      std::filesystem::current_path() / "mixed_duration_test.mp4";
+  std::filesystem::remove(kMixedDurationVideo);
+
+  juce::StringArray ffmpegArgs;
+  ffmpegArgs.add("-y");
+  ffmpegArgs.add("-f");
+  ffmpegArgs.add("lavfi");
+  ffmpegArgs.add("-t");
+  ffmpegArgs.add("1");
+  ffmpegArgs.add("-i");
+  ffmpegArgs.add("color=c=black:s=64x64");
+  ffmpegArgs.add("-f");
+  ffmpegArgs.add("lavfi");
+  ffmpegArgs.add("-t");
+  ffmpegArgs.add("3");
+  ffmpegArgs.add("-i");
+  ffmpegArgs.add("anullsrc=r=48000:cl=mono");
+  ffmpegArgs.add("-c:v");
+  ffmpegArgs.add("libx264");
+  ffmpegArgs.add("-pix_fmt");
+  ffmpegArgs.add("yuv420p");
+  ffmpegArgs.add("-c:a");
+  ffmpegArgs.add("aac");
+  ffmpegArgs.add(kMixedDurationVideo.string());
+
+  auto [exitCode, output] = executeCommand("ffmpeg", ffmpegArgs);
+  ASSERT_EQ(exitCode, 0) << "ffmpeg fixture generation failed: " << output;
+  ASSERT_TRUE(std::filesystem::exists(kMixedDurationVideo));
+
+  const double kDurationSec =
+      IAMFExportHelper::getMediaDurationSeconds(kMixedDurationVideo.string());
+
+  // The video track is ~1s; the container/audio track is ~3s. A correct
+  // implementation reports the video track's duration.
+  EXPECT_NEAR(kDurationSec, 1.0, 0.1);
+
+  std::filesystem::remove(kMixedDurationVideo);
 }
 
 // Codec param tests. These tests focus on testing advanced codec specific file
@@ -999,9 +1184,58 @@ TEST_F(FileOutputTests, time_range_start_beyond_duration) {
   fileExportRepository.update(config);
 }
 
+// Regression test: FileExport's start/end sample indices (and
+// FileOutputProcessor's own sampleTally_ accumulator) were widened from
+// `long` to juce::int64 specifically so a start index past INT32_MAX
+// (~12.4 hours at 48kHz) survives the FileExportRepository round-trip
+// intact. Before the fix, a 32-bit `long` (as on Windows LLP64) would wrap
+// this value -- most likely to a small or negative number -- which would
+// hit the "no range specified" branch (startSampleIdx_ <= 0) and cause the
+// export to incorrectly write every sample instead of none.
+TEST_F(FileOutputTests, time_range_start_beyond_int32_max) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+
+  setTestExportOpts({.codec = AudioCodec::LPCM});
+
+  constexpr juce::int64 kBeyondInt32Max = 3'000'000'000LL;  // > 2^31 - 1
+
+  // Full 1-second bounce for reference
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+  ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
+  const auto fullSize = std::filesystem::file_size(iamfOutPath);
+  std::filesystem::remove(iamfOutPath);
+
+  auto config = fileExportRepository.get();
+  config.setStartSampleIdx(kBeyondInt32Max);
+  config.setEndSampleIdx(0);
+  fileExportRepository.update(config);
+
+  // Confirm the value survived the repository's toValueTree()/fromTree()
+  // round-trip without truncating.
+  ASSERT_EQ(fileExportRepository.get().getStartSampleIdx(), kBeyondInt32Max);
+
+  ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
+  bounceAudioForDuration(fio_proc, audioElementRepository, 1.0, kSampleRate,
+                         kSamplesPerFrame);
+
+  if (std::filesystem::exists(iamfOutPath)) {
+    const auto noAudioSize = std::filesystem::file_size(iamfOutPath);
+    EXPECT_LT(noAudioSize, fullSize);
+    std::filesystem::remove(iamfOutPath);
+  }
+
+  // Reset
+  config.setStartSampleIdx(0);
+  fileExportRepository.update(config);
+}
+
 // Verify sub-second boundary precision using sample counts.
-// startTime and endTime are stored as sample counts (long) in FileExport.
-// This test uses a precise sub-second boundary.
+// startTime and endTime are stored as sample counts (juce::int64) in
+// FileExport. This test uses a precise sub-second boundary.
 TEST_F(FileOutputTests, time_range_subsecond_precision) {
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
   const juce::Uuid kMP = addMixPresentation();

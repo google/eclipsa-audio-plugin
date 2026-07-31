@@ -37,6 +37,22 @@ TEST(test_export_error_banner, messageForErrorNonEmptyExceptNoError) {
   EXPECT_TRUE(
       ExportErrorBanner::messageForError(kPermissionDenied).isNotEmpty());
   EXPECT_TRUE(ExportErrorBanner::messageForError(kMuxFailed).isNotEmpty());
+  EXPECT_TRUE(
+      ExportErrorBanner::messageForError(kVideoLongerThanAudio).isNotEmpty());
+  EXPECT_TRUE(
+      ExportErrorBanner::messageForError(kAudioLongerThanVideo).isNotEmpty());
+}
+
+// Each duration-mismatch message must name its own direction, not read like a
+// generic failure -- it's a warning, the export itself still succeeded -- and
+// the two directions must not share wording.
+TEST(test_export_error_banner, durationMismatchMessagesNameTheDirection) {
+  EXPECT_TRUE(ExportErrorBanner::messageForError(kVideoLongerThanAudio)
+                  .containsIgnoreCase("longer"));
+  EXPECT_TRUE(ExportErrorBanner::messageForError(kAudioLongerThanVideo)
+                  .containsIgnoreCase("longer"));
+  EXPECT_NE(ExportErrorBanner::messageForError(kVideoLongerThanAudio),
+            ExportErrorBanner::messageForError(kAudioLongerThanVideo));
 }
 
 // Permission-denied must not share generic write-failure wording -- this is
@@ -55,6 +71,10 @@ TEST(test_export_error_banner, permissionDeniedHasDistinctWording) {
 TEST(test_export_error_banner, shouldShowOnTransition) {
   EXPECT_TRUE(
       ExportErrorBanner::shouldShowOnTransition(kNoError, kFileWriteFailed));
+  EXPECT_TRUE(ExportErrorBanner::shouldShowOnTransition(kNoError,
+                                                        kVideoLongerThanAudio));
+  EXPECT_TRUE(ExportErrorBanner::shouldShowOnTransition(kNoError,
+                                                        kAudioLongerThanVideo));
   EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kFileWriteFailed,
                                                          kFileWriteFailed));
   EXPECT_FALSE(ExportErrorBanner::shouldShowOnTransition(kNoError, kNoError));

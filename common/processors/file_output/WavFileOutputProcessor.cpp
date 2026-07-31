@@ -84,8 +84,8 @@ void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto playHead = getPlayHead();
     if (playHead != NULL) {  // Happens in debug
       auto position = getPlayHead()->getPosition();
-      const long currentSample =
-          static_cast<long>(*position->getTimeInSeconds() * sampleRate_);
+      const juce::int64 currentSample =
+          static_cast<juce::int64>(*position->getTimeInSeconds() * sampleRate_);
       if ((endSampleIdx_ == 0) || (currentSample >= startSampleIdx_ &&
                                    currentSample <= endSampleIdx_)) {
         writeFailed = !fileWriter_->write(buffer);
@@ -116,9 +116,7 @@ void WavFileOutputProcessor::recordWriteFailureIfAny(bool writeSucceeded) {
   // Deferred via deferRepositoryUpdate() -- see its declaration for why this
   // can't call fileExportRepository_.update() synchronously.
   deferRepositoryUpdate([](FileExport& config) {
-    if (config.getExportError() == kNoError) {
-      config.setExportError(kFileWriteFailed);
-    }
+    config.recordExportErrorIfUnset(kFileWriteFailed);
   });
 }
 
@@ -150,10 +148,8 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
                   "WavFileOutputProcessor: Failed to open file for writing: " +
                       kFailedFilePath);
         deferRepositoryUpdate([kFailedFilePath](FileExport& config) {
-          if (config.getExportError() == kNoError) {
-            config.setExportError(
-                classifyWriteFailure(juce::String(kFailedFilePath)));
-          }
+          config.recordExportErrorIfUnset(
+              classifyWriteFailure(juce::String(kFailedFilePath)));
         });
       }
       performingRender_ = true;
@@ -166,9 +162,7 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
         // an unreported write failure. Only escalate if nothing more
         // specific has already been recorded earlier in this export.
         deferRepositoryUpdate([](FileExport& config) {
-          if (config.getExportError() == kNoError) {
-            config.setExportError(kFileWriteFailed);
-          }
+          config.recordExportErrorIfUnset(kFileWriteFailed);
         });
       }
       delete fileWriter_;
