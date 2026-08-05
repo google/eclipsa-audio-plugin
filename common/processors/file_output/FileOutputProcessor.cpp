@@ -306,7 +306,10 @@ void FileOutputProcessor::checkAudioVideoDurationMismatch(
   if (!(sampleRate_ > 0)) {
     return;
   }
-  constexpr double kDurationMismatchToleranceSec = 0.05;
+  // A half second tolerance accounts for some drift, 
+  // won't be noticed in practice, and handles the 
+  // slight mismatch often created in recorded video (~2-5 frames)
+  constexpr double kDurationMismatchToleranceSec = 0.5;
   const double kAudioDurationSec =
       static_cast<double>(framesWritten_) / sampleRate_;
   if (videoDurationSec <= 0.0) {
