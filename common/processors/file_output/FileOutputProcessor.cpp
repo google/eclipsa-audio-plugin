@@ -306,7 +306,10 @@ void FileOutputProcessor::checkAudioVideoDurationMismatch(
   if (!(sampleRate_ > 0)) {
     return;
   }
-  constexpr double kDurationMismatchToleranceSec = 0.05;
+  // Failure tolerance is reasonably large to avoid false positives as 0.5s of
+  // silence is unlikely to be noticed and video/audio recordings seem to often
+  // have a mismatch of ~2-10 frames, which is ~0.05-0.2s at 48kHz.
+  constexpr double kDurationMismatchToleranceSec = 0.5;
   const double kAudioDurationSec =
       static_cast<double>(framesWritten_) / sampleRate_;
   if (videoDurationSec <= 0.0) {
