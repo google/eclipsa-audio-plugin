@@ -25,10 +25,14 @@
 #include "data_structures/src/FileExport.h"
 
 // Dismissible warning banner that surfaces failures or warnings
-// that occur during file export. Unlike DAWWarningBanner, this banner starts
-// hidden and only shows on a fresh transition into an error state (see
-// shouldShowOnTransition) so a dismissal is not immediately undone by the
-// same still-set error value persisting in the repository.
+// that occur during file export. Dismissing it clears the underlying
+// ExportError in the repository (see onDismiss), the same way starting a
+// new export does -- so, like DAWWarningBanner, a dismissal survives the
+// editor being recreated, but without needing a second persisted flag: once
+// dismissed there is no error left on record to re-seed visibility from.
+// This banner also gates re-showing on a fresh transition into an error
+// state (see shouldShowOnTransition) so the same still-set error value
+// persisting in the repository doesn't undo a dismissal on its own.
 class ExportErrorBanner : public WarningBannerBase,
                           public juce::ValueTree::Listener {
  public:
@@ -43,8 +47,9 @@ class ExportErrorBanner : public WarningBannerBase,
     // -- while a prior export's failure is still on record and no fresh
     // export has run since). Without this, a banner constructed after an
     // unresolved failure would stay hidden until the NEXT export attempt,
-    // silently missing the one that already happened -- the exact bug this
-    // feature exists to fix.
+    // silently missing the one that already happened. A dismissed failure
+    // does not re-trigger this: onDismiss clears the error itself, so
+    // there is nothing left on record to seed visibility from.
     setVisible(previousError_ != kNoError);
   }
 
@@ -139,10 +144,18 @@ class ExportErrorBanner : public WarningBannerBase,
                                        : kNoError);
   }
 
-  // Transient dismiss: no repository write, unlike DAWWarningBanner's
-  // persisted dismiss. The base class already hides the component and
-  // repaints the parent on dismiss.
-  void onDismiss() override {}
+  // The base class already hides the component and repaints the parent on
+  // dismiss; this clears the underlying error so it does not reappear on
+  // editor reopen (mirroring DAWWarningBanner::onDismiss's persisted
+  // dismiss, without needing a second persisted flag -- once the error is
+  // cleared here, there is nothing left on record to re-seed visibility
+  // from on the next construction).
+  void onDismiss() override {
+    if (!repository_) return;
+    FileExport config = repository_->get();
+    config.setExportError(kNoError);
+    repository_->update(config);
+  }
 
  private:
   FileExportRepository* repository_;
