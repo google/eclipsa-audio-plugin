@@ -72,7 +72,7 @@ class MP4IAMFDemuxerTest : public FileOutputTests {
           Speakers::kHOA1,
           Speakers::kHOA2,
           Speakers::kHOA3,
-      };
+  };
 };
 
 TEST_F(MP4IAMFDemuxerTest, mux_demux_iamf_1ae_cb) {

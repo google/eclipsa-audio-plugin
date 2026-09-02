@@ -405,7 +405,7 @@ class FileOutputTests : public ::testing::Test {
           Speakers::k3Point1Point2, Speakers::kBinaural,
           Speakers::kHOA1,          Speakers::kHOA2,
           Speakers::kHOA3,
-      };
+  };
   std::vector<Speakers::AudioElementSpeakerLayout>
       kAudioElementExpandedLayouts = {
           Speakers::kExplLFE,
@@ -421,7 +421,7 @@ class FileOutputTests : public ::testing::Test {
           Speakers::kExpl9Point1Point6Side,
           Speakers::kExpl9Point1Point6TopSide,
           Speakers::kExpl9Point1Point6Top,
-      };
+  };
 
   const std::filesystem::path kTestSourceVideo =
       std::filesystem::current_path().parent_path() /
