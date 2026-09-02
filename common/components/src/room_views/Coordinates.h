@@ -96,8 +96,57 @@ Point4D toRoomNdc(const float x, const float y, const float z);
  */
 PositionParameters fromRoomNdc(const Point4D& ndcPoint);
 
-constexpr Mat4 getRearViewTransform();
-constexpr Mat4 getSideViewTransform();
-constexpr Mat4 getTopViewTransform();
+constexpr Mat4 getRearViewTransform() {
+  /**
+   * Generated with the following code:
+   * model = glm::scale(model, glm::vec3(1.2f, 0.9f, 2.5f));
+   * view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
+   * projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH / SCR_HEIGHT,
+   *  0.1f, 100.0f);
+   */
+  return {{
+      {2.19693f, 0.0f, 0.0f, 0.0f},
+      {0.0f, 2.17279f, 0.0f, 0.0f},
+      {0.0f, 0.0f, -2.505f, -2.5f},
+      {0.0f, 0.0f, 4.80981f, 5.0f},
+  }};
+}
+
+constexpr Mat4 getSideViewTransform() {
+  /**
+   * Generated with the following code:
+   * model = glm::scale(model, glm::vec3(0.9f, 1.0f, 1.3f));
+   * view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -4.0f)) *
+   *  glm::rotate(view, glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
+   * projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH / SCR_HEIGHT,
+   *  0.1f, 100.0f);
+   */
+  return {{
+      {0.0f, 0.0f, 0.901802f, 0.9f},
+      {0.0f, 2.41421f, 0.0f, 0.0f},
+      {2.38001f, 0.0f, 0.0f, 0.0f},
+      {0.0f, 0.0f, 3.80781f, 4.0f},
+  }};
+}
+
+// The panner's projection. Perspective, not orthographic: a point higher in the
+// room projects further from the room's centre.
+constexpr Mat4 getTopViewTransform() {
+  /**
+   * Generated with the following code:
+   * model = glm::scale(model, glm::vec3(1.2f, 1.f, 1.4f));
+   * view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f)) *
+   *  glm::rotate(view, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
+   * projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH / SCR_HEIGHT,
+   * 0.1f, 100.0f);
+   */
+  return {{
+      {2.19693f, 0.0f, 0.0f, 0.0f},
+      {0.0f, 0.0f, -1.002f, -1.0f},
+      {0.0f, -3.3799f, 0.0f, 0.0f},
+      {0.0f, 0.0f, 4.80981f, 5.0f},
+  }};
+}
+
 Mat4 getIsoViewTransform();
 }  // namespace Coordinates

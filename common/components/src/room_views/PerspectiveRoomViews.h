@@ -15,7 +15,10 @@
  */
 
 #pragma once
+#include <vector>
+
 #include "PerspectiveRoomView.h"
+#include "components/src/room_views/HeightIndicator.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/Elevation.h"
 #include "data_structures/src/RepositoryCollection.h"
@@ -61,6 +64,14 @@ class AudioElementPluginTopView : public PerspectiveRoomView {
   }
 
  private:
+  float elevationHeightAt(float leftRight, float frontBack) const;
+  Coordinates::Point4D indicatorPosition(
+      const Coordinates::Point4D& sourceNdc) const;
+  bool elevationClampsTheSource() const;
+  bool elevationVariesAcrossLeftRight() const;
+  void paintIndicatorRuns(const Coordinates::WindowData& window,
+                          const std::vector<HeightIndicator::Segment>& runs,
+                          float thickness, juce::Graphics& g);
   void paintFlatElevation(const Coordinates::WindowData& window,
                           juce::Graphics& g);
   void paintTentElevation(const Coordinates::WindowData& window,

@@ -15,11 +15,13 @@
 #include "PerspectiveRoomViews.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <vector>
 
 #include "components/src/room_views/ElevationSurfaces.h"
+#include "components/src/room_views/HeightIndicator.h"
 #include "data_structures/src/RepositoryCollection.h"
 
 namespace {
@@ -38,6 +40,10 @@ juce::Colour elevationRecedingSurface() {
 juce::Colour elevationFacingSurface() {
   return EclipsaColours::roomviewTranslucentWall.brighter();
 }
+
+// The height indicator's line weights.
+constexpr float kOutlineThickness = 2.f;
+constexpr float kHeightIndicatorConnectorThickness = 2.f;
 
 }  // namespace
 
@@ -164,6 +170,29 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
 
   PerspectiveRoomView::paint(g);
 
+  // First split the indicator against the elevation surface: the outline and
+  // the back-edge connector pass under it, so each is drawn either side of the
+  // fill. The right-edge connector is coincident with the surface rather than
+  // either side of it and stays on top -- see splitLeaderLinesAtElevation.
+  HeightIndicator::SplitOutline outline, connectors;
+  if (!transformedTracks_.empty()) {
+    // One height function for both splits, so the outline and a connector
+    // agree about the point where they meet.
+    const auto kRoofAt = [this](const float leftRight, const float frontBack) {
+      return elevationHeightAt(leftRight, frontBack);
+    };
+    const Coordinates::Point4D kIndicatorPos =
+        indicatorPosition(transformedTracks_[0].ndcPos);
+    outline = HeightIndicator::splitAtElevation(kIndicatorPos.a[1], kRoofAt);
+    connectors = HeightIndicator::splitLeaderLinesAtElevation(
+        kIndicatorPos, kRoofAt, elevationVariesAcrossLeftRight());
+  }
+
+  // Then the runs that pass under the surface, so the fill tints them.
+  paintIndicatorRuns(wData, outline.below, kOutlineThickness, g);
+  paintIndicatorRuns(wData, connectors.below,
+                     kHeightIndicatorConnectorThickness, g);
+
   switch (currentElevation_) {
     case AudioElementSpatialLayout::Elevation::kFlat:
       paintFlatElevation(wData, g);
@@ -184,8 +213,101 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
       break;
   }
 
+  // Then the runs over it, at full strength.
+  paintIndicatorRuns(wData, outline.above, kOutlineThickness, g);
+  paintIndicatorRuns(wData, connectors.above,
+                     kHeightIndicatorConnectorThickness, g);
+
   if (!transformedTracks_.empty()) {
+    // The audio source marker is drawn last so it is always on top.
     drawTrack(transformedTracks_[0], g);
+  }
+}
+
+float AudioElementPluginTopView::elevationHeightAt(
+    const float leftRight, const float frontBack) const {
+  switch (currentElevation_) {
+    case AudioElementSpatialLayout::Elevation::kFlat:
+      return currentFlatHeight_;
+    case AudioElementSpatialLayout::Elevation::kTent:
+      return ElevationListener::getTentElevationPt({-1.f, frontBack, 0.f}).a[1];
+    case AudioElementSpatialLayout::Elevation::kArch:
+      return ElevationListener::getArchElevationPt({-1.f, frontBack, 0.f}).a[1];
+    case AudioElementSpatialLayout::Elevation::kCurve:
+      // Sampled un-negated, on paintCurveElevation's sign convention -- the
+      // value the listener passes IS the NDC front/back coordinate.
+      return ElevationListener::getCurveElevationPt({-1.f, frontBack, 0.f})
+          .a[1];
+    case AudioElementSpatialLayout::Elevation::kDome: {
+      // The one pattern needing BOTH coordinates: it falls away from the
+      // room's centre in left/right as well as front/back.
+      //
+      // Beyond the dome's rim the surface is at the floor. Checked here rather
+      // than left to the static, which would clamp such a point onto the rim
+      // instead and can take the square root of a negative.
+      const float kRadiusSq = leftRight * leftRight + frontBack * frontBack;
+      if (kRadiusSq >= 1.f) {
+        return -1.f;
+      }
+      return ElevationListener::getDomeElevationPtClamped(
+                 {leftRight, frontBack, 0.f}, {})
+          .a[1];
+    }
+    default:
+      // kNone draws nothing, so every run comes back in `above`.
+      return -1.f;
+  }
+}
+
+Coordinates::Point4D AudioElementPluginTopView::indicatorPosition(
+    const Coordinates::Point4D& sourceNdc) const {
+  // Where a pattern clamps the source, read the height back off the surface
+  // rather than off the position parameter. The parameter is quantised, and
+  // comparing a quantised height against the exact surface is ill conditioned
+  // near a crest -- on the dome that dimmed a long run of the indicator beside
+  // a source visibly resting on the surface. Reading the surface on both sides
+  // of the comparison takes the quantisation out of it, and moves the drawn
+  // height by at most half a parameter step.
+  if (!elevationClampsTheSource()) {
+    return sourceNdc;
+  }
+  Coordinates::Point4D snapped = sourceNdc;
+  snapped.a[1] = elevationHeightAt(sourceNdc.a[0], sourceNdc.a[2]);
+  return snapped;
+}
+
+bool AudioElementPluginTopView::elevationClampsTheSource() const {
+  // The four patterns ElevationListener recomputes the height for. kFlat and
+  // kNone leave the z dial live, so under those only the parameter knows the
+  // source's height.
+  switch (currentElevation_) {
+    case AudioElementSpatialLayout::Elevation::kTent:
+    case AudioElementSpatialLayout::Elevation::kArch:
+    case AudioElementSpatialLayout::Elevation::kDome:
+    case AudioElementSpatialLayout::Elevation::kCurve:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool AudioElementPluginTopView::elevationVariesAcrossLeftRight() const {
+  // Only the dome. The others are height fields in front/back alone, so the
+  // right-edge connector lies at a single surface height under them and is
+  // placed rather than split -- see
+  // HeightIndicator::splitLeaderLinesAtElevation.
+  return currentElevation_ == AudioElementSpatialLayout::Elevation::kDome;
+}
+
+void AudioElementPluginTopView::paintIndicatorRuns(
+    const Coordinates::WindowData& window,
+    const std::vector<HeightIndicator::Segment>& runs, const float thickness,
+    juce::Graphics& g) {
+  g.setColour(EclipsaColours::controlBlue);
+  for (const HeightIndicator::Segment& run : runs) {
+    const std::array<Coordinates::Point2D, 2> kEnds =
+        HeightIndicator::projectSegment(kTransformMat_, window, run);
+    drawLine(kEnds[0], kEnds[1], g, thickness);
   }
 }
 
