@@ -14,3 +14,5 @@
 
 eclipsa_add_test(test_export_error_banner ExportErrorBanner_test.cpp "components")
 eclipsa_add_test(test_room_coordinates Coordinates_test.cpp "components")
+eclipsa_add_test(test_elevation_geometry ElevationGeometry_test.cpp "components")
+eclipsa_add_test(test_elevation_surfaces ElevationSurfaces_test.cpp "components")
