@@ -22,7 +22,7 @@ RoomViewScreen::RoomViewScreen(
       audioElementSpatialLayoutRepository_(audioElementSpatialLayoutRepo),
       parameterTree_(tree),
       onRoomElevationChange_([this] { elevationChangeCallback(); }),
-      room_(std::make_unique<AudioElementPluginRearView>(monitorData)),
+      room_(std::make_unique<AudioElementPluginTopView>(monitorData)),
       selRoomElevation_({IconStore::getInstance().getFlatElevationIcon(),
                          IconStore::getInstance().getTentElevationIcon(),
                          IconStore::getInstance().getArchElevationIcon(),

@@ -151,7 +151,7 @@ void PerspectiveRoomView::transformDynamicVertices() {
   }
   for (const AudioElementUpdateData& data : tracks_) {
     DrawableTrack newTrack;
-    Coordinates::Point4D pt = {data.x / 50, data.z / 50, -data.y / 50, 1.f};
+    Coordinates::Point4D pt = Coordinates::toRoomNdc(data.x, data.y, data.z);
     newTrack.pos = Coordinates::toWindow(kTransformMat_, wData, pt);
     if (rendererPlugin_) {
       newTrack.trackLoudness = assignTrackLoudness(data, mixPresSoloMute);

@@ -16,7 +16,25 @@
 
 #include <juce_gui_extra/juce_gui_extra.h>
 
+#include <cmath>
+
 namespace Coordinates {
+
+Point4D toRoomNdc(const float x, const float y, const float z) {
+  // Axis swap plus scale: parameter height becomes NDC up, and parameter
+  // front/back becomes NDC z with its sign inverted.
+  return {x / kPositionExtent, z / kPositionExtent, -y / kPositionExtent, 1.f};
+}
+
+PositionParameters fromRoomNdc(const Point4D& ndcPoint) {
+  // Round rather than truncate: the parameter domain is integral, and the
+  // /kPositionExtent scale is not exactly invertible in binary floating point.
+  return {
+      static_cast<int>(std::lround(ndcPoint.a[0] * kPositionExtent)),
+      static_cast<int>(std::lround(-ndcPoint.a[2] * kPositionExtent)),
+      static_cast<int>(std::lround(ndcPoint.a[1] * kPositionExtent)),
+  };
+}
 
 Point2D toWindow(const Mat4& transformMat, const WindowData& windowData,
                  const Point4D point) {
