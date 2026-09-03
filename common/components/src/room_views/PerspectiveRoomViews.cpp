@@ -14,7 +14,38 @@
 
 #include "PerspectiveRoomViews.h"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <vector>
+
+#include "components/src/room_views/ElevationSurfaces.h"
+#include "components/src/room_views/HeightIndicator.h"
 #include "data_structures/src/RepositoryCollection.h"
+
+namespace {
+
+// The two shades of the room-view translucent grey the rear projection
+// established. A pattern that presents more than one surface uses both, so
+// adjacent surfaces read as separate planes instead of merging into one panel.
+//
+// Named for the elevation surfaces on purpose: this file is unity-built into
+// components.cpp with twenty other sources, and an anonymous namespace is
+// shared across that whole translation unit, so a bare `recedingSurface` here
+// would be a name another source could collide with.
+juce::Colour elevationRecedingSurface() {
+  return EclipsaColours::roomviewTranslucentWall.brighter(0.2f);
+}
+juce::Colour elevationFacingSurface() {
+  return EclipsaColours::roomviewTranslucentWall.brighter();
+}
+
+// The height indicator's line weights.
+constexpr float kOutlineThickness = 2.f;
+constexpr float kHeightIndicatorConnectorThickness = 2.f;
+
+}  // namespace
 
 TopView::TopView(const SpeakerMonitorData& monitorData,
                  RepositoryCollection repos)
@@ -91,24 +122,20 @@ void IsoView::drawFace(const std::array<Coordinates::Point2D, 4>& faceVerts,
 const float IsoView::getTrackScaling(const Coordinates::Point4D pt) const {
   return 1.35f;
 };
-
-AudioElementPluginRearView::AudioElementPluginRearView(
+AudioElementPluginTopView::AudioElementPluginTopView(
     const SpeakerMonitorData& monitorData)
-    : PerspectiveRoomView(
-          FaceLookup::getFaces(FaceLookup::kRear),
-          Coordinates::getRearViewTransform(),
-          {SpeakerLookup::kLTB, SpeakerLookup::kRTB, SpeakerLookup::kLFE,
-           SpeakerLookup::kTPBL, SpeakerLookup::kTPBR, SpeakerLookup::kBL,
-           SpeakerLookup::kBR},
-          {}, monitorData) {};
+    : PerspectiveRoomView(FaceLookup::getFaces(FaceLookup::kTop),
+                          Coordinates::getTopViewTransform(),
+                          {SpeakerLookup::kLFE}, {}, monitorData) {};
 
-const float AudioElementPluginRearView::getTrackScaling(
+const float AudioElementPluginTopView::getTrackScaling(
     const Coordinates::Point4D pt) const {
-  return 0.35 * pt.a[FaceLookup::kAxisZ] + 1.35;
+  // Under a top-down projection the depth axis is NDC up, not NDC z.
+  return 0.35 * pt.a[FaceLookup::kAxisY] + 1.35;
 }
 
-void AudioElementPluginRearView::drawTrack(const DrawableTrack& track,
-                                           juce::Graphics& g) {
+void AudioElementPluginTopView::drawTrack(const DrawableTrack& track,
+                                          juce::Graphics& g) {
   // Determine the size of the outer track volume indicator based on the
   // loudness. Only draw if the track is not silent.
   const juce::Colour kTrackColour = getLoudnessColour(track.trackLoudness);
@@ -128,12 +155,12 @@ void AudioElementPluginRearView::drawTrack(const DrawableTrack& track,
                 width);
 }
 
-void AudioElementPluginRearView::setElevationPattern(
+void AudioElementPluginTopView::setElevationPattern(
     AudioElementSpatialLayout::Elevation elevation) {
   currentElevation_ = elevation;
 }
 
-void AudioElementPluginRearView::paint(juce::Graphics& g) {
+void AudioElementPluginTopView::paint(juce::Graphics& g) {
   Coordinates::WindowData wData = {
       .leftCornerX = 0.0f,
       .bottomCornerY = (float)getHeight(),
@@ -142,6 +169,29 @@ void AudioElementPluginRearView::paint(juce::Graphics& g) {
   };
 
   PerspectiveRoomView::paint(g);
+
+  // First split the indicator against the elevation surface: the outline and
+  // the back-edge connector pass under it, so each is drawn either side of the
+  // fill. The right-edge connector is coincident with the surface rather than
+  // either side of it and stays on top -- see splitLeaderLinesAtElevation.
+  HeightIndicator::SplitOutline outline, connectors;
+  if (!transformedTracks_.empty()) {
+    // One height function for both splits, so the outline and a connector
+    // agree about the point where they meet.
+    const auto kRoofAt = [this](const float leftRight, const float frontBack) {
+      return elevationHeightAt(leftRight, frontBack);
+    };
+    const Coordinates::Point4D kIndicatorPos =
+        indicatorPosition(transformedTracks_[0].ndcPos);
+    outline = HeightIndicator::splitAtElevation(kIndicatorPos.a[1], kRoofAt);
+    connectors = HeightIndicator::splitLeaderLinesAtElevation(
+        kIndicatorPos, kRoofAt, elevationVariesAcrossLeftRight());
+  }
+
+  // Then the runs that pass under the surface, so the fill tints them.
+  paintIndicatorRuns(wData, outline.below, kOutlineThickness, g);
+  paintIndicatorRuns(wData, connectors.below,
+                     kHeightIndicatorConnectorThickness, g);
 
   switch (currentElevation_) {
     case AudioElementSpatialLayout::Elevation::kFlat:
@@ -163,307 +213,268 @@ void AudioElementPluginRearView::paint(juce::Graphics& g) {
       break;
   }
 
+  // Then the runs over it, at full strength.
+  paintIndicatorRuns(wData, outline.above, kOutlineThickness, g);
+  paintIndicatorRuns(wData, connectors.above,
+                     kHeightIndicatorConnectorThickness, g);
+
   if (!transformedTracks_.empty()) {
+    // The audio source marker is drawn last so it is always on top.
     drawTrack(transformedTracks_[0], g);
   }
 }
 
-void AudioElementPluginRearView::paintFlatElevation(
-    const Coordinates::WindowData& window, juce::Graphics& g) {
-  // Set of (x,z) vertices needed to draw the shape. The height is given by the
-  // current elevation set by the UI.
-  std::array<Coordinates::Point4D, 4> flatElevationAnchorVertices = {
-      Coordinates::Point4D{-1.f, currentFlatHeight_, -1.f, 1.f},
-      Coordinates::Point4D{1.f, currentFlatHeight_, -1.f, 1.},
-      Coordinates::Point4D{-1.f, currentFlatHeight_, 1.f, 1.},
-      Coordinates::Point4D{1.f, currentFlatHeight_, 1.f, 1.},
-  };
-
-  std::array<Coordinates::Point2D, 4> flatElevationVertices;
-  for (int i = 0; i < flatElevationAnchorVertices.size(); ++i) {
-    flatElevationVertices[i] = Coordinates::toWindow(
-        kTransformMat_, window, flatElevationAnchorVertices[i]);
+float AudioElementPluginTopView::elevationHeightAt(
+    const float leftRight, const float frontBack) const {
+  switch (currentElevation_) {
+    case AudioElementSpatialLayout::Elevation::kFlat:
+      return currentFlatHeight_;
+    case AudioElementSpatialLayout::Elevation::kTent:
+      return ElevationListener::getTentElevationPt({-1.f, frontBack, 0.f}).a[1];
+    case AudioElementSpatialLayout::Elevation::kArch:
+      return ElevationListener::getArchElevationPt({-1.f, frontBack, 0.f}).a[1];
+    case AudioElementSpatialLayout::Elevation::kCurve:
+      // Sampled un-negated, on paintCurveElevation's sign convention -- the
+      // value the listener passes IS the NDC front/back coordinate.
+      return ElevationListener::getCurveElevationPt({-1.f, frontBack, 0.f})
+          .a[1];
+    case AudioElementSpatialLayout::Elevation::kDome: {
+      // The one pattern needing BOTH coordinates: it falls away from the
+      // room's centre in left/right as well as front/back.
+      //
+      // Beyond the dome's rim the surface is at the floor. Checked here rather
+      // than left to the static, which would clamp such a point onto the rim
+      // instead and can take the square root of a negative.
+      const float kRadiusSq = leftRight * leftRight + frontBack * frontBack;
+      if (kRadiusSq >= 1.f) {
+        return -1.f;
+      }
+      return ElevationListener::getDomeElevationPtClamped(
+                 {leftRight, frontBack, 0.f}, {})
+          .a[1];
+    }
+    default:
+      // kNone draws nothing, so every run comes back in `above`.
+      return -1.f;
   }
-
-  // Draw the path.
-  juce::Path flatElevationPath;
-  flatElevationPath.startNewSubPath(flatElevationVertices[0].a[0],
-                                    flatElevationVertices[0].a[1]);
-  flatElevationPath.lineTo(flatElevationVertices[1].a[0],
-                           flatElevationVertices[1].a[1]);
-  flatElevationPath.lineTo(flatElevationVertices[3].a[0],
-                           flatElevationVertices[3].a[1]);
-  flatElevationPath.lineTo(flatElevationVertices[2].a[0],
-                           flatElevationVertices[2].a[1]);
-  flatElevationPath.closeSubPath();
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter());
-  g.fillPath(flatElevationPath);
 }
 
-void AudioElementPluginRearView::paintTentElevation(
-    const Coordinates::WindowData& window, juce::Graphics& g) {
-  // Define the vertices needed to draw the tent shape using multiple different
-  // coloured paths.
-  const std::array<Coordinates::Point4D, 6> tentElevationAnchorVertices = {
-      Coordinates::Point4D{-1.f, -1.f, -1.f, 1.f},
-      Coordinates::Point4D{1.f, -1.f, -1.f, 1.},
-      Coordinates::Point4D{-1.f, 1.f, 0.f, 1.f},
-      Coordinates::Point4D{1.f, 1.f, 0.f, 1.},
-      Coordinates::Point4D{1.f, -1.f, 1.f, 1.},
-      Coordinates::Point4D{-1.f, -1.f, 1.f, 1.},
-  };
-
-  std::array<Coordinates::Point2D, 6> tentElevationVertices;
-  for (int i = 0; i < tentElevationAnchorVertices.size(); ++i) {
-    tentElevationVertices[i] = Coordinates::toWindow(
-        kTransformMat_, window, tentElevationAnchorVertices[i]);
+Coordinates::Point4D AudioElementPluginTopView::indicatorPosition(
+    const Coordinates::Point4D& sourceNdc) const {
+  // Where a pattern clamps the source, read the height back off the surface
+  // rather than off the position parameter. The parameter is quantised, and
+  // comparing a quantised height against the exact surface is ill conditioned
+  // near a crest -- on the dome that dimmed a long run of the indicator beside
+  // a source visibly resting on the surface. Reading the surface on both sides
+  // of the comparison takes the quantisation out of it, and moves the drawn
+  // height by at most half a parameter step.
+  if (!elevationClampsTheSource()) {
+    return sourceNdc;
   }
-
-  // Draw dark-grey paths.
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter(0.2f));
-  juce::Path leftTentPath, rightTentPath, bottomTentPath;
-  leftTentPath.startNewSubPath(tentElevationVertices[0].a[0],
-                               tentElevationVertices[0].a[1]);
-  leftTentPath.lineTo(tentElevationVertices[2].a[0],
-                      tentElevationVertices[2].a[1]);
-  leftTentPath.lineTo(tentElevationVertices[5].a[0],
-                      tentElevationVertices[5].a[1]);
-  leftTentPath.closeSubPath();
-  g.fillPath(leftTentPath);
-
-  rightTentPath.startNewSubPath(tentElevationVertices[1].a[0],
-                                tentElevationVertices[1].a[1]);
-  rightTentPath.lineTo(tentElevationVertices[3].a[0],
-                       tentElevationVertices[3].a[1]);
-  rightTentPath.lineTo(tentElevationVertices[4].a[0],
-                       tentElevationVertices[4].a[1]);
-  rightTentPath.closeSubPath();
-  g.fillPath(rightTentPath);
-
-  bottomTentPath.startNewSubPath(tentElevationVertices[0].a[0],
-                                 tentElevationVertices[0].a[1]);
-  bottomTentPath.lineTo(tentElevationVertices[1].a[0],
-                        tentElevationVertices[1].a[1]);
-  bottomTentPath.lineTo(tentElevationVertices[4].a[0],
-                        tentElevationVertices[4].a[1]);
-  bottomTentPath.lineTo(tentElevationVertices[5].a[0],
-                        tentElevationVertices[5].a[1]);
-  bottomTentPath.closeSubPath();
-  g.fillPath(bottomTentPath);
-
-  // Draw light-grey paths.
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter());
-  juce::Path topTentPath;
-  topTentPath.startNewSubPath(tentElevationVertices[0].a[0],
-                              tentElevationVertices[0].a[1]);
-  topTentPath.lineTo(tentElevationVertices[1].a[0],
-                     tentElevationVertices[1].a[1]);
-  topTentPath.lineTo(tentElevationVertices[3].a[0],
-                     tentElevationVertices[3].a[1]);
-  topTentPath.lineTo(tentElevationVertices[2].a[0],
-                     tentElevationVertices[2].a[1]);
-  topTentPath.closeSubPath();
-  g.fillPath(topTentPath);
+  Coordinates::Point4D snapped = sourceNdc;
+  snapped.a[1] = elevationHeightAt(sourceNdc.a[0], sourceNdc.a[2]);
+  return snapped;
 }
 
-void AudioElementPluginRearView::paintArchElevation(
-    const Coordinates::WindowData& window, juce::Graphics& g) {
-  // Use the function in Elevation to calculate points along the parabolic edge.
-  std::vector<Coordinates::Point4D> leftArchElevationAnchorVertices;
-  for (int i = 0; i < 41; ++i) {
-    float offset = i * 0.05f;
-    leftArchElevationAnchorVertices.push_back(Coordinates::Point4D{
-        -1.f,
-        ElevationListener::getArchElevationPt({-1.f, 1.f - offset, 1.f}).a[1],
-        -1 + offset, 1.f});
+bool AudioElementPluginTopView::elevationClampsTheSource() const {
+  // The four patterns ElevationListener recomputes the height for. kFlat and
+  // kNone leave the z dial live, so under those only the parameter knows the
+  // source's height.
+  switch (currentElevation_) {
+    case AudioElementSpatialLayout::Elevation::kTent:
+    case AudioElementSpatialLayout::Elevation::kArch:
+    case AudioElementSpatialLayout::Elevation::kDome:
+    case AudioElementSpatialLayout::Elevation::kCurve:
+      return true;
+    default:
+      return false;
   }
-
-  // Draw dark-grey paths.
-  juce::Path leftArchPath, rightArchPath, bottomArchPath;
-
-  // Convert the 3D points to window points for the left arch.
-  std::vector<Coordinates::Point2D> leftArchVertices;
-  for (int i = 0; i < leftArchElevationAnchorVertices.size(); ++i) {
-    leftArchVertices.push_back(Coordinates::toWindow(
-        kTransformMat_, window, leftArchElevationAnchorVertices[i]));
-  }
-  leftArchPath.startNewSubPath(leftArchVertices[0].a[0],
-                               leftArchVertices[0].a[1]);
-  for (int i = 1; i < leftArchVertices.size() - 1; ++i) {
-    leftArchPath.quadraticTo(leftArchVertices[i].a[0], leftArchVertices[i].a[1],
-                             leftArchVertices[i + 1].a[0],
-                             leftArchVertices[i + 1].a[1]);
-  }
-  leftArchPath.closeSubPath();
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter(0.2f));
-  g.fillPath(leftArchPath);
-
-  // Convert the 3D points to window points for the right arch.
-  std::vector<Coordinates::Point2D> rightArchVertices;
-  for (int i = 0; i < leftArchElevationAnchorVertices.size(); ++i) {
-    // Right arch points are left arch points mirrored along the z-axis.
-    const Coordinates::Point4D rightArchPt = {
-        -leftArchElevationAnchorVertices[i].a[0],
-        leftArchElevationAnchorVertices[i].a[1],
-        leftArchElevationAnchorVertices[i].a[2], 1.f};
-    rightArchVertices.push_back(
-        Coordinates::toWindow(kTransformMat_, window, rightArchPt));
-  }
-  // Paint the right arch.
-  rightArchPath.startNewSubPath(rightArchVertices[0].a[0],
-                                rightArchVertices[0].a[1]);
-  for (int i = 1; i < rightArchVertices.size() - 1; ++i) {
-    rightArchPath.quadraticTo(
-        rightArchVertices[i].a[0], rightArchVertices[i].a[1],
-        rightArchVertices[i + 1].a[0], rightArchVertices[i + 1].a[1]);
-  }
-  rightArchPath.closeSubPath();
-  g.fillPath(rightArchPath);
-
-  // Paint the floor.
-  std::array<Coordinates::Point4D, 4> flatElevationAnchorVertices = {
-      Coordinates::Point4D{-1.f, -1.f, -1.f, 1.f},
-      Coordinates::Point4D{1.f, -1.f, -1.f, 1.},
-      Coordinates::Point4D{1.f, -1.f, 1.f, 1.},
-      Coordinates::Point4D{-1.f, -1.f, 1.f, 1.},
-  };
-  std::array<Coordinates::Point2D, 4> flatElevationVertices;
-  for (int i = 0; i < flatElevationAnchorVertices.size(); ++i) {
-    flatElevationVertices[i] = Coordinates::toWindow(
-        kTransformMat_, window, flatElevationAnchorVertices[i]);
-  }
-  bottomArchPath.startNewSubPath(flatElevationVertices[0].a[0],
-                                 flatElevationVertices[0].a[1]);
-  for (int i = 1; i < flatElevationVertices.size(); ++i) {
-    bottomArchPath.lineTo(flatElevationVertices[i].a[0],
-                          flatElevationVertices[i].a[1]);
-  }
-  bottomArchPath.closeSubPath();
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter(0.2f));
-  g.fillPath(bottomArchPath);
-
-  // Draw light-grey path. The light grey path uses points of both the left and
-  // right arches.
-  juce::Path topArchPath;
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter());
-  topArchPath.startNewSubPath(leftArchVertices[0].a[0],
-                              leftArchVertices[0].a[1]);
-  for (int i = 0; i < leftArchVertices.size() / 2 + 2; ++i) {
-    topArchPath.quadraticTo(leftArchVertices[i].a[0], leftArchVertices[i].a[1],
-                            leftArchVertices[i + 1].a[0],
-                            leftArchVertices[i + 1].a[1]);
-  }
-  for (int i = rightArchVertices.size() / 2 + 3; i > 0; --i) {
-    topArchPath.quadraticTo(
-        rightArchVertices[i].a[0], rightArchVertices[i].a[1],
-        rightArchVertices[i - 1].a[0], rightArchVertices[i - 1].a[1]);
-    rightArchPath.createPathWithRoundedCorners(1.f);
-  }
-  topArchPath.closeSubPath();
-  g.fillPath(topArchPath);
 }
 
-void AudioElementPluginRearView::paintDomeElevation(
-    const Coordinates::WindowData& window, juce::Graphics& g) {
-  // Generate N linearly spaced points from 0 to 2Pi.
-  const int N = 81;
-  std::vector<float> theta(N);
-  for (int i = 0; i < N; ++i) {
-    theta[i] = i * juce::MathConstants<float>::twoPi / (N - 1);
-  }
-
-  // Generate the dome floor path points.
-  std::vector<Coordinates::Point4D> domeFloorVertices3D;
-  for (int i = 0; i < N; ++i) {
-    float x = std::cos(theta[i]);
-    float y = std::sin(theta[i]);
-    auto floorPt =
-        ElevationListener::getDomeElevationPtClamped({x, y, 0.f}, {});
-    domeFloorVertices3D.push_back(
-        {floorPt.a[0], floorPt.a[1], floorPt.a[2], 1.f});
-  };
-  // Generate the dome ceiling path points.
-  std::vector<Coordinates::Point4D> domeRoofVertices3D;
-  const float offset = 2.f / N;
-  for (int i = 0; i < N + 1; ++i) {
-    float x = 1 - i * offset;
-    auto roofPt =
-        ElevationListener::getDomeElevationPtClamped({x, 0.f, 0.f}, {});
-    domeRoofVertices3D.push_back({roofPt.a[0], roofPt.a[1], roofPt.a[2], 1.f});
-  }
-
-  // Convert the 3D points to window points.
-  std::vector<Coordinates::Point2D> domeFloorVertices;
-  for (const auto& pt : domeFloorVertices3D) {
-    domeFloorVertices.push_back(
-        Coordinates::toWindow(kTransformMat_, window, pt));
-  }
-  std::vector<Coordinates::Point2D> domeRoofVertices;
-  for (const auto& pt : domeRoofVertices3D) {
-    domeRoofVertices.push_back(
-        Coordinates::toWindow(kTransformMat_, window, pt));
-  }
-
-  // Draw the dome path using the front bottom vertices and the ceiling
-  // vertices. We use a bit of offset here because if the top arch of the dome
-  // connects to the circle exactly at its middle edges, it looks a bit weird.
-  const int kOff = 4;
-  juce::Path domePath;
-  domePath.startNewSubPath(domeFloorVertices[kOff].a[0],
-                           domeFloorVertices[kOff].a[1]);
-  for (int i = kOff; i < domeRoofVertices.size() - kOff; ++i) {
-    domePath.lineTo(domeRoofVertices[i].a[0], domeRoofVertices[i].a[1]);
-  }
-  domePath.lineTo(domeFloorVertices[domeFloorVertices.size() / 2 - kOff].a[0],
-                  domeFloorVertices[domeFloorVertices.size() / 2 - kOff].a[1]);
-  for (int i = domeFloorVertices.size() / 2 - kOff; i > kOff; --i) {
-    domePath.lineTo(domeFloorVertices[i].a[0], domeFloorVertices[i].a[1]);
-  }
-
-  domePath.closeSubPath();
-  domePath.createPathWithRoundedCorners(2.f);
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter(0.2f));
-  g.fillPath(domePath);
+bool AudioElementPluginTopView::elevationVariesAcrossLeftRight() const {
+  // Only the dome. The others are height fields in front/back alone, so the
+  // right-edge connector lies at a single surface height under them and is
+  // placed rather than split -- see
+  // HeightIndicator::splitLeaderLinesAtElevation.
+  return currentElevation_ == AudioElementSpatialLayout::Elevation::kDome;
 }
 
-void AudioElementPluginRearView::paintCurveElevation(
+void AudioElementPluginTopView::paintIndicatorRuns(
+    const Coordinates::WindowData& window,
+    const std::vector<HeightIndicator::Segment>& runs, const float thickness,
+    juce::Graphics& g) {
+  g.setColour(EclipsaColours::controlBlue);
+  for (const HeightIndicator::Segment& run : runs) {
+    const std::array<Coordinates::Point2D, 2> kEnds =
+        HeightIndicator::projectSegment(kTransformMat_, window, run);
+    drawLine(kEnds[0], kEnds[1], g, thickness);
+  }
+}
+
+// The five elevation painters below are dispatched from paint above.
+//
+// The top view is not an orthographic plan view: getTopViewTransform() is a
+// 45-degree perspective with the camera rotated 90 degrees about X, so its
+// w = 5 - y. Height therefore scales the projection, and an elevation pattern
+// reads as a 3D surface seen from above rather than as a flat outline -- which
+// is why only Flat is a single panel here, and why surfaces the rear
+// projection could omit as occluded are visible and must be drawn.
+//
+// Heights come from the statics in Elevation.h; no elevation curve is
+// re-derived here. Those helpers take the front/back coordinate in a[1] and
+// return the height in a[1] (see the axis note in Elevation.h).
+
+void AudioElementPluginTopView::paintFlatElevation(
     const Coordinates::WindowData& window, juce::Graphics& g) {
-  // Generate N linearly spaced points from -1 to 1.
-  const int N = 32;
-  std::vector<float> y(N);
-  for (int i = 0; i < N; ++i) {
-    y[i] = -1.f + i * 2.f / (N - 1);
+  // The one pattern that is genuinely a single plane: a panel over the floor at
+  // the height set through setFlatHeight. Height is indicated by the uniform
+  // tint alone.
+  const std::vector<Coordinates::Point4D> kFlatAnchors = {
+      {-1.f, currentFlatHeight_, -1.f, 1.f},
+      {1.f, currentFlatHeight_, -1.f, 1.f},
+      {1.f, currentFlatHeight_, 1.f, 1.f},
+      {-1.f, currentFlatHeight_, 1.f, 1.f},
+  };
+
+  g.setColour(elevationFacingSurface());
+  g.fillPath(
+      ElevationSurfaces::anchorsToPath(kTransformMat_, window, kFlatAnchors));
+}
+
+void AudioElementPluginTopView::paintTentElevation(
+    const Coordinates::WindowData& window, juce::Graphics& g) {
+  // Two sloping planes meeting at the ridge, off the rear projection's six
+  // anchors: floor corners at (+/-1, -1, -/+1) and ridge points at
+  // (+/-1, 1, 0). The rear projection drew only the front slope because the
+  // back slope was occluded; from above both are visible.
+  const Coordinates::Point4D kFrontFloorLeft = {-1.f, -1.f, -1.f, 1.f};
+  const Coordinates::Point4D kFrontFloorRight = {1.f, -1.f, -1.f, 1.f};
+  const Coordinates::Point4D kRidgeLeft = {-1.f, 1.f, 0.f, 1.f};
+  const Coordinates::Point4D kRidgeRight = {1.f, 1.f, 0.f, 1.f};
+  const Coordinates::Point4D kBackFloorRight = {1.f, -1.f, 1.f, 1.f};
+  const Coordinates::Point4D kBackFloorLeft = {-1.f, -1.f, 1.f, 1.f};
+
+  // Shade the two planes differently so the shared ridge reads as an edge
+  // rather than the pair merging into one panel.
+  g.setColour(elevationRecedingSurface());
+  g.fillPath(ElevationSurfaces::anchorsToPath(
+      kTransformMat_, window,
+      {kBackFloorLeft, kBackFloorRight, kRidgeRight, kRidgeLeft}));
+
+  g.setColour(elevationFacingSurface());
+  g.fillPath(ElevationSurfaces::anchorsToPath(
+      kTransformMat_, window,
+      {kFrontFloorLeft, kFrontFloorRight, kRidgeRight, kRidgeLeft}));
+}
+
+void AudioElementPluginTopView::paintArchElevation(
+    const Coordinates::WindowData& window, juce::Graphics& g) {
+  // A curved surface, not a silhouette edge: sample the parabola along the
+  // left and right room edges at the same front/back positions, then stitch
+  // the two sampled edges into one filled surface spanning left to right.
+  const int kNumSamples = 41;
+  std::vector<Coordinates::Point4D> leftEdge, rightEdge;
+  leftEdge.reserve(kNumSamples);
+  rightEdge.reserve(kNumSamples);
+  for (int i = 0; i < kNumSamples; ++i) {
+    const float offset = i * 0.05f;
+    const float frontBack = -1.f + offset;
+    const float height =
+        ElevationListener::getArchElevationPt({-1.f, frontBack, 0.f}).a[1];
+    leftEdge.push_back({-1.f, height, frontBack, 1.f});
+    rightEdge.push_back({1.f, height, frontBack, 1.f});
   }
 
-  // Generate the curve path points.
-  std::vector<Coordinates::Point4D> curveVertices3D(N);
-  for (int i = 0; i < N; ++i) {
-    auto curvePt = ElevationListener::getCurveElevationPt({-1.f, y[i], 0.f});
-    curveVertices3D[i] = {curvePt.a[0], curvePt.a[1], y[i], 1.f};
+  // The parabola crests at the centre line, so the surface has a front half
+  // facing the room's front and a back half falling away from it -- the same
+  // shape as the tent, sampled instead of faceted. Shade it the same way: the
+  // back half recedes, the front half faces. Both halves keep the crest sample,
+  // so they meet exactly at the ridge with no seam between them.
+  const size_t kCrest = ElevationSurfaces::frontBackSplitIndex(leftEdge);
+  const size_t kFrontEnd = std::min(kCrest + 1, leftEdge.size());
+
+  g.setColour(elevationRecedingSurface());
+  g.fillPath(ElevationSurfaces::sampledEdgesToPath(
+      kTransformMat_, window, {leftEdge.begin() + kCrest, leftEdge.end()},
+      {rightEdge.begin() + kCrest, rightEdge.end()}));
+
+  g.setColour(elevationFacingSurface());
+  g.fillPath(ElevationSurfaces::sampledEdgesToPath(
+      kTransformMat_, window, {leftEdge.begin(), leftEdge.begin() + kFrontEnd},
+      {rightEdge.begin(), rightEdge.begin() + kFrontEnd}));
+}
+
+void AudioElementPluginTopView::paintDomeElevation(
+    const Coordinates::WindowData& window, juce::Graphics& g) {
+  // A filled circle marking the dome's outer bound -- the region
+  // getDomeElevationPtClamped clamps x and y into -- so the circle shows where
+  // the source can actually sit. Sampling the boundary through that same
+  // function is what ties the radius to the clamp rather than to a constant:
+  // on the unit circle it returns the sampled (x, y) unclamped at floor
+  // height.
+  // The hemisphere crests at the centre of the room, so like the tent and the
+  // arch it has a half facing the room's front and a half falling away from it.
+  // Drawn as two half-discs in the same two shades, split across the centre
+  // line. Sampling each half over its own angular range rather than
+  // partitioning one full sweep is what makes the shared edge the exact
+  // diameter: cos(0) and cos(pi) are exactly +/-1, so both halves close on the
+  // same chord and no seam opens along it. The step is pi/40 per half, so the
+  // union is the same 81 boundary positions the full sweep visited and the
+  // radius is unchanged.
+  const int kSamplesPerHalf = 41;
+  const auto boundAnchorAt = [](const float theta) {
+    const Coordinates::Point3D boundPt =
+        ElevationListener::getDomeElevationPtClamped(
+            {std::cos(theta), std::sin(theta), 0.f}, {});
+    return Coordinates::Point4D{boundPt.a[0], boundPt.a[1], boundPt.a[2], 1.f};
+  };
+
+  std::vector<Coordinates::Point4D> backHalf, frontHalf;
+  backHalf.reserve(kSamplesPerHalf);
+  frontHalf.reserve(kSamplesPerHalf);
+  for (int i = 0; i < kSamplesPerHalf; ++i) {
+    // sin(theta) is the front/back coordinate, so [0, pi) is the back half and
+    // [pi, 2pi) the front half.
+    const float theta =
+        i * juce::MathConstants<float>::pi / (kSamplesPerHalf - 1);
+    backHalf.push_back(boundAnchorAt(theta));
+    frontHalf.push_back(boundAnchorAt(theta + juce::MathConstants<float>::pi));
   }
 
-  // Convert the 3D points to window points.
-  std::vector<Coordinates::Point2D> curveVertices;
-  for (const auto& pt : curveVertices3D) {
-    curveVertices.push_back(Coordinates::toWindow(kTransformMat_, window, pt));
-  }
-  // Mirror the points across the y-axis and convert them to window points.
-  for (auto& pt : curveVertices3D) {
-    pt.a[0] = -pt.a[0];
-    curveVertices.push_back(Coordinates::toWindow(kTransformMat_, window, pt));
+  g.setColour(elevationRecedingSurface());
+  g.fillPath(
+      ElevationSurfaces::anchorsToPath(kTransformMat_, window, backHalf));
+
+  g.setColour(elevationFacingSurface());
+  g.fillPath(
+      ElevationSurfaces::anchorsToPath(kTransformMat_, window, frontHalf));
+}
+
+void AudioElementPluginTopView::paintCurveElevation(
+    const Coordinates::WindowData& window, juce::Graphics& g) {
+  // The same treatment as Arch, against the logarithmic curve, at the existing
+  // sample count.
+  //
+  // Sign convention: ElevationListener negates the front/back POSITION
+  // PARAMETER before calling getCurveElevationPt, and room-view NDC z is that
+  // same parameter negated (Coordinates::toRoomNdc). The value the listener
+  // passes is therefore the NDC front/back coordinate itself, so sampling at
+  // frontBack un-negated is what makes the drawn surface agree with the height
+  // the listener derives. The curve is not symmetric about 0, so this sign
+  // matters here where it does not for Tent, Arch, or Dome.
+  const int kNumSamples = 32;
+  std::vector<Coordinates::Point4D> leftEdge, rightEdge;
+  leftEdge.reserve(kNumSamples);
+  rightEdge.reserve(kNumSamples);
+  for (int i = 0; i < kNumSamples; ++i) {
+    const float frontBack = -1.f + i * 2.f / (kNumSamples - 1);
+    const float height =
+        ElevationListener::getCurveElevationPt({-1.f, frontBack, 0.f}).a[1];
+    leftEdge.push_back({-1.f, height, frontBack, 1.f});
+    rightEdge.push_back({1.f, height, frontBack, 1.f});
   }
 
-  // Draw the curve path.
-  juce::Path curvePath;
-  curvePath.startNewSubPath(curveVertices[0].a[0], curveVertices[0].a[1]);
-  for (int i = 1; i < curveVertices.size() / 2; ++i) {
-    curvePath.lineTo(curveVertices[i].a[0], curveVertices[i].a[1]);
-  }
-  for (int i = curveVertices.size() - 1; i > curveVertices.size() / 2 - 1;
-       --i) {
-    curvePath.lineTo(curveVertices[i].a[0], curveVertices[i].a[1]);
-  }
-  curvePath.closeSubPath();
-  g.setColour(EclipsaColours::roomviewTranslucentWall.brighter(0.2f));
-  g.fillPath(curvePath);
+  g.setColour(elevationFacingSurface());
+  g.fillPath(ElevationSurfaces::sampledEdgesToPath(kTransformMat_, window,
+                                                   leftEdge, rightEdge));
 }

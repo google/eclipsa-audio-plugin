@@ -16,7 +16,25 @@
 
 #include <juce_gui_extra/juce_gui_extra.h>
 
+#include <cmath>
+
 namespace Coordinates {
+
+Point4D toRoomNdc(const float x, const float y, const float z) {
+  // Axis swap plus scale: parameter height becomes NDC up, and parameter
+  // front/back becomes NDC z with its sign inverted.
+  return {x / kPositionExtent, z / kPositionExtent, -y / kPositionExtent, 1.f};
+}
+
+PositionParameters fromRoomNdc(const Point4D& ndcPoint) {
+  // Round rather than truncate: the parameter domain is integral, and the
+  // /kPositionExtent scale is not exactly invertible in binary floating point.
+  return {
+      static_cast<int>(std::lround(ndcPoint.a[0] * kPositionExtent)),
+      static_cast<int>(std::lround(-ndcPoint.a[2] * kPositionExtent)),
+      static_cast<int>(std::lround(ndcPoint.a[1] * kPositionExtent)),
+  };
+}
 
 Point2D toWindow(const Mat4& transformMat, const WindowData& windowData,
                  const Point4D point) {
@@ -34,53 +52,6 @@ Point2D toWindow(const Mat4& transformMat, const WindowData& windowData,
           -h2 * ndcPoint.a[1] + windowData.bottomCornerY - h2};
 }
 
-constexpr Mat4 getRearViewTransform() {
-  /**
-   * Generated with the following code:
-   * model = glm::scale(model, glm::vec3(1.2f, 0.9f, 2.5f));
-   * view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
-   * projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH / SCR_HEIGHT,
-   *  0.1f, 100.0f);
-   */
-  return {{
-      {2.19693f, 0.0f, 0.0f, 0.0f},
-      {0.0f, 2.17279f, 0.0f, 0.0f},
-      {0.0f, 0.0f, -2.505f, -2.5f},
-      {0.0f, 0.0f, 4.80981f, 5.0f},
-  }};
-}
-constexpr Mat4 getSideViewTransform() {
-  /**
-   * Generated with the following code:
-   * model = glm::scale(model, glm::vec3(0.9f, 1.0f, 1.3f));
-   * view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -4.0f)) *
-   *  glm::rotate(view, glm::radians(90.f), glm::vec3(0.f, 1.f, 0.f));
-   * projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH / SCR_HEIGHT,
-   *  0.1f, 100.0f);
-   */
-  return {{
-      {0.0f, 0.0f, 0.901802f, 0.9f},
-      {0.0f, 2.41421f, 0.0f, 0.0f},
-      {2.38001f, 0.0f, 0.0f, 0.0f},
-      {0.0f, 0.0f, 3.80781f, 4.0f},
-  }};
-}
-constexpr Mat4 getTopViewTransform() {
-  /**
-   * Generated with the following code:
-   * model = glm::scale(model, glm::vec3(1.2f, 1.f, 1.4f));
-   * view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f)) *
-   *  glm::rotate(view, glm::radians(90.f), glm::vec3(1.f, 0.f, 0.f));
-   * projection = glm::perspective(glm::radians(45.0f), SCR_WIDTH / SCR_HEIGHT,
-   * 0.1f, 100.0f);
-   */
-  return {{
-      {2.19693f, 0.0f, 0.0f, 0.0f},
-      {0.0f, 0.0f, -1.002f, -1.0f},
-      {0.0f, -3.3799f, 0.0f, 0.0f},
-      {0.0f, 0.0f, 4.80981f, 5.0f},
-  }};
-}
 Mat4 getIsoViewTransform() {
   const Mat4 ortho = {{
       {0.505556f, 0.0f, 0.0f, 0.0f},

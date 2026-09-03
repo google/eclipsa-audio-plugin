@@ -81,6 +81,8 @@ class PerspectiveRoomView : public juce::Component {
     float sizeScale;
     juce::String trackLabel;
     Coordinates::Point2D pos;
+    // The position before projection, which still carries the height.
+    Coordinates::Point4D ndcPos = {0.f, 0.f, 0.f, 1.f};
   };
 
   virtual const float getTrackScaling(const Coordinates::Point4D pt) const = 0;

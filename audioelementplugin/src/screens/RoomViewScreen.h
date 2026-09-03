@@ -46,7 +46,7 @@ class RoomViewScreen : public juce::Component,
   AudioElementPluginSyncClient* syncClient_;
   AudioElementSpatialLayoutRepository* audioElementSpatialLayoutRepository_;
   AudioElementParameterTree* parameterTree_;
-  std::unique_ptr<AudioElementPluginRearView> room_;
+  std::unique_ptr<AudioElementPluginTopView> room_;
   SegmentedToggleImageButton selRoomElevation_;
   std::function<void()> onRoomElevationChange_;
   const SpeakerMonitorData& spkrData_;

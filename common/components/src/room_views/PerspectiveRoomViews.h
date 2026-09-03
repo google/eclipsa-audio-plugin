@@ -15,7 +15,10 @@
  */
 
 #pragma once
+#include <vector>
+
 #include "PerspectiveRoomView.h"
+#include "components/src/room_views/HeightIndicator.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
 #include "data_structures/src/Elevation.h"
 #include "data_structures/src/RepositoryCollection.h"
@@ -46,16 +49,29 @@ class IsoView : public PerspectiveRoomView {
   const float getTrackScaling(const Coordinates::Point4D pt) const override;
 };
 
-class AudioElementPluginRearView : public PerspectiveRoomView {
+// The audio element plugin's panner: a top-down (plan) projection of the room,
+// with left/right on the horizontal screen axis and front/back on the
+// vertical. Replaces the rear projection the panner used previously.
+class AudioElementPluginTopView : public PerspectiveRoomView {
  public:
-  AudioElementPluginRearView(const SpeakerMonitorData& monitorData);
+  AudioElementPluginTopView(const SpeakerMonitorData& monitorData);
   void paint(juce::Graphics& g) override;
   const float getTrackScaling(const Coordinates::Point4D pt) const override;
   void drawTrack(const DrawableTrack& track, juce::Graphics& g) override;
   void setElevationPattern(AudioElementSpatialLayout::Elevation elevation);
-  void setFlatHeight(float height) { currentFlatHeight_ = height / 50.f; }
+  void setFlatHeight(float height) {
+    currentFlatHeight_ = Coordinates::toRoomNdc(0.f, 0.f, height).a[1];
+  }
 
  private:
+  float elevationHeightAt(float leftRight, float frontBack) const;
+  Coordinates::Point4D indicatorPosition(
+      const Coordinates::Point4D& sourceNdc) const;
+  bool elevationClampsTheSource() const;
+  bool elevationVariesAcrossLeftRight() const;
+  void paintIndicatorRuns(const Coordinates::WindowData& window,
+                          const std::vector<HeightIndicator::Segment>& runs,
+                          float thickness, juce::Graphics& g);
   void paintFlatElevation(const Coordinates::WindowData& window,
                           juce::Graphics& g);
   void paintTentElevation(const Coordinates::WindowData& window,
@@ -68,6 +84,10 @@ class AudioElementPluginRearView : public PerspectiveRoomView {
                            juce::Graphics& g);
 
  private:
-  AudioElementSpatialLayout::Elevation currentElevation_;
-  float currentFlatHeight_;
+  // Initialized here, not left to the constructor: paint() reads both on the
+  // first repaint, which happens before RoomViewScreen calls
+  // setElevationPattern or setFlatHeight.
+  AudioElementSpatialLayout::Elevation currentElevation_ =
+      AudioElementSpatialLayout::Elevation::kNone;
+  float currentFlatHeight_ = 0.f;
 };
