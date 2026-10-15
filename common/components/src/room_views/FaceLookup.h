@@ -35,6 +35,8 @@ enum PerspectiveView {
   kSide,
   kRear,
   kIso,
+  // The top view with the audio element panner's front-wall screen added.
+  kPannerTop,
 };
 enum class FaceTag {
   kFront,
@@ -45,6 +47,7 @@ enum class FaceTag {
   kBottom,
   kIsoLeft,
   kIsoBack,
+  kScreen,
 };
 enum NormalAxis {
   kAxisX,
@@ -149,6 +152,17 @@ const Face kIsoBackFace = {
     juce::Colours::transparentBlack,
     FaceTag::kIsoBack};
 
+// A screen centred on the front wall, spanning three quarters of its width and
+// height. Wound like kFrontFace.
+const Face kFrontScreenFace = {
+    {Coordinates::Point4D{-0.75f, 0.75f, -1.f, 1.f},
+     Coordinates::Point4D{0.75f, 0.75f, -1.f, 1.f},
+     Coordinates::Point4D{0.75f, -0.75f, -1.f, 1.f},
+     Coordinates::Point4D{-0.75f, -0.75f, -1.f, 1.f}},
+    EclipsaColours::roomviewScreen,
+    juce::Colours::transparentBlack,
+    FaceTag::kScreen};
+
 // Make face sets queryable by tag.
 inline std::vector<Face> getFaces(const PerspectiveView view) {
   switch (view) {
@@ -160,6 +174,12 @@ inline std::vector<Face> getFaces(const PerspectiveView view) {
       return {kFrontFace, kLeftFace, kRightFace, kTopFace, kBottomFace};
     case PerspectiveView::kIso:
       return {kFrontFace, kBottomFace, kRightFace, kIsoBackFace, kIsoLeftFace};
+    case PerspectiveView::kPannerTop: {
+      // Last, so it draws over the front wall it sits on.
+      std::vector<Face> faces = getFaces(PerspectiveView::kTop);
+      faces.push_back(kFrontScreenFace);
+      return faces;
+    }
     default:
       return {kFrontFace, kLeftFace, kRightFace, kBottomFace, kBackFace};
   }

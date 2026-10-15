@@ -146,9 +146,9 @@ class PerspectiveRoomView : public juce::Component {
   // Speakers that are not be drawn for the current room view.
   const std::unordered_set<SpeakerLookup::SpeakerTag> kHiddenSpeakers_;
 
-  bool displaySpeakers_;
-  bool displayTracks_;
-  bool displayLabels_;
+  bool displaySpeakers_ = false;
+  bool displayTracks_ = false;
+  bool displayLabels_ = false;
 
   std::vector<AudioElementUpdateData> tracks_;
   bool recalculateStaticVertices_ = true;
