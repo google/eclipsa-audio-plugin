@@ -18,6 +18,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 #include "components/src/room_views/ElevationSurfaces.h"
@@ -44,6 +45,36 @@ juce::Colour elevationFacingSurface() {
 // The height indicator's line weights.
 constexpr float kOutlineThickness = 2.f;
 constexpr float kHeightIndicatorConnectorThickness = 2.f;
+
+// The marker's drawn diameter before depth scaling, shared by the draw and the
+// hit test.
+constexpr float kAudioSourceMarkerDiameter = 14.f;
+// Widens the grab target past the drawn edge.
+constexpr float kAudioSourceGrabMargin = 4.f;
+
+// setValueNotifyingHost takes a normalized value. Passing a raw position would
+// peg the parameter to its maximum.
+//
+// Emits no gesture of its own: the drag brackets the whole gesture from
+// mouseDown to mouseUp, and writeSteppedPositionParameter brackets a single
+// step.
+void writePositionParameter(juce::RangedAudioParameter* parameter,
+                            const int value) {
+  const int kClamped =
+      std::clamp(value, AutoParamMetaData::positionRange_.first,
+                 AutoParamMetaData::positionRange_.second);
+  parameter->setValueNotifyingHost(parameter->convertTo0to1((float)kClamped));
+}
+
+// A nudge and a wheel notch are each one discrete change rather than a
+// continuous gesture, so each carries its own bracket and none is left open
+// between events.
+void writeSteppedPositionParameter(juce::RangedAudioParameter* parameter,
+                                   const int value) {
+  parameter->beginChangeGesture();
+  writePositionParameter(parameter, value);
+  parameter->endChangeGesture();
+}
 
 }  // namespace
 
@@ -126,7 +157,12 @@ AudioElementPluginTopView::AudioElementPluginTopView(
     const SpeakerMonitorData& monitorData)
     : PerspectiveRoomView(FaceLookup::getFaces(FaceLookup::kTop),
                           Coordinates::getTopViewTransform(),
-                          {SpeakerLookup::kLFE}, {}, monitorData) {};
+                          {SpeakerLookup::kLFE}, {}, monitorData) {
+  // Arrow keys reach keyPressed only once this view can hold focus. It takes
+  // focus on mouseDown rather than on construction, so opening the plugin does
+  // not steal it from whatever the host had focused.
+  setWantsKeyboardFocus(true);
+};
 
 const float AudioElementPluginTopView::getTrackScaling(
     const Coordinates::Point4D pt) const {
@@ -142,7 +178,7 @@ void AudioElementPluginTopView::drawTrack(const DrawableTrack& track,
   float width;
   if (kTrackColour != EclipsaColours::speakerSilentFill) {
     float sf2 = 6 * (1 - std::abs(track.trackLoudness) / 60.f);
-    width = 14.f * track.sizeScale * sf2;
+    width = kAudioSourceMarkerDiameter * track.sizeScale * sf2;
     g.setColour(kTrackColour.withAlpha(0.5f));
     g.fillEllipse(track.pos.a[0] - width / 2, track.pos.a[1] - width / 2, width,
                   width);
@@ -150,7 +186,7 @@ void AudioElementPluginTopView::drawTrack(const DrawableTrack& track,
 
   // The panned audio element track center is blue independent of loudness.
   g.setColour(EclipsaColours::controlBlue);
-  width = 14.f * track.sizeScale;
+  width = kAudioSourceMarkerDiameter * track.sizeScale;
   g.fillEllipse(track.pos.a[0] - width / 2, track.pos.a[1] - width / 2, width,
                 width);
 }
@@ -160,13 +196,250 @@ void AudioElementPluginTopView::setElevationPattern(
   currentElevation_ = elevation;
 }
 
-void AudioElementPluginTopView::paint(juce::Graphics& g) {
-  Coordinates::WindowData wData = {
+juce::RangedAudioParameter* AudioElementPluginTopView::positionParameter(
+    const juce::String& parameterName) const {
+  if (parameterTree_ == nullptr) {
+    return nullptr;
+  }
+  return parameterTree_->getParameter(
+      AutoParamMetaData::getParameterIDFromName(parameterName).getParamID());
+}
+
+bool AudioElementPluginTopView::sourceMarkerContains(
+    const juce::Point<float>& windowPoint) const {
+  const DrawableTrack& kSource = transformedTracks_[0];
+  const float kRadius = kAudioSourceMarkerDiameter * kSource.sizeScale / 2.f +
+                        kAudioSourceGrabMargin;
+  return windowPoint.getDistanceFrom({kSource.pos.a[0], kSource.pos.a[1]}) <=
+         kRadius;
+}
+
+int AudioElementPluginTopView::speakerIndexAt(
+    const juce::Point<float>& windowPoint) const {
+  // setSpeakers only flags the vertices for recalculation, so the two lists
+  // are briefly out of step between a layout change and the next paint. An
+  // index resolved against a stale window list would name a different speaker.
+  if (speakers_.size() != transformedSpeakers_.size()) {
+    return PannerInput::kNoSpeaker;
+  }
+
+  std::vector<PannerInput::SpeakerTarget> targets;
+  targets.reserve(transformedSpeakers_.size());
+  for (const DrawableSpeaker& spkr : transformedSpeakers_) {
+    targets.push_back({{spkr.pos.a[0], spkr.pos.a[1]}, speakerIsDrawn(spkr)});
+  }
+  return PannerInput::speakerIndexAt(targets, windowPoint);
+}
+
+void AudioElementPluginTopView::snapToSpeaker(const int speakerIndex) {
+  const Coordinates::PositionParameters kTarget =
+      Coordinates::fromRoomNdc(speakers_[speakerIndex].pos);
+  juce::RangedAudioParameter* xParameter =
+      positionParameter(AutoParamMetaData::xPosition);
+  juce::RangedAudioParameter* yParameter =
+      positionParameter(AutoParamMetaData::yPosition);
+  // Unbracketed: the snap sits inside the drag gesture mouseDown has opened.
+  if (xParameter != nullptr) {
+    writePositionParameter(xParameter, kTarget.x);
+  }
+  if (yParameter != nullptr) {
+    writePositionParameter(yParameter, kTarget.y);
+  }
+  // Under every other pattern height belongs to the pattern: ElevationListener
+  // derives it from the position just written, so writing height here would
+  // fight it. Unlike a drag, no plan clamp is needed: every speaker sits
+  // inside the dome's footprint.
+  if (PannerInput::clickSetsHeight(currentElevation_)) {
+    juce::RangedAudioParameter* zParameter =
+        positionParameter(AutoParamMetaData::zPosition);
+    if (zParameter != nullptr) {
+      writeSteppedPositionParameter(zParameter, kTarget.z);
+    }
+  }
+}
+
+void AudioElementPluginTopView::writeDragPosition(
+    const juce::Point<float>& windowPoint) {
+  if (parameterTree_ == nullptr) {
+    return;
+  }
+  // The plane the pointer is un-projected onto. Under a pattern that positions
+  // in plan it is FIXED, so the pointer names one position however the height
+  // then moves. Reading it from the source's live height instead closes a
+  // feedback loop through ElevationListener: each event un-projects at the
+  // height the last one produced, and where the projection folds that loop has
+  // gain above 1, so the source runs away from the pointer and lands somewhere
+  // that depends on where it started.
+  const float kNdcUp =
+      elevationPositionsInPlan()
+          ? Coordinates::kPlanPlaneUp
+          : Coordinates::toRoomNdc(0.f, 0.f,
+                                   (float)parameterTree_->getZPosition())
+                .a[1];
+  const Coordinates::Point2D kWindowPoint = {windowPoint.x, windowPoint.y};
+  const std::optional<Coordinates::Point4D> kRoomNdc =
+      Coordinates::fromTopViewWindow(kTransformMat_, currentWindow(),
+                                     kWindowPoint, kNdcUp);
+  // The source keeps its last position while the panner has no area.
+  if (!kRoomNdc) {
+    return;
+  }
+  // Clamped before the write: a correction made after it has already been
+  // published to the host.
+  const Coordinates::PositionParameters kTarget =
+      PannerInput::clampToElevationPlan(currentElevation_,
+                                        Coordinates::fromRoomNdc(*kRoomNdc));
+
+  // Each event converts the pointer afresh, so no drift accumulates.
+  juce::RangedAudioParameter* xParameter =
+      positionParameter(AutoParamMetaData::xPosition);
+  juce::RangedAudioParameter* yParameter =
+      positionParameter(AutoParamMetaData::yPosition);
+  if (xParameter != nullptr) {
+    writePositionParameter(xParameter, kTarget.x);
+  }
+  if (yParameter != nullptr) {
+    writePositionParameter(yParameter, kTarget.y);
+  }
+}
+
+void AudioElementPluginTopView::mouseDown(const juce::MouseEvent& event) {
+  draggingSource_ = false;
+  // Any press in the panner takes focus, not just one that grabs the source:
+  // nudge is meant to work after the user has interacted with the panner at
+  // all, and a press that missed the marker is still that interaction.
+  grabKeyboardFocus();
+  if (parameterTree_ == nullptr) {
+    return;
+  }
+  // Tested before the source, so a press on a speaker snaps even where the
+  // source is sitting on top of one. Either press starts a drag.
+  const int kSpeakerIndex = speakerIndexAt(event.position);
+  const bool kOnSpeaker = kSpeakerIndex != PannerInput::kNoSpeaker;
+  if (!kOnSpeaker &&
+      (transformedTracks_.empty() || !sourceMarkerContains(event.position))) {
+    return;
+  }
+  draggingSource_ = true;
+  holdingSnap_ = kOnSpeaker;
+
+  // Bracket the drag so the host records one continuous gesture, snap included.
+  juce::RangedAudioParameter* xParameter =
+      positionParameter(AutoParamMetaData::xPosition);
+  juce::RangedAudioParameter* yParameter =
+      positionParameter(AutoParamMetaData::yPosition);
+  if (xParameter != nullptr) {
+    xParameter->beginChangeGesture();
+  }
+  if (yParameter != nullptr) {
+    yParameter->beginChangeGesture();
+  }
+  if (kOnSpeaker) {
+    snapToSpeaker(kSpeakerIndex);
+  }
+}
+
+void AudioElementPluginTopView::mouseDrag(const juce::MouseEvent& event) {
+  if (!draggingSource_) {
+    return;
+  }
+  // A click jitters by a pixel or two; moving the source on that would pull it
+  // off the speaker it just snapped to.
+  if (holdingSnap_ && !event.mouseWasDraggedSinceMouseDown()) {
+    return;
+  }
+  holdingSnap_ = false;
+  writeDragPosition(event.position);
+}
+
+void AudioElementPluginTopView::mouseUp(const juce::MouseEvent& event) {
+  if (!draggingSource_) {
+    return;
+  }
+  draggingSource_ = false;
+  juce::RangedAudioParameter* xParameter =
+      positionParameter(AutoParamMetaData::xPosition);
+  juce::RangedAudioParameter* yParameter =
+      positionParameter(AutoParamMetaData::yPosition);
+  if (xParameter != nullptr) {
+    xParameter->endChangeGesture();
+  }
+  if (yParameter != nullptr) {
+    yParameter->endChangeGesture();
+  }
+}
+
+void AudioElementPluginTopView::nudgeAxis(const PannerInput::Axis axis,
+                                          const int steps) {
+  if (parameterTree_ == nullptr || steps == 0) {
+    return;
+  }
+  juce::String parameterName;
+  int current = 0;
+  switch (axis) {
+    case PannerInput::Axis::kLeftRight:
+      parameterName = AutoParamMetaData::xPosition;
+      current = parameterTree_->getXPosition();
+      break;
+    case PannerInput::Axis::kFrontBack:
+      parameterName = AutoParamMetaData::yPosition;
+      current = parameterTree_->getYPosition();
+      break;
+    case PannerInput::Axis::kHeight:
+      parameterName = AutoParamMetaData::zPosition;
+      current = parameterTree_->getZPosition();
+      break;
+    case PannerInput::Axis::kNone:
+      return;
+  }
+
+  juce::RangedAudioParameter* parameter = positionParameter(parameterName);
+  if (parameter == nullptr) {
+    return;
+  }
+  // Stepped from the parameter's own current value, so the source is rendered
+  // from the parameter rather than from an accumulated position and
+  // ElevationListener's side effects stay visible.
+  writeSteppedPositionParameter(parameter, current + steps);
+}
+
+void AudioElementPluginTopView::mouseWheelMove(
+    const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
+  if (parameterTree_ == nullptr ||
+      PannerInput::elevationOwnsHeight(currentElevation_)) {
+    // Under a derived pattern ElevationListener recomputes height from x/y and
+    // would overwrite the notch before it was seen, so pass the event on
+    // rather than write a value that will not stick.
+    PerspectiveRoomView::mouseWheelMove(event, wheel);
+    return;
+  }
+  const int kSteps =
+      PannerInput::stepsForWheelDelta(wheel.deltaY, wheelAccumulator_);
+  nudgeAxis(PannerInput::Axis::kHeight, kSteps);
+}
+
+bool AudioElementPluginTopView::keyPressed(const juce::KeyPress& key) {
+  const PannerInput::Nudge kNudge =
+      PannerInput::nudgeForKeyCode(key.getKeyCode());
+  if (kNudge.axis == PannerInput::Axis::kNone) {
+    // Not a nudge -- let the host and the rest of the UI see the key.
+    return false;
+  }
+  nudgeAxis(kNudge.axis, kNudge.steps);
+  return true;
+}
+
+Coordinates::WindowData AudioElementPluginTopView::currentWindow() const {
+  return {
       .leftCornerX = 0.0f,
       .bottomCornerY = (float)getHeight(),
       .width = (float)getWidth(),
       .height = (float)getHeight(),
   };
+}
+
+void AudioElementPluginTopView::paint(juce::Graphics& g) {
+  const Coordinates::WindowData wData = currentWindow();
 
   PerspectiveRoomView::paint(g);
 
@@ -181,11 +454,14 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
     const auto kRoofAt = [this](const float leftRight, const float frontBack) {
       return elevationHeightAt(leftRight, frontBack);
     };
+    const Coordinates::Point4D kSourcePos =
+        sourceHeightPosition(transformedTracks_[0].ndcPos);
     const Coordinates::Point4D kIndicatorPos =
-        indicatorPosition(transformedTracks_[0].ndcPos);
-    outline = HeightIndicator::splitAtElevation(kIndicatorPos.a[1], kRoofAt);
-    connectors = HeightIndicator::splitLeaderLinesAtElevation(
-        kIndicatorPos, kRoofAt, elevationVariesAcrossLeftRight());
+        indicatorPosition(transformedTracks_[0], wData);
+    outline = HeightIndicator::splitAtElevation(kSourcePos.a[1], kRoofAt);
+    // Split against the surface where the source is, not where it is drawn.
+    connectors = HeightIndicator::splitLeaderLinesDrawnAt(
+        kSourcePos, kIndicatorPos, kRoofAt, elevationVariesAcrossLeftRight());
   }
 
   // Then the runs that pass under the surface, so the fill tints them.
@@ -260,6 +536,22 @@ float AudioElementPluginTopView::elevationHeightAt(
 }
 
 Coordinates::Point4D AudioElementPluginTopView::indicatorPosition(
+    const DrawableTrack& source, const Coordinates::WindowData& window) const {
+  const Coordinates::Point4D kHeightAnchored =
+      sourceHeightPosition(source.ndcPos);
+  if (!elevationPositionsInPlan()) {
+    return kHeightAnchored;
+  }
+  // The marker is drawn on the plan plane, so anchor the indicator at the point
+  // on the source's height plane that projects onto the marker. The leader
+  // lines then start at the marker and still end on the height's outline.
+  const Coordinates::Point2D kMarker = {source.pos.a[0], source.pos.a[1]};
+  return Coordinates::fromTopViewWindow(kTransformMat_, window, kMarker,
+                                        kHeightAnchored.a[1])
+      .value_or(kHeightAnchored);
+}
+
+Coordinates::Point4D AudioElementPluginTopView::sourceHeightPosition(
     const Coordinates::Point4D& sourceNdc) const {
   // Where a pattern clamps the source, read the height back off the surface
   // rather than off the position parameter. The parameter is quantised, and
@@ -289,6 +581,24 @@ bool AudioElementPluginTopView::elevationClampsTheSource() const {
     default:
       return false;
   }
+}
+
+bool AudioElementPluginTopView::elevationPositionsInPlan() const {
+  // Only the dome. Its height falls away in left/right as well as front/back,
+  // so a source resting on it projects out by r / (5 - height(r)), which peaks
+  // at r = 2*sqrt(2)/3 and comes back: one screen position names two plan
+  // radii, and neither the drag nor the hit test can tell them apart. The
+  // other patterns vary in front/back alone and stay monotonic, so they are
+  // positioned in perspective, with the marker resting on the drawn surface.
+  return currentElevation_ == AudioElementSpatialLayout::Elevation::kDome;
+}
+
+Coordinates::Point4D AudioElementPluginTopView::trackDrawPosition(
+    const Coordinates::Point4D& ndcPos) const {
+  if (!elevationPositionsInPlan()) {
+    return ndcPos;
+  }
+  return Coordinates::toPlanPlane(ndcPos);
 }
 
 bool AudioElementPluginTopView::elevationVariesAcrossLeftRight() const {

@@ -32,7 +32,9 @@ PositionSelectionScreen::createDialWithChevrons(
   dial->setTitle(title);
   addAndMakeVisible(dial.get());
   dial.get()->setValueUpdatedCallback([this, title](int newVal) {
-    parameterTree_.getParameterAsValue(title).setValue(newVal);
+    // Not getParameterAsValue -- see AudioElementParameterTree's accessors for
+    // why a value tree write can be dropped.
+    parameterTree_.setParameterValue(title, (float)newVal);
   });
   return dial;
 }

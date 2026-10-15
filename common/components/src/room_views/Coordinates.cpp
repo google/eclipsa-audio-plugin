@@ -36,6 +36,10 @@ PositionParameters fromRoomNdc(const Point4D& ndcPoint) {
   };
 }
 
+Point4D toPlanPlane(const Point4D& ndcPoint) {
+  return {ndcPoint.a[0], kPlanPlaneUp, ndcPoint.a[2], 1.f};
+}
+
 Point2D toWindow(const Mat4& transformMat, const WindowData& windowData,
                  const Point4D point) {
   // Apply transform.
@@ -50,6 +54,36 @@ Point2D toWindow(const Mat4& transformMat, const WindowData& windowData,
   const float h2 = windowData.height / 2;
   return {w2 * ndcPoint.a[0] + windowData.leftCornerX + w2,
           -h2 * ndcPoint.a[1] + windowData.bottomCornerY - h2};
+}
+
+std::optional<Point4D> fromTopViewWindow(const Mat4& transformMat,
+                                         const WindowData& windowData,
+                                         const Point2D& windowPoint,
+                                         const float ndcUp) {
+  // A host can collapse the editor mid-drag, and the division below would hand
+  // fromRoomNdc a non-finite value, which std::lround does not define.
+  if (windowData.width <= 0.f || windowData.height <= 0.f) {
+    return std::nullopt;
+  }
+  // Recover the NDC coordinates toWindow mapped into the window.
+  const float w2 = windowData.width / 2;
+  const float h2 = windowData.height / 2;
+  const float ndcX = (windowPoint.a[0] - windowData.leftCornerX - w2) / w2;
+  const float ndcY = -(windowPoint.a[1] - windowData.bottomCornerY + h2) / h2;
+
+  // Read the scale factors through the same product toWindow applies.
+  const Point4D kAtCentre = Point4D{0.f, ndcUp, 0.f, 1.f} * transformMat;
+  const Point4D kAtUnitLeftRight = Point4D{1.f, ndcUp, 0.f, 1.f} * transformMat;
+  const Point4D kAtUnitFrontBack = Point4D{0.f, ndcUp, 1.f, 1.f} * transformMat;
+
+  // At a fixed height the divisor is constant and each window axis follows one
+  // room axis.
+  const float kDivisor = kAtCentre.a[3];
+  const float kLeftRightScale = kAtUnitLeftRight.a[0] - kAtCentre.a[0];
+  const float kFrontBackScale = kAtUnitFrontBack.a[1] - kAtCentre.a[1];
+
+  return Point4D{(ndcX * kDivisor - kAtCentre.a[0]) / kLeftRightScale, ndcUp,
+                 (ndcY * kDivisor - kAtCentre.a[1]) / kFrontBackScale, 1.f};
 }
 
 Mat4 getIsoViewTransform() {

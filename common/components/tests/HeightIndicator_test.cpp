@@ -725,3 +725,81 @@ TEST(HeightIndicatorTest, domeQuantisedHeightManufacturesASpuriousCrossing) {
   // is right of the crest, where the geometry admits no crossing at all.
   EXPECT_TRUE(kExact.below.empty());
 }
+
+// Under the dome the panner draws the marker on the plan plane and anchors the
+// connectors at the point on the source's height plane that projects onto it,
+// which sits closer to the centre and so inside the dome.
+
+namespace {
+// A source resting on the dome.
+Coordinates::Point4D onTheDome(const float leftRight, const float frontBack) {
+  return {leftRight, domeRoofAt(leftRight, frontBack), frontBack, 1.f};
+}
+
+// The connectors' anchor for a dome source, derived as the panner derives it.
+Coordinates::Point4D planMarkerAnchor(const Coordinates::Point4D& source) {
+  const Coordinates::Point2D kMarker = Coordinates::toWindow(
+      topView(), kWindow, Coordinates::toPlanPlane(source));
+  return Coordinates::fromTopViewWindow(topView(), kWindow, kMarker,
+                                        source.a[1])
+      .value();
+}
+}  // namespace
+
+// Classifying from the anchor sinks the start of both connectors under the
+// dome, though from the bottom-right both run outward over a falling surface.
+TEST(HeightIndicatorTest, domeAnchorAloneSinksTheConnectorStarts) {
+  const Coordinates::Point4D kSource = onTheDome(0.6f, 0.6f);
+  const HeightIndicator::SplitOutline kFromAnchor =
+      HeightIndicator::splitLeaderLinesAtElevation(
+          planMarkerAnchor(kSource), domeRoofAt, /*splitRightEdge=*/true);
+
+  EXPECT_EQ(kFromAnchor.below.size(), 2u);
+}
+
+// Classified from the source and drawn from the anchor, a bottom-right source's
+// connectors stay over the dome for their whole length, near the rim included.
+TEST(HeightIndicatorTest, domeConnectorsFromTheMarkerStayOverTheDome) {
+  for (const float kLeftRight : {0.1f, 0.4f, 0.6f, 0.69f}) {
+    for (const float kFrontBack : {0.1f, 0.4f, 0.6f, 0.69f}) {
+      const Coordinates::Point4D kSource = onTheDome(kLeftRight, kFrontBack);
+      const HeightIndicator::SplitOutline kSplit =
+          HeightIndicator::splitLeaderLinesDrawnAt(
+              kSource, planMarkerAnchor(kSource), domeRoofAt,
+              /*splitRightEdge=*/true);
+
+      EXPECT_TRUE(kSplit.below.empty())
+          << "at (" << kLeftRight << ", " << kFrontBack << ")";
+      EXPECT_EQ(kSplit.above.size(), 2u)
+          << "at (" << kLeftRight << ", " << kFrontBack << ")";
+    }
+  }
+}
+
+// Every run is emitted on the drawn connectors: each starts at the anchor or
+// on the anchor's left/right or front/back line, never at the source.
+TEST(HeightIndicatorTest, domeConnectorRunsAreDrawnFromTheAnchor) {
+  const Coordinates::Point4D kSource = onTheDome(-0.4f, -0.4f);
+  const Coordinates::Point4D kAnchor = planMarkerAnchor(kSource);
+  const HeightIndicator::SplitOutline kFromSource =
+      HeightIndicator::splitLeaderLinesAtElevation(kSource, domeRoofAt,
+                                                   /*splitRightEdge=*/true);
+  const HeightIndicator::SplitOutline kSplit =
+      HeightIndicator::splitLeaderLinesDrawnAt(kSource, kAnchor, domeRoofAt,
+                                               /*splitRightEdge=*/true);
+
+  // The split itself is the source's.
+  ASSERT_EQ(kSplit.below.size(), kFromSource.below.size());
+  ASSERT_EQ(kSplit.above.size(), kFromSource.above.size());
+
+  for (const auto* kRuns : {&kSplit.below, &kSplit.above}) {
+    for (const HeightIndicator::Segment& run : *kRuns) {
+      const bool kOnBackEdgeLine =
+          std::abs(run.start.a[0] - kAnchor.a[0]) < kTolerance;
+      const bool kOnRightEdgeLine =
+          std::abs(run.start.a[2] - kAnchor.a[2]) < kTolerance;
+      EXPECT_TRUE(kOnBackEdgeLine || kOnRightEdgeLine);
+      EXPECT_NEAR(run.start.a[1], kSource.a[1], kTolerance);
+    }
+  }
+}

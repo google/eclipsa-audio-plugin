@@ -107,11 +107,12 @@ inline Coordinates::Point4D pointAlong(const Segment& segment, const float t) {
  * Both coordinates are passed because the dome needs both
  * @param samples positions tested along the segment, at least 2
  * @param into the split to append to
+ * @param drawOn the segment the runs are emitted on, at the same parameters
  */
 template <typename RoofHeightFn>
 inline void splitSegmentInto(const Segment& segment,
                              RoofHeightFn&& roofHeightAt, const int samples,
-                             SplitOutline& into) {
+                             SplitOutline& into, const Segment& drawOn) {
   const int kSamples = std::max(2, samples);
 
   // A point is ABOVE when it is at or over the surface. Ties resolve to above,
@@ -127,7 +128,7 @@ inline void splitSegmentInto(const Segment& segment,
       return;
     }
     (above ? into.above : into.below)
-        .push_back(Segment{pointAlong(segment, from), pointAlong(segment, to)});
+        .push_back(Segment{pointAlong(drawOn, from), pointAlong(drawOn, to)});
   };
 
   float runStart = 0.f;
@@ -156,6 +157,13 @@ inline void splitSegmentInto(const Segment& segment,
     runAbove = !runAbove;
   }
   kEmit(runStart, 1.f, runAbove);
+}
+
+template <typename RoofHeightFn>
+inline void splitSegmentInto(const Segment& segment,
+                             RoofHeightFn&& roofHeightAt, const int samples,
+                             SplitOutline& into) {
+  splitSegmentInto(segment, roofHeightAt, samples, into, segment);
 }
 
 /**
@@ -213,7 +221,11 @@ inline std::array<Segment, 2> leaderLines(const Coordinates::Point4D& source) {
  * either side of it, and a coincident line classified by comparison flickers,
  * so the caller states the distinction instead of it being inferred here.
  *
+ * The connectors are classified from `source` and drawn from `drawnAt` at the
+ * same parameters, so a marker drawn away from the source keeps its split.
+ *
  * @param source the source position in room-view NDC, w = 1
+ * @param drawnAt where the connectors start on screen, at the source's height
  * @param roofHeightAt the surface height at one (left/right, front/back)
  * position
  * @param splitRightEdge whether the surface varies with left/right, so the
@@ -222,21 +234,33 @@ inline std::array<Segment, 2> leaderLines(const Coordinates::Point4D& source) {
  * @return SplitOutline the runs under the surface and the runs over it
  */
 template <typename RoofHeightFn>
-inline SplitOutline splitLeaderLinesAtElevation(
-    const Coordinates::Point4D& source, RoofHeightFn&& roofHeightAt,
-    const bool splitRightEdge, const int samplesPerLine = 41) {
+inline SplitOutline splitLeaderLinesDrawnAt(const Coordinates::Point4D& source,
+                                            const Coordinates::Point4D& drawnAt,
+                                            RoofHeightFn&& roofHeightAt,
+                                            const bool splitRightEdge,
+                                            const int samplesPerLine = 41) {
   SplitOutline split;
   const std::array<Segment, 2> kLeaders = leaderLines(source);
+  const std::array<Segment, 2> kDrawn = leaderLines(drawnAt);
 
-  splitSegmentInto(kLeaders[0], roofHeightAt, samplesPerLine, split);
+  splitSegmentInto(kLeaders[0], roofHeightAt, samplesPerLine, split, kDrawn[0]);
 
   if (splitRightEdge) {
-    splitSegmentInto(kLeaders[1], roofHeightAt, samplesPerLine, split);
+    splitSegmentInto(kLeaders[1], roofHeightAt, samplesPerLine, split,
+                     kDrawn[1]);
   } else {
-    split.above.push_back(kLeaders[1]);
+    split.above.push_back(kDrawn[1]);
   }
 
   return split;
+}
+
+template <typename RoofHeightFn>
+inline SplitOutline splitLeaderLinesAtElevation(
+    const Coordinates::Point4D& source, RoofHeightFn&& roofHeightAt,
+    const bool splitRightEdge, const int samplesPerLine = 41) {
+  return splitLeaderLinesDrawnAt(source, source, roofHeightAt, splitRightEdge,
+                                 samplesPerLine);
 }
 
 /**

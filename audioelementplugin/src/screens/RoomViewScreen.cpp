@@ -32,6 +32,9 @@ RoomViewScreen::RoomViewScreen(
       spkrData_(monitorData) {
   audioElementSpatialLayoutRepository_->registerListener(this);
 
+  // The panner writes the position parameters when the source is dragged.
+  room_->setParameterTree(parameterTree_);
+
   // If the audio element plugin is implementing a valid audio element, display
   // the speaker layout.
   if (!audioElementSpatialLayoutRepository_->get()

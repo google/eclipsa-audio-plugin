@@ -190,9 +190,17 @@ class ElevationListener : public juce::AudioProcessorValueTreeState::Listener,
     // Sphere equation.
     double x2 = x * x;
     double y2 = y * y;
+    if (std::sqrt(x2 + y2) > 1.0 - kDomeRimBand) {
+      return {(float)x, -1.f, (float)y};
+    }
     double height = 2 * std::sqrt(std::max(0.0, 1.0 - (x2 + y2))) - 1.f;
     return {(float)x, (float)height, (float)y};
   }
+
+  // Integer x and y almost never land exactly on the dome's rim, and the sphere
+  // is near vertical there, so positions within one step of the rim are held
+  // at floor height rather than up to 14 steps above it.
+  static constexpr double kDomeRimBand = 1.0 / Coordinates::kPositionExtent;
 
   static Coordinates::Point3D getCurveElevationPt(
       const Coordinates::Point3D pt) {

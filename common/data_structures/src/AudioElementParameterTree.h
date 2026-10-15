@@ -20,6 +20,9 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 
+#include <atomic>
+#include <cmath>
+
 #include "ParameterMetaData.h"
 
 class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
@@ -30,43 +33,42 @@ class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
             AutoParamMetaData::CreateStaticParameterLayout()) {};
 
   int getXPosition() {
-    return getParameterAsValue(AutoParamMetaData::xPosition).getValue();
+    return (int)std::lround(read(AutoParamMetaData::xPosition));
   }
 
   int getYPosition() {
-    return getParameterAsValue(AutoParamMetaData::yPosition).getValue();
+    return (int)std::lround(read(AutoParamMetaData::yPosition));
   }
 
   int getZPosition() {
-    return getParameterAsValue(AutoParamMetaData::zPosition).getValue();
+    return (int)std::lround(read(AutoParamMetaData::zPosition));
   }
 
-  float getVolume() {
-    return getParameterAsValue(AutoParamMetaData::volumeId).getValue();
-  }
+  float getVolume() { return read(AutoParamMetaData::volumeId); }
 
-  bool getUnmute() {
-    return getParameterAsValue(AutoParamMetaData::unmuteId).getValue();
-  }
+  bool getUnmute() { return read(AutoParamMetaData::unmuteId) > 0.5f; }
 
   void setXPosition(int value) {
-    getParameterAsValue(AutoParamMetaData::xPosition).setValue(value);
+    write(AutoParamMetaData::xPosition, (float)value);
   }
 
   void setYPosition(int value) {
-    getParameterAsValue(AutoParamMetaData::yPosition).setValue(value);
+    write(AutoParamMetaData::yPosition, (float)value);
   }
 
   void setZPosition(int value) {
-    getParameterAsValue(AutoParamMetaData::zPosition).setValue(value);
+    write(AutoParamMetaData::zPosition, (float)value);
   }
 
-  void setVolume(float value) {
-    getParameterAsValue(AutoParamMetaData::volumeId).setValue(value);
-  }
+  void setVolume(float value) { write(AutoParamMetaData::volumeId, value); }
 
   void setUnmute(bool value) {
-    getParameterAsValue(AutoParamMetaData::unmuteId).setValue(value);
+    write(AutoParamMetaData::unmuteId, value ? 1.f : 0.f);
+  }
+
+  // For a control that carries its parameter's name rather than a fixed axis.
+  void setParameterValue(const juce::String& parameterName, const float value) {
+    write(parameterName, value);
   }
 
   void addXPositionListener(
@@ -117,5 +119,26 @@ class AudioElementParameterTree : public juce::AudioProcessorValueTreeState {
   void removeUnmuteListener(
       juce::AudioProcessorValueTreeState::Listener* listener) {
     removeParameterListener(AutoParamMetaData::unmuteId, listener);
+  }
+
+ private:
+  // Reads the parameter itself, not the value tree behind getParameterAsValue.
+  // AudioProcessorValueTreeState refreshes that tree from its own timer, which
+  // idles at half a second, so a tree read can lag the parameter by that much
+  // -- including inside a parameter listener, which runs before the refresh.
+  // The tree is still what gets persisted; copyState flushes it first.
+  float read(const juce::String& parameterName) const {
+    const std::atomic<float>* kValue = getRawParameterValue(parameterName);
+    return kValue == nullptr ? 0.f : kValue->load();
+  }
+
+  // Writes the parameter for the same reason, and because setting a tree
+  // property is a no-op when the lagging property already holds `value`,
+  // leaving the parameter at what the caller meant to replace.
+  void write(const juce::String& parameterName, const float value) {
+    juce::RangedAudioParameter* parameter = getParameter(parameterName);
+    if (parameter != nullptr) {
+      parameter->setValueNotifyingHost(parameter->convertTo0to1(value));
+    }
   }
 };

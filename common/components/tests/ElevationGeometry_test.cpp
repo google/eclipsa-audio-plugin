@@ -187,6 +187,21 @@ TEST(ElevationGeometry, domeClampsAnOutsidePointOntoTheBoundary) {
   EXPECT_NEAR(clamped.a[1], -1.f, kDomeHeightTolerance);
 }
 
+// Within one parameter step of the rim the dome is at the floor, where the
+// sphere alone would put (35, 35) 14 steps above it.
+TEST(ElevationGeometry, domeHoldsTheRimBandAtTheFloor) {
+  EXPECT_EQ(
+      ElevationListener::getDomeElevationPtClamped({0.7f, 0.7f, 0.f}, {}).a[1],
+      -1.f);
+}
+
+// Outside the band the dome is still the sphere.
+TEST(ElevationGeometry, domeKeepsTheSphereInsideTheRimBand) {
+  EXPECT_NEAR(
+      ElevationListener::getDomeElevationPtClamped({0.96f, 0.f, 0.f}, {}).a[1],
+      2.f * std::sqrt(1.f - 0.96f * 0.96f) - 1.f, kTolerance);
+}
+
 // The dome's apex is at the middle of the room, at the ceiling.
 TEST(ElevationGeometry, domeApexIsAtTheRoomCeiling) {
   EXPECT_NEAR(

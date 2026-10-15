@@ -85,6 +85,14 @@ class PerspectiveRoomView : public juce::Component {
     Coordinates::Point4D ndcPos = {0.f, 0.f, 0.f, 1.f};
   };
 
+  // Where a track is DRAWN, which is not always where it is. A view that
+  // positions in plan projects the marker onto one plane, so its screen
+  // position carries the plan position alone. The default draws it where it
+  // is, which is what every view but the audio element panner wants.
+  virtual Coordinates::Point4D trackDrawPosition(
+      const Coordinates::Point4D& ndcPos) const {
+    return ndcPos;
+  }
   virtual const float getTrackScaling(const Coordinates::Point4D pt) const = 0;
   virtual void drawFace(const std::array<Coordinates::Point2D, 4>& faceVerts,
                         const juce::Colour& c, juce::Graphics& g);
@@ -100,10 +108,23 @@ class PerspectiveRoomView : public juce::Component {
                 const float thickness = 2.f);
   juce::Colour getLoudnessColour(const float loudness) const;
 
+  // Whether a speaker reaches the screen at all: drawSpeaker skips the hidden
+  // set, and nothing is drawn while speakers are switched off. Derived views
+  // hit-testing speakers must ask the same question the draw path asks.
+  bool speakerIsDrawn(const DrawableSpeaker& spkr) const {
+    return displaySpeakers_ && !kHiddenSpeakers_.contains(spkr.tag);
+  }
+
   const Coordinates::Mat4 kTransformMat_;
 
   // Data visible to derived classes needing to draw tracks differently.
   std::vector<DrawableTrack> transformedTracks_;
+
+  // Visible to derived classes hit-testing speakers. Built one-to-one and in
+  // the same order, so an index into either reaches the same speaker; tags do
+  // not identify one, since several layouts repeat a tag.
+  std::vector<SpeakerLookup::RoomViewSpeaker> speakers_;
+  std::vector<DrawableSpeaker> transformedSpeakers_;
 
  private:
   const float assignTrackLoudness(
@@ -129,11 +150,8 @@ class PerspectiveRoomView : public juce::Component {
   bool displayTracks_;
   bool displayLabels_;
 
-  // Speaker set to draw in the room view.
-  std::vector<SpeakerLookup::RoomViewSpeaker> speakers_;
   std::vector<AudioElementUpdateData> tracks_;
   bool recalculateStaticVertices_ = true;
   std::vector<DrawableFace> transformedFaces_;
-  std::vector<DrawableSpeaker> transformedSpeakers_;
   juce::ImageComponent imageComponent_;
 };
