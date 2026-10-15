@@ -155,7 +155,7 @@ const float IsoView::getTrackScaling(const Coordinates::Point4D pt) const {
 };
 AudioElementPluginTopView::AudioElementPluginTopView(
     const SpeakerMonitorData& monitorData)
-    : PerspectiveRoomView(FaceLookup::getFaces(FaceLookup::kTop),
+    : PerspectiveRoomView(FaceLookup::getFaces(FaceLookup::kPannerTop),
                           Coordinates::getTopViewTransform(),
                           {SpeakerLookup::kLFE}, {}, monitorData) {
   // Arrow keys reach keyPressed only once this view can hold focus. It takes
@@ -168,6 +168,25 @@ const float AudioElementPluginTopView::getTrackScaling(
     const Coordinates::Point4D pt) const {
   // Under a top-down projection the depth axis is NDC up, not NDC z.
   return 0.35 * pt.a[FaceLookup::kAxisY] + 1.35;
+}
+
+void AudioElementPluginTopView::drawFace(
+    const std::array<Coordinates::Point2D, 4>& faceVerts, const juce::Colour& c,
+    juce::Graphics& g) {
+  if (c != EclipsaColours::roomviewScreen) {
+    PerspectiveRoomView::drawFace(faceVerts, c, g);
+    return;
+  }
+  // The screen is filled without the wall outline, so it reads as an object on
+  // the wall rather than a panel of it.
+  juce::Path screenPath;
+  screenPath.startNewSubPath(faceVerts[0].a[0], faceVerts[0].a[1]);
+  for (size_t i = 1; i < faceVerts.size(); ++i) {
+    screenPath.lineTo(faceVerts[i].a[0], faceVerts[i].a[1]);
+  }
+  screenPath.closeSubPath();
+  g.setColour(c);
+  g.fillPath(screenPath);
 }
 
 void AudioElementPluginTopView::drawTrack(const DrawableTrack& track,
@@ -443,6 +462,12 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
 
   PerspectiveRoomView::paint(g);
 
+  const bool kHeadUnderSurface =
+      ListenerHead::drawnBeforeElevation(currentElevation_, currentFlatHeight_);
+  if (kHeadUnderSurface) {
+    paintListenerHead(wData, g);
+  }
+
   // First split the indicator against the elevation surface: the outline and
   // the back-edge connector pass under it, so each is drawn either side of the
   // fill. The right-edge connector is coincident with the surface rather than
@@ -487,6 +512,10 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
       break;
     default:
       break;
+  }
+
+  if (!kHeadUnderSurface) {
+    paintListenerHead(wData, g);
   }
 
   // Then the runs over it, at full strength.
@@ -607,6 +636,20 @@ bool AudioElementPluginTopView::elevationVariesAcrossLeftRight() const {
   // placed rather than split -- see
   // HeightIndicator::splitLeaderLinesAtElevation.
   return currentElevation_ == AudioElementSpatialLayout::Elevation::kDome;
+}
+
+void AudioElementPluginTopView::paintListenerHead(
+    const Coordinates::WindowData& window, juce::Graphics& g) {
+  // Painted here rather than through imageComponent_: a child component paints
+  // over all of this view's paint output, so it could not sit under a surface.
+  const juce::Image kHead = IconStore::getInstance().getTopIcon();
+  // drawImage draws at the context's current opacity, which the elevation
+  // painters leave at the surface's alpha.
+  g.setOpacity(1.f);
+  const Coordinates::Point2D kCentre =
+      Coordinates::toWindow(kTransformMat_, window, {0.f, 0.f, 0.f, 1.f});
+  g.drawImage(kHead, kHead.getBounds().toFloat().withCentre(
+                         {kCentre.a[0], kCentre.a[1]}));
 }
 
 void AudioElementPluginTopView::paintIndicatorRuns(
