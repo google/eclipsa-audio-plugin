@@ -59,6 +59,9 @@ const static juce::Colour roomviewLightGrid = juce::Colour(77, 84, 83);
 const static juce::Colour roomviewDarkGrid = juce::Colour(41, 48, 47);
 const static juce::Colour roomviewTranslucentWall =
     roomviewDarkWall.withAlpha(0.5f);
+// The panner's front-wall screen. Darkens the front wall it sits on while
+// leaving the wall's grid lines visible through it.
+const static juce::Colour roomviewScreen = backgroundOffBlack.withAlpha(0.45f);
 const static juce::Colour roomviewIsoTransparentWall =
     EclipsaColours::roomviewLightWall.brighter().withAlpha(0.06f);
 const static juce::Colour speakerOutline = juce::Colour(147, 143, 153);

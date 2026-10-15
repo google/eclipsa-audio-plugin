@@ -19,6 +19,7 @@
 
 #include "PerspectiveRoomView.h"
 #include "components/src/room_views/HeightIndicator.h"
+#include "components/src/room_views/ListenerHead.h"
 #include "components/src/room_views/PannerInput.h"
 #include "data_structures/src/AudioElementParameterTree.h"
 #include "data_structures/src/AudioElementSpatialLayout.h"
@@ -60,6 +61,8 @@ class AudioElementPluginTopView : public PerspectiveRoomView {
   void paint(juce::Graphics& g) override;
   const float getTrackScaling(const Coordinates::Point4D pt) const override;
   void drawTrack(const DrawableTrack& track, juce::Graphics& g) override;
+  void drawFace(const std::array<Coordinates::Point2D, 4>& faceVerts,
+                const juce::Colour& c, juce::Graphics& g) override;
   void setElevationPattern(AudioElementSpatialLayout::Elevation elevation);
   void setFlatHeight(float height) {
     currentFlatHeight_ = Coordinates::toRoomNdc(0.f, 0.f, height).a[1];
@@ -110,6 +113,8 @@ class AudioElementPluginTopView : public PerspectiveRoomView {
   bool elevationPositionsInPlan() const;
   Coordinates::Point4D trackDrawPosition(
       const Coordinates::Point4D& ndcPos) const override;
+  void paintListenerHead(const Coordinates::WindowData& window,
+                         juce::Graphics& g);
   void paintIndicatorRuns(const Coordinates::WindowData& window,
                           const std::vector<HeightIndicator::Segment>& runs,
                           float thickness, juce::Graphics& g);
