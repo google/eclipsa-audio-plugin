@@ -143,7 +143,7 @@ void TextEditorControlledDial::resetLookAndFeel() {
 
 // triggered when automation changes the value
 void TextEditorControlledDial::setValue(const float& value) {
-  int newValue = static_cast<int>(value);
+  int newValue = juce::roundToInt(value);
   // Track the displayed value so the no-change check in
   // textEditorChangedCallback compares against the parameter, not this dial's
   // last write.
