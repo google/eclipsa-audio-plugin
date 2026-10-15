@@ -328,7 +328,7 @@ void AudioElementPluginTopView::mouseDown(const juce::MouseEvent& event) {
   // nudge is meant to work after the user has interacted with the panner at
   // all, and a press that missed the marker is still that interaction.
   grabKeyboardFocus();
-  if (parameterTree_ == nullptr) {
+  if (parameterTree_ == nullptr || !displaySource_) {
     return;
   }
   // Tested before the source, so a press on a speaker snaps even where the
@@ -424,7 +424,7 @@ void AudioElementPluginTopView::nudgeAxis(const PannerInput::Axis axis,
 
 void AudioElementPluginTopView::mouseWheelMove(
     const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
-  if (parameterTree_ == nullptr ||
+  if (parameterTree_ == nullptr || !displaySource_ ||
       PannerInput::elevationOwnsHeight(currentElevation_)) {
     // Under a derived pattern ElevationListener recomputes height from x/y and
     // would overwrite the notch before it was seen, so pass the event on
@@ -438,6 +438,9 @@ void AudioElementPluginTopView::mouseWheelMove(
 }
 
 bool AudioElementPluginTopView::keyPressed(const juce::KeyPress& key) {
+  if (!displaySource_) {
+    return false;
+  }
   const PannerInput::Nudge kNudge =
       PannerInput::nudgeForKeyCode(key.getKeyCode());
   if (kNudge.axis == PannerInput::Axis::kNone) {
@@ -473,7 +476,8 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
   // fill. The right-edge connector is coincident with the surface rather than
   // either side of it and stays on top -- see splitLeaderLinesAtElevation.
   HeightIndicator::SplitOutline outline, connectors;
-  if (!transformedTracks_.empty()) {
+  const bool kDrawSource = displaySource_ && !transformedTracks_.empty();
+  if (kDrawSource) {
     // One height function for both splits, so the outline and a connector
     // agree about the point where they meet.
     const auto kRoofAt = [this](const float leftRight, const float frontBack) {
@@ -523,7 +527,7 @@ void AudioElementPluginTopView::paint(juce::Graphics& g) {
   paintIndicatorRuns(wData, connectors.above,
                      kHeightIndicatorConnectorThickness, g);
 
-  if (!transformedTracks_.empty()) {
+  if (kDrawSource) {
     // The audio source marker is drawn last so it is always on top.
     drawTrack(transformedTracks_[0], g);
   }
