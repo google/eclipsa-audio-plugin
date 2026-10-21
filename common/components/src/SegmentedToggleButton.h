@@ -35,7 +35,7 @@ class STBLookAndFeel : public juce::LookAndFeel_V4 {
 
 class SegmentedToggleButton : public juce::Component {
  public:
-  SegmentedToggleButton(const std::initializer_list<juce::String>& opts,
+  SegmentedToggleButton(const std::vector<juce::String>& opts,
                         const bool singularToggle);
 
   ~SegmentedToggleButton() { setLookAndFeel(nullptr); }

@@ -25,3 +25,4 @@ eclipsa_add_test(test_panner_source_display PannerSourceDisplay_test.cpp "compon
 eclipsa_add_test(test_selection_box SelectionBox_test.cpp "components")
 eclipsa_add_test(test_loudness_warning_banner LoudnessWarningBanner_test.cpp "components")
 eclipsa_add_test(test_mix_presentation_warning_banner MixPresentationWarningBanner_test.cpp "components")
+eclipsa_add_test(test_segmented_toggle_button SegmentedToggleButton_test.cpp "components")

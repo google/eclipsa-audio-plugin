@@ -96,7 +96,7 @@ void STBLookAndFeel::drawButtonBackground(juce::Graphics& g,
 }
 
 SegmentedToggleButton::SegmentedToggleButton(
-    const std::initializer_list<juce::String>& opts, const bool singularToggle)
+    const std::vector<juce::String>& opts, const bool singularToggle)
     : kSingularToggle_(singularToggle) {
   for (const juce::String& opt : opts) {
     buttons_.emplace_back(std::make_unique<juce::TextButton>(opt, opt));

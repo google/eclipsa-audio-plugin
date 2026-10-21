@@ -53,10 +53,9 @@ class RoomMonitoringScreen : public juce::Component,
   SpeakerMonitorData& monitorData_;
   std::unordered_set<juce::Uuid> activeAudioElementIDs_;
   // Components.
-  SelectionBox speakerSetup_;
   SelectionBox exportProfile_;
   ImageTextButton exportButton;
   FileExportScreen fileExportScreen_;
   std::unique_ptr<PerspectiveRoomView> roomView_;
-  SegmentedToggleButton selRoomOpts_, selRoomView_;
+  SegmentedToggleButton selSpeakerSetup_, selRoomOpts_, selRoomView_;
 };

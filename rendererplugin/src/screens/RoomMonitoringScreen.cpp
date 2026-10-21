@@ -20,6 +20,16 @@
 #include "../RendererProcessor.h"
 #include "data_structures/src/FileExport.h"
 
+namespace {
+std::vector<juce::String> speakerLayoutDescriptions() {
+  std::vector<juce::String> descriptions;
+  for (const RoomLayout& layout : speakerLayoutConfigurationOptions) {
+    descriptions.push_back(layout.getDescription());
+  }
+  return descriptions;
+}
+}  // namespace
+
 RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
                                            SpeakerMonitorData& data,
                                            FilePlaybackProcessorData& fpbData,
@@ -27,8 +37,8 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
     : repos_(repos),
       monitorData_(data),
       fileExportScreen_(editor, repos, fpbData),
-      speakerSetup_("Speaker Setup"),
       exportProfile_("Export Profile"),
+      selSpeakerSetup_(speakerLayoutDescriptions(), true),
       selRoomOpts_({"Speakers", "Tracks", "Labels"}, false),
       selRoomView_({"Iso", "Top", "Side", "Rear"}, true),
       exportButton(IconStore::getInstance().getsettingsIcon()) {
@@ -36,7 +46,7 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
   exportButton.setExportLookAndFeel(IconStore::getInstance().getsettingsIcon(),
                                     IconStore::getInstance().getLineIcon());
   initializeSpeakerSetup();
-  addAndMakeVisible(speakerSetup_);
+  addAndMakeVisible(selSpeakerSetup_);
   initializeExportProfile();
   addAndMakeVisible(exportProfile_);
 
@@ -80,15 +90,10 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
 
 void RoomMonitoringScreen::initializeSpeakerSetup() {
   LOG_ANALYTICS(RendererProcessor::instanceId_, "Initializing speaker setup.");
-  for (const auto& channelSet : speakerLayoutConfigurationOptions) {
-    speakerSetup_.addOption(channelSet.getDescription());
-    // Speaker setup to display at top of box.
-    auto currSpkrLayout = repos_.roomSetupRepo_.get().getSpeakerLayout();
-    if (channelSet == currSpkrLayout) {
-      speakerSetup_.setOption(currSpkrLayout.getDescription());
-    }
-  }
-  speakerSetup_.onChange([this] { updateSpeakerSetup(); });
+  // Toggled before the callback is attached; the room view does not exist yet.
+  selSpeakerSetup_.toggleOn(
+      repos_.roomSetupRepo_.get().getSpeakerLayout().getDescription());
+  selSpeakerSetup_.onChange([this] { updateSpeakerSetup(); });
 }
 
 void RoomMonitoringScreen::initializeExportProfile() {
@@ -136,12 +141,16 @@ void RoomMonitoringScreen::paint(juce::Graphics& g) {
   bounds.removeFromRight(40);
   int height = bounds.getHeight();
   auto topBounds = bounds.removeFromTop(height * 0.10f);
-  auto botBounds = bounds.removeFromBottom(height * 0.06f);
+  const int kRowHeight = height * 0.06f;
+  const int kRowGap = 8;
+  auto botBounds = bounds.removeFromBottom(kRowHeight);
+  bounds.removeFromBottom(kRowGap);
+  // Spans the full width of the room options and room view rows below it.
+  selSpeakerSetup_.setBounds(bounds.removeFromBottom(kRowHeight));
   auto roomBounds = bounds;
 
-  // Draw speaker speaker dropdown, timecode, and export button.
+  // Draw export profile dropdown and export button.
   int topWidth = topBounds.getWidth();
-  speakerSetup_.setBounds(topBounds.removeFromLeft(topWidth * 0.20f));
   exportProfile_.setBounds(topBounds.removeFromLeft(topWidth * 0.20f));
 
   // Adjusted button width to accommodate images and text
@@ -171,12 +180,13 @@ void RoomMonitoringScreen::paint(juce::Graphics& g) {
 }
 
 void RoomMonitoringScreen::updateSpeakerSetup() {
-  // Update the currently selected speaker layout in the repo.
-  int speakerLayoutIdx = speakerSetup_.getSelectedIndex();
-  RoomLayout newSpeakerLayout =
-      speakerLayoutConfigurationOptions[speakerLayoutIdx];
-
+  // Update the currently selected speaker layout in the repo. With no button
+  // toggled, the stored layout is kept.
   RoomSetup currentRoomSetup = repos_.roomSetupRepo_.get();
+  const std::vector<juce::String> kToggled = selSpeakerSetup_.getToggled();
+  const RoomLayout newSpeakerLayout =
+      kToggled.empty() ? currentRoomSetup.getSpeakerLayout()
+                       : fetchLayoutFromDescription(kToggled.back());
   currentRoomSetup.setSpeakerLayout(newSpeakerLayout);
   repos_.roomSetupRepo_.update(currentRoomSetup);
 
