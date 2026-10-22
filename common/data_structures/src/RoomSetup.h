@@ -17,6 +17,9 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include <algorithm>
+#include <vector>
+
 #include "../src/RepositoryItem.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
 
@@ -50,6 +53,18 @@ static const std::array<RoomLayout, 9> speakerLayoutConfigurationOptions = {
     RoomLayout(Speakers::k7Point1Point2, "7.1.2"),
     RoomLayout(Speakers::k7Point1Point4, "7.1.4"),
     RoomLayout(Speakers::kBinaural, "Binaural")};
+
+// The layouts in the order the renderer's layout buttons show them: Binaural
+// first, then the rest in configuration order.
+static std::vector<RoomLayout> speakerLayoutDisplayOrder() {
+  std::vector<RoomLayout> ordered(speakerLayoutConfigurationOptions.begin(),
+                                  speakerLayoutConfigurationOptions.end());
+  std::stable_partition(
+      ordered.begin(), ordered.end(), [](const RoomLayout& layout) {
+        return layout.getRoomSpeakerLayout() == Speakers::kBinaural;
+      });
+  return ordered;
+}
 
 static RoomLayout fetchLayoutFromDescription(const juce::String& desc) {
   for (const auto& layout : speakerLayoutConfigurationOptions) {

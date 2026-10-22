@@ -118,3 +118,16 @@ TEST(ExportProfileOption, out_of_range_index_is_advanced) {
   EXPECT_EQ(exportProfileFromOptionIndex(-1), ExportProfile::kAdvanced);
   EXPECT_EQ(exportProfileFromOptionIndex(2), ExportProfile::kAdvanced);
 }
+
+// The layout buttons list Binaural first, then every other layout in
+// configuration order.
+TEST(test_room_setup, display_order_puts_binaural_first) {
+  const std::vector<juce::String> expected = {"Binaural", "Stereo", "3.1.2",
+                                              "5.1",      "5.1.2",  "5.1.4",
+                                              "7.1",      "7.1.2",  "7.1.4"};
+  std::vector<juce::String> actual;
+  for (const RoomLayout& layout : speakerLayoutDisplayOrder()) {
+    actual.push_back(layout.getDescription());
+  }
+  EXPECT_EQ(actual, expected);
+}

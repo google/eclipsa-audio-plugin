@@ -23,7 +23,7 @@
 namespace {
 std::vector<juce::String> speakerLayoutDescriptions() {
   std::vector<juce::String> descriptions;
-  for (const RoomLayout& layout : speakerLayoutConfigurationOptions) {
+  for (const RoomLayout& layout : speakerLayoutDisplayOrder()) {
     descriptions.push_back(layout.getDescription());
   }
   return descriptions;
