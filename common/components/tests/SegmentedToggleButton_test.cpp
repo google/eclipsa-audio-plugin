@@ -76,3 +76,22 @@ TEST(SegmentedToggleButtonOptions, single_select_click_on_toggled_keeps_it) {
   EXPECT_EQ(row.getToggled(), std::vector<juce::String>{"5.1"});
   EXPECT_EQ(calls, 0);
 }
+
+// The buttons tile the row edge to edge, so a width the count does not divide
+// leaves no empty strip on the right.
+TEST(SegmentedToggleButtonOptions, buttons_fill_full_width) {
+  const juce::ScopedJuceInitialiser_GUI kJuce;
+  SegmentedToggleButton row({"A", "B", "C", "D"}, true);
+  row.setBounds(0, 0, 103, 20);
+  juce::Image image(juce::Image::ARGB, 103, 20, true);
+  juce::Graphics g(image);
+  row.paint(g);
+
+  int expectedLeft = 1;
+  for (int i = 0; i < row.getNumChildComponents(); ++i) {
+    const juce::Rectangle<int> kBounds = row.getChildComponent(i)->getBounds();
+    EXPECT_EQ(kBounds.getX(), expectedLeft) << "button " << i;
+    expectedLeft = kBounds.getRight();
+  }
+  EXPECT_EQ(expectedLeft, 102);
+}

@@ -106,14 +106,17 @@ SegmentedToggleButton::SegmentedToggleButton(
 }
 
 void SegmentedToggleButton::paint(juce::Graphics& g) {
-  auto bounds = getLocalBounds();
-  // Draw buttons.
-  int buttonWidth = bounds.getWidth() / buttons_.size();
-  for (int i = 0; i < buttons_.size(); ++i) {
-    auto buttonBounds = bounds.removeFromLeft(buttonWidth);
+  const auto bounds = getLocalBounds();
+  const int kCount = static_cast<int>(buttons_.size());
+  // Draw buttons. Edges are spread proportionally so the row fills its full
+  // width instead of leaving the division remainder empty on the right.
+  for (int i = 0; i < kCount; ++i) {
+    const int kLeft = bounds.getWidth() * i / kCount;
+    const int kRight = bounds.getWidth() * (i + 1) / kCount;
+    auto buttonBounds = bounds.withX(kLeft).withWidth(kRight - kLeft);
     if (i == 0) {
       buttonBounds.removeFromLeft(1);
-    } else if (i == buttons_.size() - 1) {
+    } else if (i == kCount - 1) {
       buttonBounds.removeFromRight(1);
     }
     buttons_[i]->setBounds(buttonBounds);

@@ -142,7 +142,7 @@ void RoomMonitoringScreen::paint(juce::Graphics& g) {
   int height = bounds.getHeight();
   auto topBounds = bounds.removeFromTop(height * 0.10f);
   const int kRowHeight = height * 0.06f;
-  const int kRowGap = 8;
+  const int kRowGap = 16;
   auto botBounds = bounds.removeFromBottom(kRowHeight);
   bounds.removeFromBottom(kRowGap);
   // Spans the full width of the room options and room view rows below it.
