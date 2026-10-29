@@ -7,10 +7,16 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   BUILD_TYPE: Release
   TEST_TYPE: CI_TEST
   CLEAN_BUILD: false
+  # Disabling macOS CI compile until builds work on MacOS v15
+  # Build works on macOS v14 but github no longer supports v14
+  ENABLE_MACOS_COMPILE: 'false'
   # Enable vcpkg binary caching for GitHub Actions
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
@@ -22,14 +28,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-14, windows-2022 ]
+        os: [ macos-15, windows-2022 ]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
         with:
           submodules: recursive
           lfs: true
+          persist-credentials: false
 
       - name: Fetch LFS objects
         run: git lfs pull
@@ -44,97 +51,107 @@ jobs:
 
       # --- Caching Steps (Common) ---
       - name: Cache Protobuf Build
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: protobuf-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/_deps/protobuf-build
           key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/version.json') }}
 
       - name: Check Protobuf Cache
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.protobuf-cache.outputs.cache-hit }}
         run: |
-          echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
-          if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "Protobuf cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "Protobuf cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache JUCE Build
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: juce-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/third_party/JUCE
           key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/CMakeLists.txt') }}
 
       - name: Check JUCE Cache
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.juce-cache.outputs.cache-hit }}
         run: |
-          echo "JUCE cache hit: ${{ steps.juce-cache.outputs.cache-hit }}"
-          if [ "${{ steps.juce-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "JUCE cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "JUCE cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache IAMF Build
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: iamf-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/_deps/libiamf-build
           key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/libiamf/CMakeLists.txt') }}
 
       - name: Check IAMF Cache
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.iamf-cache.outputs.cache-hit }}
         run: |
-          echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
-          if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "IAMF cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "IAMF cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache Libear Build
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: libear-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/third_party/libear
           key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/CMakeLists.txt') }}
 
       - name: Check Libear Cache
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.libear-cache.outputs.cache-hit }}
         run: |
-          echo "Libear cache hit: ${{ steps.libear-cache.outputs.cache-hit }}"
-          if [ "${{ steps.libear-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "Libear cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "Libear cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Cache Main Build
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: main-build-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build
           key: ${{ runner.os }}-main-build-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h') }}
 
       - name: Check Main Build Cache
-        if: env.CLEAN_BUILD != 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.main-build-cache.outputs.cache-hit }}
         run: |
-          echo "Main build cache hit: ${{ steps.main-build-cache.outputs.cache-hit }}"
-          if [ "${{ steps.main-build-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "Main build cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "Main build cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
 
       - name: Check Clean Build
-        if: env.CLEAN_BUILD == 'true'
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD == 'true'
         shell: bash
         run: |
           echo "CLEAN_BUILD is true, removing entire build directory."
@@ -142,7 +159,7 @@ jobs:
 
       # --- FFmpeg (macOS) ---
       - name: Install FFmpeg (macOS)
-        if: runner.os == 'macOS'
+        if: env.ENABLE_MACOS_COMPILE == 'true' && runner.os == 'macOS'
         run: |
           echo "Installing FFmpeg via Homebrew..."
           brew update
@@ -183,11 +200,13 @@ jobs:
 
       # --- CMake Setup ---
       - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true')
+        uses: jwlawson/actions-setup-cmake@d06b37b47cfd043ec794ffa3e40e0b6b5858a7ec # v1.14.2
         with:
           cmake-version: "3.30.x"
 
       - name: Verify CMake
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true')
         shell: bash
         run: |
           cmake --version
@@ -197,7 +216,7 @@ jobs:
       - name: Cache Intel OneAPI
         id: cache-oneapi
         if: runner.os == 'Windows'
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: oneapi
           key: ${{ runner.os }}-oneapi-mkl-2025.3.0
@@ -275,7 +294,7 @@ jobs:
         # --- vcpkg Setup (Windows) ---
       - name: Export GitHub Actions cache environment variables
         if: runner.os == 'Windows'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
@@ -314,7 +333,7 @@ jobs:
 
       # --- Configure (macOS) ---
       - name: Configure CMake (macOS)
-        if: runner.os == 'macOS'
+        if: env.ENABLE_MACOS_COMPILE == 'true' && runner.os == 'macOS'
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "Unix Makefiles" \
             -D${{ env.TEST_TYPE }}=ON \
@@ -326,6 +345,7 @@ jobs:
 
       # --- Build ---
       - name: Build
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true')
         shell: bash
         run: |
           if [ "${{ runner.os }}" == "macOS" ]; then
@@ -337,13 +357,14 @@ jobs:
 
       # --- Test ---
       - name: Test
+        if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true')
         working-directory: ${{ github.workspace }}/build
         shell: bash
         run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
 
       # --- Logs ---
       - name: Dump Test Logs
-        if: ${{ failure() }}
+        if: ${{ (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && failure() }}
         shell: bash
         run: |
           echo "//// CTest Logs ////"
