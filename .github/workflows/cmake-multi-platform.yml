@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
         with:
           submodules: recursive
           lfs: true
@@ -49,7 +49,7 @@ jobs:
       - name: Cache Protobuf Build
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: protobuf-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/_deps/protobuf-build
           key: ${{ runner.os }}-protobuf-build-${{ hashFiles('third_party/protobuf/version.json') }}
@@ -57,9 +57,11 @@ jobs:
       - name: Check Protobuf Cache
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.protobuf-cache.outputs.cache-hit }}
         run: |
-          echo "Protobuf cache hit: ${{ steps.protobuf-cache.outputs.cache-hit }}"
-          if [ "${{ steps.protobuf-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "Protobuf cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "Protobuf cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
@@ -67,7 +69,7 @@ jobs:
       - name: Cache JUCE Build
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: juce-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/third_party/JUCE
           key: ${{ runner.os }}-juce-build-${{ hashFiles('third_party/JUCE/CMakeLists.txt') }}
@@ -75,9 +77,11 @@ jobs:
       - name: Check JUCE Cache
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.juce-cache.outputs.cache-hit }}
         run: |
-          echo "JUCE cache hit: ${{ steps.juce-cache.outputs.cache-hit }}"
-          if [ "${{ steps.juce-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "JUCE cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "JUCE cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
@@ -85,7 +89,7 @@ jobs:
       - name: Cache IAMF Build
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: iamf-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/_deps/libiamf-build
           key: ${{ runner.os }}-iamf-build-${{ hashFiles('third_party/libiamf/CMakeLists.txt') }}
@@ -93,9 +97,11 @@ jobs:
       - name: Check IAMF Cache
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.iamf-cache.outputs.cache-hit }}
         run: |
-          echo "IAMF cache hit: ${{ steps.iamf-cache.outputs.cache-hit }}"
-          if [ "${{ steps.iamf-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "IAMF cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "IAMF cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
@@ -103,7 +109,7 @@ jobs:
       - name: Cache Libear Build
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: libear-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build/third_party/libear
           key: ${{ runner.os }}-libear-build-${{ hashFiles('third_party/libear/CMakeLists.txt') }}
@@ -111,9 +117,11 @@ jobs:
       - name: Check Libear Cache
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.libear-cache.outputs.cache-hit }}
         run: |
-          echo "Libear cache hit: ${{ steps.libear-cache.outputs.cache-hit }}"
-          if [ "${{ steps.libear-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "Libear cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "Libear cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
@@ -121,7 +129,7 @@ jobs:
       - name: Cache Main Build
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         id: main-build-cache
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: build
           key: ${{ runner.os }}-main-build-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'components/**/*.cpp', 'components/**/*.h') }}
@@ -129,9 +137,11 @@ jobs:
       - name: Check Main Build Cache
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true') && env.CLEAN_BUILD != 'true'
         shell: bash
+        env:
+          CACHE_HIT: ${{ steps.main-build-cache.outputs.cache-hit }}
         run: |
-          echo "Main build cache hit: ${{ steps.main-build-cache.outputs.cache-hit }}"
-          if [ "${{ steps.main-build-cache.outputs.cache-hit }}" != 'true' ]; then
+          echo "Main build cache hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != 'true' ]; then
             echo "Main build cache missed or expired, setting CLEAN_BUILD to true."
             echo "CLEAN_BUILD=true" >> $GITHUB_ENV
           fi
@@ -187,7 +197,7 @@ jobs:
       # --- CMake Setup ---
       - name: Setup CMake
         if: (runner.os != 'macOS' || env.ENABLE_MACOS_COMPILE == 'true')
-        uses: jwlawson/actions-setup-cmake@v1
+        uses: jwlawson/actions-setup-cmake@d06b37b47cfd043ec794ffa3e40e0b6b5858a7ec # v1.14.2
         with:
           cmake-version: "3.30.x"
 
@@ -202,7 +212,7 @@ jobs:
       - name: Cache Intel OneAPI
         id: cache-oneapi
         if: runner.os == 'Windows'
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
           path: oneapi
           key: ${{ runner.os }}-oneapi-mkl-2025.3.0
@@ -280,7 +290,7 @@ jobs:
         # --- vcpkg Setup (Windows) ---
       - name: Export GitHub Actions cache environment variables
         if: runner.os == 'Windows'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
