@@ -18,3 +18,6 @@ eclipsa_add_test(test_elevation_geometry ElevationGeometry_test.cpp "components"
 eclipsa_add_test(test_elevation_surfaces ElevationSurfaces_test.cpp "components")
 eclipsa_add_test(test_height_indicator HeightIndicator_test.cpp "components")
 eclipsa_add_test(test_panner_input PannerInput_test.cpp "components")
+eclipsa_add_test(test_panner_screen_face PannerScreenFace_test.cpp "components")
+eclipsa_add_test(test_listener_head ListenerHead_test.cpp "components")
+eclipsa_add_test(test_text_editor_controlled_dial TextEditorControlledDial_test.cpp "components")

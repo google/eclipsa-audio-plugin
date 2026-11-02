@@ -14,6 +14,8 @@
 
 #include "TextEditorControlledDial.h"
 
+#include <cmath>
+
 TextEditorControlledDial::TextEditorControlledDial(
     const juce::String& title, const int& defaultValue, const int& currValue,
     const int& min, const int& max, juce::Image leftImage,
@@ -141,8 +143,12 @@ void TextEditorControlledDial::resetLookAndFeel() {
 
 // triggered when automation changes the value
 void TextEditorControlledDial::setValue(const float& value) {
-  int newValue = static_cast<int>(value);
-  textBox_.setText(juce::String(newValue));
+  int newValue = juce::roundToInt(value);
+  // Track the displayed value so the no-change check in
+  // textEditorChangedCallback compares against the parameter, not this dial's
+  // last write.
+  currentText_ = juce::String(newValue);
+  textBox_.setText(currentText_);
   // update the dial visual
   slider_.setValue(newValue);
 }
@@ -183,25 +189,12 @@ void TextEditorControlledDial::textEditorChangedCallback() {
 
 int TextEditorControlledDial::moveToNextMultipleOf5() {
   int value = textBox_.getText().getIntValue();
-  // if the number is not already a multiple of 5,
-  // increment it by the complement to the next multiple of 5
-  if (value % 5 != 0) {
-    value += 5 - (value % 5);
-  } else {
-    value += 5;
-  }
-
-  return value;
+  // Floor division, unlike %, rounds a negative value the right way.
+  return (static_cast<int>(std::floor(value / 5.0)) + 1) * 5;
 }
+
 int TextEditorControlledDial::moveToPreviousMultipleOf5() {
   int value = textBox_.getText().getIntValue();
-  // if the number is not already a multiple of 5,
-  // decrement it by the complement to the previous multiple of 5
-  if (value % 5 != 0) {
-    value -= value % 5;
-  } else {
-    value -= 5;
-  }
-
-  return value;
+  // Ceiling division, unlike %, rounds a negative value the right way.
+  return (static_cast<int>(std::ceil(value / 5.0)) - 1) * 5;
 }
