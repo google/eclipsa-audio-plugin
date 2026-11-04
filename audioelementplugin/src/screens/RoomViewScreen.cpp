@@ -45,6 +45,8 @@ RoomViewScreen::RoomViewScreen(
         audioElementSpatialLayoutRepository_->get().getChannelLayout());
   }
   room_->setDisplayLabels(true);
+  room_->setDisplaySource(
+      audioElementSpatialLayoutRepository_->get().isPanningEnabled());
   addAndMakeVisible(room_.get());
 
   // Configure the roof selection, but only make visible if panning is enabled
@@ -151,7 +153,9 @@ void RoomViewScreen::valueTreePropertyChanged(
   }
 
   if (property == AudioElementSpatialLayout::kPanningEnabled) {
-    selRoomElevation_.setVisible(
-        audioElementSpatialLayoutRepository_->get().isPanningEnabled());
+    const bool kPanningEnabled =
+        audioElementSpatialLayoutRepository_->get().isPanningEnabled();
+    selRoomElevation_.setVisible(kPanningEnabled);
+    room_->setDisplaySource(kPanningEnabled);
   }
 }

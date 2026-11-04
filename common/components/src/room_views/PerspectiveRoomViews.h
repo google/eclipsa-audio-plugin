@@ -73,6 +73,10 @@ class AudioElementPluginTopView : public PerspectiveRoomView {
     parameterTree_ = tree;
   }
 
+  // Off while panning is disabled: the source and its height indicator are
+  // not drawn and source input is ignored.
+  void setDisplaySource(bool enable) { displaySource_ = enable; }
+
   // A press on a drawn speaker snaps the source to it; a press on a speaker or
   // on the source starts a drag in left/right and front/back.
   void mouseDown(const juce::MouseEvent& event) override;
@@ -138,6 +142,7 @@ class AudioElementPluginTopView : public PerspectiveRoomView {
   float currentFlatHeight_ = 0.f;
 
   AudioElementParameterTree* parameterTree_ = nullptr;
+  bool displaySource_ = false;
   bool draggingSource_ = false;  // true between press and release
   // A speaker press holds the snapped position until the pointer has moved
   // past JUCE's drag threshold.
