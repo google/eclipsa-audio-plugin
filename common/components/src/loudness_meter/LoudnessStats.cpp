@@ -125,16 +125,7 @@ void LoudnessStats::drawStatValues(const int labelHeight,
                                    juce::Rectangle<int>& bounds) {
   MeasureEBU128::LoudnessStats stats{};
   rtData_.loudnessEBU128.read(stats);
-  // Check values are valid and within a logical range.
-  const auto valid = [](const float x) {
-    if (isinf(x) || isnan(x)) {
-      return false;
-    }
-    if (x < -100.f || x > 60.f) {
-      return false;
-    }
-    return true;
-  };
+  const auto valid = isValidLoudness;
 
   // If reset button was pressed, show invalid values until new stats are
   // available.
@@ -197,3 +188,10 @@ void LoudnessStats::buttonClicked(juce::Button* btn) {
 }
 
 void LoudnessStats::timerCallback() { repaint(); }
+
+bool LoudnessStats::isValidLoudness(const float x) {
+  if (std::isinf(x) || std::isnan(x)) {
+    return false;
+  }
+  return x >= -100.f && x <= 60.f;
+}

@@ -30,7 +30,9 @@
 #include "components/src/Viewports.h"
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/AudioElementSpatialLayoutRepository.h"
+#include "data_repository/implementation/ExportProfileListener.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/FileExport.h"
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
@@ -62,6 +64,7 @@ class ElementRoutingScreen : public juce::Component,
                            audioElementSpatialLayoutRepository,
                        FileExportRepository* fileExportRepository,
                        MixPresentationRepository* mixPresentationRepository,
+                       RoomSetupRepository* roomSetupRepository,
                        int totalChanneCount);
 
   ~ElementRoutingScreen();
@@ -101,6 +104,19 @@ class ElementRoutingScreen : public juce::Component,
     repaint();
   }
 
+  // The profile that limits new audio elements. Under YouTube, Base Enhanced
+  // counts as Base; the stored profile is not changed.
+  static FileProfile effectiveProfile(ExportProfile exportProfile,
+                                      FileProfile profile);
+
+  // Layouts offered by "Add Audio Element" for a profile.
+  static std::vector<Speakers::AudioElementSpeakerLayout> layoutsForProfile(
+      FileProfile profile);
+
+  static int remainingChannels(FileProfile profile, int channelsInUse);
+
+  static int remainingAudioElements(FileProfile profile, int audioElementCount);
+
   bool confirmValidNameChange(TitledTextBox& textBox, const juce::Uuid id) {
     // this name is already taken
     // do no update the name
@@ -124,6 +140,8 @@ class ElementRoutingScreen : public juce::Component,
   void updateAddAudioElementButton(const juce::StringArray& audioElementNames);
   Speakers::AudioElementSpeakerLayout getAudioElementLayout(
       const juce::String& name);
+  FileProfile currentEffectiveProfile() const;
+  void updateBaseEnhancedOption();
 
   HeaderBar headerBar_;
   SelectionBox profileSelectionBox_;
@@ -135,6 +153,7 @@ class ElementRoutingScreen : public juce::Component,
       audioElementSpatialLayoutRepository_;
   FileExportRepository* fileExportRepository_;
   MixPresentationRepository* mixPresentationRepository_;
+  RoomSetupRepository* roomSetupRepository_;
   std::map<juce::String, juce::Uuid>* pannerInformation_;
   std::vector<std::unique_ptr<AudioElementColumn>> audioElementColumns_;
   std::vector<std::unique_ptr<PannerLabel>> pannerLabels_;
@@ -161,9 +180,12 @@ class ElementRoutingScreen : public juce::Component,
 
   ElementRoutingScreenLookAndFeel lookAndFeel_;
   FileProfile currentProfile_;
+  // Option index of "Base Enhanced", or -1 when the bus is too narrow for it.
+  int baseEnhancedIndex_ = -1;
   int channelsInUse_;
   juce::TooltipWindow tooltipWindow_;
   juce::ImageComponent tooltipImage_;
+  std::unique_ptr<ExportProfileListener> exportProfileListener_;
 };
 
 class PannerLabel : public juce::Component {

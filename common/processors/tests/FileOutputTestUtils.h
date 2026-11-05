@@ -120,8 +120,9 @@ static inline void bouncePremiereProAudio(
     AudioElementRepository& audioElementRepository,
     MixPresentationRepository& mixPresentationRepository,
     MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
-    unsigned sampleRate = 48e3, unsigned frameSize = 128,
-    unsigned numBlocks = 8) {
+    RoomSetupRepository& roomSetupRepository, unsigned sampleRate = 48e3,
+    unsigned frameSize = 128, unsigned numBlocks = 8,
+    const YouTubeExportLimits::Limits& youTubeLimits = {}) {
   // First, premiere pro starts a manual export
   auto fileExport = fileExportRepository.get();
   fileExport.setManualExport(true);
@@ -131,7 +132,8 @@ static inline void bouncePremiereProAudio(
   // using an existing instance
   PremiereProFileOutputProcessor fio_proc_pp(
       fileExportRepository, filePlaybackRepository, audioElementRepository,
-      mixPresentationRepository, mixPresentationLoudnessRepository);
+      mixPresentationRepository, mixPresentationLoudnessRepository,
+      roomSetupRepository, youTubeLimits);
 
   const unsigned kNumChannels = totalAudioChannels(audioElementRepository);
   const auto kSineTone = generateSineWave(440.0f, sampleRate, frameSize);

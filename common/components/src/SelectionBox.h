@@ -298,6 +298,11 @@ class SelectionBox : public juce::Component {
     listeners_.push_back(listener);
   }
 
+  // Item ids are one more than the option index, as assigned by addOption.
+  void setOptionEnabled(const int index, const bool enabled) {
+    selectionBox_.setItemEnabled(index + 1, enabled);
+  }
+
   void disableIndex(const int& index) {
     selectionBox_.getChildComponent(index)->setEnabled(false);
   }

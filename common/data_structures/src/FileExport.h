@@ -41,7 +41,9 @@ enum ExportError {
   kPermissionDenied = 3,
   kMuxFailed = 4,
   kVideoLongerThanAudio = 5,
-  kAudioLongerThanVideo = 6
+  kAudioLongerThanVideo = 6,
+  kYouTubeDurationExceeded = 7,
+  kYouTubeSizeExceeded = 8
 };
 
 // Using a macro here to help minimize the amount of code

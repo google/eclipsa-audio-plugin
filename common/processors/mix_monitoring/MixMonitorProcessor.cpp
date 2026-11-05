@@ -83,6 +83,10 @@ const juce::AudioBuffer<float> MixMonitorProcessor::getRenderedBuffer(
 void MixMonitorProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
+  // The export profile does not change what is measured, so keep the stats.
+  if (property == RoomSetup::kExportProfile) {
+    return;
+  }
   playbackLayout_ = roomSetupRepo_.get()
                         .getSpeakerLayout()
                         .getRoomSpeakerLayout()

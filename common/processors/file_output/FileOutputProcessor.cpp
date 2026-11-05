@@ -16,6 +16,7 @@
 
 #include <logger/logger.h>
 
+#include <algorithm>
 #include <string>
 
 #include "WriteFailureClassifier.h"
@@ -39,7 +40,9 @@ FileOutputProcessor::FileOutputProcessor(
     FilePlaybackRepository& filePlaybackRepository,
     AudioElementRepository& audioElementRepository,
     MixPresentationRepository& mixPresentationRepository,
-    MixPresentationLoudnessRepository& mixPresentationLoudnessRepository)
+    MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
+    RoomSetupRepository& roomSetupRepository,
+    const YouTubeExportLimits::Limits& youTubeLimits)
     : ProcessorBase(),
       performingRender_(false),
       fileExportRepository_(fileExportRepository),
@@ -47,6 +50,8 @@ FileOutputProcessor::FileOutputProcessor(
       audioElementRepository_(audioElementRepository),
       mixPresentationRepository_(mixPresentationRepository),
       mixPresentationLoudnessRepository_(mixPresentationLoudnessRepository),
+      roomSetupRepository_(roomSetupRepository),
+      youTubeLimits_(youTubeLimits),
       securityScopedHandle_(nullptr) {}
 
 FileOutputProcessor::~FileOutputProcessor() {
@@ -141,24 +146,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   performingRender_ = true;
   startSampleIdx_ = config.getStartSampleIdx();
   endSampleIdx_ = config.getEndSampleIdx();
-  std::string exportFile = config.getExportFile().toStdString();
-
-  // To create the IAMF file, create a list of all the audio element wav
-  // files to be created
-  juce::OwnedArray<AudioElement> audioElements;
-  audioElementRepository_.getAll(audioElements);
-  iamfWavFileWriters_.clear();
-  iamfWavFileWriters_.reserve(audioElements.size());
-  for (int i = 0; i < audioElements.size(); i++) {
-    const juce::String kElemName = audioElements[i]->getName();
-    const juce::String kWavFilePath =
-        config.getExportFile() + "_" + kElemName + ".wav";
-    sampleRate_ = config.getSampleRate();
-
-    iamfWavFileWriters_.emplace_back(new AudioElementFileWriter(
-        kWavFilePath, config.getSampleRate(), config.getBitDepth(),
-        config.getAudioCodec(), *audioElements[i]));
-  }
+  sampleRate_ = config.getSampleRate();
   sampleTally_ = 0;
   framesWritten_ = 0;
 
@@ -173,7 +161,40 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   fpb.setPlaybackCommand(FilePlayback::PlaybackCommand::kPause);
   fpbr_.update(fpb);
 
+  iamfWavFileWriters_.clear();
   iamfFileWriter_ = nullptr;
+  youTubeStopped_ = false;
+  youTubeFrameCap_ = 0;
+  if (roomSetupRepository_.get().getExportProfile() ==
+      ExportProfile::kYouTube) {
+    youTubeFrameCap_ = static_cast<juce::int64>(youTubeLimits_.maxDurationSec *
+                                                config.getSampleRate());
+    const ExportError kLimitError = checkYouTubeLimitsBeforeRender(config);
+    if (kLimitError != kNoError) {
+      // performingRender_ stays true, so closeFileExport still runs and
+      // stops security-scoped access; with no writers it has nothing to mux.
+      LOG_WARNING(0, "FileOutputProcessor: export exceeds YouTube limits.");
+      youTubeStopped_ = true;
+      recordExportError(kLimitError);
+      return;
+    }
+  }
+
+  // To create the IAMF file, create a list of all the audio element wav
+  // files to be created
+  juce::OwnedArray<AudioElement> audioElements;
+  audioElementRepository_.getAll(audioElements);
+  iamfWavFileWriters_.reserve(audioElements.size());
+  for (int i = 0; i < audioElements.size(); i++) {
+    const juce::String kElemName = audioElements[i]->getName();
+    const juce::String kWavFilePath =
+        config.getExportFile() + "_" + kElemName + ".wav";
+
+    iamfWavFileWriters_.emplace_back(new AudioElementFileWriter(
+        kWavFilePath, config.getSampleRate(), config.getBitDepth(),
+        config.getAudioCodec(), *audioElements[i]));
+  }
+
   const juce::String kIamfPath = config.getExportFile();
   if (FileExport::validateFilePath(
           FileExport::expandTildePath(kIamfPath).toStdString(), false)) {
@@ -247,7 +268,23 @@ void FileOutputProcessor::closeFileExport(const FileExport& config) {
       fileExportRepository_.update(freshConfig);
     }
   }
-  if (kIamfExported && fileExportRepository_.get().getExportVideo()) {
+  // Under YouTube, a finished file over the size limit is not muxed.
+  if (kIamfExported && youTubeFrameCap_ > 0 && !youTubeStopped_) {
+    const FileExport kConfig = fileExportRepository_.get();
+    std::int64_t bytes =
+        juce::File(FileExport::expandTildePath(kConfig.getExportFile()))
+            .getSize();
+    if (kConfig.getExportVideo()) {
+      bytes += juce::File(kConfig.getVideoSource()).getSize();
+    }
+    if (YouTubeExportLimits::check(-1.0, bytes, youTubeLimits_) != kNoError) {
+      youTubeStopped_ = true;
+      recordExportError(kYouTubeSizeExceeded);
+    }
+  }
+
+  if (kIamfExported && !youTubeStopped_ &&
+      fileExportRepository_.get().getExportVideo()) {
     double videoDurationSec = -1.0;
     const bool kMuxIamfSuccess = IAMFExportHelper::muxIAMF(
         fileExportRepository_.get(), &videoDurationSec);
@@ -340,7 +377,7 @@ void FileOutputProcessor::checkAudioVideoDurationMismatch(
 
 bool FileOutputProcessor::shouldBufferBeWritten(
     const juce::AudioBuffer<float>& buffer) {
-  if (!performingRender_ || buffer.getNumSamples() < 1) {
+  if (!performingRender_ || buffer.getNumSamples() < 1 || youTubeStopped_) {
     return false;
   }
 
@@ -349,7 +386,7 @@ bool FileOutputProcessor::shouldBufferBeWritten(
 
   // No range specified — write everything
   if (startSampleIdx_ <= 0 && endSampleIdx_ <= 0) {
-    return true;
+    return withinYouTubeFrameCap(buffer);
   }
 
   // Skip if buffer starts before the requested start sample
@@ -362,5 +399,75 @@ bool FileOutputProcessor::shouldBufferBeWritten(
     return false;
   }
 
-  return true;
+  return withinYouTubeFrameCap(buffer);
+}
+
+bool FileOutputProcessor::withinYouTubeFrameCap(
+    const juce::AudioBuffer<float>& buffer) {
+  if (youTubeFrameCap_ <= 0 ||
+      framesWritten_ + buffer.getNumSamples() <= youTubeFrameCap_) {
+    return true;
+  }
+  youTubeStopped_ = true;
+  recordExportError(kYouTubeDurationExceeded);
+  return false;
+}
+
+ExportError FileOutputProcessor::checkYouTubeLimitsBeforeRender(
+    const FileExport& config) const {
+  const double kSampleRate = config.getSampleRate();
+  double rangeSec = -1.0;
+  if (endSampleIdx_ > 0 && kSampleRate > 0) {
+    rangeSec = static_cast<double>(endSampleIdx_ -
+                                   std::max<juce::int64>(startSampleIdx_, 0)) /
+               kSampleRate;
+  }
+  double videoSec = -1.0;
+  std::int64_t videoBytes = 0;
+  if (config.getExportVideo()) {
+    videoSec =
+        IAMFExportHelper::getMediaDurationSeconds(config.getVideoSource());
+    videoBytes = juce::File(config.getVideoSource()).getSize();
+  }
+
+  if (YouTubeExportLimits::check(std::max(rangeSec, videoSec), -1,
+                                 youTubeLimits_) != kNoError) {
+    return kYouTubeDurationExceeded;
+  }
+
+  const double kAudioSec = rangeSec > 0 ? rangeSec : videoSec;
+  if (kAudioSec <= 0) {
+    return kNoError;
+  }
+  juce::OwnedArray<AudioElement> audioElements;
+  audioElementRepository_.getAll(audioElements);
+  int channels = 0;
+  for (const AudioElement* element : audioElements) {
+    channels += element->getChannelCount();
+  }
+  double audioBytes = 0.0;
+  switch (config.getAudioCodec()) {
+    case AudioCodec::OPUS:
+      audioBytes = config.getOpusTotalBitrate() / 8.0 * kAudioSec;
+      break;
+    case AudioCodec::FLAC:
+      // Uncompressed size, an upper bound for FLAC.
+      audioBytes =
+          channels * kSampleRate * kAudioSec * config.getBitDepth() / 8.0;
+      break;
+    case AudioCodec::LPCM:
+    default:
+      audioBytes =
+          channels * kSampleRate * kAudioSec * config.getLPCMSampleSize() / 8.0;
+      break;
+  }
+  return YouTubeExportLimits::check(
+      -1.0, videoBytes + static_cast<std::int64_t>(audioBytes), youTubeLimits_);
+}
+
+void FileOutputProcessor::recordExportError(const ExportError error) {
+  FileExport config = fileExportRepository_.get();
+  if (config.recordExportErrorIfUnset(error)) {
+    fileExportRepository_.update(config);
+  }
 }

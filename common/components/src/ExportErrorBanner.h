@@ -121,6 +121,11 @@ class ExportErrorBanner : public WarningBannerBase,
         return "The exported audio is longer than the video. The file was "
                "exported, but the audio has been shortened to fit the video "
                "file.";
+      case kYouTubeDurationExceeded:
+        return "YouTube does not support more than 12 hours of audio or "
+               "video.";
+      case kYouTubeSizeExceeded:
+        return "YouTube does not support files larger than 256 GB.";
       default:
         return messageForError(kFileWriteFailed);
     }

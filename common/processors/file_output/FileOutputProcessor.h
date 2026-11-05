@@ -34,6 +34,8 @@
 #include "FilePermissions.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
 #include "data_repository/implementation/MixPresentationLoudnessRepository.h"
+#include "data_repository/implementation/RoomSetupRepository.h"
+#include "data_structures/src/YouTubeExportLimits.h"
 #include "iamf_export_utils/IAMFFileWriter.h"
 
 //==============================================================================
@@ -45,7 +47,9 @@ class FileOutputProcessor : public ProcessorBase {
       FilePlaybackRepository& filePlaybackRepository,
       AudioElementRepository& audioElementRepository,
       MixPresentationRepository& mixPresentationRepository,
-      MixPresentationLoudnessRepository& mixPresentationLoudnessRepository);
+      MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
+      RoomSetupRepository& roomSetupRepository,
+      const YouTubeExportLimits::Limits& youTubeLimits = {});
   ~FileOutputProcessor() override;
 
   //==============================================================================
@@ -100,6 +104,17 @@ class FileOutputProcessor : public ProcessorBase {
 
   bool shouldBufferBeWritten(const juce::AudioBuffer<float>& buffer);
 
+  // Applies the YouTube duration and size limits to the export about to
+  // start. Inputs that cannot be read (no range, unreadable video) are
+  // skipped. Returns the first limit exceeded, or kNoError.
+  ExportError checkYouTubeLimitsBeforeRender(const FileExport& config) const;
+
+  // Under YouTube, stops writing before a buffer would take the export past
+  // the duration cap, recording kYouTubeDurationExceeded once.
+  bool withinYouTubeFrameCap(const juce::AudioBuffer<float>& buffer);
+
+  void recordExportError(ExportError error);
+
   // Classifies a file write failure by probing whether the parent directory
   // of `path` is actually writable. The real write attempt has already
   // failed by the time this runs, so this only distinguishes a permission
@@ -113,6 +128,13 @@ class FileOutputProcessor : public ProcessorBase {
   AudioElementRepository& audioElementRepository_;
   MixPresentationRepository& mixPresentationRepository_;
   MixPresentationLoudnessRepository& mixPresentationLoudnessRepository_;
+  RoomSetupRepository& roomSetupRepository_;
+  const YouTubeExportLimits::Limits youTubeLimits_;
+  // Captured when an export starts; 0 when the YouTube rules are off.
+  juce::int64 youTubeFrameCap_ = 0;
+  // Set once a YouTube limit stops this export; no further audio is written
+  // and the mux is skipped.
+  bool youTubeStopped_ = false;
   std::vector<std::unique_ptr<AudioElementFileWriter>> iamfWavFileWriters_;
   int numSamples_;
   double sampleRate_;

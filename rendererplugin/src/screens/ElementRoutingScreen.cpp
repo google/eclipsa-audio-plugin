@@ -33,11 +33,13 @@ ElementRoutingScreen::ElementRoutingScreen(
     MultibaseAudioElementSpatialLayoutRepository*
         AudioElementSpatialLayoutRepository,
     FileExportRepository* fileExportRepository,
-    MixPresentationRepository* mixPresentationRepository, int totalChanneCount)
+    MixPresentationRepository* mixPresentationRepository,
+    RoomSetupRepository* roomSetupRepository, int totalChanneCount)
     : audioElementRepository_(audioElementRepository),
       audioElementSpatialLayoutRepository_(AudioElementSpatialLayoutRepository),
       fileExportRepository_(fileExportRepository),
       mixPresentationRepository_(mixPresentationRepository),
+      roomSetupRepository_(roomSetupRepository),
       headerBar_("Routing", editor),
       profileSelectionBox_("Profile"),
       addAudioElementButton_("+ Add Audio Element", this),
@@ -66,6 +68,7 @@ ElementRoutingScreen::ElementRoutingScreen(
   // Add the base option to the profile config only if 28 channels are
   // available, as the base enhanced profile supports 28 channels
   if (totalChanneCount >= 28) {
+    baseEnhancedIndex_ = profileSelectionBox_.getComboBox()->getNumItems();
     profileSelectionBox_.addOption("Base Enhanced");
   }
 
@@ -98,6 +101,8 @@ ElementRoutingScreen::ElementRoutingScreen(
       "Available audio element layouts are filtered based on remaining "
       "channel capacity and profile limitations.");
 
+  updateBaseEnhancedOption();
+
   // Update the local rendering with the current audio elements and panners
   updateAudioElementChannels();
 
@@ -114,6 +119,13 @@ ElementRoutingScreen::ElementRoutingScreen(
                   "Profile changed to: " + std::to_string(idx));
     updateAudioElementChannels();
   });
+
+  exportProfileListener_ =
+      std::make_unique<ExportProfileListener>(roomSetupRepository_, [this]() {
+        updateBaseEnhancedOption();
+        updateAudioElementChannels();
+        repaint();
+      });
 }
 
 ElementRoutingScreen::~ElementRoutingScreen() {
@@ -310,19 +322,15 @@ void ElementRoutingScreen::updateAudioElementChannels() {
   // can still be added
   channelsInUse_ = totalChannels;
 
-  int remainingChannels =
-      FileProfileHelper::profileChannels(currentProfile_) - totalChannels;
-  int remainingAudioElements =
-      FileProfileHelper::profileAudioElements(currentProfile_) -
-      audioElementArray.size();
-
+  const FileProfile effective = currentEffectiveProfile();
   remainingChannelsLabel_.setText(
-      juce::String(remainingChannels) + " remaining channels",
+      juce::String(remainingChannels(effective, totalChannels)) +
+          " remaining channels",
       juce::NotificationType::dontSendNotification);
 
   // Update the add audio element button with filtered layouts
   // This will also handle enabling/disabling the button appropriately
-  updateAddAudioElementButton(getAudioElementNames(currentProfile_));
+  updateAddAudioElementButton(getAudioElementNames(effective));
 
   // Update the panner rows
   pannerRows_.clear();
@@ -376,10 +384,10 @@ void ElementRoutingScreen::comboBoxChanged(
 
   // Verify their are enough available channels / audio elements for the
   // request
-  if (channelsInUse_ + layout.getNumChannels() >
-          FileProfileHelper::profileChannels(currentProfile_) ||
-      audioElementRepository_->getItemCount() >=
-          FileProfileHelper::profileAudioElements(currentProfile_)) {
+  const FileProfile effective = currentEffectiveProfile();
+  if (layout.getNumChannels() > remainingChannels(effective, channelsInUse_) ||
+      remainingAudioElements(effective,
+                             audioElementRepository_->getItemCount()) <= 0) {
     LOG_ANALYTICS(
         RendererProcessor::instanceId_,
         "Failed to add audio element: Insufficient channels or limit reached.");
@@ -451,60 +459,88 @@ void ElementRoutingScreen::updateAudioElementName(juce::Uuid& element,
 juce::StringArray ElementRoutingScreen::getAudioElementNames(
     const FileProfile& profile) {
   juce::StringArray audioElementNames;
-  std::vector<Speakers::AudioElementSpeakerLayout> layouts;
+  if (remainingAudioElements(profile,
+                             audioElementRepository_->getItemCount()) <= 0) {
+    return audioElementNames;
+  }
+  // Channel constraints are applied later as disabled options.
+  for (const auto& layout : layoutsForProfile(profile)) {
+    audioElementNames.add(layout.toString());
+  }
+  return audioElementNames;
+}
+
+FileProfile ElementRoutingScreen::effectiveProfile(
+    const ExportProfile exportProfile, const FileProfile profile) {
+  if (exportProfile == ExportProfile::kYouTube) {
+    return std::min(profile, FileProfile::BASE);
+  }
+  return profile;
+}
+
+std::vector<Speakers::AudioElementSpeakerLayout>
+ElementRoutingScreen::layoutsForProfile(const FileProfile profile) {
   if (profile == FileProfile::SIMPLE || profile == FileProfile::BASE) {
-    layouts = {
+    return {
         Speakers::kMono,     Speakers::kStereo,        Speakers::k3Point1Point2,
         Speakers::k5Point1,  Speakers::k5Point1Point2, Speakers::k5Point1Point4,
         Speakers::k7Point1,  Speakers::k7Point1Point2, Speakers::k7Point1Point4,
         Speakers::kBinaural, Speakers::kHOA1,          Speakers::kHOA2,
         Speakers::kHOA3};
-  } else {
-    layouts = {Speakers::kMono,
-               Speakers::kStereo,
-               Speakers::k3Point1Point2,
-               Speakers::k5Point1,
-               Speakers::k5Point1Point2,
-               Speakers::k5Point1Point4,
-               Speakers::kExplLFE,
-               Speakers::kExpl5Point1Point4Surround,
-               Speakers::k7Point1,
-               Speakers::k7Point1Point2,
-               Speakers::k7Point1Point4,
-               Speakers::kExpl7Point1Point4Front,
-               Speakers::kExpl7Point1Point4SideSurround,
-               Speakers::kExpl7Point1Point4RearSurround,
-               Speakers::kExpl7Point1Point4TopFront,
-               Speakers::kExpl7Point1Point4TopBack,
-               Speakers::kExpl7Point1Point4Top,
-               Speakers::kExpl9Point1Point6,
-               Speakers::kExpl9Point1Point6Front,
-               Speakers::kExpl9Point1Point6Side,
-               Speakers::kExpl9Point1Point6TopSide,
-               Speakers::kExpl9Point1Point6Top,
-               Speakers::kBinaural,
-               Speakers::kHOA1,
-               Speakers::kHOA2,
-               Speakers::kHOA3};
   }
+  return {Speakers::kMono,
+          Speakers::kStereo,
+          Speakers::k3Point1Point2,
+          Speakers::k5Point1,
+          Speakers::k5Point1Point2,
+          Speakers::k5Point1Point4,
+          Speakers::kExplLFE,
+          Speakers::kExpl5Point1Point4Surround,
+          Speakers::k7Point1,
+          Speakers::k7Point1Point2,
+          Speakers::k7Point1Point4,
+          Speakers::kExpl7Point1Point4Front,
+          Speakers::kExpl7Point1Point4SideSurround,
+          Speakers::kExpl7Point1Point4RearSurround,
+          Speakers::kExpl7Point1Point4TopFront,
+          Speakers::kExpl7Point1Point4TopBack,
+          Speakers::kExpl7Point1Point4Top,
+          Speakers::kExpl9Point1Point6,
+          Speakers::kExpl9Point1Point6Front,
+          Speakers::kExpl9Point1Point6Side,
+          Speakers::kExpl9Point1Point6TopSide,
+          Speakers::kExpl9Point1Point6Top,
+          Speakers::kBinaural,
+          Speakers::kHOA1,
+          Speakers::kHOA2,
+          Speakers::kHOA3};
+}
 
-  // Check remaining audio element count limit
-  juce::OwnedArray<AudioElement> audioElementArray;
-  audioElementRepository_->getAll(audioElementArray);
-  int remainingAudioElements =
-      FileProfileHelper::profileAudioElements(currentProfile_) -
-      audioElementArray.size();
+int ElementRoutingScreen::remainingChannels(const FileProfile profile,
+                                            const int channelsInUse) {
+  return FileProfileHelper::profileChannels(profile) - channelsInUse;
+}
 
-  // Add all layouts that fit within the audio element count limit
-  // Channel constraints will be handled later via disabled options
-  for (auto layout : layouts) {
-    // Only add if there would be space for this new audio element
-    if (remainingAudioElements > 0) {
-      audioElementNames.add(layout.toString());
-    }
+int ElementRoutingScreen::remainingAudioElements(const FileProfile profile,
+                                                 const int audioElementCount) {
+  return FileProfileHelper::profileAudioElements(profile) - audioElementCount;
+}
+
+FileProfile ElementRoutingScreen::currentEffectiveProfile() const {
+  if (roomSetupRepository_ == nullptr) {
+    return currentProfile_;
   }
+  return effectiveProfile(roomSetupRepository_->get().getExportProfile(),
+                          currentProfile_);
+}
 
-  return audioElementNames;
+void ElementRoutingScreen::updateBaseEnhancedOption() {
+  if (baseEnhancedIndex_ < 0 || roomSetupRepository_ == nullptr) {
+    return;
+  }
+  const bool youTube =
+      roomSetupRepository_->get().getExportProfile() == ExportProfile::kYouTube;
+  profileSelectionBox_.setOptionEnabled(baseEnhancedIndex_, !youTube);
 }
 
 void ElementRoutingScreen::updateAddAudioElementButton(
@@ -516,8 +552,8 @@ void ElementRoutingScreen::updateAddAudioElementButton(
   int hostWideLayoutChannels = ProcessorBase::getHostWideLayout().size();
 
   // Get available channels for new audio elements
-  int remainingChannels =
-      FileProfileHelper::profileChannels(currentProfile_) - channelsInUse_;
+  const int channelsLeft =
+      remainingChannels(currentEffectiveProfile(), channelsInUse_);
 
   // Apply enabled/disabled state to each option based on constraints
   for (int i = 0; i < audioElementNames.size(); i++) {
@@ -530,7 +566,7 @@ void ElementRoutingScreen::updateAddAudioElementButton(
     bool enable = true;
     if (hostWideLayoutChannels > 0 && layoutChannels > hostWideLayoutChannels) {
       enable = false;
-    } else if (layoutChannels > remainingChannels) {
+    } else if (layoutChannels > channelsLeft) {
       enable = false;
     }
 

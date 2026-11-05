@@ -52,15 +52,9 @@ bool muxIAMF(const FileExport& exportData,
 // duration over the movie/container-level duration, falling back to the
 // container duration if the file has no visual track.
 //
-// Deliberately NOT called from the mismatch-warning feature's own production
-// path: muxIAMF()'s outVideoDurationSec already returns the muxed output's
-// video-track duration from the destination file it has open during muxing,
-// so calling this too would just re-parse that same file a second,
-// independent time. This is a general-purpose utility -- usable against any
-// media file, not just a just-muxed one -- kept here (with its own
-// dedicated unit test, get_media_duration_uses_video_track_not_container)
-// for future callers that need a duration read outside the muxing path, e.g.
-// validating the source video before mux starts. It has no production
-// caller today; that is intentional, not an oversight.
+// The mismatch warning reads the duration from muxIAMF()'s
+// outVideoDurationSec instead, to avoid a second parse of the muxed file.
+// FileOutputProcessor calls this on the source video before render to apply
+// the YouTube duration limit.
 [[nodiscard]] double getMediaDurationSeconds(const juce::String& mediaFilePath);
 }  // namespace IAMFExportHelper

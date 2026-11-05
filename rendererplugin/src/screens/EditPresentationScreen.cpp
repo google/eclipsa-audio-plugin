@@ -49,7 +49,8 @@ void EditPresentationTabbedComponent::currentTabChanged(
 EditPresentationScreen::EditPresentationScreen(
     MainEditor& editor, AudioElementRepository* ae_repository,
     MixPresentationRepository* mixPresentationRepository,
-    ActiveMixRepository* activeMixRepo)
+    ActiveMixRepository* activeMixRepo,
+    RoomSetupRepository* roomSetupRepository)
     : tagScreen_(mixPresentationRepository,
                  mixPresentationRepository->getFirst()->getId()),
       initialTabIndex_(0),
@@ -59,6 +60,7 @@ EditPresentationScreen::EditPresentationScreen(
       mixPresentationRepository_(mixPresentationRepository),
       audioElementRepository_(ae_repository),
       activeMixRepository_(activeMixRepo),
+      roomSetupRepository_(roomSetupRepository),
       addMixPresentationButton_(IconStore::getInstance().getPlusIcon()) {
   setLookAndFeel(&lookAndFeel_);
   setWantsKeyboardFocus(true);
@@ -97,6 +99,14 @@ EditPresentationScreen::EditPresentationScreen(
       EclipsaColours::selectCyan);
 
   addAndMakeVisible(tagScreen_);
+
+  exportProfileListener_ = std::make_unique<ExportProfileListener>(
+      roomSetupRepository_,
+      [safeThis = juce::Component::SafePointer<EditPresentationScreen>(this)] {
+        juce::MessageManager::callAsync([safeThis] {
+          if (safeThis) safeThis->updateAddMixPresentationButton();
+        });
+      });
 }
 
 EditPresentationScreen::~EditPresentationScreen() {
@@ -164,17 +174,11 @@ void EditPresentationScreen::paint(juce::Graphics& g) {
 
 void EditPresentationScreen::updateTabButtonBounds(
     const juce::Rectangle<int>& presentationEditingBounds) {
+  updateAddMixPresentationButton();
+
   // nothing to paint if no mixes
   if (numMixes_ == 0) {
     return;
-  }
-
-  if (numMixes_ >= 5) {
-    addMixPresentationButton_.dimButton();
-    addMixPresentationButton_.setEnabled(false);
-  } else {
-    addMixPresentationButton_.resetButton();
-    addMixPresentationButton_.setEnabled(true);
   }
 
   presentationTabs_->setBounds(presentationEditingBounds);
@@ -190,6 +194,20 @@ void EditPresentationScreen::updateTabButtonBounds(
         presentationTabs_->getTabbedButtonBar().getTabButton(i);
     tabButton->setBounds(tabbedbuttonbarbounds.removeFromLeft(
         presentationEditingBounds.getWidth() * fraction));
+  }
+}
+
+void EditPresentationScreen::updateAddMixPresentationButton() {
+  const ExportProfile profile =
+      roomSetupRepository_ != nullptr
+          ? roomSetupRepository_->get().getExportProfile()
+          : ExportProfile::kAdvanced;
+  if (canAddMixPresentation(profile, numMixes_)) {
+    addMixPresentationButton_.resetButton();
+    addMixPresentationButton_.setEnabled(true);
+  } else {
+    addMixPresentationButton_.dimButton();
+    addMixPresentationButton_.setEnabled(false);
   }
 }
 

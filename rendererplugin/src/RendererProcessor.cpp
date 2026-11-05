@@ -69,14 +69,16 @@ RendererProcessor::RendererProcessor()
             mixPresentationLoudnessRepository_, audioElementRepository_));
     audioProcessors_.push_back(std::make_unique<PremiereProFileOutputProcessor>(
         fileExportRepository_, filePlaybackRepository_, audioElementRepository_,
-        mixPresentationRepository_, mixPresentationLoudnessRepository_));
+        mixPresentationRepository_, mixPresentationLoudnessRepository_,
+        roomSetupRepository_));
   } else {
     audioProcessors_.push_back(std::make_unique<LoudnessExportProcessor>(
         fileExportRepository_, mixPresentationRepository_,
         mixPresentationLoudnessRepository_, audioElementRepository_));
     audioProcessors_.push_back(std::make_unique<FileOutputProcessor>(
         fileExportRepository_, filePlaybackRepository_, audioElementRepository_,
-        mixPresentationRepository_, mixPresentationLoudnessRepository_));
+        mixPresentationRepository_, mixPresentationLoudnessRepository_,
+        roomSetupRepository_));
   }
   audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>(
       channelMonitorData_, &mixPresentationRepository_,

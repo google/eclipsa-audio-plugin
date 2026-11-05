@@ -28,6 +28,7 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
       monitorData_(data),
       fileExportScreen_(editor, repos, fpbData),
       speakerSetup_("Speaker Setup"),
+      exportProfile_("Export Profile"),
       selRoomOpts_({"Speakers", "Tracks", "Labels"}, false),
       selRoomView_({"Iso", "Top", "Side", "Rear"}, true),
       exportButton(IconStore::getInstance().getsettingsIcon()) {
@@ -36,6 +37,8 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
                                     IconStore::getInstance().getLineIcon());
   initializeSpeakerSetup();
   addAndMakeVisible(speakerSetup_);
+  initializeExportProfile();
+  addAndMakeVisible(exportProfile_);
 
   // Set up functionality in the constructor
   exportButton.setButtonOnClick([this, &editor] {
@@ -88,6 +91,17 @@ void RoomMonitoringScreen::initializeSpeakerSetup() {
   speakerSetup_.onChange([this] { updateSpeakerSetup(); });
 }
 
+void RoomMonitoringScreen::initializeExportProfile() {
+  for (const ExportProfile profile : kExportProfileOptions) {
+    exportProfile_.addOption(exportProfileToString(profile));
+  }
+  exportProfile_.setSelectedIndex(
+      optionIndexForExportProfile(
+          repos_.roomSetupRepo_.get().getExportProfile()),
+      juce::dontSendNotification);
+  exportProfile_.onChange([this] { updateExportProfile(); });
+}
+
 RoomMonitoringScreen::~RoomMonitoringScreen() {
   setLookAndFeel(nullptr);
 
@@ -128,6 +142,7 @@ void RoomMonitoringScreen::paint(juce::Graphics& g) {
   // Draw speaker speaker dropdown, timecode, and export button.
   int topWidth = topBounds.getWidth();
   speakerSetup_.setBounds(topBounds.removeFromLeft(topWidth * 0.20f));
+  exportProfile_.setBounds(topBounds.removeFromLeft(topWidth * 0.20f));
 
   // Adjusted button width to accommodate images and text
   int exportbuttonWidth =
@@ -170,6 +185,17 @@ void RoomMonitoringScreen::updateSpeakerSetup() {
   LOG_ANALYTICS(RendererProcessor::instanceId_, " updated speaker setup.");
   roomView_->setSpeakers(newSpeakerLayout.getRoomSpeakerLayout());
   roomView_->repaint();
+}
+
+void RoomMonitoringScreen::updateExportProfile() {
+  const ExportProfile profile =
+      exportProfileFromOptionIndex(exportProfile_.getSelectedIndex());
+  RoomSetup currentRoomSetup = repos_.roomSetupRepo_.get();
+  currentRoomSetup.setExportProfile(profile);
+  repos_.roomSetupRepo_.update(currentRoomSetup);
+  LOG_ANALYTICS(RendererProcessor::instanceId_,
+                "export profile changed to: " +
+                    exportProfileToString(profile).toStdString());
 }
 
 void RoomMonitoringScreen::updateRoomOpts() {
