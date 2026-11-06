@@ -32,6 +32,8 @@ class RoomMonitoringScreen : public juce::Component,
  private:
   void initializeSpeakerSetup();
   void updateSpeakerSetup();
+  void initializeExportProfile();
+  void updateExportProfile();
   void updateRoomOpts();
   void toggleLabelsDrawable();
   void updateRoomView();
@@ -52,6 +54,7 @@ class RoomMonitoringScreen : public juce::Component,
   std::unordered_set<juce::Uuid> activeAudioElementIDs_;
   // Components.
   SelectionBox speakerSetup_;
+  SelectionBox exportProfile_;
   ImageTextButton exportButton;
   FileExportScreen fileExportScreen_;
   std::unique_ptr<PerspectiveRoomView> roomView_;

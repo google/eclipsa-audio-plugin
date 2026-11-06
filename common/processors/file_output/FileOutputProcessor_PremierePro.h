@@ -36,7 +36,9 @@ class PremiereProFileOutputProcessor final : public FileOutputProcessor {
       FilePlaybackRepository& filePlaybackRepository,
       AudioElementRepository& audioElementRepository,
       MixPresentationRepository& mixPresentationRepository,
-      MixPresentationLoudnessRepository& mixPresentationLoudnessRepository);
+      MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
+      RoomSetupRepository& roomSetupRepository,
+      const YouTubeExportLimits::Limits& youTubeLimits = {});
   ~PremiereProFileOutputProcessor() override;
 
   //==============================================================================

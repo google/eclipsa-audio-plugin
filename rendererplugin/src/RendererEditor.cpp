@@ -64,6 +64,10 @@ RendererEditor::RendererEditor(RendererProcessor& p)
     : MainEditor(p),
       dawWarningBanner_(&p.getRoomSetupRepository()),
       exportErrorBanner_(&p.getFileExportRepository()),
+      loudnessWarningBanner_(p.getSpeakerMonitorData(),
+                             &p.getRoomSetupRepository()),
+      mixPresentationWarningBanner_(&p.getRepositories().mpRepo_,
+                                    &p.getRoomSetupRepository()),
       monitorScreen_(p.getRepositories(), p.getSpeakerMonitorData(),
                      p.getChannelMonitorData(),
                      p.getFilePlaybackProcessorData(), *this,
@@ -124,6 +128,23 @@ RendererEditor::RendererEditor(RendererProcessor& p)
 
   addChildComponent(exportErrorBanner_);
   exportErrorBanner_.onVisibilityChanged = [this] { repaint(); };
+
+  addChildComponent(loudnessWarningBanner_);
+  loudnessWarningBanner_.onVisibilityChanged = [this] { repaint(); };
+
+  addChildComponent(mixPresentationWarningBanner_);
+  mixPresentationWarningBanner_.onVisibilityChanged = [this] { repaint(); };
+}
+
+std::array<WarningBannerBase*, 4> RendererEditor::banners() {
+  return {&dawWarningBanner_, &exportErrorBanner_, &loudnessWarningBanner_,
+          &mixPresentationWarningBanner_};
+}
+
+void RendererEditor::addBanners() {
+  for (WarningBannerBase* banner : banners()) {
+    addChildComponent(banner);
+  }
 }
 
 RendererEditor::~RendererEditor() { setLookAndFeel(nullptr); }
@@ -155,17 +176,14 @@ void RendererEditor::paint(juce::Graphics& g) {
   // Add some spacing between title and any warning banners (if shown)
   bounds.removeFromTop(5);
 
-  // Stack the DAW warning banner and the export-error banner (if visible),
-  // export-error beneath the DAW banner when both are showing.
+  // Stack the visible banners under the title in banners() order.
   int bannerY = titleLabel_.getBottom() + 5;
-  if (dawWarningBanner_.isVisible()) {
-    dawWarningBanner_.updatePosition(bannerY, getWidth());
-    bannerY += 35;
-    bounds.removeFromTop(35);
-  }
-  if (exportErrorBanner_.isVisible()) {
-    exportErrorBanner_.updatePosition(bannerY, getWidth());
-    bounds.removeFromTop(35);
+  for (WarningBannerBase* banner : banners()) {
+    if (banner->isVisible()) {
+      banner->updatePosition(bannerY, getWidth());
+      bannerY += 35;
+      bounds.removeFromTop(35);
+    }
   }
 
   // Add some spacing before the separator line
@@ -219,8 +237,7 @@ void RendererEditor::resized() {
 void RendererEditor::setScreen(juce::Component& screen) {
   removeAllChildren();
   addAndMakeVisible(titleLabel_);
-  addChildComponent(dawWarningBanner_);
-  addChildComponent(exportErrorBanner_);
+  addBanners();
 
   dawWarningBanner_.refreshVisibility();
 
@@ -232,8 +249,7 @@ void RendererEditor::setScreen(juce::Component& screen) {
 void RendererEditor::resetScreen() {
   removeAllChildren();
   addAndMakeVisible(titleLabel_);
-  addChildComponent(dawWarningBanner_);
-  addChildComponent(exportErrorBanner_);
+  addBanners();
 
   // Refresh visibility to ensure the banner state is correct
   dawWarningBanner_.refreshVisibility();

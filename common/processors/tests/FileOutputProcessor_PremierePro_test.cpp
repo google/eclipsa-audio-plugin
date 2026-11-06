@@ -32,7 +32,8 @@ TEST_F(FileOutputTests, iamf_pp_lpc_1ae_1mp) {
     ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
     bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
-                           mixRepository, mixPresentationLoudnessRepository);
+                           mixRepository, mixPresentationLoudnessRepository,
+                           roomSetupRepository);
 
     ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
     std::filesystem::remove(iamfOutPath);  // Rm for next iteration
@@ -50,7 +51,8 @@ TEST_F(FileOutputTests, iamf_pp_lpc_1ae_1mp_expl) {
 
     ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
     bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
-                           mixRepository, mixPresentationLoudnessRepository);
+                           mixRepository, mixPresentationLoudnessRepository,
+                           roomSetupRepository);
 
     ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
     std::filesystem::remove(iamfOutPath);  // Rm for next iteration
@@ -70,7 +72,8 @@ TEST_F(FileOutputTests, iamf_pp_lpc_2ae_1mp) {
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
   bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
-                         mixRepository, mixPresentationLoudnessRepository);
+                         mixRepository, mixPresentationLoudnessRepository,
+                         roomSetupRepository);
 
   ASSERT_TRUE(std::filesystem::exists(iamfOutPath));
   std::filesystem::remove(iamfOutPath);  // Rm for next iteration
@@ -112,7 +115,8 @@ TEST_F(FileOutputTests, pp_invalid_path_does_not_crash) {
   fileExportRepository.update(config);
 
   bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
-                         mixRepository, mixPresentationLoudnessRepository);
+                         mixRepository, mixPresentationLoudnessRepository,
+                         roomSetupRepository);
 
   EXPECT_EQ(fileExportRepository.get().getExportError(),
             ExportError::kInvalidExportPath);
@@ -132,7 +136,8 @@ TEST_F(FileOutputTests, pp_flags_mismatch_when_video_longer_than_audio) {
   setTestExportOpts({.codec = AudioCodec::LPCM, .exportVideo = true});
 
   bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
-                         mixRepository, mixPresentationLoudnessRepository);
+                         mixRepository, mixPresentationLoudnessRepository,
+                         roomSetupRepository);
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
   EXPECT_EQ(fileExportRepository.get().getExportError(),
@@ -157,7 +162,7 @@ TEST_F(FileOutputTests, pp_flags_mismatch_when_audio_longer_than_video) {
   // default test video.
   bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
                          mixRepository, mixPresentationLoudnessRepository,
-                         48000, 128, 2000);
+                         roomSetupRepository, 48000, 128, 2000);
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
   EXPECT_EQ(fileExportRepository.get().getExportError(),
@@ -178,7 +183,7 @@ TEST_F(FileOutputTests, pp_no_mismatch_when_durations_match) {
   // video's own duration within the mismatch tolerance.
   bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
                          mixRepository, mixPresentationLoudnessRepository,
-                         48000, 128, 1413);
+                         roomSetupRepository, 48000, 128, 1413);
 
   ASSERT_TRUE(std::filesystem::exists(videoOutPath));
   EXPECT_EQ(fileExportRepository.get().getExportError(), ExportError::kNoError);
@@ -194,7 +199,8 @@ TEST_F(FileOutputTests, pp_validate_file_checksum) {
   ASSERT_FALSE(std::filesystem::exists(iamfOutPath));
 
   bouncePremiereProAudio(fileExportRepository, fpbr, audioElementRepository,
-                         mixRepository, mixPresentationLoudnessRepository);
+                         mixRepository, mixPresentationLoudnessRepository,
+                         roomSetupRepository);
 
   // Verify the file exists and generate checksum
   juce::File iamfFile(iamfOutPath.string());

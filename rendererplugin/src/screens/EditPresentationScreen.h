@@ -19,7 +19,9 @@
 
 #include "MixPresentationTagScreen.h"
 #include "components/src/MainEditor.h"
+#include "data_repository/implementation/ExportProfileListener.h"
 #include "data_repository/implementation/MixPresentationRepository.h"
+#include "data_repository/implementation/RoomSetupRepository.h"
 
 class EditPresentationScreenLookAndFeel : public juce::LookAndFeel_V4 {
  public:
@@ -61,17 +63,27 @@ class EditPresentationScreen : public juce::Component,
   EditPresentationScreen(MainEditor& editor,
                          AudioElementRepository* ae_repository,
                          MixPresentationRepository* mixPresentationRepository,
-                         ActiveMixRepository* activeMixRepository);
+                         ActiveMixRepository* activeMixRepository,
+                         RoomSetupRepository* roomSetupRepository);
 
   ~EditPresentationScreen();
 
   void paint(juce::Graphics& g) override;
+
+  static constexpr int kMaxMixPresentations = 5;
+
+  // YouTube plays only the first mix presentation, so it allows just one.
+  static bool canAddMixPresentation(ExportProfile profile, int numMixes) {
+    if (profile == ExportProfile::kYouTube) return numMixes == 0;
+    return numMixes < kMaxMixPresentations;
+  }
 
  private:
   void test_addMixPresentation();
   void updateTabButtonBounds(const juce::Rectangle<int>& mixEditingBounds);
   void updateMixPresentations();
   void updatePresentationTabs();
+  void updateAddMixPresentationButton();
 
   void valueTreeChildAdded(juce::ValueTree& parentTree,
                            juce::ValueTree& childWhichHasBeenAdded) override;
@@ -84,6 +96,7 @@ class EditPresentationScreen : public juce::Component,
   MixPresentationRepository* mixPresentationRepository_;
   AudioElementRepository* audioElementRepository_;
   ActiveMixRepository* activeMixRepository_;
+  RoomSetupRepository* roomSetupRepository_;
   juce::OwnedArray<MixPresentation> mixPresentationArray_;
   int numMixes_ = 0;
 
@@ -94,4 +107,5 @@ class EditPresentationScreen : public juce::Component,
   // Add a control button to return to the main screen
   ImageTextButton addMixPresentationButton_;
   juce::Label titleLabel_;
+  std::unique_ptr<ExportProfileListener> exportProfileListener_;
 };

@@ -209,3 +209,69 @@ TEST(test_renderer_processor, validate_up_mixing) {
     }
   }
 }
+namespace {
+ExportProfile storedExportProfile(RendererProcessor& processor) {
+  return processor.getRepositories().roomSetupRepo_.get().getExportProfile();
+}
+
+void setStoredExportProfile(RendererProcessor& processor,
+                            const ExportProfile profile) {
+  RoomSetupRepository& repo = processor.getRepositories().roomSetupRepo_;
+  RoomSetup setup = repo.get();
+  setup.setExportProfile(profile);
+  repo.update(setup);
+}
+}  // namespace
+
+// A fresh renderer instance starts on the YouTube profile.
+TEST(RendererProcessorExportProfile, fresh_instance_is_youtube) {
+  RendererProcessor processor;
+  EXPECT_EQ(storedExportProfile(processor), ExportProfile::kYouTube);
+}
+
+// A saved state with no export_profile, as written before the profile
+// existed, loads as Advanced.
+TEST(RendererProcessorExportProfile, legacy_state_loads_advanced) {
+  juce::MemoryBlock state;
+  {
+    RendererProcessor source;
+    source.getStateInformation(state);
+  }
+  std::unique_ptr<juce::XmlElement> xml =
+      juce::AudioProcessor::getXmlFromBinary(state.getData(),
+                                             static_cast<int>(state.getSize()));
+  ASSERT_NE(xml, nullptr);
+  juce::XmlElement* roomSetup =
+      xml->getChildByName(RoomSetup::kTreeType.toString());
+  ASSERT_NE(roomSetup, nullptr);
+  ASSERT_TRUE(roomSetup->hasAttribute(RoomSetup::kExportProfile.toString()));
+  roomSetup->removeAttribute(RoomSetup::kExportProfile.toString());
+  juce::MemoryBlock legacyState;
+  juce::AudioProcessor::copyXmlToBinary(*xml, legacyState);
+
+  RendererProcessor restored;
+  restored.setStateInformation(legacyState.getData(),
+                               static_cast<int>(legacyState.getSize()));
+  EXPECT_EQ(storedExportProfile(restored), ExportProfile::kAdvanced);
+}
+
+// Saving and restoring the plugin state keeps each export profile.
+TEST(RendererProcessorExportProfile, state_round_trip_keeps_value) {
+  for (const ExportProfile profile :
+       {ExportProfile::kYouTube, ExportProfile::kAdvanced}) {
+    juce::MemoryBlock state;
+    {
+      RendererProcessor source;
+      setStoredExportProfile(source, profile);
+      source.getStateInformation(state);
+    }
+    RendererProcessor restored;
+    // Start from the other value so the restore has to change it.
+    setStoredExportProfile(restored, profile == ExportProfile::kYouTube
+                                         ? ExportProfile::kAdvanced
+                                         : ExportProfile::kYouTube);
+    restored.setStateInformation(state.getData(),
+                                 static_cast<int>(state.getSize()));
+    EXPECT_EQ(storedExportProfile(restored), profile);
+  }
+}

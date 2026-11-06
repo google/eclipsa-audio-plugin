@@ -97,6 +97,14 @@ class WarningBannerBase : public juce::Component,
     }
   }
 
+  // Shows on a fresh transition into the warning state and hides when it
+  // clears; otherwise keeps the current visibility, so a dismissal holds.
+  static bool nextVisibility(bool wasWarning, bool isWarning, bool visible) {
+    if (!isWarning) return false;
+    if (!wasWarning) return true;
+    return visible;
+  }
+
   void updatePosition(int yPosition, int width) {
     const int bannerHeight = 30;
     setBounds(0, yPosition, width, bannerHeight);

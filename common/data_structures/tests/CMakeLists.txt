@@ -22,3 +22,4 @@ eclipsa_add_test(test_audioElementSpatialLayout AudioElementSpatialLayout_test.c
 eclipsa_add_test(test_active_mix_pres ActiveMixPresentation_test.cpp "data_structures")
 eclipsa_add_test(test_mix_presentation_solo_mute MixPresentationSoloMute_test.cpp "data_structures")
 eclipsa_add_test(test_mix_presentation_loudness MixPresentationLoudness_test.cpp "data_structures")
+eclipsa_add_test(test_youtube_export_limits YouTubeExportLimits_test.cpp "data_structures")

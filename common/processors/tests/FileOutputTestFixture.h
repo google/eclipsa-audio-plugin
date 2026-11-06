@@ -28,6 +28,7 @@
 #include "../common/substream_rdr/substream_rdr_utils/Speakers.h"
 #include "../file_output/FileOutputProcessor.h"
 #include "data_repository/implementation/FilePlaybackRepository.h"
+#include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/FileExport.h"
 #include "processors/tests/FileOutputTestUtils.h"
 
@@ -267,7 +268,11 @@ class FileOutputTests : public ::testing::Test {
   FileOutputTests()
       : ex(fileExportRepository.get()),
         fio_proc(fileExportRepository, fpbr, audioElementRepository,
-                 mixRepository, mixPresentationLoudnessRepository) {
+                 mixRepository, mixPresentationLoudnessRepository,
+                 roomSetupRepository) {
+    // Existing tests run without the YouTube rules.
+    setExportProfile(ExportProfile::kAdvanced);
+
     // Configure basic audio export data
     ex.setExportAudio(true);
     ex.setAudioFileFormat(AudioFileFormat::IAMF);
@@ -383,6 +388,12 @@ class FileOutputTests : public ::testing::Test {
                                   .string();
   };
 
+  void setExportProfile(const ExportProfile profile) {
+    RoomSetup setup = roomSetupRepository.get();
+    setup.setExportProfile(profile);
+    roomSetupRepository.update(setup);
+  }
+
   void setTestExportOpts(const ExportTestOpts opts) {
     const FileProfile resolvedProfile =
         opts.profile.has_value() ? *opts.profile
@@ -444,6 +455,8 @@ class FileOutputTests : public ::testing::Test {
       testState.getOrCreateChildWithName("mix", nullptr)};
   MixPresentationLoudnessRepository mixPresentationLoudnessRepository{
       testState.getOrCreateChildWithName("mixLoud", nullptr)};
+  RoomSetupRepository roomSetupRepository{
+      testState.getOrCreateChildWithName(RoomSetup::kTreeType, nullptr)};
 
   std::filesystem::path iamfOutPath;
   std::filesystem::path videoOutPath;

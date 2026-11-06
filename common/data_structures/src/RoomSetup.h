@@ -60,6 +60,25 @@ static RoomLayout fetchLayoutFromDescription(const juce::String& desc) {
   return speakerLayoutConfigurationOptions[0];
 }
 
+// Platform rules applied to a session. YouTube restricts routing, warns on
+// loudness and mix presentations, and limits exports; Advanced does not.
+enum class ExportProfile { kYouTube, kAdvanced };
+
+// Dropdown order; an option's index is its position here.
+static const std::array<ExportProfile, 2> kExportProfileOptions = {
+    ExportProfile::kYouTube, ExportProfile::kAdvanced};
+
+juce::String exportProfileToString(ExportProfile profile);
+
+// Missing or unknown strings map to Advanced, so sessions saved before the
+// profile existed keep their unrestricted behavior.
+ExportProfile exportProfileFromString(const juce::String& str);
+
+// An out-of-range index maps to Advanced.
+ExportProfile exportProfileFromOptionIndex(int index);
+
+int optionIndexForExportProfile(ExportProfile profile);
+
 class RoomSetup final : public RepositoryItemBase {
  public:
   RoomSetup();
@@ -67,7 +86,8 @@ class RoomSetup final : public RepositoryItemBase {
   RoomSetup(const RoomLayout layout, const bool drawSpeakers,
             const bool drawSpeakerLabels, const bool drawTracks,
             const juce::String& currRoomView,
-            const bool dawWarningDismissed = false);
+            const bool dawWarningDismissed = false,
+            const ExportProfile exportProfile = ExportProfile::kYouTube);
 
   virtual juce::ValueTree toValueTree() const override;
   static RoomSetup fromTree(const juce::ValueTree tree);
@@ -98,6 +118,11 @@ class RoomSetup final : public RepositoryItemBase {
     dawWarningDismissed_ = dismissed;
   }
 
+  ExportProfile getExportProfile() const { return exportProfile_; }
+  void setExportProfile(const ExportProfile profile) {
+    exportProfile_ = profile;
+  }
+
   inline static const juce::Identifier kTreeType{"room_setup"};
   inline static const juce::Identifier kSpeakerLayout{"speaker_layout"};
   inline static const juce::Identifier kDrawSpeakers{"draw_speakers"};
@@ -106,10 +131,12 @@ class RoomSetup final : public RepositoryItemBase {
   inline static const juce::Identifier kCurrRoomView{"current_view"};
   inline static const juce::Identifier kDawWarningDismissed{
       "daw_warning_dismissed"};
+  inline static const juce::Identifier kExportProfile{"export_profile"};
 
  private:
   RoomLayout speakerLayout_ = speakerLayoutConfigurationOptions[0];
   bool drawSpeakers_ = false, drawSpeakerLabels_ = false, drawTracks_ = false;
   bool dawWarningDismissed_ = false;
   juce::String currentRoomView_ = "Iso";
+  ExportProfile exportProfile_ = ExportProfile::kYouTube;
 };

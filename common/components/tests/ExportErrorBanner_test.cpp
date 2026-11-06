@@ -88,3 +88,11 @@ TEST(test_export_error_banner, shouldHideOnTransition) {
   EXPECT_FALSE(ExportErrorBanner::shouldHideOnTransition(kFileWriteFailed));
   EXPECT_FALSE(ExportErrorBanner::shouldHideOnTransition(kPermissionDenied));
 }
+
+// The YouTube limit errors use the agreed wording.
+TEST(ExportErrorBannerYouTube, limitMessages) {
+  EXPECT_EQ(ExportErrorBanner::messageForError(kYouTubeDurationExceeded),
+            "YouTube does not support more than 12 hours of audio or video.");
+  EXPECT_EQ(ExportErrorBanner::messageForError(kYouTubeSizeExceeded),
+            "YouTube does not support files larger than 256 GB.");
+}

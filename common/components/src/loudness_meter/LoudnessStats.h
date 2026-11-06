@@ -32,6 +32,9 @@ class LoudnessStats : public juce::Component,
 
   void timerCallback() override;
 
+  // True for a finite value within the range the meter displays.
+  static bool isValidLoudness(float x);
+
  private:
   using LabelWithVal = std::pair<juce::Label, juce::Label>;
 

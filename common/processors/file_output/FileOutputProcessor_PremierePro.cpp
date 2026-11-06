@@ -27,10 +27,13 @@ PremiereProFileOutputProcessor::PremiereProFileOutputProcessor(
     FilePlaybackRepository& filePlaybackRepository,
     AudioElementRepository& audioElementRepository,
     MixPresentationRepository& mixPresentationRepository,
-    MixPresentationLoudnessRepository& mixPresentationLoudnessRepository)
+    MixPresentationLoudnessRepository& mixPresentationLoudnessRepository,
+    RoomSetupRepository& roomSetupRepository,
+    const YouTubeExportLimits::Limits& youTubeLimits)
     : FileOutputProcessor(fileExportRepository, filePlaybackRepository,
                           audioElementRepository, mixPresentationRepository,
-                          mixPresentationLoudnessRepository) {}
+                          mixPresentationLoudnessRepository,
+                          roomSetupRepository, youTubeLimits) {}
 
 PremiereProFileOutputProcessor::~PremiereProFileOutputProcessor() {
   LOG_ANALYTICS(0, "FileOutputProcessor_PremierePro destructor called");
