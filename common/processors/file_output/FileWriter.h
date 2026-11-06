@@ -22,23 +22,23 @@
 
 class FileWriter {
  public:
-  FileWriter(const juce::String& filename, double sampleRate, int numChannels,
-             int firstChannel, int bitDepth, AudioCodec codec)
+  // `channelSet` sets the WAV channel mask; the channels of each buffer
+  // written must already be in its getChannelTypes() order.
+  FileWriter(const juce::String& filename, double sampleRate,
+             const juce::AudioChannelSet& channelSet, int firstChannel,
+             int bitDepth, AudioCodec codec)
       : outputFile_(filename),
         framesWritten(0),
-        numChannels_(numChannels),
+        numChannels_(channelSet.size()),
         firstChannel_(firstChannel),
         bitDepth_(bitDepth) {
     outputFile_.deleteFile();
     juce::WavAudioFormat format;
     auto* stream = new juce::FileOutputStream(outputFile_);
-    writer_ = format.createWriterFor(stream,
-                                     sampleRate,    // Sample Rate
-                                     numChannels_,  // Number of channels
-                                     bitDepth_,     // Bits per sample
-                                     {},
-                                     0  // Quality option index
-    );
+    writer_ =
+        format.createWriterFor(stream, sampleRate, channelSet, bitDepth_, {},
+                               0  // Quality option index
+        );
     if (writer_ == nullptr) {
       // createWriterFor does NOT take ownership of the stream when it fails
       // (see juce_AudioFormat.h) -- delete it ourselves or it leaks.
@@ -60,6 +60,30 @@ class FileWriter {
     }
   }
 
+  // The set JUCE's WAV writer picks when given only a channel count.
+  static juce::AudioChannelSet defaultWavChannelSet(int numChannels) {
+    switch (numChannels) {
+      case 1:
+        return juce::AudioChannelSet::mono();
+      case 2:
+        return juce::AudioChannelSet::stereo();
+      case 3:
+        return juce::AudioChannelSet::createLCR();
+      case 4:
+        return juce::AudioChannelSet::quadraphonic();
+      case 5:
+        return juce::AudioChannelSet::create5point0();
+      case 6:
+        return juce::AudioChannelSet::create5point1();
+      case 7:
+        return juce::AudioChannelSet::create7point0SDDS();
+      case 8:
+        return juce::AudioChannelSet::create7point1SDDS();
+      default:
+        return juce::AudioChannelSet::discreteChannels(numChannels);
+    }
+  }
+
   // Virtual so tests can subclass and override write()/close() to simulate
   // a failure after a successful open (disk full, WAV 4GB cap) -- a
   // FileWriter constructed against a real, writable path always opens
@@ -69,10 +93,15 @@ class FileWriter {
   // Returns whether the underlying file was successfully opened for writing.
   virtual bool isOpen() const { return writer_ != nullptr; }
 
-  // Returns false (and writes nothing) if the writer failed to open, or if
-  // the write itself fails (e.g. disk full, WAV 4GB size limit exceeded).
+  // Returns false (and writes nothing) if the writer failed to open, if
+  // `buffer` lacks the channels this writer reads, or if the write itself
+  // fails (e.g. disk full, WAV 4GB size limit exceeded).
   virtual bool write(juce::AudioBuffer<float>& buffer) {
     if (writer_ == nullptr) {
+      return false;
+    }
+    if (firstChannel_ + numChannels_ > buffer.getNumChannels()) {
+      jassertfalse;
       return false;
     }
     juce::AudioBuffer<float> toWrite;

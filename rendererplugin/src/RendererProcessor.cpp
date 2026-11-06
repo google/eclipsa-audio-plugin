@@ -83,12 +83,14 @@ RendererProcessor::RendererProcessor()
   audioProcessors_.push_back(std::make_unique<ChannelMonitorProcessor>(
       channelMonitorData_, &mixPresentationRepository_,
       &mixPresentationSoloMuteRepository_));
-  audioProcessors_.push_back(std::make_unique<RenderProcessor>(
+  auto renderProcessor = std::make_unique<RenderProcessor>(
       this, &roomSetupRepository_, &audioElementRepository_,
       &mixPresentationRepository_, &activeMixPresentationRepository_,
-      monitorData_));
+      monitorData_);
+  const RenderProcessor& kRenderProcessor = *renderProcessor;
+  audioProcessors_.push_back(std::move(renderProcessor));
   audioProcessors_.push_back(std::make_unique<WavFileOutputProcessor>(
-      fileExportRepository_, roomSetupRepository_));
+      fileExportRepository_, roomSetupRepository_, kRenderProcessor));
   audioProcessors_.push_back(std::make_unique<MSProcessor>(getRepositories()));
   audioProcessors_.push_back(std::make_unique<MixMonitorProcessor>(
       roomSetupRepository_, monitorData_));

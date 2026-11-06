@@ -19,15 +19,18 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <memory>
 
 #include "../processor_base/ProcessorBase.h"
+#include "../render/BinauralMixSource.h"
 #include "AudioElementFileWriter.h"
 #include "FileWriter.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/RoomSetup.h"
+#include "substream_rdr/substream_rdr_utils/Speakers.h"
 #include "user_metadata.pb.h"
 
 //==============================================================================
@@ -38,9 +41,24 @@
 class WavFileOutputProcessor : public ProcessorBase,
                                public juce::ValueTree::Listener {
  public:
+  static constexpr int kMaxRoomWavChannels = 12;
+
+  // The WAV channel set an export writes, and for each of its channels, in
+  // getChannelTypes() order, the source channel it is copied from.
+  struct WavChannelMap {
+    juce::AudioChannelSet channelSet;
+    std::array<int, kMaxRoomWavChannels> sourceChannels{};
+  };
+
+  // Rear surrounds and top-side heights have no WAV channel mask bit, so they
+  // are written as the WAVE back surrounds and top-front heights.
+  static WavChannelMap getRoomWavChannelMap(
+      Speakers::AudioElementSpeakerLayout layout);
+
   //==============================================================================
   WavFileOutputProcessor(FileExportRepository& fileExportRepository,
-                         RoomSetupRepository& roomSetupRepository);
+                         RoomSetupRepository& roomSetupRepository,
+                         const BinauralMixSource& binauralMixSource);
   ~WavFileOutputProcessor() override;
 
   //==============================================================================
@@ -51,15 +69,9 @@ class WavFileOutputProcessor : public ProcessorBase,
   void setNonRealtime(bool isNonRealtime) noexcept override;
 
   //==============================================================================
-  void checkManualExportStartStop();
-  void valueTreeRedirected(juce::ValueTree& treeWhichHasBeenChanged) override;
+  void checkManualExportStartStop(const juce::Identifier& property);
   void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
                                 const juce::Identifier& property) override;
-  void valueTreeChildAdded(juce::ValueTree& parentTree,
-                           juce::ValueTree& childWhichHasBeenAdded) override;
-  void valueTreeChildRemoved(juce::ValueTree& parentTree,
-                             juce::ValueTree& childWhichHasBeenRemoved,
-                             int indexFromWhichChildWasRemoved) override;
 
   //==============================================================================
   const juce::String getName() { return "WaveFileOutput"; }
@@ -76,10 +88,11 @@ class WavFileOutputProcessor : public ProcessorBase,
   }
 
   virtual FileWriter* createFileWriter(const juce::String& filename,
-                                       double sampleRate, int numChannels,
+                                       double sampleRate,
+                                       const juce::AudioChannelSet& channelSet,
                                        int firstChannel, int bitDepth,
                                        AudioCodec codec) {
-    return new FileWriter(filename, sampleRate, numChannels, firstChannel,
+    return new FileWriter(filename, sampleRate, channelSet, firstChannel,
                           bitDepth, codec);
   }
 
@@ -87,6 +100,16 @@ class WavFileOutputProcessor : public ProcessorBase,
   // Records a kFileWriteFailed ExportError (unless a more specific error is
   // already on record) when a FileWriter::write() call fails.
   void recordWriteFailureIfAny(bool writeSucceeded);
+
+  // Advances the export's sample tally past a block of `numSamples` and
+  // returns true when the block starts inside the export's start and end
+  // sample indices.
+  bool isBlockInExportRange(int numSamples);
+
+  // Copies the export's source channels (the room render in `buffer`, or the
+  // binaural mix) into exportBuffer_ in WAV order and writes them. Returns
+  // false if the write fails.
+  bool writeExportBlock(const juce::AudioBuffer<float>& buffer);
 
   // Defers a FileExport mutation to the next message-loop turn (via
   // postToMessageThread), running `mutator` against a config fetched fresh
@@ -118,9 +141,13 @@ class WavFileOutputProcessor : public ProcessorBase,
   bool performingRender_;  // True if we are rendering in offline mode
   FileExportRepository& fileExportRepository_;
   RoomSetupRepository& roomSetupRepository_;
+  const BinauralMixSource& binauralMixSource_;
   FileWriter* fileWriter_;
+  bool exportingBinaural_ = false;
+  WavChannelMap exportChannelMap_;
+  juce::AudioBuffer<float> exportBuffer_;
   int numSamples_;
-  double sampleRate_;
+  juce::int64 sampleTally_ = 0;  // Samples rendered since the export started
   juce::int64 startSampleIdx_;
   juce::int64 endSampleIdx_;
   juce::SpinLock lock_;

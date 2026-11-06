@@ -54,3 +54,42 @@ TEST(test_file_export, round_trip_preserves_sample_indices_past_int32_max) {
   EXPECT_EQ(roundTripped.getStartSampleIdx(), kBeyondInt32Max);
   EXPECT_EQ(roundTripped.getEndSampleIdx(), kBeyondInt32Max + 1000);
 }
+
+// A session saved with the old "WAV" format value loads as Room WAV.
+TEST(FileExportFormat, saved_wav_value_loads_as_room_wav) {
+  juce::ValueTree tree{FileExport::kTreeType, {}};
+  tree.setProperty(FileExport::kAudioFileFormat, 1, nullptr);
+
+  const FileExport fileExport = FileExport::fromTree(tree);
+
+  EXPECT_EQ(fileExport.getAudioFileFormat(), AudioFileFormat::WAV);
+}
+
+// BinauralWav survives a toValueTree()/fromTree() round trip.
+TEST(FileExportFormat, binaural_wav_round_trips) {
+  FileExport config;
+  config.setAudioFileFormat(AudioFileFormat::BinauralWav);
+
+  const FileExport roundTripped = FileExport::fromTree(config.toValueTree());
+
+  EXPECT_EQ(roundTripped.getAudioFileFormat(), AudioFileFormat::BinauralWav);
+}
+
+// The dropdown table lists IAMF, Binaural WAV and Room WAV in that order.
+TEST(FileExportFormat, selectable_formats_in_display_order) {
+  ASSERT_EQ(kSelectableAudioFileFormats.size(), 3u);
+  EXPECT_STREQ(kSelectableAudioFileFormats[0].label, "IAMF");
+  EXPECT_EQ(kSelectableAudioFileFormats[0].format, AudioFileFormat::IAMF);
+  EXPECT_STREQ(kSelectableAudioFileFormats[1].label, "Binaural WAV");
+  EXPECT_EQ(kSelectableAudioFileFormats[1].format,
+            AudioFileFormat::BinauralWav);
+  EXPECT_STREQ(kSelectableAudioFileFormats[2].label, "Room WAV");
+  EXPECT_EQ(kSelectableAudioFileFormats[2].format, AudioFileFormat::WAV);
+}
+
+// Each selectable format maps to the extension of the file it writes.
+TEST(FileExportFormat, extension_follows_format) {
+  EXPECT_EQ(getAudioFileFormatExtension(AudioFileFormat::IAMF), ".iamf");
+  EXPECT_EQ(getAudioFileFormatExtension(AudioFileFormat::BinauralWav), ".wav");
+  EXPECT_EQ(getAudioFileFormatExtension(AudioFileFormat::WAV), ".wav");
+}

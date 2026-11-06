@@ -25,11 +25,12 @@
 
 WavFileOutputProcessor::WavFileOutputProcessor(
     FileExportRepository& fileExportRepository,
-    RoomSetupRepository& roomSetupRepository)
+    RoomSetupRepository& roomSetupRepository,
+    const BinauralMixSource& binauralMixSource)
     : fileExportRepository_(fileExportRepository),
       roomSetupRepository_(roomSetupRepository),
+      binauralMixSource_(binauralMixSource),
       numSamples_(0),
-      sampleRate_(0),
       performingRender_(false),
       fileWriter_(nullptr) {
   fileExportRepository_.registerListener(this);
@@ -57,6 +58,46 @@ void WavFileOutputProcessor::deferRepositoryUpdate(
   });
 }
 
+WavFileOutputProcessor::WavChannelMap
+WavFileOutputProcessor::getRoomWavChannelMap(
+    Speakers::AudioElementSpeakerLayout layout) {
+  using ChannelType = juce::AudioChannelSet::ChannelType;
+  const juce::Array<ChannelType> kItuOrder = layout.getITUChannelOrdering();
+  WavChannelMap map;
+  // Binaural, the one room layout without an ITU order, renders to stereo.
+  if (kItuOrder.isEmpty()) {
+    map.channelSet = layout.getChannelSet();
+    for (int i = 0; i < map.channelSet.size(); ++i) {
+      map.sourceChannels[i] = i;
+    }
+    return map;
+  }
+
+  const auto toWavChannel = [](ChannelType type) {
+    switch (type) {
+      case ChannelType::leftSurroundRear:
+        return ChannelType::leftSurround;
+      case ChannelType::rightSurroundRear:
+        return ChannelType::rightSurround;
+      case ChannelType::topSideLeft:
+        return ChannelType::topFrontLeft;
+      case ChannelType::topSideRight:
+        return ChannelType::topFrontRight;
+      default:
+        return type;
+    }
+  };
+  for (const ChannelType kType : kItuOrder) {
+    map.channelSet.addChannel(toWavChannel(kType));
+  }
+  for (int ituIdx = 0; ituIdx < kItuOrder.size(); ++ituIdx) {
+    const int kWavIdx =
+        map.channelSet.getChannelIndexForType(toWavChannel(kItuOrder[ituIdx]));
+    map.sourceChannels[kWavIdx] = ituIdx;
+  }
+  return map;
+}
+
 //==============================================================================
 void WavFileOutputProcessor::prepareToPlay(double sampleRate,
                                            int samplesPerBlock) {
@@ -67,6 +108,27 @@ void WavFileOutputProcessor::prepareToPlay(double sampleRate,
   }
 
   numSamples_ = samplesPerBlock;
+  exportBuffer_.setSize(kMaxRoomWavChannels, samplesPerBlock);
+}
+
+bool WavFileOutputProcessor::writeExportBlock(
+    const juce::AudioBuffer<float>& buffer) {
+  const juce::AudioBuffer<float>& source =
+      exportingBinaural_ ? binauralMixSource_.getBinauralMix() : buffer;
+  const int kNumChannels = exportChannelMap_.channelSet.size();
+  const int kNumSamples = buffer.getNumSamples();
+  if (source.getNumChannels() < kNumChannels ||
+      source.getNumSamples() < kNumSamples) {
+    jassertfalse;
+    return false;
+  }
+  // Reallocates only if the host exceeds the block size it prepared with.
+  exportBuffer_.setSize(kNumChannels, kNumSamples, false, false, true);
+  for (int ch = 0; ch < kNumChannels; ++ch) {
+    exportBuffer_.copyFrom(ch, 0, source, exportChannelMap_.sourceChannels[ch],
+                           0, kNumSamples);
+  }
+  return fileWriter_->write(exportBuffer_);
 }
 
 void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -78,25 +140,30 @@ void WavFileOutputProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   }
 
   bool writeFailed = false;
-  if (performingRender_ && fileWriter_ != nullptr) {
-    // If the current position is between the configured start and end position,
-    // write to the file. Else do nothing
-    auto playHead = getPlayHead();
-    if (playHead != NULL) {  // Happens in debug
-      auto position = getPlayHead()->getPosition();
-      const juce::int64 currentSample =
-          static_cast<juce::int64>(*position->getTimeInSeconds() * sampleRate_);
-      if ((endSampleIdx_ == 0) || (currentSample >= startSampleIdx_ &&
-                                   currentSample <= endSampleIdx_)) {
-        writeFailed = !fileWriter_->write(buffer);
-      }
-    } else {
-      writeFailed = !fileWriter_->write(buffer);
+  if (performingRender_) {
+    const bool kInRange = isBlockInExportRange(buffer.getNumSamples());
+    if (kInRange && fileWriter_ != nullptr) {
+      writeFailed = !writeExportBlock(buffer);
     }
   }
   lock_.exit();
 
   recordWriteFailureIfAny(!writeFailed);
+}
+
+bool WavFileOutputProcessor::isBlockInExportRange(int numSamples) {
+  const juce::int64 kCurrentSample = sampleTally_;
+  sampleTally_ += numSamples;
+  // Same bounds as FileOutputProcessor::shouldBufferBeWritten: a block is
+  // written when it starts at or after the start and before the end, and a
+  // bound of 0 is unset.
+  if (startSampleIdx_ > 0 && kCurrentSample < startSampleIdx_) {
+    return false;
+  }
+  if (endSampleIdx_ > 0 && kCurrentSample >= endSampleIdx_) {
+    return false;
+  }
+  return true;
 }
 
 void WavFileOutputProcessor::recordWriteFailureIfAny(bool writeSucceeded) {
@@ -121,14 +188,20 @@ void WavFileOutputProcessor::recordWriteFailureIfAny(bool writeSucceeded) {
 }
 
 void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
-  lock_.enter();
-  if (!performingRender_) {
+  const juce::SpinLock::ScopedLockType kLock(lock_);
+  if (isNonRealtime == performingRender_) {
+    return;
+  }
+  if (isNonRealtime) {
     // Start Rendering
     FileExport configParams = fileExportRepository_.get();
     RoomSetup roomSetup = roomSetupRepository_.get();
     startSampleIdx_ = configParams.getStartSampleIdx();
     endSampleIdx_ = configParams.getEndSampleIdx();
-    if ((configParams.getAudioFileFormat() == AudioFileFormat::WAV) &&
+    sampleTally_ = 0;
+    const AudioFileFormat kFormat = configParams.getAudioFileFormat();
+    if ((kFormat == AudioFileFormat::WAV ||
+         kFormat == AudioFileFormat::BinauralWav) &&
         configParams.getExportAudio()) {
       // Every export begins from a clean slate, mirroring
       // FileOutputProcessor::initializeFileExport. Deferred via
@@ -138,10 +211,17 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
           [](FileExport& config) { config.setExportError(kNoError); });
       hasRecordedWriteFailure_ = false;
 
+      exportingBinaural_ = kFormat == AudioFileFormat::BinauralWav;
+      if (exportingBinaural_) {
+        exportChannelMap_ = {juce::AudioChannelSet::stereo(), {0, 1}};
+      } else {
+        exportChannelMap_ = getRoomWavChannelMap(
+            roomSetup.getSpeakerLayout().getRoomSpeakerLayout());
+      }
       fileWriter_ = createFileWriter(
           configParams.getExportFile(), configParams.getSampleRate(),
-          roomSetup.getSpeakerLayout().getRoomSpeakerLayout().getNumChannels(),
-          0, configParams.getBitDepth(), configParams.getAudioCodec());
+          exportChannelMap_.channelSet, 0, configParams.getBitDepth(),
+          configParams.getAudioCodec());
       if (!fileWriter_->isOpen()) {
         const std::string kFailedFilePath = fileWriter_->getFilePath();
         LOG_ERROR(0,
@@ -170,30 +250,20 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
     }
     performingRender_ = false;
   }
-  lock_.exit();
 }
 
-void WavFileOutputProcessor::checkManualExportStartStop() {
-  FileExport configParams = fileExportRepository_.get();
-  if (performingRender_ != configParams.getManualExport()) {
-    setNonRealtime(configParams.getManualExport());
+void WavFileOutputProcessor::checkManualExportStartStop(
+    const juce::Identifier& property) {
+  // Only the manual-export flag starts or stops an export, so a host bounce
+  // survives other FileExport edits and an idle processor never opens a file.
+  if (property != FileExport::kManualExport) {
+    return;
   }
+  setNonRealtime(fileExportRepository_.get().getManualExport());
 }
-void WavFileOutputProcessor::valueTreeRedirected(
-    juce::ValueTree& treeWhichHasBeenChanged) {
-  checkManualExportStartStop();
-}
+
 void WavFileOutputProcessor::valueTreePropertyChanged(
     juce::ValueTree& treeWhosePropertyHasChanged,
     const juce::Identifier& property) {
-  checkManualExportStartStop();
-}
-void WavFileOutputProcessor::valueTreeChildAdded(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) {
-  checkManualExportStartStop();
-}
-void WavFileOutputProcessor::valueTreeChildRemoved(
-    juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
-    int indexFromWhichChildWasRemoved) {
-  checkManualExportStartStop();
+  checkManualExportStartStop(property);
 }

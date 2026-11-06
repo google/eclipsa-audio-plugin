@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "../processor_base/ProcessorBase.h"
+#include "BinauralMixSource.h"
 #include "data_repository/implementation/AudioElementRepository.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/AudioElement.h"
@@ -66,7 +67,9 @@ struct AudioElementRenderer {
 };
 
 //==============================================================================
-class RenderProcessor final : public ProcessorBase, juce::ValueTree::Listener {
+class RenderProcessor final : public ProcessorBase,
+                              public BinauralMixSource,
+                              juce::ValueTree::Listener {
  public:
   //==============================================================================
   RenderProcessor(ProcessorBase* hostProc, RoomSetupRepository* roomSetupData,
@@ -138,6 +141,10 @@ class RenderProcessor final : public ProcessorBase, juce::ValueTree::Listener {
   }
 
   int getSpeakersOut() { return speakersOut_; }
+
+  const juce::AudioBuffer<float>& getBinauralMix() const override {
+    return binauralMixBuffer_;
+  }
 
  public:
   void reinitializeAfterStateRestore() { initializeRenderers(); }

@@ -17,10 +17,31 @@
 #pragma once
 #include <juce_data_structures/juce_data_structures.h>
 
+#include <array>
+
 #include "data_structures/src/AudioElement.h"
 #include "data_structures/src/RepositoryItem.h"
 
-enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2 };
+// Persisted by value in saved sessions: WAV is the Room WAV export, so never
+// renumber existing entries.
+enum AudioFileFormat { IAMF = 0, WAV = 1, ADM = 2, BinauralWav = 3 };
+
+struct AudioFileFormatOption {
+  const char* label;
+  AudioFileFormat format;
+};
+
+// The export formats offered in the renderer's format dropdown, in display
+// order.
+inline constexpr std::array<AudioFileFormatOption, 3>
+    kSelectableAudioFileFormats{{{"IAMF", AudioFileFormat::IAMF},
+                                 {"Binaural WAV", AudioFileFormat::BinauralWav},
+                                 {"Room WAV", AudioFileFormat::WAV}}};
+
+// File extension, including the leading dot, written by `format`.
+inline juce::String getAudioFileFormatExtension(AudioFileFormat format) {
+  return format == AudioFileFormat::IAMF ? ".iamf" : ".wav";
+}
 
 enum AudioCodec { LPCM = 0, FLAC = 1, OPUS = 2 };
 
