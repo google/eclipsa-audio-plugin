@@ -830,6 +830,17 @@ AudioElementSpeakerLayout::getITUChannelOrdering() const {
               ChannelType::rightSurroundSide,
               ChannelType::leftSurroundRear,
               ChannelType::rightSurroundRear};
+    case k7Point1Point2:
+      return {ChannelType::left,
+              ChannelType::right,
+              ChannelType::centre,
+              ChannelType::LFE,
+              ChannelType::leftSurroundSide,
+              ChannelType::rightSurroundSide,
+              ChannelType::leftSurroundRear,
+              ChannelType::rightSurroundRear,
+              ChannelType::topSideLeft,
+              ChannelType::topSideRight};
     case k7Point1Point4:
       return {ChannelType::left,
               ChannelType::right,

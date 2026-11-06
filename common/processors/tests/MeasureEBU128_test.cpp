@@ -86,7 +86,8 @@ MeasureEBU128::LoudnessStats measureLoudness(
         juce::File("./common/processors/tests/test_resources/loudness_drum_" +
                    speakerLayout.toString() + ".wav")
             .getFullPathName(),
-        reader->sampleRate, outputBuffer.getNumChannels(), 0, 16,
+        reader->sampleRate,
+        FileWriter::defaultWavChannelSet(outputBuffer.getNumChannels()), 0, 16,
         AudioCodec::LPCM);
   }
 

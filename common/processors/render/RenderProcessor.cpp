@@ -255,6 +255,7 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
   // Update the binaural loudness from the rendered and mixed binaural
   // buffer.
   updateBinauralLoudness(binauralMixBuffer_);
+  binauralMixBuffer_.applyGain(mixPresentationGain_);
 
   buffer.clear();
 
@@ -271,8 +272,8 @@ void RenderProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (int i = 0; i < mixBuffer_.getNumChannels(); ++i) {
       buffer.copyFrom(i, 0, mixBuffer_, i, 0, mixBuffer_.getNumSamples());
     }
+    buffer.applyGain(mixPresentationGain_);
   }
-  buffer.applyGain(mixPresentationGain_);
 }
 
 void RenderProcessor::updateBinauralLoudness(
