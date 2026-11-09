@@ -187,16 +187,39 @@ FileExportScreen::FileExportScreen(MainEditor& editor,
                                      folderImage, 0.8f, juce::Colours::white);
 
   // Add the format options
-  formatSelector_.addOption("IAMF");
-  formatSelector_.addOption("WAV");
-  formatSelector_.setOption(
-      config.getAudioFileFormat() == AudioFileFormat::IAMF ? "IAMF" : "WAV");
+  for (const auto& option : kSelectableAudioFileFormats) {
+    formatSelector_.addOption(option.label);
+    if (option.format == config.getAudioFileFormat()) {
+      formatSelector_.setOption(option.label);
+    }
+  }
+  exportPath_.setDefaultExtension(
+      getAudioFileFormatExtension(config.getAudioFileFormat()));
   formatSelector_.onChange([this] {
+    // Options were added in table order, so the index selects the table row.
+    const int kIndex = formatSelector_.getSelectedIndex();
+    if (kIndex < 0 ||
+        kIndex >= static_cast<int>(kSelectableAudioFileFormats.size())) {
+      return;
+    }
     FileExport config = repository_->get();
-    if (formatSelector_.getSelectedIndex() == 0) {
-      config.setAudioFileFormat(AudioFileFormat::IAMF);
-    } else {
-      config.setAudioFileFormat(AudioFileFormat::WAV);
+    const juce::String kOldExtension =
+        getAudioFileFormatExtension(config.getAudioFileFormat());
+    const AudioFileFormat kNewFormat =
+        kSelectableAudioFileFormats[kIndex].format;
+    const juce::String kNewExtension = getAudioFileFormatExtension(kNewFormat);
+    config.setAudioFileFormat(kNewFormat);
+
+    // Swap the old format's extension on an existing path rather than
+    // appending the new one after it.
+    exportPath_.setDefaultExtension(kNewExtension);
+    const juce::String kPath = config.getExportFile();
+    if (kOldExtension != kNewExtension &&
+        kPath.endsWithIgnoreCase(kOldExtension)) {
+      const juce::String kNewPath =
+          kPath.dropLastCharacters(kOldExtension.length()) + kNewExtension;
+      exportPath_.setText(kNewPath);
+      config.setExportFile(kNewPath);
     }
     repository_->update(config);
   });
@@ -1078,8 +1101,12 @@ bool FileExportScreen::validFileExportConfig(const FileExport& config) {
   // Check if the export file is valid
   if (config.getExportFile().isEmpty()) {
     warningLabel_.setVisible(true);
-    warningLabel_.setText("Must Specify a .IAMF File to Export",
-                          juce::NotificationType::dontSendNotification);
+    warningLabel_.setText(
+        "Must Specify a " +
+            getAudioFileFormatExtension(config.getAudioFileFormat())
+                .toUpperCase() +
+            " File to Export",
+        juce::NotificationType::dontSendNotification);
     return false;
   }
 

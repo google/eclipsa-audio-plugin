@@ -29,8 +29,10 @@ class AudioElementFileWriter {
       : element_(element)  // Use a local copy of the audio element to avoid
                            // updates elsewhere causing issues
   {
-    fileWriter = new FileWriter(filename, sampleRate, element.getChannelCount(),
-                                element.getFirstChannel(), bitDepth, codec);
+    fileWriter = new FileWriter(
+        filename, sampleRate,
+        FileWriter::defaultWavChannelSet(element.getChannelCount()),
+        element.getFirstChannel(), bitDepth, codec);
   }
 
   ~AudioElementFileWriter() {
