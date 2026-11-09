@@ -45,6 +45,10 @@ WavFileOutputProcessor::~WavFileOutputProcessor() {
               ->isThisTheMessageThread());
   *isAlive_ = false;
   fileExportRepository_.deregisterListener(this);
+  // Releases access when the processor is destroyed mid-export. Qualified
+  // because a destructor cannot reach a subclass override.
+  WavFileOutputProcessor::stopFileAccess(securityScopedHandle_);
+  securityScopedHandle_ = nullptr;
 }
 
 void WavFileOutputProcessor::deferRepositoryUpdate(
@@ -218,6 +222,10 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
         exportChannelMap_ = getRoomWavChannelMap(
             roomSetup.getSpeakerLayout().getRoomSpeakerLayout());
       }
+      // The bookmark covers the export folder, and must be active before
+      // the file is opened, or sandboxed hosts such as Logic Pro deny it.
+      securityScopedHandle_ =
+          startFileAccess(configParams.getSecurityBookmark().toStdString());
       fileWriter_ = createFileWriter(
           configParams.getExportFile(), configParams.getSampleRate(),
           exportChannelMap_.channelSet, 0, configParams.getBitDepth(),
@@ -248,6 +256,8 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
       delete fileWriter_;
       fileWriter_ = nullptr;
     }
+    stopFileAccess(securityScopedHandle_);
+    securityScopedHandle_ = nullptr;
     performingRender_ = false;
   }
 }

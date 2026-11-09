@@ -19,6 +19,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <string>
 #include <vector>
 
 #include "data_repository/implementation/ActiveMixPresentationRepository.h"
@@ -81,6 +82,7 @@ class FakeFileWriter : public FileWriter {
   }
 
   bool close() override {
+    if (onClose) onClose();
     if (forceCloseFailure) return false;
     return FileWriter::close();
   }
@@ -88,6 +90,7 @@ class FakeFileWriter : public FileWriter {
   bool forceWriteFailure = false;
   bool forceCloseFailure = false;
   int writeCallCount = 0;
+  std::function<void()> onClose;
 };
 
 // Queues WavFileOutputProcessor's deferred repository updates (see
@@ -122,10 +125,25 @@ class TestableWavFileOutputProcessor : public WavFileOutputProcessor {
   bool forceCloseFailure = false;
   FakeFileWriter* lastFakeWriter = nullptr;
   int writersCreated = 0;
+  std::string startedBookmark;
+  int accessStarts = 0;
+  int accessStops = 0;
+  bool accessActiveAtOpen = false;
+  bool accessActiveAtClose = false;
 
  protected:
   void postToMessageThread(std::function<void()> task) override {
     pendingTasks_.push_back(std::move(task));
+  }
+
+  void* startFileAccess(const std::string& bookmark) override {
+    startedBookmark = bookmark;
+    ++accessStarts;
+    return &accessStarts;
+  }
+
+  void stopFileAccess(void* handle) override {
+    if (handle != nullptr) ++accessStops;
   }
 
   FileWriter* createFileWriter(const juce::String& filename, double sampleRate,
@@ -136,6 +154,10 @@ class TestableWavFileOutputProcessor : public WavFileOutputProcessor {
                                     firstChannel, bitDepth, codec);
     fake->forceWriteFailure = forceWriteFailure;
     fake->forceCloseFailure = forceCloseFailure;
+    fake->onClose = [this] {
+      accessActiveAtClose = accessStarts > accessStops;
+    };
+    accessActiveAtOpen = accessStarts > accessStops;
     lastFakeWriter = fake;
     ++writersCreated;
     return fake;
@@ -1004,4 +1026,48 @@ TEST_F(WavFileOutputHostBounce, idle_path_edits_create_no_file) {
   processor.setNonRealtime(false);
   std::filesystem::remove(kOldPath);
   std::filesystem::remove(kNewPath);
+}
+
+// Room and Binaural WAV exports hold sandbox access from the stored bookmark
+// while the file is opened and closed, then release it once.
+TEST_F(WavFileOutputHostBounce, holds_security_scoped_access_while_writing) {
+  for (const AudioFileFormat kFormat :
+       {AudioFileFormat::WAV, AudioFileFormat::BinauralWav}) {
+    const std::filesystem::path kOutPath =
+        std::filesystem::current_path() / "wav_security_scope.wav";
+    std::filesystem::remove(kOutPath);
+    configureExport(kFormat, kOutPath);
+    FileExport config = fileExportRepository.get();
+    config.setSecurityBookmark("export-folder-bookmark");
+    fileExportRepository.update(config);
+    processor.accessStarts = 0;
+    processor.accessStops = 0;
+
+    processor.setNonRealtime(true);
+    EXPECT_EQ(processor.startedBookmark, "export-folder-bookmark");
+    EXPECT_TRUE(processor.accessActiveAtOpen);
+    EXPECT_EQ(processor.accessStops, 0);
+
+    processor.setNonRealtime(false);
+    EXPECT_TRUE(processor.accessActiveAtClose);
+    EXPECT_EQ(processor.accessStarts, 1);
+    EXPECT_EQ(processor.accessStops, 1);
+    processor.runPendingTasks();
+    std::filesystem::remove(kOutPath);
+  }
+}
+
+// A non-WAV export neither starts nor stops sandbox access.
+TEST_F(WavFileOutputHostBounce, iamf_export_leaves_security_scope_alone) {
+  const std::filesystem::path kOutPath =
+      std::filesystem::current_path() / "wav_security_scope_iamf.wav";
+  configureExport(AudioFileFormat::IAMF, kOutPath);
+
+  processor.setNonRealtime(true);
+  processor.setNonRealtime(false);
+
+  EXPECT_EQ(processor.accessStarts, 0);
+  EXPECT_EQ(processor.accessStops, 0);
+  processor.runPendingTasks();
+  std::filesystem::remove(kOutPath);
 }
