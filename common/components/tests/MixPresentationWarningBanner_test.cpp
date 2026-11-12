@@ -22,30 +22,39 @@
 
 using Banner = MixPresentationWarningBanner;
 
-// Under YouTube, zero or one mix presentation does not warn.
-TEST(MixPresentationWarning, youtube_single_mix_does_not_warn) {
-  EXPECT_FALSE(Banner::shouldWarn(ExportProfile::kYouTube, 0));
-  EXPECT_FALSE(Banner::shouldWarn(ExportProfile::kYouTube, 1));
+// Under YouTube - Simple, more than one mix presentation warns.
+TEST(MixPresentationWarning, youtube_simple_warns_above_one) {
+  constexpr ExportProfile kSimple = ExportProfile::kYouTubeSimple;
+  EXPECT_FALSE(Banner::shouldWarn(kSimple, 0));
+  EXPECT_FALSE(Banner::shouldWarn(kSimple, 1));
+  EXPECT_TRUE(Banner::shouldWarn(kSimple, 2));
+  EXPECT_TRUE(Banner::shouldWarn(kSimple, 5));
 }
 
-// Under YouTube, more than one mix presentation warns.
-TEST(MixPresentationWarning, youtube_extra_mixes_warn) {
-  EXPECT_TRUE(Banner::shouldWarn(ExportProfile::kYouTube, 2));
-  EXPECT_TRUE(Banner::shouldWarn(ExportProfile::kYouTube, 5));
+// Under YouTube - Base, more than two mix presentations warn.
+TEST(MixPresentationWarning, youtube_base_warns_above_two) {
+  constexpr ExportProfile kBase = ExportProfile::kYouTubeBase;
+  EXPECT_FALSE(Banner::shouldWarn(kBase, 1));
+  EXPECT_FALSE(Banner::shouldWarn(kBase, 2));
+  EXPECT_TRUE(Banner::shouldWarn(kBase, 3));
+  EXPECT_TRUE(Banner::shouldWarn(kBase, 5));
 }
 
-// Under Advanced the banner never warns, however many mixes exist.
-TEST(MixPresentationWarning, advanced_never_warns) {
+// Under Open the banner never warns, however many mixes exist.
+TEST(MixPresentationWarning, open_never_warns) {
   for (const int numMixes : {0, 1, 2, 5}) {
-    EXPECT_FALSE(Banner::shouldWarn(ExportProfile::kAdvanced, numMixes));
+    EXPECT_FALSE(Banner::shouldWarn(ExportProfile::kOpen, numMixes));
   }
 }
 
-// The banner text matches the agreed wording.
+// The banner text names the selected profile and its limit.
 TEST(MixPresentationWarning, message_text) {
-  EXPECT_EQ(Banner::messageText(),
-            "YouTube only plays back the first mix presentation. Remove "
-            "additional mix presentations if unneeded.");
+  EXPECT_EQ(Banner::messageText(ExportProfile::kYouTubeSimple),
+            "YouTube - Simple allows 1 mix presentation. Remove additional "
+            "mix presentations before exporting.");
+  EXPECT_EQ(Banner::messageText(ExportProfile::kYouTubeBase),
+            "YouTube - Base allows 2 mix presentations. Remove additional "
+            "mix presentations before exporting.");
 }
 
 // A false-to-true transition shows the banner.
@@ -73,10 +82,10 @@ TEST(MixPresentationWarningTransition, dismissal_holds_until_recurrence) {
   EXPECT_TRUE(visible);
 }
 
-// Switching from Advanced to YouTube with extra mixes is a rising edge, so a
+// Switching from Open to YouTube with extra mixes is a rising edge, so a
 // banner dismissed earlier shows again.
 TEST(MixPresentationWarningTransition, youtube_reselected_shows_again) {
-  const bool wasWarning = Banner::shouldWarn(ExportProfile::kAdvanced, 3);
-  const bool isWarning = Banner::shouldWarn(ExportProfile::kYouTube, 3);
+  const bool wasWarning = Banner::shouldWarn(ExportProfile::kOpen, 3);
+  const bool isWarning = Banner::shouldWarn(ExportProfile::kYouTubeBase, 3);
   EXPECT_TRUE(Banner::nextVisibility(wasWarning, isWarning, false));
 }

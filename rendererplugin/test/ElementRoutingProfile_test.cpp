@@ -38,33 +38,34 @@ void editRoomSetup(RoomSetupRepository& repo, Edit edit) {
 }
 }  // namespace
 
-// Under YouTube, Base Enhanced is capped to Base; lower profiles pass through.
-TEST(EffectiveProfile, youtube_caps_at_base) {
-  const ExportProfile kYt = ExportProfile::kYouTube;
-  EXPECT_EQ(ElementRoutingScreen::effectiveProfile(kYt, FileProfile::SIMPLE),
-            FileProfile::SIMPLE);
-  EXPECT_EQ(ElementRoutingScreen::effectiveProfile(kYt, FileProfile::BASE),
-            FileProfile::BASE);
-  EXPECT_EQ(
-      ElementRoutingScreen::effectiveProfile(kYt, FileProfile::BASE_ENHANCED),
-      FileProfile::BASE);
-}
-
-// Under Advanced, every profile is returned unchanged.
-TEST(EffectiveProfile, advanced_is_unchanged) {
+// Each YouTube profile forces its routing profile, whatever is selected.
+TEST(EffectiveProfile, youtube_forces_required_profile) {
   for (const FileProfile profile :
        {FileProfile::SIMPLE, FileProfile::BASE, FileProfile::BASE_ENHANCED}) {
-    EXPECT_EQ(ElementRoutingScreen::effectiveProfile(ExportProfile::kAdvanced,
-                                                     profile),
-              profile);
+    EXPECT_EQ(ElementRoutingScreen::effectiveProfile(
+                  ExportProfile::kYouTubeSimple, profile),
+              FileProfile::SIMPLE);
+    EXPECT_EQ(ElementRoutingScreen::effectiveProfile(
+                  ExportProfile::kYouTubeBase, profile),
+              FileProfile::BASE);
   }
 }
 
-// Under YouTube with Base Enhanced selected, new audio elements get Base's
-// limits: 18 channels, 2 audio elements and no expanded layouts.
-TEST(RoutingLayoutFilter, youtube_base_enhanced_offers_base) {
+// Under Open, every profile is returned unchanged.
+TEST(EffectiveProfile, open_is_unchanged) {
+  for (const FileProfile profile :
+       {FileProfile::SIMPLE, FileProfile::BASE, FileProfile::BASE_ENHANCED}) {
+    EXPECT_EQ(
+        ElementRoutingScreen::effectiveProfile(ExportProfile::kOpen, profile),
+        profile);
+  }
+}
+
+// Under YouTube - Base, new audio elements get Base's limits: 18 channels,
+// 2 audio elements and no expanded layouts.
+TEST(RoutingLayoutFilter, youtube_base_offers_base) {
   const FileProfile effective = ElementRoutingScreen::effectiveProfile(
-      ExportProfile::kYouTube, FileProfile::BASE_ENHANCED);
+      ExportProfile::kYouTubeBase, FileProfile::BASE_ENHANCED);
   const auto layouts = ElementRoutingScreen::layoutsForProfile(effective);
   EXPECT_FALSE(hasExpandedLayout(layouts));
   EXPECT_EQ(layouts.size(),
@@ -76,11 +77,23 @@ TEST(RoutingLayoutFilter, youtube_base_enhanced_offers_base) {
   EXPECT_EQ(ElementRoutingScreen::remainingAudioElements(effective, 1), 1);
 }
 
-// Under Advanced with Base Enhanced selected, the limits are today's: 28
-// channels, 28 audio elements and the expanded layouts.
-TEST(RoutingLayoutFilter, advanced_base_enhanced_is_unchanged) {
+// Under YouTube - Simple, new audio elements get Simple's limits: 16
+// channels, 1 audio element and no expanded layouts.
+TEST(RoutingLayoutFilter, youtube_simple_offers_simple) {
   const FileProfile effective = ElementRoutingScreen::effectiveProfile(
-      ExportProfile::kAdvanced, FileProfile::BASE_ENHANCED);
+      ExportProfile::kYouTubeSimple, FileProfile::BASE);
+  EXPECT_FALSE(
+      hasExpandedLayout(ElementRoutingScreen::layoutsForProfile(effective)));
+  EXPECT_EQ(ElementRoutingScreen::remainingChannels(effective, 0), 16);
+  EXPECT_EQ(ElementRoutingScreen::remainingAudioElements(effective, 0), 1);
+  EXPECT_EQ(ElementRoutingScreen::remainingAudioElements(effective, 1), 0);
+}
+
+// Under Open with Base Enhanced selected, the limits are today's: 28
+// channels, 28 audio elements and the expanded layouts.
+TEST(RoutingLayoutFilter, open_base_enhanced_is_unchanged) {
+  const FileProfile effective = ElementRoutingScreen::effectiveProfile(
+      ExportProfile::kOpen, FileProfile::BASE_ENHANCED);
   const auto layouts = ElementRoutingScreen::layoutsForProfile(effective);
   EXPECT_TRUE(hasExpandedLayout(layouts));
   EXPECT_EQ(layouts.size(), 26u);
@@ -101,8 +114,8 @@ TEST(RoutingProfileListener, reacts_only_to_export_profile) {
   editRoomSetup(repo, [](RoomSetup& s) { s.setDrawTracks(true); });
   EXPECT_EQ(calls, 0);
 
-  editRoomSetup(
-      repo, [](RoomSetup& s) { s.setExportProfile(ExportProfile::kAdvanced); });
+  editRoomSetup(repo,
+                [](RoomSetup& s) { s.setExportProfile(ExportProfile::kOpen); });
   EXPECT_EQ(calls, 1);
 }
 

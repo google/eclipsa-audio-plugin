@@ -34,6 +34,7 @@ class RoomMonitoringScreen : public juce::Component,
   void updateSpeakerSetup();
   void initializeExportProfile();
   void updateExportProfile();
+  void updateExportProfileOptions();
   void updateRoomOpts();
   void toggleLabelsDrawable();
   void updateRoomView();

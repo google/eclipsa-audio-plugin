@@ -54,18 +54,23 @@ class MixPresentationWarningBanner : public WarningBannerBase,
   }
 
   static bool shouldWarn(ExportProfile profile, int numMixes) {
-    return profile == ExportProfile::kYouTube && numMixes > 1;
+    const std::optional<int> limit = youTubeMixPresentationLimit(profile);
+    return limit.has_value() && numMixes > *limit;
   }
 
-  static juce::String messageText() {
-    return "YouTube only plays back the first mix presentation. Remove "
-           "additional mix presentations if unneeded.";
+  static juce::String messageText(ExportProfile profile) {
+    const int limit = youTubeMixPresentationLimit(profile).value_or(0);
+    return exportProfileToString(profile) + " allows " + juce::String(limit) +
+           (limit == 1 ? " mix presentation" : " mix presentations") +
+           ". Remove additional mix presentations before exporting.";
   }
 
   std::function<void()> onVisibilityChanged;
 
  protected:
-  juce::String getMessageText() const override { return messageText(); }
+  juce::String getMessageText() const override {
+    return messageText(currentProfile());
+  }
 
  private:
   static void evaluateLater(
@@ -75,11 +80,14 @@ class MixPresentationWarningBanner : public WarningBannerBase,
     });
   }
 
+  ExportProfile currentProfile() const {
+    return roomSetupRepository_ != nullptr
+               ? roomSetupRepository_->get().getExportProfile()
+               : ExportProfile::kOpen;
+  }
+
   bool currentCondition() const {
-    const ExportProfile profile =
-        roomSetupRepository_ != nullptr
-            ? roomSetupRepository_->get().getExportProfile()
-            : ExportProfile::kAdvanced;
+    const ExportProfile profile = currentProfile();
     const int numMixes = mixPresentationRepository_ != nullptr
                              ? mixPresentationRepository_->getItemCount()
                              : 0;
@@ -94,6 +102,8 @@ class MixPresentationWarningBanner : public WarningBannerBase,
       setVisible(visible);
       if (onVisibilityChanged) onVisibilityChanged();
     }
+    // The text names the profile's limit, which a profile switch changes.
+    if (visible) repaint();
   }
 
   void valueTreeChildAdded(juce::ValueTree&, juce::ValueTree& child) override {

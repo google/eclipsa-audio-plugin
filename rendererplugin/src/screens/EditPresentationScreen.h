@@ -72,10 +72,9 @@ class EditPresentationScreen : public juce::Component,
 
   static constexpr int kMaxMixPresentations = 5;
 
-  // YouTube plays only the first mix presentation, so it allows just one.
   static bool canAddMixPresentation(ExportProfile profile, int numMixes) {
-    if (profile == ExportProfile::kYouTube) return numMixes == 0;
-    return numMixes < kMaxMixPresentations;
+    return numMixes <
+           youTubeMixPresentationLimit(profile).value_or(kMaxMixPresentations);
   }
 
  private:

@@ -16,26 +16,68 @@
 
 juce::String exportProfileToString(const ExportProfile profile) {
   switch (profile) {
-    case ExportProfile::kYouTube:
-      return "YouTube";
-    case ExportProfile::kAdvanced:
-      return "Advanced";
+    case ExportProfile::kYouTubeSimple:
+      return "YouTube - Simple";
+    case ExportProfile::kYouTubeBase:
+      return "YouTube - Base";
+    case ExportProfile::kOpen:
+      return "Open";
   }
-  return "Advanced";
+  return "Open";
+}
+
+bool isYouTubeProfile(const ExportProfile profile) {
+  return requiredFileProfile(profile).has_value();
+}
+
+std::optional<FileProfile> requiredFileProfile(const ExportProfile profile) {
+  switch (profile) {
+    case ExportProfile::kYouTubeSimple:
+      return FileProfile::SIMPLE;
+    case ExportProfile::kYouTubeBase:
+      return FileProfile::BASE;
+    case ExportProfile::kOpen:
+      return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+std::optional<int> youTubeMixPresentationLimit(const ExportProfile profile) {
+  switch (profile) {
+    case ExportProfile::kYouTubeSimple:
+      return 1;
+    case ExportProfile::kYouTubeBase:
+      return 2;
+    case ExportProfile::kOpen:
+      return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+bool exportProfileFits(const ExportProfile profile,
+                       const FileProfile sessionProfile) {
+  const std::optional<FileProfile> required = requiredFileProfile(profile);
+  return !required.has_value() || sessionProfile <= *required;
 }
 
 ExportProfile exportProfileFromString(const juce::String& str) {
+  if (str == "YouTube") {
+    return ExportProfile::kYouTubeBase;
+  }
+  if (str == "Advanced") {
+    return ExportProfile::kOpen;
+  }
   for (const ExportProfile profile : kExportProfileOptions) {
     if (exportProfileToString(profile) == str) {
       return profile;
     }
   }
-  return ExportProfile::kAdvanced;
+  return ExportProfile::kOpen;
 }
 
 ExportProfile exportProfileFromOptionIndex(const int index) {
   if (index < 0 || index >= static_cast<int>(kExportProfileOptions.size())) {
-    return ExportProfile::kAdvanced;
+    return ExportProfile::kOpen;
   }
   return kExportProfileOptions[index];
 }

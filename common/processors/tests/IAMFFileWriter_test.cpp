@@ -41,13 +41,15 @@ class IAMFFileWriterAccessible : public IAMFFileWriter {
 
 class IAMFFileWriterTest : public FileOutputTests {
  public:
+  // Exports with savedProfile stored and checks the header profile. The
+  // default, Simple, leaves the header to the audio elements' minimum.
   void validateProfileSelection(
-      iamf_tools_cli_proto::ProfileVersion expectedProfile) {
+      iamf_tools_cli_proto::ProfileVersion expectedProfile,
+      FileProfile savedProfile = FileProfile::SIMPLE) {
     iamf_tools_cli_proto::UserMetadata iamfMD;
 
-    // Configure the profile to be the highest
     FileExport fileExport = fileExportRepository.get();
-    fileExport.setProfile(FileProfile::BASE_ENHANCED);
+    fileExport.setProfile(savedProfile);
     fileExportRepository.update(fileExport);
 
     // Create the IAMF file
@@ -58,7 +60,6 @@ class IAMFFileWriterTest : public FileOutputTests {
     bool closeResult = writer.close();
     EXPECT_TRUE(closeResult);
 
-    // Validate the profile written is simple
     // I'd prefer to check the file directly here, but for now there is no way
     // to do this with the decoder
     writer.fetchUserMetadata(iamfMD);
@@ -123,6 +124,27 @@ TEST_F(IAMFFileWriterTest, validate_simple_profile_selection) {
   validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_SIMPLE);
 }
 
+// A saved profile above what the audio elements need is written as is.
+TEST_F(IAMFFileWriterTest, saved_profile_sets_header) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE,
+                           FileProfile::BASE);
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE_ENHANCED,
+                           FileProfile::BASE_ENHANCED);
+}
+
+// A saved profile below what the audio elements need is raised to it.
+TEST_F(IAMFFileWriterTest, saved_profile_raised_to_minimum) {
+  const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::kStereo);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE, kAE2});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE,
+                           FileProfile::SIMPLE);
+}
+
 TEST_F(IAMFFileWriterTest, validate_base_profile_selection) {
   // Base profile with 2 audio elements
   const juce::Uuid kAE = addAudioElement(Speakers::kStereo);
@@ -131,6 +153,16 @@ TEST_F(IAMFFileWriterTest, validate_base_profile_selection) {
   addAudioElementsToMix(kMP, {kAE, kAE2});
 
   validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE);
+}
+
+// Two 7.1.4 elements need 24 channels, more than Base's 18, so the header
+// is Base Enhanced even though the element count fits Base.
+TEST_F(IAMFFileWriterTest, validate_channel_count_profile_selection) {
+  const juce::Uuid kAE = addAudioElement(Speakers::k7Point1Point4);
+  const juce::Uuid kAE2 = addAudioElement(Speakers::k7Point1Point4);
+  const juce::Uuid kMP = addMixPresentation();
+  addAudioElementsToMix(kMP, {kAE, kAE2});
+  validateProfileSelection(iamf_tools_cli_proto::PROFILE_VERSION_BASE_ENHANCED);
 }
 
 TEST_F(IAMFFileWriterTest, validate_expanded_profile_selection) {

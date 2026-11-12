@@ -104,8 +104,8 @@ class ElementRoutingScreen : public juce::Component,
     repaint();
   }
 
-  // The profile that limits new audio elements. Under YouTube, Base Enhanced
-  // counts as Base; the stored profile is not changed.
+  // The profile that limits new audio elements: the YouTube profile's
+  // required profile, or the selected one under Open.
   static FileProfile effectiveProfile(ExportProfile exportProfile,
                                       FileProfile profile);
 
@@ -141,7 +141,7 @@ class ElementRoutingScreen : public juce::Component,
   Speakers::AudioElementSpeakerLayout getAudioElementLayout(
       const juce::String& name);
   FileProfile currentEffectiveProfile() const;
-  void updateBaseEnhancedOption();
+  void updateProfileSelector();
 
   HeaderBar headerBar_;
   SelectionBox profileSelectionBox_;
@@ -180,8 +180,6 @@ class ElementRoutingScreen : public juce::Component,
 
   ElementRoutingScreenLookAndFeel lookAndFeel_;
   FileProfile currentProfile_;
-  // Option index of "Base Enhanced", or -1 when the bus is too narrow for it.
-  int baseEnhancedIndex_ = -1;
   int channelsInUse_;
   juce::TooltipWindow tooltipWindow_;
   juce::ImageComponent tooltipImage_;

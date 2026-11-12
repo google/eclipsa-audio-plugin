@@ -68,7 +68,6 @@ ElementRoutingScreen::ElementRoutingScreen(
   // Add the base option to the profile config only if 28 channels are
   // available, as the base enhanced profile supports 28 channels
   if (totalChanneCount >= 28) {
-    baseEnhancedIndex_ = profileSelectionBox_.getComboBox()->getNumItems();
     profileSelectionBox_.addOption("Base Enhanced");
   }
 
@@ -99,9 +98,11 @@ ElementRoutingScreen::ElementRoutingScreen(
       "Base Enhanced profile supports up to 28 audio elements with a "
       "maximum of 28 channels.\n\n"
       "Available audio element layouts are filtered based on remaining "
-      "channel capacity and profile limitations.");
+      "channel capacity and profile limitations.\n\n"
+      "The YouTube - Simple and YouTube - Base export profiles set the "
+      "matching profile, and it cannot be changed here.");
 
-  updateBaseEnhancedOption();
+  updateProfileSelector();
 
   // Update the local rendering with the current audio elements and panners
   updateAudioElementChannels();
@@ -122,7 +123,7 @@ ElementRoutingScreen::ElementRoutingScreen(
 
   exportProfileListener_ =
       std::make_unique<ExportProfileListener>(roomSetupRepository_, [this]() {
-        updateBaseEnhancedOption();
+        updateProfileSelector();
         updateAudioElementChannels();
         repaint();
       });
@@ -304,10 +305,16 @@ void ElementRoutingScreen::updateAudioElementChannels() {
     totalChannels += audioElement->getChannelCount();
   }
 
-  // Validate the profile selection and revert if necessary
+  // Validate the profile selection and revert if necessary. A YouTube
+  // profile keeps its locked profile; its export options already exclude
+  // sessions that need more.
   FileProfile minimumProfile =
       FileProfileHelper::minimumProfile(totalChannels, audioElementArray);
-  if (minimumProfile > currentProfile_) {
+  const bool locked =
+      roomSetupRepository_ != nullptr &&
+      requiredFileProfile(roomSetupRepository_->get().getExportProfile())
+          .has_value();
+  if (minimumProfile > currentProfile_ && !locked) {
     LOG_ANALYTICS(RendererProcessor::instanceId_,
                   "Profile downgraded to: " +
                       std::to_string(static_cast<int>(minimumProfile)) +
@@ -472,10 +479,7 @@ juce::StringArray ElementRoutingScreen::getAudioElementNames(
 
 FileProfile ElementRoutingScreen::effectiveProfile(
     const ExportProfile exportProfile, const FileProfile profile) {
-  if (exportProfile == ExportProfile::kYouTube) {
-    return std::min(profile, FileProfile::BASE);
-  }
-  return profile;
+  return requiredFileProfile(exportProfile).value_or(profile);
 }
 
 std::vector<Speakers::AudioElementSpeakerLayout>
@@ -534,13 +538,37 @@ FileProfile ElementRoutingScreen::currentEffectiveProfile() const {
                           currentProfile_);
 }
 
-void ElementRoutingScreen::updateBaseEnhancedOption() {
-  if (baseEnhancedIndex_ < 0 || roomSetupRepository_ == nullptr) {
+void ElementRoutingScreen::updateProfileSelector() {
+  if (roomSetupRepository_ == nullptr) {
     return;
   }
-  const bool youTube =
-      roomSetupRepository_->get().getExportProfile() == ExportProfile::kYouTube;
-  profileSelectionBox_.setOptionEnabled(baseEnhancedIndex_, !youTube);
+  const ExportProfile exportProfile =
+      roomSetupRepository_->get().getExportProfile();
+  // A YouTube profile fixes the routing profile, so the selector is locked.
+  const std::optional<FileProfile> required =
+      requiredFileProfile(exportProfile);
+  if (required.has_value()) {
+    profileSelectionBox_.setEnabled(false);
+    profileSelectionBox_.dimSelectionBox();
+  } else {
+    profileSelectionBox_.restoreLookAndFeel();
+    profileSelectionBox_.setEnabled(true);
+  }
+
+  // Store the required profile; the IAMF export writes it to the file header.
+  if (!required.has_value() || *required == currentProfile_) {
+    return;
+  }
+  currentProfile_ = *required;
+  FileExport profileConfig = fileExportRepository_->get();
+  profileConfig.setProfile(currentProfile_);
+  fileExportRepository_->update(profileConfig);
+  if (static_cast<int>(currentProfile_) <
+      profileSelectionBox_.getComboBox()->getNumItems()) {
+    profileSelectionBox_.setSelectedIndex(
+        static_cast<int>(currentProfile_),
+        juce::NotificationType::dontSendNotification);
+  }
 }
 
 void ElementRoutingScreen::updateAddAudioElementButton(

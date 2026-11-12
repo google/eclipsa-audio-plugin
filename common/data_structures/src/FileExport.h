@@ -109,6 +109,16 @@ class FileProfileHelper {
     }
   }
 
+  // The minimum profile for a session's audio elements and their channels.
+  static FileProfile minimumProfile(
+      juce::OwnedArray<AudioElement>& audioElements) {
+    int numChannels = 0;
+    for (const AudioElement* audioElement : audioElements) {
+      numChannels += audioElement->getChannelCount();
+    }
+    return minimumProfile(numChannels, audioElements);
+  }
+
   // Helper function to determine the minimum profile for a given number of
   // channels and audio elements
   static FileProfile minimumProfile(
