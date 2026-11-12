@@ -14,6 +14,7 @@
 
 #include "IAMFFileWriter.h"
 
+#include <algorithm>
 #include <vector>
 
 #include "IAMFExportUtil.h"
@@ -109,11 +110,11 @@ void IAMFFileWriter::populateAudioElementMetadataFromRepository(
     audioElementInformation_.emplace_back(aeMetadata);
   }
 
-  // Finally, write out the minimum profile level required for the audio
-  // elements
+  // Finally, write out the saved profile, raised to the minimum the audio
+  // elements and their channels need so the header is never too low.
   IAMFExportHelper::writeIASeqHdr(
-      FileProfileHelper::minimumProfile(iamfMD.audio_element_metadata_size(),
-                                        audioElements),
+      std::max(fileExportRepository_.get().getProfile(),
+               FileProfileHelper::minimumProfile(audioElements)),
       iamfMD);
 }
 

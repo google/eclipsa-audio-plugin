@@ -271,7 +271,7 @@ class FileOutputTests : public ::testing::Test {
                  mixRepository, mixPresentationLoudnessRepository,
                  roomSetupRepository) {
     // Existing tests run without the YouTube rules.
-    setExportProfile(ExportProfile::kAdvanced);
+    setExportProfile(ExportProfile::kOpen);
 
     // Configure basic audio export data
     ex.setExportAudio(true);

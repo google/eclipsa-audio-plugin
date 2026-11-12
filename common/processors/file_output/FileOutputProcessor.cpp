@@ -165,8 +165,7 @@ void FileOutputProcessor::initializeFileExport(FileExport& config) {
   iamfFileWriter_ = nullptr;
   youTubeStopped_ = false;
   youTubeFrameCap_ = 0;
-  if (roomSetupRepository_.get().getExportProfile() ==
-      ExportProfile::kYouTube) {
+  if (isYouTubeProfile(roomSetupRepository_.get().getExportProfile())) {
     youTubeFrameCap_ = static_cast<juce::int64>(youTubeLimits_.maxDurationSec *
                                                 config.getSampleRate());
     const ExportError kLimitError = checkYouTubeLimitsBeforeRender(config);

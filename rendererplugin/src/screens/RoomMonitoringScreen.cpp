@@ -84,6 +84,7 @@ RoomMonitoringScreen::RoomMonitoringScreen(RepositoryCollection repos,
   // active tracks / Audio Elements.
   repos_.activeMPRepo_.registerListener(this);
   updateActiveIDs(repos_, roomView_);
+  repos_.aeRepo_.registerListener(this);
 
   startTimerHz(60);
 }
@@ -105,6 +106,18 @@ void RoomMonitoringScreen::initializeExportProfile() {
           repos_.roomSetupRepo_.get().getExportProfile()),
       juce::dontSendNotification);
   exportProfile_.onChange([this] { updateExportProfile(); });
+  updateExportProfileOptions();
+}
+
+void RoomMonitoringScreen::updateExportProfileOptions() {
+  juce::OwnedArray<AudioElement> audioElements;
+  repos_.aeRepo_.getAll(audioElements);
+  const FileProfile sessionProfile =
+      FileProfileHelper::minimumProfile(audioElements);
+  for (int i = 0; i < static_cast<int>(kExportProfileOptions.size()); ++i) {
+    exportProfile_.setOptionEnabled(
+        i, exportProfileFits(kExportProfileOptions[i], sessionProfile));
+  }
 }
 
 RoomMonitoringScreen::~RoomMonitoringScreen() {
@@ -130,6 +143,7 @@ RoomMonitoringScreen::~RoomMonitoringScreen() {
   LOG_ANALYTICS(RendererProcessor::instanceId_,
                 "RoomMonitoringScreen destroyed; saved state to repository.");
   repos_.activeMPRepo_.deregisterListener(this);
+  repos_.aeRepo_.deregisterListener(this);
 }
 
 void RoomMonitoringScreen::paint(juce::Graphics& g) {
@@ -150,8 +164,11 @@ void RoomMonitoringScreen::paint(juce::Graphics& g) {
   auto roomBounds = bounds;
 
   // Draw export profile dropdown and export button.
-  int topWidth = topBounds.getWidth();
-  exportProfile_.setBounds(topBounds.removeFromLeft(topWidth * 0.20f));
+  const int topWidth = topBounds.getWidth();
+  const int profileWidth =
+      std::max(static_cast<int>(topWidth * 0.20f),
+               exportProfile_.widthToFitOptions(topBounds.getHeight()));
+  exportProfile_.setBounds(topBounds.removeFromLeft(profileWidth));
 
   // Adjusted button width to accommodate images and text
   int exportbuttonWidth =
@@ -313,6 +330,9 @@ void RoomMonitoringScreen::valueTreeChildAdded(
       parentTree.getType() == AudioElement::kTreeType) {
     updateActiveIDs(repos_, roomView_);
   }
+  if (childWhichHasBeenAdded.getType() == AudioElement::kTreeType) {
+    updateExportProfileOptions();
+  }
 }
 void RoomMonitoringScreen::valueTreeChildRemoved(
     juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved,
@@ -320,6 +340,9 @@ void RoomMonitoringScreen::valueTreeChildRemoved(
   if (parentTree.getType() == MixPresentation::kTreeType ||
       parentTree.getType() == AudioElement::kTreeType) {
     updateActiveIDs(repos_, roomView_);
+  }
+  if (childWhichHasBeenRemoved.getType() == AudioElement::kTreeType) {
+    updateExportProfileOptions();
   }
 }
 

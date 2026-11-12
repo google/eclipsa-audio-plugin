@@ -60,18 +60,19 @@ TEST(test_room_setup, daw_warning_dismissal_persistence) {
   // 4. Verify the state was persisted
   ASSERT_TRUE(roomSetup2.getDawWarningDismissed());
 }
-// A new RoomSetup starts on the YouTube profile.
-TEST(ExportProfile, default_is_youtube) {
+// A new RoomSetup starts on the YouTube - Base profile.
+TEST(ExportProfile, default_is_youtube_base) {
   const RoomSetup setup;
-  EXPECT_EQ(setup.getExportProfile(), ExportProfile::kYouTube);
+  EXPECT_EQ(setup.getExportProfile(), ExportProfile::kYouTubeBase);
   EXPECT_EQ(RoomSetup(speakerLayoutConfigurationOptions[2]).getExportProfile(),
-            ExportProfile::kYouTube);
+            ExportProfile::kYouTubeBase);
 }
 
 // Each profile survives a toValueTree/fromTree round trip.
 TEST(ExportProfile, round_trip_preserves_value) {
   for (const ExportProfile profile :
-       {ExportProfile::kYouTube, ExportProfile::kAdvanced}) {
+       {ExportProfile::kYouTubeSimple, ExportProfile::kYouTubeBase,
+        ExportProfile::kOpen}) {
     RoomSetup setup;
     setup.setExportProfile(profile);
     const juce::ValueTree tree = setup.toValueTree();
@@ -81,42 +82,112 @@ TEST(ExportProfile, round_trip_preserves_value) {
   }
 }
 
-// A tree saved before the profile existed loads as Advanced.
-TEST(ExportProfile, missing_value_loads_advanced) {
+// A tree saved before the profile existed loads as Open.
+TEST(ExportProfile, missing_value_loads_open) {
   juce::ValueTree tree = RoomSetup().toValueTree();
   tree.removeProperty(RoomSetup::kExportProfile, nullptr);
   ASSERT_FALSE(tree.hasProperty(RoomSetup::kExportProfile));
-  EXPECT_EQ(RoomSetup::fromTree(tree).getExportProfile(),
-            ExportProfile::kAdvanced);
+  EXPECT_EQ(RoomSetup::fromTree(tree).getExportProfile(), ExportProfile::kOpen);
 }
 
-// An unrecognized stored string loads as Advanced.
-TEST(ExportProfile, unknown_value_loads_advanced) {
+// A session saved with the retired "YouTube" value loads as YouTube - Base.
+TEST(ExportProfile, legacy_youtube_loads_youtube_base) {
+  juce::ValueTree tree = RoomSetup().toValueTree();
+  tree.setProperty(RoomSetup::kExportProfile, "YouTube", nullptr);
+  EXPECT_EQ(RoomSetup::fromTree(tree).getExportProfile(),
+            ExportProfile::kYouTubeBase);
+}
+
+// The stored strings are the dropdown labels.
+TEST(ExportProfile, display_names) {
+  EXPECT_EQ(exportProfileToString(ExportProfile::kYouTubeSimple),
+            "YouTube - Simple");
+  EXPECT_EQ(exportProfileToString(ExportProfile::kYouTubeBase),
+            "YouTube - Base");
+  EXPECT_EQ(exportProfileToString(ExportProfile::kOpen), "Open");
+}
+
+// Each YouTube profile pins one routing profile and a mix presentation limit;
+// Open pins neither.
+TEST(ExportProfile, youtube_profile_rules) {
+  EXPECT_TRUE(isYouTubeProfile(ExportProfile::kYouTubeSimple));
+  EXPECT_TRUE(isYouTubeProfile(ExportProfile::kYouTubeBase));
+  EXPECT_FALSE(isYouTubeProfile(ExportProfile::kOpen));
+
+  EXPECT_EQ(requiredFileProfile(ExportProfile::kYouTubeSimple),
+            FileProfile::SIMPLE);
+  EXPECT_EQ(requiredFileProfile(ExportProfile::kYouTubeBase),
+            FileProfile::BASE);
+  EXPECT_FALSE(requiredFileProfile(ExportProfile::kOpen).has_value());
+
+  EXPECT_EQ(youTubeMixPresentationLimit(ExportProfile::kYouTubeSimple), 1);
+  EXPECT_EQ(youTubeMixPresentationLimit(ExportProfile::kYouTubeBase), 2);
+  EXPECT_FALSE(youTubeMixPresentationLimit(ExportProfile::kOpen).has_value());
+}
+
+// Each YouTube profile fits sessions up to its routing profile; Open fits any.
+TEST(ExportProfile, session_fit) {
+  EXPECT_TRUE(exportProfileFits(ExportProfile::kYouTubeSimple, SIMPLE));
+  EXPECT_FALSE(exportProfileFits(ExportProfile::kYouTubeSimple, BASE));
+  EXPECT_TRUE(exportProfileFits(ExportProfile::kYouTubeBase, BASE));
+  EXPECT_FALSE(exportProfileFits(ExportProfile::kYouTubeBase, BASE_ENHANCED));
+  EXPECT_TRUE(exportProfileFits(ExportProfile::kOpen, BASE_ENHANCED));
+}
+
+// Two 7.1.4 elements are within Base's element count but need 24 channels,
+// so the session needs Base Enhanced and YouTube - Base does not fit.
+TEST(ExportProfile, channels_count_toward_fit) {
+  juce::OwnedArray<AudioElement> audioElements;
+  audioElements.add(
+      new AudioElement(juce::Uuid(), "A", Speakers::k7Point1Point4, 0));
+  audioElements.add(
+      new AudioElement(juce::Uuid(), "B", Speakers::k7Point1Point4, 12));
+  const FileProfile session = FileProfileHelper::minimumProfile(audioElements);
+  EXPECT_EQ(session, BASE_ENHANCED);
+  EXPECT_FALSE(exportProfileFits(ExportProfile::kYouTubeBase, session));
+
+  // A single stereo element fits YouTube - Simple.
+  juce::OwnedArray<AudioElement> stereo;
+  stereo.add(new AudioElement(juce::Uuid(), "S", Speakers::kStereo, 0));
+  EXPECT_TRUE(exportProfileFits(ExportProfile::kYouTubeSimple,
+                                FileProfileHelper::minimumProfile(stereo)));
+}
+
+// A session saved with the retired "Advanced" value loads as Open.
+TEST(ExportProfile, legacy_advanced_loads_open) {
+  juce::ValueTree tree = RoomSetup().toValueTree();
+  tree.setProperty(RoomSetup::kExportProfile, "Advanced", nullptr);
+  EXPECT_EQ(RoomSetup::fromTree(tree).getExportProfile(), ExportProfile::kOpen);
+}
+
+// An unrecognized stored string loads as Open.
+TEST(ExportProfile, unknown_value_loads_open) {
   juce::ValueTree tree = RoomSetup().toValueTree();
   tree.setProperty(RoomSetup::kExportProfile, "Vimeo", nullptr);
-  EXPECT_EQ(RoomSetup::fromTree(tree).getExportProfile(),
-            ExportProfile::kAdvanced);
+  EXPECT_EQ(RoomSetup::fromTree(tree).getExportProfile(), ExportProfile::kOpen);
 }
 
-// Dropdown index 0 is YouTube and index 1 is Advanced.
+// The dropdown lists YouTube - Simple, YouTube - Base, then Open.
 TEST(ExportProfileOption, index_maps_to_profile) {
-  EXPECT_EQ(exportProfileFromOptionIndex(0), ExportProfile::kYouTube);
-  EXPECT_EQ(exportProfileFromOptionIndex(1), ExportProfile::kAdvanced);
+  EXPECT_EQ(exportProfileFromOptionIndex(0), ExportProfile::kYouTubeSimple);
+  EXPECT_EQ(exportProfileFromOptionIndex(1), ExportProfile::kYouTubeBase);
+  EXPECT_EQ(exportProfileFromOptionIndex(2), ExportProfile::kOpen);
 }
 
 // Each profile maps back to the dropdown index it came from.
 TEST(ExportProfileOption, profile_maps_to_index) {
-  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTube), 0);
-  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kAdvanced), 1);
+  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTubeSimple), 0);
+  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTubeBase), 1);
+  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kOpen), 2);
   for (int i = 0; i < static_cast<int>(kExportProfileOptions.size()); ++i) {
     EXPECT_EQ(optionIndexForExportProfile(exportProfileFromOptionIndex(i)), i);
   }
 }
 
-// An index outside the dropdown, such as none selected, maps to Advanced.
-TEST(ExportProfileOption, out_of_range_index_is_advanced) {
-  EXPECT_EQ(exportProfileFromOptionIndex(-1), ExportProfile::kAdvanced);
-  EXPECT_EQ(exportProfileFromOptionIndex(2), ExportProfile::kAdvanced);
+// An index outside the dropdown, such as none selected, maps to Open.
+TEST(ExportProfileOption, out_of_range_index_is_open) {
+  EXPECT_EQ(exportProfileFromOptionIndex(-1), ExportProfile::kOpen);
+  EXPECT_EQ(exportProfileFromOptionIndex(3), ExportProfile::kOpen);
 }
 
 // The layout buttons list Binaural first, then every other layout in

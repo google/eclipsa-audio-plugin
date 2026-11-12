@@ -201,7 +201,7 @@ void EditPresentationScreen::updateAddMixPresentationButton() {
   const ExportProfile profile =
       roomSetupRepository_ != nullptr
           ? roomSetupRepository_->get().getExportProfile()
-          : ExportProfile::kAdvanced;
+          : ExportProfile::kOpen;
   if (canAddMixPresentation(profile, numMixes_)) {
     addMixPresentationButton_.resetButton();
     addMixPresentationButton_.setEnabled(true);
