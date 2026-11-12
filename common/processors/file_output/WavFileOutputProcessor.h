@@ -23,10 +23,12 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "../processor_base/ProcessorBase.h"
 #include "../render/BinauralMixSource.h"
 #include "AudioElementFileWriter.h"
+#include "FilePermissions.h"
 #include "FileWriter.h"
 #include "data_repository/implementation/RoomSetupRepository.h"
 #include "data_structures/src/RoomSetup.h"
@@ -96,6 +98,15 @@ class WavFileOutputProcessor : public ProcessorBase,
                           bitDepth, codec);
   }
 
+  // Wrap FilePermissions so tests can observe the sandbox access an export
+  // holds while its file is open.
+  virtual void* startFileAccess(const std::string& bookmark) {
+    return startSecurityScopedAccess(bookmark);
+  }
+  virtual void stopFileAccess(void* handle) {
+    stopSecurityScopedAccess(handle);
+  }
+
  private:
   // Records a kFileWriteFailed ExportError (unless a more specific error is
   // already on record) when a FileWriter::write() call fails.
@@ -143,6 +154,9 @@ class WavFileOutputProcessor : public ProcessorBase,
   RoomSetupRepository& roomSetupRepository_;
   const BinauralMixSource& binauralMixSource_;
   FileWriter* fileWriter_;
+  // Sandbox access to the export folder, held from opening the file until
+  // it is closed. Always nullptr on Windows and in unsandboxed hosts.
+  void* securityScopedHandle_ = nullptr;
   bool exportingBinaural_ = false;
   WavChannelMap exportChannelMap_;
   juce::AudioBuffer<float> exportBuffer_;
