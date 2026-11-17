@@ -82,10 +82,10 @@ static RoomLayout fetchLayoutFromDescription(const juce::String& desc) {
 // exports; Open does not.
 enum class ExportProfile { kYouTubeSimple, kYouTubeBase, kOpen };
 
-// Dropdown order; an option's index is its position here.
-static const std::array<ExportProfile, 3> kExportProfileOptions = {
-    ExportProfile::kYouTubeSimple, ExportProfile::kYouTubeBase,
-    ExportProfile::kOpen};
+// Dropdown order; an option's index is its position here. Premiere Pro's
+// 16-channel renderer input is YouTube - Simple's limit, so it does not offer
+// YouTube - Base.
+std::vector<ExportProfile> exportProfileOptions(bool isPremiereHost);
 
 bool isYouTubeProfile(ExportProfile profile);
 
@@ -107,9 +107,16 @@ juce::String exportProfileToString(ExportProfile profile);
 ExportProfile exportProfileFromString(const juce::String& str);
 
 // An out-of-range index maps to Open.
-ExportProfile exportProfileFromOptionIndex(int index);
+ExportProfile exportProfileFromOptionIndex(int index, bool isPremiereHost);
 
-int optionIndexForExportProfile(ExportProfile profile);
+int optionIndexForExportProfile(ExportProfile profile, bool isPremiereHost);
+
+// The profile a session uses on this host. On Premiere Pro a stored
+// YouTube - Base becomes YouTube - Simple when the session fits Simple, and
+// Open otherwise; every other case keeps the stored profile.
+ExportProfile exportProfileForHost(ExportProfile stored,
+                                   FileProfile sessionProfile,
+                                   bool isPremiereHost);
 
 class RoomSetup final : public RepositoryItemBase {
  public:

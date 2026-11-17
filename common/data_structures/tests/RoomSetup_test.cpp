@@ -169,25 +169,94 @@ TEST(ExportProfile, unknown_value_loads_open) {
 
 // The dropdown lists YouTube - Simple, YouTube - Base, then Open.
 TEST(ExportProfileOption, index_maps_to_profile) {
-  EXPECT_EQ(exportProfileFromOptionIndex(0), ExportProfile::kYouTubeSimple);
-  EXPECT_EQ(exportProfileFromOptionIndex(1), ExportProfile::kYouTubeBase);
-  EXPECT_EQ(exportProfileFromOptionIndex(2), ExportProfile::kOpen);
+  EXPECT_EQ(exportProfileFromOptionIndex(0, false),
+            ExportProfile::kYouTubeSimple);
+  EXPECT_EQ(exportProfileFromOptionIndex(1, false),
+            ExportProfile::kYouTubeBase);
+  EXPECT_EQ(exportProfileFromOptionIndex(2, false), ExportProfile::kOpen);
 }
 
 // Each profile maps back to the dropdown index it came from.
 TEST(ExportProfileOption, profile_maps_to_index) {
-  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTubeSimple), 0);
-  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTubeBase), 1);
-  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kOpen), 2);
-  for (int i = 0; i < static_cast<int>(kExportProfileOptions.size()); ++i) {
-    EXPECT_EQ(optionIndexForExportProfile(exportProfileFromOptionIndex(i)), i);
+  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTubeSimple, false),
+            0);
+  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kYouTubeBase, false), 1);
+  EXPECT_EQ(optionIndexForExportProfile(ExportProfile::kOpen, false), 2);
+  for (int i = 0; i < static_cast<int>(exportProfileOptions(false).size());
+       ++i) {
+    EXPECT_EQ(optionIndexForExportProfile(
+                  exportProfileFromOptionIndex(i, false), false),
+              i);
   }
 }
 
 // An index outside the dropdown, such as none selected, maps to Open.
 TEST(ExportProfileOption, out_of_range_index_is_open) {
-  EXPECT_EQ(exportProfileFromOptionIndex(-1), ExportProfile::kOpen);
-  EXPECT_EQ(exportProfileFromOptionIndex(3), ExportProfile::kOpen);
+  EXPECT_EQ(exportProfileFromOptionIndex(-1, false), ExportProfile::kOpen);
+  EXPECT_EQ(exportProfileFromOptionIndex(3, false), ExportProfile::kOpen);
+  EXPECT_EQ(exportProfileFromOptionIndex(2, true), ExportProfile::kOpen);
+}
+
+// Premiere Pro lists YouTube - Simple then Open, without YouTube - Base.
+TEST(ExportProfile, premiere_option_list) {
+  const std::vector<ExportProfile> expected = {ExportProfile::kYouTubeSimple,
+                                               ExportProfile::kOpen};
+  EXPECT_EQ(exportProfileOptions(true), expected);
+}
+
+// Each Premiere Pro option maps to its index and back.
+TEST(ExportProfile, premiere_index_round_trip) {
+  EXPECT_EQ(exportProfileFromOptionIndex(0, true),
+            ExportProfile::kYouTubeSimple);
+  EXPECT_EQ(exportProfileFromOptionIndex(1, true), ExportProfile::kOpen);
+  for (int i = 0; i < static_cast<int>(exportProfileOptions(true).size());
+       ++i) {
+    EXPECT_EQ(optionIndexForExportProfile(exportProfileFromOptionIndex(i, true),
+                                          true),
+              i);
+  }
+}
+
+// Hosts other than Premiere Pro keep all three profiles in the same order.
+TEST(ExportProfile, premiere_flag_off_keeps_full_list) {
+  const std::vector<ExportProfile> expected = {ExportProfile::kYouTubeSimple,
+                                               ExportProfile::kYouTubeBase,
+                                               ExportProfile::kOpen};
+  EXPECT_EQ(exportProfileOptions(false), expected);
+}
+
+// On Premiere Pro a stored YouTube - Base becomes YouTube - Simple when the
+// session fits Simple, and Open when it does not.
+TEST(ExportProfile, premiere_resolves_stored_base) {
+  EXPECT_EQ(exportProfileForHost(ExportProfile::kYouTubeBase, SIMPLE, true),
+            ExportProfile::kYouTubeSimple);
+  EXPECT_EQ(exportProfileForHost(ExportProfile::kYouTubeBase, BASE, true),
+            ExportProfile::kOpen);
+  EXPECT_EQ(
+      exportProfileForHost(ExportProfile::kYouTubeBase, BASE_ENHANCED, true),
+      ExportProfile::kOpen);
+}
+
+// A new Premiere Pro session, with no audio elements, starts on
+// YouTube - Simple.
+TEST(ExportProfile, premiere_new_session_starts_simple) {
+  juce::OwnedArray<AudioElement> none;
+  EXPECT_EQ(exportProfileForHost(RoomSetup().getExportProfile(),
+                                 FileProfileHelper::minimumProfile(none), true),
+            ExportProfile::kYouTubeSimple);
+}
+
+// Profiles Premiere Pro offers, and every profile on other hosts, are kept.
+TEST(ExportProfile, premiere_keeps_offered_profiles) {
+  EXPECT_EQ(exportProfileForHost(ExportProfile::kYouTubeSimple, SIMPLE, true),
+            ExportProfile::kYouTubeSimple);
+  EXPECT_EQ(exportProfileForHost(ExportProfile::kOpen, BASE, true),
+            ExportProfile::kOpen);
+  EXPECT_EQ(exportProfileForHost(ExportProfile::kYouTubeBase, SIMPLE, false),
+            ExportProfile::kYouTubeBase);
+  EXPECT_EQ(
+      exportProfileForHost(ExportProfile::kYouTubeBase, BASE_ENHANCED, false),
+      ExportProfile::kYouTubeBase);
 }
 
 // The layout buttons list Binaural first, then every other layout in

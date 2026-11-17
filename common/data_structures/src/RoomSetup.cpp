@@ -67,7 +67,7 @@ ExportProfile exportProfileFromString(const juce::String& str) {
   if (str == "Advanced") {
     return ExportProfile::kOpen;
   }
-  for (const ExportProfile profile : kExportProfileOptions) {
+  for (const ExportProfile profile : exportProfileOptions(false)) {
     if (exportProfileToString(profile) == str) {
       return profile;
     }
@@ -75,21 +75,46 @@ ExportProfile exportProfileFromString(const juce::String& str) {
   return ExportProfile::kOpen;
 }
 
-ExportProfile exportProfileFromOptionIndex(const int index) {
-  if (index < 0 || index >= static_cast<int>(kExportProfileOptions.size())) {
-    return ExportProfile::kOpen;
+std::vector<ExportProfile> exportProfileOptions(const bool isPremiereHost) {
+  if (isPremiereHost) {
+    return {ExportProfile::kYouTubeSimple, ExportProfile::kOpen};
   }
-  return kExportProfileOptions[index];
+  return {ExportProfile::kYouTubeSimple, ExportProfile::kYouTubeBase,
+          ExportProfile::kOpen};
 }
 
-int optionIndexForExportProfile(const ExportProfile profile) {
-  for (int i = 0; i < static_cast<int>(kExportProfileOptions.size()); ++i) {
-    if (kExportProfileOptions[i] == profile) {
+ExportProfile exportProfileFromOptionIndex(const int index,
+                                           const bool isPremiereHost) {
+  const std::vector<ExportProfile> options =
+      exportProfileOptions(isPremiereHost);
+  if (index < 0 || index >= static_cast<int>(options.size())) {
+    return ExportProfile::kOpen;
+  }
+  return options[index];
+}
+
+int optionIndexForExportProfile(const ExportProfile profile,
+                                const bool isPremiereHost) {
+  const std::vector<ExportProfile> options =
+      exportProfileOptions(isPremiereHost);
+  for (int i = 0; i < static_cast<int>(options.size()); ++i) {
+    if (options[i] == profile) {
       return i;
     }
   }
   jassertfalse;
   return 0;
+}
+
+ExportProfile exportProfileForHost(const ExportProfile stored,
+                                   const FileProfile sessionProfile,
+                                   const bool isPremiereHost) {
+  if (!isPremiereHost || stored != ExportProfile::kYouTubeBase) {
+    return stored;
+  }
+  return exportProfileFits(ExportProfile::kYouTubeSimple, sessionProfile)
+             ? ExportProfile::kYouTubeSimple
+             : ExportProfile::kOpen;
 }
 
 RoomSetup::RoomSetup() : RepositoryItemBase({}), dawWarningDismissed_(false) {}

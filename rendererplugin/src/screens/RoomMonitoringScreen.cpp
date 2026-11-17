@@ -98,12 +98,13 @@ void RoomMonitoringScreen::initializeSpeakerSetup() {
 }
 
 void RoomMonitoringScreen::initializeExportProfile() {
-  for (const ExportProfile profile : kExportProfileOptions) {
+  const bool isPremiereHost = juce::PluginHostType().isPremiere();
+  for (const ExportProfile profile : exportProfileOptions(isPremiereHost)) {
     exportProfile_.addOption(exportProfileToString(profile));
   }
   exportProfile_.setSelectedIndex(
       optionIndexForExportProfile(
-          repos_.roomSetupRepo_.get().getExportProfile()),
+          repos_.roomSetupRepo_.get().getExportProfile(), isPremiereHost),
       juce::dontSendNotification);
   exportProfile_.onChange([this] { updateExportProfile(); });
   updateExportProfileOptions();
@@ -114,9 +115,11 @@ void RoomMonitoringScreen::updateExportProfileOptions() {
   repos_.aeRepo_.getAll(audioElements);
   const FileProfile sessionProfile =
       FileProfileHelper::minimumProfile(audioElements);
-  for (int i = 0; i < static_cast<int>(kExportProfileOptions.size()); ++i) {
+  const std::vector<ExportProfile> options =
+      exportProfileOptions(juce::PluginHostType().isPremiere());
+  for (int i = 0; i < static_cast<int>(options.size()); ++i) {
     exportProfile_.setOptionEnabled(
-        i, exportProfileFits(kExportProfileOptions[i], sessionProfile));
+        i, exportProfileFits(options[i], sessionProfile));
   }
 }
 
@@ -215,8 +218,8 @@ void RoomMonitoringScreen::updateSpeakerSetup() {
 }
 
 void RoomMonitoringScreen::updateExportProfile() {
-  const ExportProfile profile =
-      exportProfileFromOptionIndex(exportProfile_.getSelectedIndex());
+  const ExportProfile profile = exportProfileFromOptionIndex(
+      exportProfile_.getSelectedIndex(), juce::PluginHostType().isPremiere());
   RoomSetup currentRoomSetup = repos_.roomSetupRepo_.get();
   currentRoomSetup.setExportProfile(profile);
   repos_.roomSetupRepo_.update(currentRoomSetup);

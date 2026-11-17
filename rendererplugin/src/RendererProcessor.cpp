@@ -103,6 +103,8 @@ RendererProcessor::RendererProcessor()
     outputChannels.addChannel((juce::AudioChannelSet::ChannelType)i);
   }
 
+  applyHostExportProfile();
+
   // Set up listening for the switch to manual offline mode
   fileExportRepository_.registerListener(this);
   roomSetupRepository_.registerListener(this);
@@ -316,6 +318,8 @@ void RendererProcessor::setStateInformation(const void* data, int sizeInBytes) {
   RendererVersionConverter::convertToLatestVersion(xmlState);
 
   updateRepositories();
+
+  applyHostExportProfile();
 
   initializeMixPresentations();
 
@@ -560,6 +564,24 @@ void RendererProcessor::configureOutputBus() {
   busesLayout.outputBuses.add(outputChannelSet_);
 
   setBusesLayout(busesLayout);
+}
+
+void RendererProcessor::applyHostExportProfile() {
+  RoomSetup roomSetup = roomSetupRepository_.get();
+  juce::OwnedArray<AudioElement> audioElements;
+  audioElementRepository_.getAll(audioElements);
+  const ExportProfile profile =
+      exportProfileForHost(roomSetup.getExportProfile(),
+                           FileProfileHelper::minimumProfile(audioElements),
+                           juce::PluginHostType().isPremiere());
+  if (profile == roomSetup.getExportProfile()) {
+    return;
+  }
+  roomSetup.setExportProfile(profile);
+  roomSetupRepository_.update(roomSetup);
+  LOG_ANALYTICS(instanceId_, "export profile set to " +
+                                 exportProfileToString(profile).toStdString() +
+                                 " for this host");
 }
 
 void RendererProcessor::reinitializeAfterStateRestore() {
