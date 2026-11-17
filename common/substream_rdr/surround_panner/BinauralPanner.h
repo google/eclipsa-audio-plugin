@@ -17,6 +17,7 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include "AmbisonicPanner.h"
 #include "AudioPanner.h"
 #include "renderer/obr_impl.h"
 
@@ -43,6 +44,10 @@ class BinauralPanner : public AudioPanner {
   void positionUpdated() override;
 
  private:
+  // The source is encoded to third-order ambisonics here, rather than inside
+  // obr, so a position change crossfades smoothly before the binaural decode.
+  AmbisonicPanner ambisonicPanner_;
+  juce::AudioBuffer<float> ambisonicBuffer_;
   obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_;
   std::unique_ptr<obr::ObrImpl> encoder_;
 };

@@ -114,7 +114,9 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
   objectMetadata_.channelLock = admrender::ChannelLock();
   objectMetadata_.channelLock->maxDistance = 0.01f;
   objectMetadata_.width = 0;
-  objectMetadata_.jumpPosition.flag = true;
+  // Ramp the speaker gains across each block rather than switching them at
+  // once, which clicks when the position changes during playback.
+  objectMetadata_.jumpPosition.flag = false;
   objectMetadata_.screenRef = false;
 
   // Prepare a stream containing this object

@@ -15,14 +15,17 @@
 #include "BinauralPanner.h"
 
 BinauralPanner::BinauralPanner(const int samplesPerBlock, const int sampleRate)
-    : encoder_(nullptr),
-      AudioPanner(Speakers::kBinaural, samplesPerBlock, sampleRate) {
-  // Create the encoder for encoding to the desired ambisonic order.
+    : AudioPanner(Speakers::kBinaural, samplesPerBlock, sampleRate),
+      ambisonicPanner_(Speakers::kHOA3, samplesPerBlock, sampleRate),
+      ambisonicBuffer_(Speakers::kHOA3.getNumChannels(), samplesPerBlock),
+      encoder_(nullptr) {
+  // Create the renderer for decoding third-order ambisonics to binaural.
   encoder_ = std::make_unique<obr::ObrImpl>(samplesPerBlock, sampleRate);
-  encoder_->AddAudioElement(obr::AudioElementType::kObjectMono);
+  encoder_->AddAudioElement(obr::AudioElementType::k3OA);
 
   // Resize internal buffers for API calls.
-  inputBufferPlanar_ = obr::AudioBuffer(1, samplesPerBlock);
+  inputBufferPlanar_ =
+      obr::AudioBuffer(Speakers::kHOA3.getNumChannels(), samplesPerBlock);
   outputBufferPlanar_ =
       obr::AudioBuffer(Speakers::kBinaural.getNumChannels(), samplesPerBlock);
 }
@@ -30,21 +33,21 @@ BinauralPanner::BinauralPanner(const int samplesPerBlock, const int sampleRate)
 BinauralPanner::~BinauralPanner() {}
 
 void BinauralPanner::positionUpdated() {
-  encoder_->UpdateObjectPosition(0, currPos_.azimuth, currPos_.elevation,
-                                 currPos_.distance);
+  ambisonicPanner_.setPolarPosition(currPos_);
 }
 
 void BinauralPanner::process(juce::AudioBuffer<float>& inputBuffer,
                              juce::AudioBuffer<float>& outputBuffer) {
   outputBuffer.clear();
 
-  // Fetch the first channel, which is the only channel to be panned
-  const float* rPtr = inputBuffer.getReadPointer(0);
-  for (int j = 0; j < kSamplesPerBlock_; ++j) {
-    inputBufferPlanar_[0][j] = rPtr[j];
+  ambisonicPanner_.process(inputBuffer, ambisonicBuffer_);
+  for (int i = 0; i < ambisonicBuffer_.getNumChannels(); ++i) {
+    const float* rPtr = ambisonicBuffer_.getReadPointer(i);
+    for (int j = 0; j < kSamplesPerBlock_; ++j) {
+      inputBufferPlanar_[i][j] = rPtr[j];
+    }
   }
 
-  // Convert input buffer to planar vector and add spatial information.
   encoder_->Process(inputBufferPlanar_, &outputBufferPlanar_);
 
   // Write the processed planar output data to the intermediate buffer.

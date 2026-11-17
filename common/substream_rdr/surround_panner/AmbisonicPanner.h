@@ -41,10 +41,17 @@ class AmbisonicPanner : public AudioPanner {
   void process(juce::AudioBuffer<float>& inputBuffer,
                juce::AudioBuffer<float>& outputBuffer) override;
 
+  void setPolarPosition(const ear::PolarPosition& position);
+
  protected:
   void positionUpdated() override;
 
  private:
-  obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_;
+  void applyPosition();
+
+  obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_, movedBufferPlanar_;
   std::unique_ptr<obr::AmbisonicEncoder> encoder_;
+  // A position set after the first block is crossfaded in by the next one.
+  bool hasRendered_ = false;
+  bool positionPending_ = false;
 };
