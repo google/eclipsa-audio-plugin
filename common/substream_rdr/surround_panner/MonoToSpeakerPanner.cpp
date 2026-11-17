@@ -144,7 +144,8 @@ void MonoToSpeakerPanner::positionUpdated() {
 }
 
 void MonoToSpeakerPanner::process(juce::AudioBuffer<float>& inputBuffer,
-                                  juce::AudioBuffer<float>& outputBuffer) {
+                                  juce::AudioBuffer<float>& outputBuffer,
+                                  const int numSamples) {
   // Add the object to the stream
   // Note that GetRendereredAudio basically resets the renderer, so objects must
   // be added every time
@@ -153,7 +154,7 @@ void MonoToSpeakerPanner::process(juce::AudioBuffer<float>& inputBuffer,
   // and libspatialaudio doesn't take a const, and we'd
   // rather not perform a copy
   float* inputAudio = inputBuffer.getWritePointer(0);
-  renderer_.AddObject(inputAudio, kSamplesPerBlock_, objectMetadata_);
+  renderer_.AddObject(inputAudio, numSamples, objectMetadata_);
   outputBuffer.clear();
   // For non-expanded layouts, just write directly to the output buffer
   if (!kPannedLayout_.isExpandedLayout()) {
@@ -163,16 +164,16 @@ void MonoToSpeakerPanner::process(juce::AudioBuffer<float>& inputBuffer,
       outputAudioBufferPointers_[i] = outputBuffer.getWritePointer(i);
     }
 
-    renderer_.GetRenderedAudio(outputAudioBufferPointers_, kSamplesPerBlock_);
+    renderer_.GetRenderedAudio(outputAudioBufferPointers_, numSamples);
   } else {
     // For expanded layouts, we need to copy out the channels we want
     // First, render to 9_10_3
-    renderer_.GetRenderedAudio(outputAudioBufferPointers_, kSamplesPerBlock_);
+    renderer_.GetRenderedAudio(outputAudioBufferPointers_, numSamples);
 
     // Now copy out the desired channels
     for (int i = 0; i < explValidChannels_.size(); i++) {
       outputBuffer.copyFrom(i, 0, explChannelPointers_[explValidChannels_[i]],
-                            kSamplesPerBlock_);
+                            numSamples);
     }
   }
 }

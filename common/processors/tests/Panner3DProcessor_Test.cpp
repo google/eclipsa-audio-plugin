@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <vector>
 
 #include "../audioelementplugin/src/AudioElementPluginProcessor.h"
@@ -108,113 +109,173 @@ TEST(test_3D_render_Processor, test_simple_pan) {
 };
 
 namespace {
-struct DiffsPerChannel {
-  std::vector<float> steady;
-  std::vector<float> moving;
+constexpr int kPreparedBlockSize = 1024;
+constexpr int kSampleRate = 48000;
+constexpr float kFrequency = 440.f;
+
+// A Panner3DProcessor panning a mono element to `outputLayout`, prepared with
+// kPreparedBlockSize.
+struct PannerFixture {
+  explicit PannerFixture(const Speakers::AudioElementSpeakerLayout outputLayout)
+      : audioElement(juce::Uuid(), "Test", Speakers::kMono, 0),
+        audioElementRepository(juce::ValueTree{"test"}),
+        spatialLayoutRepository(
+            juce::ValueTree{"audioElementSpatialLayout_test"}),
+        syncClient(&spatialLayoutRepository, 0),
+        routingProcessor(&spatialLayoutRepository, &syncClient, 36),
+        parameterTree(routingProcessor) {
+    audioElementRepository.add(audioElement);
+    AudioElementSpatialLayout spatialLayout = spatialLayoutRepository.get();
+    spatialLayout.setAudioElementId(audioElement.getId());
+    spatialLayout.setFirstChannel(0);
+    spatialLayout.setLayout(outputLayout);
+    spatialLayout.setPanningEnabled(true);
+    spatialLayoutRepository.update(spatialLayout);
+    syncClient.setAudioElementRepositoryForTesting(audioElementRepository);
+
+    panner = std::make_unique<Panner3DProcessor>(
+        &hostProcessor, &spatialLayoutRepository, &parameterTree);
+  }
+
+  void moveTo(float x, float y) {
+    panner->parameterChanged(AutoParamMetaData::xPosition, x);
+    panner->parameterChanged(AutoParamMetaData::yPosition, y);
+    panner->parameterChanged(AutoParamMetaData::zPosition, 0.f);
+  }
+
+  AudioElement audioElement;
+  AudioElementRepository audioElementRepository;
+  AudioElementSpatialLayoutRepository spatialLayoutRepository;
+  TestAudioElementPluginSyncClient syncClient;
+  RoutingProcessor routingProcessor;
+  AudioElementParameterTree parameterTree;
+  DummyHostProcessor hostProcessor;
+  std::unique_ptr<Panner3DProcessor> panner;
 };
 
-// Pans a constant sine to `outputLayout` in 1024-sample blocks, moving the
-// source from front-left to rear-right between two blocks. Returns each output
-// channel's largest sample-to-sample difference while the source holds still
-// at either end, and across the move and the block after it.
-DiffsPerChannel measurePositionChange(
-    const Speakers::AudioElementSpeakerLayout outputLayout) {
-  constexpr int kBlockSize = 1024;
-  constexpr int kSampleRate = 48000;
-  constexpr float kFrequency = 440.f;
-  constexpr int kSettleBlocks = 8;
+struct PositionChangeMeasurement {
+  // Each channel's largest sample-to-sample step while the source holds still.
+  std::vector<float> steady;
+  // Each channel's largest absolute sample while the source holds still.
+  std::vector<float> steadyPeak;
+  // Each channel's largest step across the move and the samples after it.
+  std::vector<float> moving;
+  // Each channel's settled gain against the input at the start and end
+  // positions.
+  std::vector<float> gainBefore;
+  std::vector<float> gainAfter;
+};
 
-  AudioElement audioElement(juce::Uuid(), "Test", Speakers::kMono, 0);
-  AudioElementRepository audioElementRepository(juce::ValueTree{"test"});
-  audioElementRepository.add(audioElement);
+// Pans a constant sine to `outputLayout` in `hostBlockSize`-sample blocks,
+// moving the source from front-left to rear-right between two blocks.
+PositionChangeMeasurement measurePositionChange(
+    const Speakers::AudioElementSpeakerLayout outputLayout,
+    const int hostBlockSize) {
+  constexpr int kSettleSamples = 8 * kPreparedBlockSize;
+  // Covers the ramp, the binaural FIFO and libspatialaudio's delay line.
+  constexpr int kMovingSamples = 3 * kPreparedBlockSize;
 
-  AudioElementSpatialLayoutRepository spatialLayoutRepository(
-      juce::ValueTree{"audioElementSpatialLayout_test"});
-  AudioElementSpatialLayout spatialLayout = spatialLayoutRepository.get();
-  spatialLayout.setAudioElementId(audioElement.getId());
-  spatialLayout.setFirstChannel(0);
-  spatialLayout.setLayout(outputLayout);
-  spatialLayout.setPanningEnabled(true);
-  spatialLayoutRepository.update(spatialLayout);
-
-  TestAudioElementPluginSyncClient syncClient(&spatialLayoutRepository, 0);
-  syncClient.setAudioElementRepositoryForTesting(audioElementRepository);
-  RoutingProcessor routingProcessor(&spatialLayoutRepository, &syncClient, 36);
-  AudioElementParameterTree parameterTree(routingProcessor);
-  DummyHostProcessor hostProcessor;
-
-  Panner3DProcessor panner(&hostProcessor, &spatialLayoutRepository,
-                           &parameterTree);
-  const auto moveTo = [&panner](float x, float y) {
-    panner.parameterChanged(AutoParamMetaData::xPosition, x);
-    panner.parameterChanged(AutoParamMetaData::yPosition, y);
-    panner.parameterChanged(AutoParamMetaData::zPosition, 0.f);
-  };
-  moveTo(-50.f, 50.f);
-  panner.prepareToPlay(kSampleRate, kBlockSize);
+  PannerFixture fixture(outputLayout);
+  fixture.moveTo(-50.f, 50.f);
+  fixture.panner->prepareToPlay(kSampleRate, kPreparedBlockSize);
 
   const int numChannels = outputLayout.getNumChannels();
-  juce::AudioBuffer<float> buffer(numChannels, kBlockSize);
+  juce::AudioBuffer<float> buffer(numChannels, hostBlockSize);
   juce::MidiBuffer midi;
   std::vector<float> lastSample(numChannels, 0.f);
   long long sampleIndex = 0;
 
-  // Renders one block and returns each channel's largest step, counting the
-  // step from the previous block's last sample.
-  const auto renderBlock = [&]() {
-    buffer.clear();
-    for (int i = 0; i < kBlockSize; ++i, ++sampleIndex) {
-      buffer.setSample(0, i,
-                       0.5f * std::sin(2.f * juce::MathConstants<float>::pi *
-                                       kFrequency * sampleIndex / kSampleRate));
-    }
-    panner.processBlock(buffer, midi);
+  PositionChangeMeasurement result{std::vector<float>(numChannels, 0.f),
+                                   std::vector<float>(numChannels, 0.f),
+                                   std::vector<float>(numChannels, 0.f),
+                                   std::vector<float>(numChannels, 0.f),
+                                   std::vector<float>(numChannels, 0.f)};
 
-    std::vector<float> maxStep(numChannels, 0.f);
-    for (int ch = 0; ch < numChannels; ++ch) {
-      float previous = lastSample[ch];
-      for (int i = 0; i < kBlockSize; ++i) {
-        const float sample = buffer.getSample(ch, i);
-        maxStep[ch] = std::max(maxStep[ch], std::abs(sample - previous));
-        previous = sample;
+  // Renders host blocks until at least `numSamples` have passed, raising
+  // `maxStep` and `peak` to each channel's largest step and sample. When
+  // `gain` is given, it receives each channel's correlation with the input.
+  const auto render = [&](int numSamples, std::vector<float>* maxStep,
+                          std::vector<float>* peak, std::vector<float>* gain) {
+    std::vector<double> crossSum(numChannels, 0.0);
+    double inputSum = 0.0;
+    for (int rendered = 0; rendered < numSamples; rendered += hostBlockSize) {
+      buffer.clear();
+      for (int i = 0; i < hostBlockSize; ++i, ++sampleIndex) {
+        buffer.setSample(
+            0, i,
+            0.5f * std::sin(2.f * juce::MathConstants<float>::pi * kFrequency *
+                            sampleIndex / kSampleRate));
       }
-      lastSample[ch] = previous;
+      std::vector<float> input(buffer.getReadPointer(0),
+                               buffer.getReadPointer(0) + hostBlockSize);
+      fixture.panner->processBlock(buffer, midi);
+
+      for (int ch = 0; ch < numChannels; ++ch) {
+        float previous = lastSample[ch];
+        for (int i = 0; i < hostBlockSize; ++i) {
+          const float sample = buffer.getSample(ch, i);
+          if (maxStep != nullptr) {
+            (*maxStep)[ch] =
+                std::max((*maxStep)[ch], std::abs(sample - previous));
+          }
+          if (peak != nullptr) {
+            (*peak)[ch] = std::max((*peak)[ch], std::abs(sample));
+          }
+          crossSum[ch] += sample * input[i];
+          previous = sample;
+        }
+        lastSample[ch] = previous;
+      }
+      for (const float sample : input) {
+        inputSum += sample * sample;
+      }
     }
-    return maxStep;
+    if (gain != nullptr) {
+      for (int ch = 0; ch < numChannels; ++ch) {
+        (*gain)[ch] = static_cast<float>(crossSum[ch] / inputSum);
+      }
+    }
   };
 
-  DiffsPerChannel diffs{std::vector<float>(numChannels, 0.f),
-                        std::vector<float>(numChannels, 0.f)};
-  const auto accumulate = [](std::vector<float>& into,
-                             const std::vector<float>& from) {
-    for (size_t ch = 0; ch < into.size(); ++ch) {
-      into[ch] = std::max(into[ch], from[ch]);
-    }
-  };
+  render(kSettleSamples, nullptr, nullptr, nullptr);
+  render(kPreparedBlockSize, &result.steady, &result.steadyPeak,
+         &result.gainBefore);
 
-  for (int block = 0; block < kSettleBlocks; ++block) {
-    renderBlock();
-  }
-  accumulate(diffs.steady, renderBlock());
+  fixture.moveTo(50.f, -50.f);
+  render(kMovingSamples, &result.moving, nullptr, nullptr);
 
-  moveTo(50.f, -50.f);
-  accumulate(diffs.moving, renderBlock());
-  accumulate(diffs.moving, renderBlock());
-
-  for (int block = 0; block < kSettleBlocks; ++block) {
-    renderBlock();
-  }
-  accumulate(diffs.steady, renderBlock());
-  return diffs;
+  render(kSettleSamples, nullptr, nullptr, nullptr);
+  render(kPreparedBlockSize, &result.steady, &result.steadyPeak,
+         &result.gainAfter);
+  return result;
 }
 
 void expectSmoothPositionChange(
-    const Speakers::AudioElementSpeakerLayout outputLayout) {
-  const DiffsPerChannel diffs = measurePositionChange(outputLayout);
-  for (size_t ch = 0; ch < diffs.steady.size(); ++ch) {
-    EXPECT_LE(diffs.moving[ch], 2.f * diffs.steady[ch] + 1e-6f)
-        << "channel " << ch << " steps by " << diffs.moving[ch]
-        << " while moving, " << diffs.steady[ch] << " in steady state";
+    const Speakers::AudioElementSpeakerLayout outputLayout,
+    const int hostBlockSize = kPreparedBlockSize) {
+  const PositionChangeMeasurement m =
+      measurePositionChange(outputLayout, hostBlockSize);
+
+  EXPECT_GT(*std::max_element(m.steady.begin(), m.steady.end()), 0.f)
+      << "the panner output is silent";
+  float largestGainChange = 0.f;
+  for (size_t ch = 0; ch < m.gainBefore.size(); ++ch) {
+    largestGainChange = std::max(largestGainChange,
+                                 std::abs(m.gainAfter[ch] - m.gainBefore[ch]));
+  }
+  EXPECT_GT(largestGainChange, 0.05f) << "the move never reached the panner";
+
+  // A sine of peak A steps by at most A * 2 * pi * f / fs between samples, so
+  // a larger steady step is a discontinuity.
+  const float sineStep =
+      2.f * juce::MathConstants<float>::pi * kFrequency / kSampleRate;
+  for (size_t ch = 0; ch < m.steady.size(); ++ch) {
+    EXPECT_LE(m.steady[ch], 1.1f * sineStep * m.steadyPeak[ch] + 1e-6f)
+        << "channel " << ch << " steps by " << m.steady[ch]
+        << " in steady state with peak " << m.steadyPeak[ch];
+    EXPECT_LE(m.moving[ch], 2.f * m.steady[ch] + 1e-6f)
+        << "channel " << ch << " steps by " << m.moving[ch] << " while moving, "
+        << m.steady[ch] << " in steady state";
   }
 }
 }  // namespace
@@ -238,4 +299,52 @@ TEST(test_3D_render_Processor,
 // Moving the source does not click in binaural output.
 TEST(test_3D_render_Processor, position_change_is_smooth_binaural) {
   expectSmoothPositionChange(Speakers::kBinaural);
+}
+
+// Host blocks shorter than the prepared size do not click a 5.1 bed.
+TEST(test_3D_render_Processor, short_host_blocks_are_smooth_5_1) {
+  expectSmoothPositionChange(Speakers::k5Point1, 300);
+}
+
+// Host blocks longer than, and not a multiple of, the prepared size do not
+// click a 5.1 bed.
+TEST(test_3D_render_Processor, long_host_blocks_are_smooth_5_1) {
+  expectSmoothPositionChange(Speakers::k5Point1, 1500);
+}
+
+// Host blocks shorter than the prepared size do not click in third-order
+// ambisonics.
+TEST(test_3D_render_Processor, short_host_blocks_are_smooth_ambisonics) {
+  expectSmoothPositionChange(Speakers::kHOA3, 300);
+}
+
+// Host blocks longer than, and not a multiple of, the prepared size do not
+// click in third-order ambisonics.
+TEST(test_3D_render_Processor, long_host_blocks_are_smooth_ambisonics) {
+  expectSmoothPositionChange(Speakers::kHOA3, 1500);
+}
+
+// Host blocks shorter than the prepared size do not click in binaural output.
+TEST(test_3D_render_Processor, short_host_blocks_are_smooth_binaural) {
+  expectSmoothPositionChange(Speakers::kBinaural, 300);
+}
+
+// Host blocks longer than, and not a multiple of, the prepared size do not
+// click in binaural output.
+TEST(test_3D_render_Processor, long_host_blocks_are_smooth_binaural) {
+  expectSmoothPositionChange(Speakers::kBinaural, 1500);
+}
+
+// Binaural panning reports its one-block FIFO to the host as latency.
+TEST(test_3D_render_Processor, binaural_reports_latency) {
+  PannerFixture fixture(Speakers::kBinaural);
+  fixture.panner->prepareToPlay(kSampleRate, kPreparedBlockSize);
+  EXPECT_EQ(fixture.hostProcessor.getLatencySamples(), kPreparedBlockSize);
+}
+
+// Speaker-bed panning reports no latency to the host.
+TEST(test_3D_render_Processor, speaker_bed_reports_no_latency) {
+  PannerFixture fixture(Speakers::k5Point1);
+  fixture.panner->prepareToPlay(kSampleRate, kPreparedBlockSize);
+  EXPECT_EQ(fixture.hostProcessor.getLatencySamples(), 0);
 }

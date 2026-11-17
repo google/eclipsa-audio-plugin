@@ -17,6 +17,8 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include <vector>
+
 #include "AudioPanner.h"
 #include "ambisonic_encoder.h"  // OBR Ambisonic Encoder implementation.
 #include "substream_rdr/substream_rdr_utils/Speakers.h"
@@ -33,25 +35,26 @@ class AmbisonicPanner : public AudioPanner {
    *        output buffer.
    * @pre Input buffer must have the same number of channels as the input
    * layout.
-   * @pre Input buffer must have the same number of samples as the panner was
-   *      constructed with.
+   * @pre Input and output buffers must hold at least the number of samples
+   *      the panner was constructed with.
    * @param inputBuffer
    * @param outputBuffer
+   * @param numSamples Samples to pan, at most the constructed block size.
    */
   void process(juce::AudioBuffer<float>& inputBuffer,
-               juce::AudioBuffer<float>& outputBuffer) override;
+               juce::AudioBuffer<float>& outputBuffer, int numSamples) override;
 
+  // Takes a polar position directly and ramps the gains to it over the next
+  // block's worth of samples.
   void setPolarPosition(const ear::PolarPosition& position);
 
  protected:
   void positionUpdated() override;
 
  private:
-  void applyPosition();
-
-  obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_, movedBufferPlanar_;
+  obr::AudioBuffer unitInputPlanar_, unitOutputPlanar_;
   std::unique_ptr<obr::AmbisonicEncoder> encoder_;
-  // A position set after the first block is crossfaded in by the next one.
+  std::vector<float> currentGains_, targetGains_, gainSteps_;
+  int rampSamplesRemaining_ = 0;
   bool hasRendered_ = false;
-  bool positionPending_ = false;
 };

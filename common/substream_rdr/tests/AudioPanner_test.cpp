@@ -84,7 +84,7 @@ TEST(test_surround_panner, pan_to_ambi) {
     ambisonicPanner.setPosition(1.f, 2.f, 3.f);
 
     // Process audio.
-    ambisonicPanner.process(inputBuffer, outputBuffer);
+    ambisonicPanner.process(inputBuffer, outputBuffer, kNumSamples);
 
     // Validate something sensible was output
     for (int i = 0; i < outputBuffer.getNumChannels(); ++i) {
@@ -119,7 +119,7 @@ TEST(test_surround_panner, pan_to_bed) {
     monoToSpeakerPanner.setPosition(0.5, 0.5, 0.5);
 
     // Process audio.
-    monoToSpeakerPanner.process(inputBuffer, outputBuffer);
+    monoToSpeakerPanner.process(inputBuffer, outputBuffer, kNumSamples);
 
     // Validate something sensible was output
     // Note that the first 255 samples are always 0
@@ -138,7 +138,7 @@ TEST(test_surround_panner, pan_to_bed) {
     monoToSpeakerPanner2.setPosition(45.0f, 0.0f, 0.0f);
 
     // Process audio.
-    monoToSpeakerPanner2.process(inputBuffer, outputBuffer);
+    monoToSpeakerPanner2.process(inputBuffer, outputBuffer, kNumSamples);
 
     // Validate audio is output to the right speaker
     // Validate no audio is output to the left speaker
@@ -169,8 +169,9 @@ TEST(test_surround_panner, pan_to_binaural) {
   // Set source position.
   binPanner.setPosition(1.f, 2.f, 3.f);
 
-  // Process audio.
-  binPanner.process(inputBuffer, outputBuffer);
+  // Process audio. The first block only fills the panner's one-block FIFO.
+  binPanner.process(inputBuffer, outputBuffer, kNumSamples);
+  binPanner.process(inputBuffer, outputBuffer, kNumSamples);
 
   // Validate something sensible was output
   for (int i = 0; i < outputBuffer.getNumChannels(); ++i) {
@@ -178,6 +179,95 @@ TEST(test_surround_panner, pan_to_binaural) {
       EXPECT_NE(outputBuffer.getSample(i, j), 0.f);
     }
   }
+}
+
+namespace {
+// Renders three blocks of a sine through `whole` one block per call and
+// through `split` in two uneven calls per block, moving the source before the
+// second block, and expects identical output.
+void expectSplitBlocksMatchWholeBlocks(AudioPanner& whole, AudioPanner& split,
+                                       const int numChannels) {
+  constexpr int kSplitAt = 300;
+  juce::AudioBuffer<float> input(1, kNumSamples);
+  juce::AudioBuffer<float> splitInput(1, kNumSamples);
+  juce::AudioBuffer<float> wholeOutput(numChannels, kNumSamples);
+  juce::AudioBuffer<float> splitOutput(numChannels, kNumSamples);
+  juce::AudioBuffer<float> splitPart(numChannels, kNumSamples);
+
+  whole.setPosition(-50.f, 50.f, 0.f);
+  split.setPosition(-50.f, 50.f, 0.f);
+  int sampleIndex = 0;
+  for (int block = 0; block < 3; ++block) {
+    if (block == 1) {
+      whole.setPosition(50.f, -50.f, 0.f);
+      split.setPosition(50.f, -50.f, 0.f);
+    }
+    for (int i = 0; i < kNumSamples; ++i, ++sampleIndex) {
+      input.setSample(0, i, 0.5f * std::sin(0.05f * sampleIndex));
+    }
+    whole.process(input, wholeOutput, kNumSamples);
+
+    splitInput.copyFrom(0, 0, input, 0, 0, kSplitAt);
+    split.process(splitInput, splitPart, kSplitAt);
+    for (int ch = 0; ch < numChannels; ++ch) {
+      splitOutput.copyFrom(ch, 0, splitPart, ch, 0, kSplitAt);
+    }
+    splitInput.copyFrom(0, 0, input, 0, kSplitAt, kNumSamples - kSplitAt);
+    split.process(splitInput, splitPart, kNumSamples - kSplitAt);
+    for (int ch = 0; ch < numChannels; ++ch) {
+      splitOutput.copyFrom(ch, kSplitAt, splitPart, ch, 0,
+                           kNumSamples - kSplitAt);
+    }
+
+    for (int ch = 0; ch < numChannels; ++ch) {
+      for (int i = 0; i < kNumSamples; ++i) {
+        ASSERT_NEAR(splitOutput.getSample(ch, i), wholeOutput.getSample(ch, i),
+                    1e-5f)
+            << "block " << block << " channel " << ch << " sample " << i;
+      }
+    }
+  }
+}
+}  // namespace
+
+// A speaker bed panner renders the same audio whether a block arrives whole
+// or in shorter parts, including across a move.
+TEST(test_surround_panner, bed_split_blocks_match_whole_blocks) {
+  MonoToSpeakerPanner whole(Speakers::k5Point1, kNumSamples, 48000);
+  MonoToSpeakerPanner split(Speakers::k5Point1, kNumSamples, 48000);
+  expectSplitBlocksMatchWholeBlocks(whole, split,
+                                    Speakers::k5Point1.getNumChannels());
+}
+
+// An ambisonic panner renders the same audio whether a block arrives whole or
+// in shorter parts, including across a move.
+TEST(test_surround_panner, ambi_split_blocks_match_whole_blocks) {
+  AmbisonicPanner whole(Speakers::kHOA3, kNumSamples, 48000);
+  AmbisonicPanner split(Speakers::kHOA3, kNumSamples, 48000);
+  expectSplitBlocksMatchWholeBlocks(whole, split,
+                                    Speakers::kHOA3.getNumChannels());
+}
+
+// A binaural panner renders the same audio whether a block arrives whole or in
+// shorter parts, including across a move.
+TEST(test_surround_panner, binaural_split_blocks_match_whole_blocks) {
+  BinauralPanner whole(kNumSamples, 48000);
+  BinauralPanner split(kNumSamples, 48000);
+  expectSplitBlocksMatchWholeBlocks(whole, split,
+                                    Speakers::kBinaural.getNumChannels());
+}
+
+// The binaural panner reports its one-block FIFO as latency; the others add
+// none.
+TEST(test_surround_panner, latency_samples) {
+  EXPECT_EQ(BinauralPanner(kNumSamples, 48000).getLatencySamples(),
+            kNumSamples);
+  EXPECT_EQ(
+      AmbisonicPanner(Speakers::kHOA3, kNumSamples, 48000).getLatencySamples(),
+      0);
+  EXPECT_EQ(MonoToSpeakerPanner(Speakers::k5Point1, kNumSamples, 48000)
+                .getLatencySamples(),
+            0);
 }
 
 #ifdef RDR_TO_FILE

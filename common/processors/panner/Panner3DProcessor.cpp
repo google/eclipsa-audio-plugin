@@ -84,7 +84,8 @@ void Panner3DProcessor::initializePanning() {
   renderLock.enter();
 
   // Note that for all speakers we are currently just using mono inputs
-  if (!isPanningEnabled || (outputLayout_ == Speakers::kMono) ||
+  if (samplesPerBlock_ <= 0 || !isPanningEnabled ||
+      (outputLayout_ == Speakers::kMono) ||
       (outputLayout_ == Speakers::kExplLFE)) {
     // If panning is disabled, we need to set the panner to NULL
     surroundPanner_.reset();
@@ -110,10 +111,14 @@ void Panner3DProcessor::initializePanning() {
                                  lastSetZPosition_);
   }
 
-  outputBuffer_.setSize(outputLayout_.getNumChannels(), samplesPerBlock_);
+  const int chunkSize = surroundPanner_ ? samplesPerBlock_ : 0;
+  outputBuffer_.setSize(outputLayout_.getNumChannels(), chunkSize);
   // The panners read only the first input channel.
-  chunkInput_.setSize(1, samplesPerBlock_);
+  chunkInput_.setSize(1, chunkSize);
+  const int latency =
+      surroundPanner_ ? surroundPanner_->getLatencySamples() : 0;
   renderLock.exit();
+  hostProcessor_->setLatencySamples(latency);
   hostProcessor_->suspendProcessing(false);
 }
 
@@ -138,8 +143,9 @@ void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       lastSetZPosition_ = z;
     }
 
-    const int chunkSize = samplesPerBlock_;
-    const int numChunks = (hostBufferSize + chunkSize - 1) / chunkSize;
+    const int chunkSize = chunkInput_.getNumSamples();
+    const int numChunks =
+        chunkSize > 0 ? (hostBufferSize + chunkSize - 1) / chunkSize : 0;
     const int copyChannels =
         std::min(outputBuffer_.getNumChannels(), buffer.getNumChannels());
 
@@ -147,13 +153,8 @@ void Panner3DProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       const int start = chunk * chunkSize;
       const int numSamples = std::min(chunkSize, hostBufferSize - start);
 
-      // The panners always render a full chunk, so zero-pad a short one.
       chunkInput_.copyFrom(0, 0, buffer, 0, start, numSamples);
-      if (numSamples < chunkSize) {
-        chunkInput_.clear(0, numSamples, chunkSize - numSamples);
-      }
-
-      surroundPanner_->process(chunkInput_, outputBuffer_);
+      surroundPanner_->process(chunkInput_, outputBuffer_, numSamples);
 
       for (int channel = 0; channel < copyChannels; ++channel) {
         buffer.copyFrom(channel, start, outputBuffer_, channel, 0, numSamples);

@@ -96,8 +96,8 @@ class Panner3DProcessor final
   AudioElementParameterTree* automationParameterTree_;
   juce::SpinLock renderLock;
   std::unique_ptr<AudioPanner> surroundPanner_;
-  int samplesPerBlock_;
-  int sampleRate_;
+  int samplesPerBlock_ = 0;
+  int sampleRate_ = 0;
   Speakers::AudioElementSpeakerLayout inputLayout_;
   Speakers::AudioElementSpeakerLayout outputLayout_;
   juce::AudioBuffer<float> outputBuffer_;

@@ -99,7 +99,7 @@ MeasureEBU128::LoudnessStats measureLoudness(
         inputBuffer.getArrayOfWritePointers(), numChannels, i, chunkSize);
 
     // Pan the audio and compute it's loudness
-    panner.process(chunk, outputBuffer);
+    panner.process(chunk, outputBuffer, chunkSize);
     stats =
         loudness.measureLoudness(speakerLayout.getChannelSet(), outputBuffer);
 

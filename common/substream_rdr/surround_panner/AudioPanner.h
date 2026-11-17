@@ -92,8 +92,14 @@ class AudioPanner {
 
   ear::PolarPosition getPosition() const { return currPos_; }
 
+  // Pans the first `numSamples` samples of the input's first channel, where
+  // `numSamples` is at most the block size the panner was constructed with.
   virtual void process(juce::AudioBuffer<float>& inputBuffer,
-                       juce::AudioBuffer<float>& outputBuffer) = 0;
+                       juce::AudioBuffer<float>& outputBuffer,
+                       int numSamples) = 0;
+
+  // Samples by which the output lags the input.
+  virtual int getLatencySamples() const { return 0; }
 
  protected:
   virtual void positionUpdated() = 0;

@@ -33,13 +33,14 @@ class MonoToSpeakerPanner : public AudioPanner {
    *        output buffer.
    * @pre Input buffer must have the same number of channels as the input
    * layout.
-   * @pre Input buffer must have the same number of samples as the panner was
-   *      constructed with.
+   * @pre Input and output buffers must hold at least the number of samples
+   *      the panner was constructed with.
    * @param inputBuffer
    * @param outputBuffer
+   * @param numSamples Samples to pan, at most the constructed block size.
    */
   void process(juce::AudioBuffer<float>& inputBuffer,
-               juce::AudioBuffer<float>& outputBuffer) override;
+               juce::AudioBuffer<float>& outputBuffer, int numSamples) override;
 
  protected:
   void positionUpdated() override;

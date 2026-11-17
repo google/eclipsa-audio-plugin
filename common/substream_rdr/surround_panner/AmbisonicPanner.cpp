@@ -14,17 +14,20 @@
 
 #include "AmbisonicPanner.h"
 
+#include <algorithm>
+
 AmbisonicPanner::AmbisonicPanner(
     const Speakers::AudioElementSpeakerLayout pannedLayout,
     const int samplesPerBlock, const int sampleRate)
     : AudioPanner(pannedLayout, samplesPerBlock, sampleRate),
-      inputBufferPlanar_(1, kSamplesPerBlock_),
-      outputBufferPlanar_(pannedLayout.getNumChannels(), kSamplesPerBlock_),
-      movedBufferPlanar_(pannedLayout.getNumChannels(), kSamplesPerBlock_),
+      unitInputPlanar_(1, 1),
+      unitOutputPlanar_(pannedLayout.getNumChannels(), 1),
       encoder_(std::make_unique<obr::AmbisonicEncoder>(
-          1, (int)(std::sqrt(pannedLayout.getNumChannels()) - 1.0))) {
-  // Create the encoder for encoding to the desired ambisonic order.
-  int numSamplesOutPlanar = pannedLayout.getNumChannels() * kSamplesPerBlock_;
+          1, (int)(std::sqrt(pannedLayout.getNumChannels()) - 1.0))),
+      currentGains_(pannedLayout.getNumChannels(), 0.f),
+      targetGains_(pannedLayout.getNumChannels(), 0.f),
+      gainSteps_(pannedLayout.getNumChannels(), 0.f) {
+  unitInputPlanar_[0][0] = 1.f;
 }
 
 AmbisonicPanner::~AmbisonicPanner() {}
@@ -35,53 +38,52 @@ void AmbisonicPanner::setPolarPosition(const ear::PolarPosition& position) {
 }
 
 void AmbisonicPanner::positionUpdated() {
-  if (hasRendered_) {
-    positionPending_ = true;
-  } else {
-    applyPosition();
-  }
-}
-
-void AmbisonicPanner::applyPosition() {
   // NOTE: As we pan mono only, just set the source of the first input channel.
   encoder_->SetSource(0, 1.f, currPos_.azimuth, currPos_.elevation,
                       currPos_.distance);
+
+  // The encoder is a per-channel gain, so encoding a unit sample reads it out.
+  encoder_->ProcessPlanarAudioData(unitInputPlanar_, &unitOutputPlanar_);
+  for (size_t i = 0; i < targetGains_.size(); ++i) {
+    targetGains_[i] = unitOutputPlanar_[i][0];
+  }
+
+  if (!hasRendered_) {
+    currentGains_ = targetGains_;
+    rampSamplesRemaining_ = 0;
+    return;
+  }
+
+  // Ramp from wherever the gains are now, even mid-ramp, to the new target.
+  for (size_t i = 0; i < targetGains_.size(); ++i) {
+    gainSteps_[i] = (targetGains_[i] - currentGains_[i]) / kSamplesPerBlock_;
+  }
+  rampSamplesRemaining_ = kSamplesPerBlock_;
 }
 
 void AmbisonicPanner::process(juce::AudioBuffer<float>& inputBuffer,
-                              juce::AudioBuffer<float>& outputBuffer) {
-  outputBuffer.clear();
+                              juce::AudioBuffer<float>& outputBuffer,
+                              const int numSamples) {
+  const float* input = inputBuffer.getReadPointer(0);
+  const int rampSamples = std::min(numSamples, rampSamplesRemaining_);
+  const bool rampEnds = rampSamples == rampSamplesRemaining_;
 
-  // Fetch the data for the first channel, since it's the only channel we will
-  // pan
-  const float* rPtr = inputBuffer.getReadPointer(0);
-  for (int j = 0; j < kSamplesPerBlock_; ++j) {
-    inputBufferPlanar_[0][j] = rPtr[j];
-  }
-
-  // Convert input buffer to planar vector and add spatial information.
-  encoder_->ProcessPlanarAudioData(inputBufferPlanar_, &outputBufferPlanar_);
-
-  // Crossfade from the previous position's encoding to the new position's
-  // across the block, so moving the source does not step the output.
-  if (positionPending_) {
-    applyPosition();
-    encoder_->ProcessPlanarAudioData(inputBufferPlanar_, &movedBufferPlanar_);
-    for (int i = 0; i < kPannedLayout_.getNumChannels(); i++) {
-      for (int j = 0; j < kSamplesPerBlock_; j++) {
-        const float t = static_cast<float>(j + 1) / kSamplesPerBlock_;
-        outputBufferPlanar_[i][j] +=
-            (movedBufferPlanar_[i][j] - outputBufferPlanar_[i][j]) * t;
-      }
+  for (int i = 0; i < kPannedLayout_.getNumChannels(); ++i) {
+    float* output = outputBuffer.getWritePointer(i);
+    float gain = currentGains_[i];
+    for (int j = 0; j < rampSamples; ++j) {
+      gain += gainSteps_[i];
+      output[j] = input[j] * gain;
     }
-    positionPending_ = false;
+    if (rampEnds) {
+      gain = targetGains_[i];
+    }
+    for (int j = rampSamples; j < numSamples; ++j) {
+      output[j] = input[j] * gain;
+    }
+    currentGains_[i] = gain;
   }
+
+  rampSamplesRemaining_ -= rampSamples;
   hasRendered_ = true;
-
-  // Write the processed planar output data to the intermediate buffer.
-  for (int i = 0; i < kPannedLayout_.getNumChannels(); i++) {
-    for (int j = 0; j < kSamplesPerBlock_; j++) {
-      outputBuffer.setSample(i, j, outputBufferPlanar_[i][j]);
-    }
-  }
 }
