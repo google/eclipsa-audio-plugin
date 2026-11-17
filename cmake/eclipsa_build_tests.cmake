@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function(eclipsa_build_tests)
-    get_property(test_sources GLOBAL PROPERTY ECLIPSA_TEST_SOURCES)
-    get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
-
-    list(REMOVE_DUPLICATES test_link_libs)
-
-    add_executable(eclipsa_tests ${test_sources})
-    target_compile_definitions(eclipsa_tests
+# Applies the build settings, runtime DLL copies and ctest discovery shared by
+# every Eclipsa test executable.
+function(eclipsa_configure_test_executable target link_libs)
+    target_compile_definitions(${target}
             PUBLIC
             JUCE_WEB_BROWSER=0
             JUCE_USE_CURL=0
@@ -29,31 +25,31 @@ function(eclipsa_build_tests)
 
     # Vendor library path (set in toolchain)
     if (DEFINED LIBIAMF_VENDOR_PATH)
-        target_link_directories(eclipsa_tests PRIVATE "${LIBIAMF_VENDOR_PATH}")
+        target_link_directories(${target} PRIVATE "${LIBIAMF_VENDOR_PATH}")
     elseif (DEFINED LIBIAMF_VENDOR_RELEASE_PATH)
-        target_link_directories(eclipsa_tests PRIVATE
+        target_link_directories(${target} PRIVATE
                 "$<IF:$<CONFIG:Debug>,${LIBIAMF_VENDOR_DEBUG_PATH},${LIBIAMF_VENDOR_RELEASE_PATH}>"
         )
     endif ()
 
     if (WIN32 AND DEFINED ECLIPSA_TEST_DLLS)
-        add_custom_command(TARGET eclipsa_tests POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:eclipsa_tests>"
+        add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${ECLIPSA_TEST_DLLS}
-                "$<TARGET_FILE_DIR:eclipsa_tests>/"
+                "$<TARGET_FILE_DIR:${target}>/"
                 COMMAND_EXPAND_LISTS
-                COMMENT "Copying test DLLs to $<TARGET_FILE_DIR:eclipsa_tests>"
+                COMMENT "Copying test DLLs to $<TARGET_FILE_DIR:${target}>"
         )
     endif ()
 
     if (DEFINED LIBIAMF_INCLUDE_DIRS)
-        target_include_directories(eclipsa_tests PRIVATE ${LIBIAMF_INCLUDE_DIRS})
+        target_include_directories(${target} PRIVATE ${LIBIAMF_INCLUDE_DIRS})
     endif ()
 
-    target_link_libraries(eclipsa_tests
+    target_link_libraries(${target}
             PRIVATE
-            ${test_link_libs}
+            ${link_libs}
             PUBLIC
             juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags
@@ -61,14 +57,24 @@ function(eclipsa_build_tests)
     )
 
     if (WIN32)
-        add_custom_command(TARGET eclipsa_tests POST_BUILD
+        add_custom_command(TARGET ${target} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_RUNTIME_DLLS:eclipsa_tests>
-                $<TARGET_FILE_DIR:eclipsa_tests>
+                $<TARGET_RUNTIME_DLLS:${target}>
+                $<TARGET_FILE_DIR:${target}>
                 COMMAND_EXPAND_LISTS
-                COMMENT "Copying runtime DLLs for eclipsa_tests"
+                COMMENT "Copying runtime DLLs for ${target}"
         )
     endif ()
 
-    gtest_discover_tests(eclipsa_tests DISCOVERY_MODE PRE_TEST)
+    gtest_discover_tests(${target} DISCOVERY_MODE PRE_TEST)
+endfunction()
+
+function(eclipsa_build_tests)
+    get_property(test_sources GLOBAL PROPERTY ECLIPSA_TEST_SOURCES)
+    get_property(test_link_libs GLOBAL PROPERTY ECLIPSA_TEST_LINK_LIBS)
+
+    list(REMOVE_DUPLICATES test_link_libs)
+
+    add_executable(eclipsa_tests ${test_sources})
+    eclipsa_configure_test_executable(eclipsa_tests "${test_link_libs}")
 endfunction()

@@ -13,3 +13,7 @@
 # limitations under the License.
 eclipsa_add_test(test_audioelement_version_converter AudioElementVersionConverter_test.cpp "AudioElementPlugin;processors")
 
+# AudioElementPluginProcessor and RendererProcessor both define the plugin entry
+# point, so the processor tests cannot share the eclipsa_tests executable.
+add_executable(eclipsa_audioelement_processor_tests AudioElementPluginProcessor_test.cpp)
+eclipsa_configure_test_executable(eclipsa_audioelement_processor_tests "AudioElementPlugin;processors")

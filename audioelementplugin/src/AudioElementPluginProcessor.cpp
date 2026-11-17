@@ -109,7 +109,19 @@ void AudioElementPluginProcessor::updateTrackProperties(
   trackName_ = properties.name;
   AudioElementSpatialLayout toUpdate =
       audioElementSpatialLayoutRepository_.get();
+  if (toUpdate.isNameCustom()) {
+    return;
+  }
   toUpdate.setName(trackName_);
+  audioElementSpatialLayoutRepository_.update(toUpdate);
+}
+
+void AudioElementPluginProcessor::setUserTrackName(const juce::String& name) {
+  AudioElementSpatialLayout toUpdate =
+      audioElementSpatialLayoutRepository_.get();
+  const bool isCustom = name.isNotEmpty();
+  toUpdate.setNameIsCustom(isCustom);
+  toUpdate.setName(isCustom ? name : trackName_);
   audioElementSpatialLayoutRepository_.update(toUpdate);
 }
 
@@ -301,9 +313,14 @@ void AudioElementPluginProcessor::setStateInformation(const void* data,
     audioElementSpatialLayoutRepository_.update(
         repositoryAudioElementSpatialLayout);
 
-    // Only sync trackName_ from loaded state if we haven't received a track
-    // name from the host yet
-    if (trackName_.isEmpty()) {
+    if (repositoryAudioElementSpatialLayout.isNameCustom()) {
+      LOG_ANALYTICS(
+          instanceId_,
+          "setStateInformation: kept custom name '" +
+              repositoryAudioElementSpatialLayout.getName().toStdString() +
+              "'");
+    } else if (trackName_.isEmpty()) {
+      // No host track name yet, so the loaded name stands in for it.
       trackName_ = repositoryAudioElementSpatialLayout.getName();
       LOG_ANALYTICS(instanceId_,
                     "setStateInformation: synchronized trackName_ to '" +

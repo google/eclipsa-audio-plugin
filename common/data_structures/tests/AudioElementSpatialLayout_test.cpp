@@ -119,3 +119,45 @@ TEST(test_audioElementSpatialLayout, equality) {
       id, name, audioElementId2, firstChannel, layout, false, elevation);
   EXPECT_NE(audioElementSpatialLayout3, audioElementSpatialLayout4);
 }
+// kNameIsCustom survives toValueTree then fromTree in both states.
+TEST(test_audioElementSpatialLayout, name_is_custom_round_trips) {
+  for (const bool nameIsCustom : {true, false}) {
+    AudioElementSpatialLayout layout(juce::Uuid(), "Lead Vocal", juce::Uuid(),
+                                     0, Speakers::kStereo);
+    layout.setNameIsCustom(nameIsCustom);
+
+    const juce::ValueTree tree = layout.toValueTree();
+    EXPECT_EQ(static_cast<bool>(tree[AudioElementSpatialLayout::kNameIsCustom]),
+              nameIsCustom);
+    EXPECT_EQ(AudioElementSpatialLayout::fromTree(tree).isNameCustom(),
+              nameIsCustom);
+  }
+}
+
+// A tree saved before kNameIsCustom existed loads as not custom.
+TEST(test_audioElementSpatialLayout, name_is_custom_defaults_false) {
+  const juce::ValueTree tree{
+      AudioElementSpatialLayout::kTreeType,
+      {
+          {AudioElementSpatialLayout::kId, juce::Uuid().toString()},
+          {AudioElementSpatialLayout::kName, "Legacy"},
+          {AudioElementSpatialLayout::kaudioElement, juce::Uuid().toString()},
+          {AudioElementSpatialLayout::kFirstChannel, 0},
+          {AudioElementSpatialLayout::kLayout, 1},
+      }};
+  ASSERT_FALSE(tree.hasProperty(AudioElementSpatialLayout::kNameIsCustom));
+
+  EXPECT_FALSE(AudioElementSpatialLayout::fromTree(tree).isNameCustom());
+}
+
+// copyValuesFrom carries kNameIsCustom across.
+TEST(test_audioElementSpatialLayout, copy_values_keeps_name_is_custom) {
+  AudioElementSpatialLayout source(juce::Uuid(), "Custom", juce::Uuid(), 0,
+                                   Speakers::kStereo);
+  source.setNameIsCustom(true);
+  AudioElementSpatialLayout target;
+
+  target.copyValuesFrom(source);
+
+  EXPECT_TRUE(target.isNameCustom());
+}
