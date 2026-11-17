@@ -89,13 +89,12 @@ class WavFileOutputProcessor : public ProcessorBase,
     juce::MessageManager::callAsync(std::move(task));
   }
 
-  virtual FileWriter* createFileWriter(const juce::String& filename,
-                                       double sampleRate,
-                                       const juce::AudioChannelSet& channelSet,
-                                       int firstChannel, int bitDepth,
-                                       AudioCodec codec) {
-    return new FileWriter(filename, sampleRate, channelSet, firstChannel,
-                          bitDepth, codec);
+  virtual std::unique_ptr<FileWriter> createFileWriter(
+      const juce::String& filename, double sampleRate,
+      const juce::AudioChannelSet& channelSet, int firstChannel, int bitDepth,
+      AudioCodec codec) {
+    return std::make_unique<FileWriter>(filename, sampleRate, channelSet,
+                                        firstChannel, bitDepth, codec);
   }
 
   // Wrap FilePermissions so tests can observe the sandbox access an export
@@ -153,7 +152,7 @@ class WavFileOutputProcessor : public ProcessorBase,
   FileExportRepository& fileExportRepository_;
   RoomSetupRepository& roomSetupRepository_;
   const BinauralMixSource& binauralMixSource_;
-  FileWriter* fileWriter_;
+  std::unique_ptr<FileWriter> fileWriter_;
   // Sandbox access to the export folder, held from opening the file until
   // it is closed. Always nullptr on Windows and in unsandboxed hosts.
   void* securityScopedHandle_ = nullptr;

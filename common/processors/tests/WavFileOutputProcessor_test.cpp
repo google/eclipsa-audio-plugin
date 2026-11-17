@@ -19,6 +19,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -136,29 +137,32 @@ class TestableWavFileOutputProcessor : public WavFileOutputProcessor {
     pendingTasks_.push_back(std::move(task));
   }
 
+  // Returns no handle without a bookmark, as the real access does, so a
+  // processor destroyed mid-export never passes this fake handle to the
+  // non-virtual release in its destructor.
   void* startFileAccess(const std::string& bookmark) override {
     startedBookmark = bookmark;
     ++accessStarts;
-    return &accessStarts;
+    return bookmark.empty() ? nullptr : &accessStarts;
   }
 
   void stopFileAccess(void* handle) override {
     if (handle != nullptr) ++accessStops;
   }
 
-  FileWriter* createFileWriter(const juce::String& filename, double sampleRate,
-                               const juce::AudioChannelSet& channelSet,
-                               int firstChannel, int bitDepth,
-                               AudioCodec codec) override {
-    auto* fake = new FakeFileWriter(filename, sampleRate, channelSet,
-                                    firstChannel, bitDepth, codec);
+  std::unique_ptr<FileWriter> createFileWriter(
+      const juce::String& filename, double sampleRate,
+      const juce::AudioChannelSet& channelSet, int firstChannel, int bitDepth,
+      AudioCodec codec) override {
+    auto fake = std::make_unique<FakeFileWriter>(
+        filename, sampleRate, channelSet, firstChannel, bitDepth, codec);
     fake->forceWriteFailure = forceWriteFailure;
     fake->forceCloseFailure = forceCloseFailure;
     fake->onClose = [this] {
       accessActiveAtClose = accessStarts > accessStops;
     };
     accessActiveAtOpen = accessStarts > accessStops;
-    lastFakeWriter = fake;
+    lastFakeWriter = fake.get();
     ++writersCreated;
     return fake;
   }
@@ -1069,5 +1073,83 @@ TEST_F(WavFileOutputHostBounce, iamf_export_leaves_security_scope_alone) {
   EXPECT_EQ(processor.accessStarts, 0);
   EXPECT_EQ(processor.accessStops, 0);
   processor.runPendingTasks();
+  std::filesystem::remove(kOutPath);
+}
+
+namespace {
+constexpr int kDestroyBlockSize = 64;
+constexpr int kDestroyBlocks = 5;
+
+// Starts a `format` export with setNonRealtime(true), writes kDestroyBlocks
+// blocks, then destroys the processor without setNonRealtime(false), as
+// Premiere Pro ends an export.
+void exportThenDestroy(FileExportRepository& fileExportRepository,
+                       RoomSetupRepository& roomSetupRepository,
+                       const BinauralMixSource& binauralMix,
+                       AudioFileFormat format,
+                       const std::filesystem::path& path) {
+  setRoomLayout(roomSetupRepository, Speakers::k5Point1);
+  FileExport config = fileExportRepository.get();
+  config.setAudioFileFormat(format);
+  config.setExportAudio(true);
+  config.setSampleRate(48000);
+  config.setBitDepth(24);
+  config.setAudioCodec(AudioCodec::LPCM);
+  config.setExportFile(path.string());
+  config.setManualExport(false);
+  fileExportRepository.update(config);
+
+  auto processor = std::make_unique<TestableWavFileOutputProcessor>(
+      fileExportRepository, roomSetupRepository, binauralMix);
+  processor->prepareToPlay(48000, kDestroyBlockSize);
+  processor->setNonRealtime(true);
+  ASSERT_NE(processor->lastFakeWriter, nullptr);
+  // The hook writes to the test subclass, which is gone by the time the
+  // base destructor closes the writer.
+  processor->lastFakeWriter->onClose = nullptr;
+
+  juce::AudioBuffer<float> buffer(6, kDestroyBlockSize);
+  buffer.clear();
+  juce::MidiBuffer midi;
+  for (int block = 0; block < kDestroyBlocks; ++block) {
+    processor->processBlock(buffer, midi);
+  }
+  processor.reset();
+}
+}  // namespace
+
+// Destroying the processor mid-export finalizes a 5.1 Room WAV whose header
+// matches the frames written.
+TEST_F(WavFileOutputTests, destructor_closes_room_wav) {
+  const std::filesystem::path kOutPath =
+      std::filesystem::current_path() / "wav_destroy_room.wav";
+  std::filesystem::remove(kOutPath);
+
+  exportThenDestroy(fileExportRepository, roomSetupRepository, binauralMix,
+                    AudioFileFormat::WAV, kOutPath);
+
+  auto reader = readWav(kOutPath);
+  ASSERT_NE(reader, nullptr);
+  EXPECT_EQ(reader->numChannels, 6u);
+  EXPECT_EQ(reader->lengthInSamples, kDestroyBlocks * kDestroyBlockSize);
+  reader.reset();
+  std::filesystem::remove(kOutPath);
+}
+
+// Destroying the processor mid-export finalizes a stereo Binaural WAV whose
+// header matches the frames written.
+TEST_F(WavFileOutputTests, destructor_closes_binaural_wav) {
+  const std::filesystem::path kOutPath =
+      std::filesystem::current_path() / "wav_destroy_binaural.wav";
+  std::filesystem::remove(kOutPath);
+
+  exportThenDestroy(fileExportRepository, roomSetupRepository, binauralMix,
+                    AudioFileFormat::BinauralWav, kOutPath);
+
+  auto reader = readWav(kOutPath);
+  ASSERT_NE(reader, nullptr);
+  EXPECT_EQ(reader->numChannels, 2u);
+  EXPECT_EQ(reader->lengthInSamples, kDestroyBlocks * kDestroyBlockSize);
+  reader.reset();
   std::filesystem::remove(kOutPath);
 }
