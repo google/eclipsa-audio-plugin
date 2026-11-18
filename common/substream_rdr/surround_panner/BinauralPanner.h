@@ -17,6 +17,7 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include "AmbisonicPanner.h"
 #include "AudioPanner.h"
 #include "renderer/obr_impl.h"
 
@@ -31,18 +32,25 @@ class BinauralPanner : public AudioPanner {
    *        output buffer.
    * @pre Input buffer must have the same number of channels as the input
    * layout.
-   * @pre Input buffer must have the same number of samples as the panner was
-   *      constructed with.
+   * @pre Input and output buffers must hold at least the number of samples
+   *      the panner was constructed with.
    * @param inputBuffer
    * @param outputBuffer
+   * @param numSamples Samples to pan, at most the constructed block size.
    */
   void process(juce::AudioBuffer<float>& inputBuffer,
-               juce::AudioBuffer<float>& outputBuffer) override;
+               juce::AudioBuffer<float>& outputBuffer, int numSamples) override;
+
+  int getLatencySamples() const override { return kSamplesPerBlock_; }
 
  protected:
   void positionUpdated() override;
 
  private:
-  obr::AudioBuffer inputBufferPlanar_, outputBufferPlanar_;
+  AmbisonicPanner ambisonicPanner_;  // Ramps position changes before decode.
+  juce::AudioBuffer<float> ambisonicBuffer_;
+  // obr decodes whole blocks only, so samples pass through a one-block FIFO.
+  obr::AudioBuffer fifoInputPlanar_, fifoOutputPlanar_;
+  int fifoPosition_ = 0;
   std::unique_ptr<obr::ObrImpl> encoder_;
 };

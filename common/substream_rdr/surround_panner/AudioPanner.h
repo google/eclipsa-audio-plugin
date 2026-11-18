@@ -17,6 +17,7 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
+#include <algorithm>
 #include <cmath>
 
 #ifndef M_PI
@@ -92,11 +93,24 @@ class AudioPanner {
 
   ear::PolarPosition getPosition() const { return currPos_; }
 
+  // Pans the first `numSamples` samples of the input's first channel, where
+  // `numSamples` is at most the block size the panner was constructed with.
   virtual void process(juce::AudioBuffer<float>& inputBuffer,
-                       juce::AudioBuffer<float>& outputBuffer) = 0;
+                       juce::AudioBuffer<float>& outputBuffer,
+                       int numSamples) = 0;
+
+  // Samples by which the output lags the input.
+  virtual int getLatencySamples() const { return 0; }
 
  protected:
   virtual void positionUpdated() = 0;
+
+  // Samples over which a position change crossfades: 20 ms, and never less
+  // than one block, so small host buffers still ramp without a click.
+  int getRampSamples() const {
+    return std::max(kSamplesPerBlock_,
+                    static_cast<int>(std::lround(0.02 * kSampleRate_)));
+  }
 
   ear::PolarPosition currPos_ = {0.0f, 0.0f, 0.0f};
   const Speakers::AudioElementSpeakerLayout kPannedLayout_;

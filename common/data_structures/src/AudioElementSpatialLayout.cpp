@@ -57,6 +57,7 @@ void AudioElementSpatialLayout::copyValuesFrom(
   elevation_ = other.elevation_;
   layoutSelected_ = other.layoutSelected_;
   panningEnabled_ = other.panningEnabled_;
+  nameIsCustom_ = other.nameIsCustom_;
 }
 
 AudioElementSpatialLayout AudioElementSpatialLayout::fromTree(
@@ -64,19 +65,24 @@ AudioElementSpatialLayout AudioElementSpatialLayout::fromTree(
   jassert(tree.hasProperty(kId));
   jassert(tree.hasProperty(kName));
   jassert(tree.hasProperty(kaudioElement));
-  if (tree.hasProperty(kElevation)) {
-    return AudioElementSpatialLayout(
-        juce::Uuid(tree[kId]), tree[kName], juce::Uuid(tree[kaudioElement]),
-        tree[kFirstChannel], Speakers::AudioElementSpeakerLayout(tree[kLayout]),
-        tree[kPanningEnabled],
-        static_cast<Elevation>(tree[kElevation].toString().getIntValue()),
-        tree[kLayoutSelected]);
-  } else {
-    return AudioElementSpatialLayout(
-        juce::Uuid(tree[kId]), tree[kName], juce::Uuid(tree[kaudioElement]),
-        tree[kFirstChannel], Speakers::AudioElementSpeakerLayout(tree[kLayout]),
-        tree[kPanningEnabled]);
-  }
+  AudioElementSpatialLayout layout =
+      tree.hasProperty(kElevation)
+          ? AudioElementSpatialLayout(
+                juce::Uuid(tree[kId]), tree[kName],
+                juce::Uuid(tree[kaudioElement]), tree[kFirstChannel],
+                Speakers::AudioElementSpeakerLayout(tree[kLayout]),
+                tree[kPanningEnabled],
+                static_cast<Elevation>(
+                    tree[kElevation].toString().getIntValue()),
+                tree[kLayoutSelected])
+          : AudioElementSpatialLayout(
+                juce::Uuid(tree[kId]), tree[kName],
+                juce::Uuid(tree[kaudioElement]), tree[kFirstChannel],
+                Speakers::AudioElementSpeakerLayout(tree[kLayout]),
+                tree[kPanningEnabled]);
+  // Sessions saved before the flag existed load as not custom.
+  layout.setNameIsCustom(tree.getProperty(kNameIsCustom, false));
+  return layout;
 }
 
 bool AudioElementSpatialLayout::operator==(
@@ -114,6 +120,10 @@ void AudioElementSpatialLayout::setPanningEnabled(bool panningEnabled) {
   panningEnabled_ = panningEnabled;
 }
 
+void AudioElementSpatialLayout::setNameIsCustom(bool nameIsCustom) {
+  nameIsCustom_ = nameIsCustom;
+}
+
 juce::ValueTree AudioElementSpatialLayout::toValueTree() const {
   return {kTreeType,
           {{kId, id_.toString()},
@@ -123,5 +133,6 @@ juce::ValueTree AudioElementSpatialLayout::toValueTree() const {
            {kLayout, (int)channelLayout_},
            {kElevation, static_cast<int>(elevation_)},
            {kLayoutSelected, layoutSelected_},
-           {kPanningEnabled, panningEnabled_}}};
+           {kPanningEnabled, panningEnabled_},
+           {kNameIsCustom, nameIsCustom_}}};
 }

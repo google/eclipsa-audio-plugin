@@ -96,19 +96,20 @@ class Panner3DProcessor final
   AudioElementParameterTree* automationParameterTree_;
   juce::SpinLock renderLock;
   std::unique_ptr<AudioPanner> surroundPanner_;
-  int samplesPerBlock_;
-  int sampleRate_;
+  int samplesPerBlock_ = 0;
+  int sampleRate_ = 0;
   Speakers::AudioElementSpeakerLayout inputLayout_;
   Speakers::AudioElementSpeakerLayout outputLayout_;
   juce::AudioBuffer<float> outputBuffer_;
+  juce::AudioBuffer<float> chunkInput_;
   int xPosition_ = 0;
   int yPosition_ = 0;
   int zPosition_ = 0;
 
-  // Position caching for optimization - avoid redundant renderer updates
-  int lastSetXPosition_ = -999;
-  int lastSetYPosition_ = -999;
-  int lastSetZPosition_ = -999;
+  // Position last passed to the panner, so it is set only when it changes.
+  int lastSetXPosition_ = 0;
+  int lastSetYPosition_ = 0;
+  int lastSetZPosition_ = 0;
 
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Panner3DProcessor)

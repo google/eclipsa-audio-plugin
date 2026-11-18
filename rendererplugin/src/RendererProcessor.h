@@ -120,6 +120,9 @@ class RendererProcessor final : public ProcessorBase,
 
   void configureOutputBus();
 
+  // Replaces a stored export profile this host does not offer.
+  void applyHostExportProfile();
+
   juce::ValueTree getTreeWithId(const juce::Identifier& id);
 
   std::vector<std::unique_ptr<ProcessorBase>> audioProcessors_;

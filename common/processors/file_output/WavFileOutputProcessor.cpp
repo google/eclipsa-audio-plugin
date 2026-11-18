@@ -31,8 +31,7 @@ WavFileOutputProcessor::WavFileOutputProcessor(
       roomSetupRepository_(roomSetupRepository),
       binauralMixSource_(binauralMixSource),
       numSamples_(0),
-      performingRender_(false),
-      fileWriter_(nullptr) {
+      performingRender_(false) {
   fileExportRepository_.registerListener(this);
 }
 
@@ -45,6 +44,16 @@ WavFileOutputProcessor::~WavFileOutputProcessor() {
               ->isThisTheMessageThread());
   *isAlive_ = false;
   fileExportRepository_.deregisterListener(this);
+  const juce::SpinLock::ScopedLockType kLock(lock_);
+  // Premiere Pro ends an export by destroying the plugin instead of calling
+  // setNonRealtime(false), so the WAV header is only finalized here.
+  if (fileWriter_ != nullptr) {
+    if (!fileWriter_->close()) {
+      LOG_ERROR(0, "WavFileOutputProcessor: Failed to close file on destroy: " +
+                       fileWriter_->getFilePath());
+    }
+    fileWriter_.reset();
+  }
   // Releases access when the processor is destroyed mid-export. Qualified
   // because a destructor cannot reach a subclass override.
   WavFileOutputProcessor::stopFileAccess(securityScopedHandle_);
@@ -253,8 +262,7 @@ void WavFileOutputProcessor::setNonRealtime(bool isNonRealtime) noexcept {
           config.recordExportErrorIfUnset(kFileWriteFailed);
         });
       }
-      delete fileWriter_;
-      fileWriter_ = nullptr;
+      fileWriter_.reset();
     }
     stopFileAccess(securityScopedHandle_);
     securityScopedHandle_ = nullptr;

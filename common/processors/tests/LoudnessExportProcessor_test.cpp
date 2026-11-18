@@ -434,7 +434,7 @@ MeasureEBU128::LoudnessStats getPannedStereoVerificationData(
     chunk.copyFrom(0, 0, inputBuffer, 0, i, samplesPerFrame);
     chunk.applyGain(mixGain);
 
-    monoToLayoutPanner.process(chunk, layoutOutputBuffer);
+    monoToLayoutPanner.process(chunk, layoutOutputBuffer, samplesPerFrame);
 
     instrument.measureLoudness(Speakers::kStereo.getChannelSet(),
                                layoutOutputBuffer);
@@ -590,7 +590,7 @@ TEST(test_loudness_proc, verify_metadata) {
                                    kSamplesPerFrame);
     chunk.copyFrom(0, 0, inputBuffer, 0, i, kSamplesPerFrame);
 
-    monoToStereoPanner.process(chunk, stereoBuffer);
+    monoToStereoPanner.process(chunk, stereoBuffer, kSamplesPerFrame);
     // copy the stereo buffer in to the mix buffer
     // the stereo audio element corresponds to the last two channels of the mix
     // buffer

@@ -227,11 +227,14 @@ AudioElementPluginEditor::AudioElementPluginEditor(
     audioElementSpatialLayoutRepository_->update(toUpdate);
   });
 
-  trackNameTextBox_.onTextChanged([this]() {
-    AudioElementSpatialLayout toUpdate =
-        audioElementSpatialLayoutRepository_->get();
-    toUpdate.setName(trackNameTextBox_.getText());
-    audioElementSpatialLayoutRepository_->update(toUpdate);
+  trackNameTextBox_.onTextChanged([this, elementProcessor = &p]() {
+    const juce::String text = trackNameTextBox_.getText();
+    // setText from valueTreePropertyChanged echoes the host's name back here;
+    // that is not a user rename.
+    if (text == audioElementSpatialLayoutRepository_->get().getName()) {
+      return;
+    }
+    elementProcessor->setUserTrackName(text);
   });
 
   // Update the panning type and listen for any changes

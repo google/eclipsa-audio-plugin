@@ -43,6 +43,18 @@ struct AudioElementUpdateData {
     memcpy(uuid.data(), juce::Uuid().getRawData(), 16);
     strcpy(name, "");
   }
+
+  // Decodes a received message into `out`, rejecting one of the wrong size.
+  // Any local process can publish, so the name is terminated after the copy.
+  static bool fromMessage(const void* data, const size_t size,
+                          AudioElementUpdateData& out) {
+    if (size != sizeof(AudioElementUpdateData)) {
+      return false;
+    }
+    memcpy(&out, data, sizeof(AudioElementUpdateData));
+    out.name[sizeof(out.name) - 1] = '\0';
+    return true;
+  }
 };
 
 class AudioElementPublisher {
@@ -162,7 +174,10 @@ class AudioElementSubscriber {
         }
         // Copy the message into a data struct
         AudioElementUpdateData d;
-        memcpy(&d, message.data(), sizeof(AudioElementUpdateData));
+        if (!AudioElementUpdateData::fromMessage(message.data(), message.size(),
+                                                 d)) {
+          continue;
+        }
         // Write the data to the data map
         juce::ScopedWriteLock writeLock(dataMapLock);
         dataMap[d.uuid] = d;

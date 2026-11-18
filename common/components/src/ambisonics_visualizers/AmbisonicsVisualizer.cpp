@@ -110,6 +110,7 @@ void AmbisonicsVisualizer::adjustDialAspectRatio(
   }
 }
 
+// The carat marks the side of the sphere facing the front of the room.
 void AmbisonicsVisualizer::drawCarat(juce::Graphics& g) {
   const float scale = 1.f;
   int heightOffset = carat_.getHeight() * scale / 2;
@@ -117,20 +118,17 @@ void AmbisonicsVisualizer::drawCarat(juce::Graphics& g) {
   juce::Point<int> caratPoint;
   switch (view_) {
     case VisualizerView::kLeft:
-      caratPoint = {circleBounds_.getX(),
-                    circleBounds_.getCentreY() - heightOffset};
-      break;
-    case VisualizerView::kRight:
       caratPoint = {circleBounds_.getX() + circleBounds_.getWidth(),
                     circleBounds_.getCentreY() - heightOffset};
       break;
+    case VisualizerView::kRight:
+      caratPoint = {circleBounds_.getX(),
+                    circleBounds_.getCentreY() - heightOffset};
+      break;
     case VisualizerView::kTop:
+    case VisualizerView::kBottom:
       caratPoint = {circleBounds_.getCentreX() - widthOffset,
                     circleBounds_.getY()};
-      break;
-    case VisualizerView::kBottom:
-      caratPoint = {circleBounds_.getCentreX() + widthOffset,
-                    circleBounds_.getBottom()};
       break;
   }
 
@@ -148,16 +146,14 @@ float AmbisonicsVisualizer::getCaratRotation(const VisualizerView& view) {
   float rotation;
   switch (view_) {
     case VisualizerView::kLeft:
-      rotation = juce::MathConstants<float>::pi;
-      break;
-    case VisualizerView::kRight:
       rotation = 0.f;
       break;
-    case VisualizerView::kTop:
-      rotation = -1.f * juce::MathConstants<float>::halfPi;
+    case VisualizerView::kRight:
+      rotation = juce::MathConstants<float>::pi;
       break;
+    case VisualizerView::kTop:
     case VisualizerView::kBottom:
-      rotation = juce::MathConstants<float>::halfPi;
+      rotation = -1.f * juce::MathConstants<float>::halfPi;
       break;
   }
   return rotation;
@@ -286,11 +282,13 @@ AmbisonicsVisualizer::projectSpeakerToView(const CartesianPoint3D& speaker3D,
   float x2D, y2D;
 
   // Coordinate system: +X = front (azimuth 0°), +Y = left (azimuth 90°), +Z =
-  // up (these come from SAF conventions)
+  // up (these come from SAF conventions). Views that show left and right put
+  // the listener's left on screen left; views with a carat face front toward
+  // it.
   switch (view) {
     case VisualizerView::kFront:
       if (speaker3D.x < 0) return std::nullopt;  // speaker on far side (behind)
-      x2D = speaker3D.y;
+      x2D = -speaker3D.y;
       y2D = -speaker3D.z;
       break;
     case VisualizerView::kRear:
@@ -310,12 +308,12 @@ AmbisonicsVisualizer::projectSpeakerToView(const CartesianPoint3D& speaker3D,
       break;
     case VisualizerView::kTop:
       if (speaker3D.z < 0) return std::nullopt;  // speaker on far side (below)
-      x2D = speaker3D.y;
-      y2D = speaker3D.x;
+      x2D = -speaker3D.y;
+      y2D = -speaker3D.x;
       break;
     case VisualizerView::kBottom:
       if (speaker3D.z > 0) return std::nullopt;  // speaker on far side (above)
-      x2D = speaker3D.y;
+      x2D = -speaker3D.y;
       y2D = -speaker3D.x;
       break;
   }

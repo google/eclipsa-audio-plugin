@@ -97,6 +97,10 @@ class AudioElementPluginProcessor final : public ProcessorBase,
 
   void updateTrackProperties(const TrackProperties& properties) override;
 
+  // Applies a name the user typed. An empty name stops overriding the host's
+  // track name and restores it.
+  void setUserTrackName(const juce::String& name);
+
   inline static const ::juce::Identifier
       kAudioElementSpatialLayoutRepositoryStateKey{
           "audio_element_spatial_layout_repository_state"};

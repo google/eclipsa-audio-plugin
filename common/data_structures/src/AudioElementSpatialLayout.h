@@ -61,6 +61,9 @@ class AudioElementSpatialLayout final : public RepositoryItemBase {
   void setElevation(Elevation elevation);
   void setLayoutSelected(bool layoutSelected);
   void setPanningEnabled(bool panningEnabled);
+  // True when the user typed the name, so the host's track name must not
+  // replace it.
+  void setNameIsCustom(bool nameIsCustom);
 
   juce::String getName() const { return name_; }
   juce::Uuid getAudioElementId() const { return audioElementId_; }
@@ -71,6 +74,7 @@ class AudioElementSpatialLayout final : public RepositoryItemBase {
   Elevation getElevation() const { return elevation_; }
   bool isLayoutSelected() const { return layoutSelected_; }
   bool isPanningEnabled() const { return panningEnabled_; }
+  bool isNameCustom() const { return nameIsCustom_; }
 
   inline static const juce::Identifier kTreeType{
       "audio_element_spatial_layout"};
@@ -81,6 +85,7 @@ class AudioElementSpatialLayout final : public RepositoryItemBase {
   inline static const juce::Identifier kElevation{"elevation"};
   inline static const juce::Identifier kLayoutSelected{"layout_selected"};
   inline static const juce::Identifier kPanningEnabled{"panning_enabled"};
+  inline static const juce::Identifier kNameIsCustom{"name_is_custom"};
 
  private:
   juce::String name_;
@@ -90,4 +95,5 @@ class AudioElementSpatialLayout final : public RepositoryItemBase {
   Elevation elevation_;
   bool layoutSelected_;
   bool panningEnabled_;
+  bool nameIsCustom_ = false;
 };

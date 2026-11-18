@@ -69,9 +69,9 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
     // ITU 9_10_3 has 24 channels
     // See: https://www.itu.int/rec/R-REC-BS.2127-1-202311-I/en
     // For simplicity, create the widest buffer we could possibly need
-    outputAudioBufferPointers_ = new float*[24];
+    outputAudioBufferPointers_ = new float*[kExpandedRenderChannels];
 
-    for (int i = 0; i < 24; i++) {
+    for (int i = 0; i < kExpandedRenderChannels; i++) {
       outputAudioBufferPointers_[i] = new float[samplesPerBlock];
     }
 
@@ -114,7 +114,10 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
   objectMetadata_.channelLock = admrender::ChannelLock();
   objectMetadata_.channelLock->maxDistance = 0.01f;
   objectMetadata_.width = 0;
+  // Ramp the speaker gains over getRampSamples() rather than switching them at
+  // once, which clicks when the position changes during playback.
   objectMetadata_.jumpPosition.flag = true;
+  objectMetadata_.jumpPosition.interpolationLength = getRampSamples();
   objectMetadata_.screenRef = false;
 
   // Prepare a stream containing this object
@@ -128,11 +131,11 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
 
 MonoToSpeakerPanner::~MonoToSpeakerPanner() {
   if (kPannedLayout_.isExpandedLayout()) {
-    for (int i = 0; i < kPannedLayout_.getNumChannels(); i++) {
+    for (int i = 0; i < kExpandedRenderChannels; i++) {
       delete[] outputAudioBufferPointers_[i];
     }
   }
-  delete outputAudioBufferPointers_;
+  delete[] outputAudioBufferPointers_;
 }
 
 void MonoToSpeakerPanner::positionUpdated() {
@@ -142,7 +145,8 @@ void MonoToSpeakerPanner::positionUpdated() {
 }
 
 void MonoToSpeakerPanner::process(juce::AudioBuffer<float>& inputBuffer,
-                                  juce::AudioBuffer<float>& outputBuffer) {
+                                  juce::AudioBuffer<float>& outputBuffer,
+                                  const int numSamples) {
   // Add the object to the stream
   // Note that GetRendereredAudio basically resets the renderer, so objects must
   // be added every time
@@ -151,7 +155,7 @@ void MonoToSpeakerPanner::process(juce::AudioBuffer<float>& inputBuffer,
   // and libspatialaudio doesn't take a const, and we'd
   // rather not perform a copy
   float* inputAudio = inputBuffer.getWritePointer(0);
-  renderer_.AddObject(inputAudio, kSamplesPerBlock_, objectMetadata_);
+  renderer_.AddObject(inputAudio, numSamples, objectMetadata_);
   outputBuffer.clear();
   // For non-expanded layouts, just write directly to the output buffer
   if (!kPannedLayout_.isExpandedLayout()) {
@@ -161,16 +165,16 @@ void MonoToSpeakerPanner::process(juce::AudioBuffer<float>& inputBuffer,
       outputAudioBufferPointers_[i] = outputBuffer.getWritePointer(i);
     }
 
-    renderer_.GetRenderedAudio(outputAudioBufferPointers_, kSamplesPerBlock_);
+    renderer_.GetRenderedAudio(outputAudioBufferPointers_, numSamples);
   } else {
     // For expanded layouts, we need to copy out the channels we want
     // First, render to 9_10_3
-    renderer_.GetRenderedAudio(outputAudioBufferPointers_, kSamplesPerBlock_);
+    renderer_.GetRenderedAudio(outputAudioBufferPointers_, numSamples);
 
     // Now copy out the desired channels
     for (int i = 0; i < explValidChannels_.size(); i++) {
       outputBuffer.copyFrom(i, 0, explChannelPointers_[explValidChannels_[i]],
-                            kSamplesPerBlock_);
+                            numSamples);
     }
   }
 }
