@@ -75,8 +75,8 @@ ExportProfile exportProfileFromString(const juce::String& str) {
   return ExportProfile::kOpen;
 }
 
-std::vector<ExportProfile> exportProfileOptions(const bool isPremiereHost) {
-  if (isPremiereHost) {
+std::vector<ExportProfile> exportProfileOptions(const bool simpleOnlyHost) {
+  if (simpleOnlyHost) {
     return {ExportProfile::kYouTubeSimple, ExportProfile::kOpen};
   }
   return {ExportProfile::kYouTubeSimple, ExportProfile::kYouTubeBase,
@@ -84,9 +84,9 @@ std::vector<ExportProfile> exportProfileOptions(const bool isPremiereHost) {
 }
 
 ExportProfile exportProfileFromOptionIndex(const int index,
-                                           const bool isPremiereHost) {
+                                           const bool simpleOnlyHost) {
   const std::vector<ExportProfile> options =
-      exportProfileOptions(isPremiereHost);
+      exportProfileOptions(simpleOnlyHost);
   if (index < 0 || index >= static_cast<int>(options.size())) {
     return ExportProfile::kOpen;
   }
@@ -94,9 +94,9 @@ ExportProfile exportProfileFromOptionIndex(const int index,
 }
 
 int optionIndexForExportProfile(const ExportProfile profile,
-                                const bool isPremiereHost) {
+                                const bool simpleOnlyHost) {
   const std::vector<ExportProfile> options =
-      exportProfileOptions(isPremiereHost);
+      exportProfileOptions(simpleOnlyHost);
   for (int i = 0; i < static_cast<int>(options.size()); ++i) {
     if (options[i] == profile) {
       return i;
@@ -108,8 +108,8 @@ int optionIndexForExportProfile(const ExportProfile profile,
 
 ExportProfile exportProfileForHost(const ExportProfile stored,
                                    const FileProfile sessionProfile,
-                                   const bool isPremiereHost) {
-  if (!isPremiereHost || stored != ExportProfile::kYouTubeBase) {
+                                   const bool simpleOnlyHost) {
+  if (!simpleOnlyHost || stored != ExportProfile::kYouTubeBase) {
     return stored;
   }
   return exportProfileFits(ExportProfile::kYouTubeSimple, sessionProfile)

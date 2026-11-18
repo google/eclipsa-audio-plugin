@@ -573,7 +573,7 @@ void RendererProcessor::applyHostExportProfile() {
   const ExportProfile profile =
       exportProfileForHost(roomSetup.getExportProfile(),
                            FileProfileHelper::minimumProfile(audioElements),
-                           juce::PluginHostType().isPremiere());
+                           isSimpleOnlyExportHost());
   if (profile == roomSetup.getExportProfile()) {
     return;
   }
