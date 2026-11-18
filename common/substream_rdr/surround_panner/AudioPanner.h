@@ -17,6 +17,7 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
+#include <algorithm>
 #include <cmath>
 
 #ifndef M_PI
@@ -103,6 +104,13 @@ class AudioPanner {
 
  protected:
   virtual void positionUpdated() = 0;
+
+  // Samples over which a position change crossfades: 20 ms, and never less
+  // than one block, so small host buffers still ramp without a click.
+  int getRampSamples() const {
+    return std::max(kSamplesPerBlock_,
+                    static_cast<int>(std::lround(0.02 * kSampleRate_)));
+  }
 
   ear::PolarPosition currPos_ = {0.0f, 0.0f, 0.0f};
   const Speakers::AudioElementSpeakerLayout kPannedLayout_;

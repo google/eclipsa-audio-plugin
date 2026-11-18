@@ -42,10 +42,19 @@ class MonoToSpeakerPanner : public AudioPanner {
   void process(juce::AudioBuffer<float>& inputBuffer,
                juce::AudioBuffer<float>& outputBuffer, int numSamples) override;
 
+  int getLatencySamples() const override { return kDirectPathDelaySamples; }
+
+  // libspatialaudio delays the direct signal by half its 512-tap decorrelation
+  // filter so it lines up with the diffuse signal.
+  static constexpr int kDirectPathDelaySamples = (512 - 1) / 2;
+
  protected:
   void positionUpdated() override;
 
  private:
+  // Expanded layouts render to ITU 9+10+3, the widest output, then copy out.
+  static constexpr int kExpandedRenderChannels = 24;
+
   float** outputAudioBufferPointers_;
   admrender::ObjectMetadata objectMetadata_;
   admrender::StreamInformation streamInfo_;

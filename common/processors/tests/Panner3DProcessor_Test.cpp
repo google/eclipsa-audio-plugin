@@ -110,11 +110,14 @@ TEST(test_3D_render_Processor, test_simple_pan) {
 
 namespace {
 constexpr int kPreparedBlockSize = 1024;
+// The prepared block size of AU builds, the smallest the panner runs at.
+constexpr int kSmallPreparedBlockSize = 32;
 constexpr int kSampleRate = 48000;
 constexpr float kFrequency = 440.f;
+// Low enough that a crossfade lasting only a short block still clicks.
+constexpr float kLowFrequency = 50.f;
 
-// A Panner3DProcessor panning a mono element to `outputLayout`, prepared with
-// kPreparedBlockSize.
+// A Panner3DProcessor panning a mono element to `outputLayout`.
 struct PannerFixture {
   explicit PannerFixture(const Speakers::AudioElementSpeakerLayout outputLayout)
       : audioElement(juce::Uuid(), "Test", Speakers::kMono, 0),
@@ -166,18 +169,21 @@ struct PositionChangeMeasurement {
   std::vector<float> gainAfter;
 };
 
-// Pans a constant sine to `outputLayout` in `hostBlockSize`-sample blocks,
-// moving the source from front-left to rear-right between two blocks.
+// Pans a constant `frequency` sine to `outputLayout` in `hostBlockSize`-sample
+// blocks, moving the source from front-left to rear-right between two blocks.
 PositionChangeMeasurement measurePositionChange(
     const Speakers::AudioElementSpeakerLayout outputLayout,
-    const int hostBlockSize) {
-  constexpr int kSettleSamples = 8 * kPreparedBlockSize;
+    const int hostBlockSize, const int preparedBlockSize,
+    const float frequency) {
+  constexpr int kSettleSamples = 8192;
   // Covers the ramp, the binaural FIFO and libspatialaudio's delay line.
-  constexpr int kMovingSamples = 3 * kPreparedBlockSize;
+  constexpr int kMovingSamples = 3072;
+  // At least one period of the lowest test frequency.
+  constexpr int kSteadySamples = 2048;
 
   PannerFixture fixture(outputLayout);
   fixture.moveTo(-50.f, 50.f);
-  fixture.panner->prepareToPlay(kSampleRate, kPreparedBlockSize);
+  fixture.panner->prepareToPlay(kSampleRate, preparedBlockSize);
 
   const int numChannels = outputLayout.getNumChannels();
   juce::AudioBuffer<float> buffer(numChannels, hostBlockSize);
@@ -191,9 +197,13 @@ PositionChangeMeasurement measurePositionChange(
                                    std::vector<float>(numChannels, 0.f),
                                    std::vector<float>(numChannels, 0.f)};
 
+  const int latency = fixture.hostProcessor.getLatencySamples();
+  std::vector<float> inputHistory;
+
   // Renders host blocks until at least `numSamples` have passed, raising
   // `maxStep` and `peak` to each channel's largest step and sample. When
-  // `gain` is given, it receives each channel's correlation with the input.
+  // `gain` is given, it receives each channel's correlation with the input
+  // delayed by the reported latency.
   const auto render = [&](int numSamples, std::vector<float>* maxStep,
                           std::vector<float>* peak, std::vector<float>* gain) {
     std::vector<double> crossSum(numChannels, 0.0);
@@ -203,11 +213,12 @@ PositionChangeMeasurement measurePositionChange(
       for (int i = 0; i < hostBlockSize; ++i, ++sampleIndex) {
         buffer.setSample(
             0, i,
-            0.5f * std::sin(2.f * juce::MathConstants<float>::pi * kFrequency *
+            0.5f * std::sin(2.f * juce::MathConstants<float>::pi * frequency *
                             sampleIndex / kSampleRate));
       }
-      std::vector<float> input(buffer.getReadPointer(0),
-                               buffer.getReadPointer(0) + hostBlockSize);
+      const size_t blockStart = inputHistory.size();
+      inputHistory.insert(inputHistory.end(), buffer.getReadPointer(0),
+                          buffer.getReadPointer(0) + hostBlockSize);
       fixture.panner->processBlock(buffer, midi);
 
       for (int ch = 0; ch < numChannels; ++ch) {
@@ -221,12 +232,17 @@ PositionChangeMeasurement measurePositionChange(
           if (peak != nullptr) {
             (*peak)[ch] = std::max((*peak)[ch], std::abs(sample));
           }
-          crossSum[ch] += sample * input[i];
+          const long long inputIndex =
+              static_cast<long long>(blockStart) + i - latency;
+          if (inputIndex >= 0) {
+            crossSum[ch] += sample * inputHistory[inputIndex];
+          }
           previous = sample;
         }
         lastSample[ch] = previous;
       }
-      for (const float sample : input) {
+      for (int i = 0; i < hostBlockSize; ++i) {
+        const float sample = inputHistory[blockStart + i];
         inputSum += sample * sample;
       }
     }
@@ -238,23 +254,24 @@ PositionChangeMeasurement measurePositionChange(
   };
 
   render(kSettleSamples, nullptr, nullptr, nullptr);
-  render(kPreparedBlockSize, &result.steady, &result.steadyPeak,
+  render(kSteadySamples, &result.steady, &result.steadyPeak,
          &result.gainBefore);
 
   fixture.moveTo(50.f, -50.f);
   render(kMovingSamples, &result.moving, nullptr, nullptr);
 
   render(kSettleSamples, nullptr, nullptr, nullptr);
-  render(kPreparedBlockSize, &result.steady, &result.steadyPeak,
-         &result.gainAfter);
+  render(kSteadySamples, &result.steady, &result.steadyPeak, &result.gainAfter);
   return result;
 }
 
 void expectSmoothPositionChange(
     const Speakers::AudioElementSpeakerLayout outputLayout,
-    const int hostBlockSize = kPreparedBlockSize) {
-  const PositionChangeMeasurement m =
-      measurePositionChange(outputLayout, hostBlockSize);
+    const int hostBlockSize = kPreparedBlockSize,
+    const int preparedBlockSize = kPreparedBlockSize,
+    const float frequency = kFrequency) {
+  const PositionChangeMeasurement m = measurePositionChange(
+      outputLayout, hostBlockSize, preparedBlockSize, frequency);
 
   EXPECT_GT(*std::max_element(m.steady.begin(), m.steady.end()), 0.f)
       << "the panner output is silent";
@@ -268,7 +285,7 @@ void expectSmoothPositionChange(
   // A sine of peak A steps by at most A * 2 * pi * f / fs between samples, so
   // a larger steady step is a discontinuity.
   const float sineStep =
-      2.f * juce::MathConstants<float>::pi * kFrequency / kSampleRate;
+      2.f * juce::MathConstants<float>::pi * frequency / kSampleRate;
   for (size_t ch = 0; ch < m.steady.size(); ++ch) {
     EXPECT_LE(m.steady[ch], 1.1f * sineStep * m.steadyPeak[ch] + 1e-6f)
         << "channel " << ch << " steps by " << m.steady[ch]
@@ -335,6 +352,24 @@ TEST(test_3D_render_Processor, long_host_blocks_are_smooth_binaural) {
   expectSmoothPositionChange(Speakers::kBinaural, 1500);
 }
 
+// A low tone panned to a 5.1 bed at the AU block size does not click.
+TEST(test_3D_render_Processor, small_block_low_tone_is_smooth_5_1) {
+  expectSmoothPositionChange(Speakers::k5Point1, kSmallPreparedBlockSize,
+                             kSmallPreparedBlockSize, kLowFrequency);
+}
+
+// A low tone in third-order ambisonics at the AU block size does not click.
+TEST(test_3D_render_Processor, small_block_low_tone_is_smooth_ambisonics) {
+  expectSmoothPositionChange(Speakers::kHOA3, kSmallPreparedBlockSize,
+                             kSmallPreparedBlockSize, kLowFrequency);
+}
+
+// A low tone in binaural output at the AU block size does not click.
+TEST(test_3D_render_Processor, small_block_low_tone_is_smooth_binaural) {
+  expectSmoothPositionChange(Speakers::kBinaural, kSmallPreparedBlockSize,
+                             kSmallPreparedBlockSize, kLowFrequency);
+}
+
 // Binaural panning reports its one-block FIFO to the host as latency.
 TEST(test_3D_render_Processor, binaural_reports_latency) {
   PannerFixture fixture(Speakers::kBinaural);
@@ -342,9 +377,30 @@ TEST(test_3D_render_Processor, binaural_reports_latency) {
   EXPECT_EQ(fixture.hostProcessor.getLatencySamples(), kPreparedBlockSize);
 }
 
-// Speaker-bed panning reports no latency to the host.
-TEST(test_3D_render_Processor, speaker_bed_reports_no_latency) {
+// Speaker-bed panning reports the delay its output actually has: the first
+// non-zero output sample of a constant input.
+TEST(test_3D_render_Processor, speaker_bed_reports_measured_latency) {
   PannerFixture fixture(Speakers::k5Point1);
   fixture.panner->prepareToPlay(kSampleRate, kPreparedBlockSize);
-  EXPECT_EQ(fixture.hostProcessor.getLatencySamples(), 0);
+
+  juce::AudioBuffer<float> buffer(Speakers::k5Point1.getNumChannels(),
+                                  kPreparedBlockSize);
+  buffer.clear();
+  for (int i = 0; i < kPreparedBlockSize; ++i) {
+    buffer.setSample(0, i, 1.f);
+  }
+  juce::MidiBuffer midi;
+  fixture.panner->processBlock(buffer, midi);
+
+  int firstNonZero = -1;
+  for (int i = 0; i < kPreparedBlockSize && firstNonZero < 0; ++i) {
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+      if (std::abs(buffer.getSample(ch, i)) > 1e-6f) {
+        firstNonZero = i;
+        break;
+      }
+    }
+  }
+  ASSERT_GT(firstNonZero, 0) << "the bed output has no delay to measure";
+  EXPECT_EQ(fixture.hostProcessor.getLatencySamples(), firstNonZero);
 }

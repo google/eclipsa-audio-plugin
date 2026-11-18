@@ -257,8 +257,8 @@ TEST(test_surround_panner, binaural_split_blocks_match_whole_blocks) {
                                     Speakers::kBinaural.getNumChannels());
 }
 
-// The binaural panner reports its one-block FIFO as latency; the others add
-// none.
+// The binaural panner reports its one-block FIFO as latency, the bed panner
+// libspatialaudio's direct-path delay, and the ambisonic panner none.
 TEST(test_surround_panner, latency_samples) {
   EXPECT_EQ(BinauralPanner(kNumSamples, 48000).getLatencySamples(),
             kNumSamples);
@@ -267,7 +267,7 @@ TEST(test_surround_panner, latency_samples) {
       0);
   EXPECT_EQ(MonoToSpeakerPanner(Speakers::k5Point1, kNumSamples, 48000)
                 .getLatencySamples(),
-            0);
+            255);
 }
 
 #ifdef RDR_TO_FILE

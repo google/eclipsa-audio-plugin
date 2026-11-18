@@ -44,8 +44,8 @@ class AmbisonicPanner : public AudioPanner {
   void process(juce::AudioBuffer<float>& inputBuffer,
                juce::AudioBuffer<float>& outputBuffer, int numSamples) override;
 
-  // Takes a polar position directly and ramps the gains to it over the next
-  // block's worth of samples.
+  // Takes a polar position directly and ramps the gains to it over
+  // getRampSamples() samples.
   void setPolarPosition(const ear::PolarPosition& position);
 
  protected:

@@ -69,9 +69,9 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
     // ITU 9_10_3 has 24 channels
     // See: https://www.itu.int/rec/R-REC-BS.2127-1-202311-I/en
     // For simplicity, create the widest buffer we could possibly need
-    outputAudioBufferPointers_ = new float*[24];
+    outputAudioBufferPointers_ = new float*[kExpandedRenderChannels];
 
-    for (int i = 0; i < 24; i++) {
+    for (int i = 0; i < kExpandedRenderChannels; i++) {
       outputAudioBufferPointers_[i] = new float[samplesPerBlock];
     }
 
@@ -114,9 +114,10 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
   objectMetadata_.channelLock = admrender::ChannelLock();
   objectMetadata_.channelLock->maxDistance = 0.01f;
   objectMetadata_.width = 0;
-  // Ramp the speaker gains across each block rather than switching them at
+  // Ramp the speaker gains over getRampSamples() rather than switching them at
   // once, which clicks when the position changes during playback.
-  objectMetadata_.jumpPosition.flag = false;
+  objectMetadata_.jumpPosition.flag = true;
+  objectMetadata_.jumpPosition.interpolationLength = getRampSamples();
   objectMetadata_.screenRef = false;
 
   // Prepare a stream containing this object
@@ -130,11 +131,11 @@ MonoToSpeakerPanner::MonoToSpeakerPanner(
 
 MonoToSpeakerPanner::~MonoToSpeakerPanner() {
   if (kPannedLayout_.isExpandedLayout()) {
-    for (int i = 0; i < kPannedLayout_.getNumChannels(); i++) {
+    for (int i = 0; i < kExpandedRenderChannels; i++) {
       delete[] outputAudioBufferPointers_[i];
     }
   }
-  delete outputAudioBufferPointers_;
+  delete[] outputAudioBufferPointers_;
 }
 
 void MonoToSpeakerPanner::positionUpdated() {

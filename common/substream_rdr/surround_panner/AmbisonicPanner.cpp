@@ -55,10 +55,11 @@ void AmbisonicPanner::positionUpdated() {
   }
 
   // Ramp from wherever the gains are now, even mid-ramp, to the new target.
+  const int rampSamples = getRampSamples();
   for (size_t i = 0; i < targetGains_.size(); ++i) {
-    gainSteps_[i] = (targetGains_[i] - currentGains_[i]) / kSamplesPerBlock_;
+    gainSteps_[i] = (targetGains_[i] - currentGains_[i]) / rampSamples;
   }
-  rampSamplesRemaining_ = kSamplesPerBlock_;
+  rampSamplesRemaining_ = rampSamples;
 }
 
 void AmbisonicPanner::process(juce::AudioBuffer<float>& inputBuffer,
