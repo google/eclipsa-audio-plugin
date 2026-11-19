@@ -43,6 +43,13 @@ class RendererProcessor final : public ProcessorBase,
   const static int instanceId_ =
       0;  // Unique identifier for each instance of the plugin
 
+  // Premiere Pro and Logic Pro offer YouTube - Simple and Open, not
+  // YouTube - Base.
+  static bool isSimpleOnlyExportHost() {
+    const juce::PluginHostType host;
+    return host.isPremiere() || host.isLogic();
+  }
+
   bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
   bool applyBusLayouts(const BusesLayout& layouts) override;

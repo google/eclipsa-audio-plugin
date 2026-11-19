@@ -98,13 +98,13 @@ void RoomMonitoringScreen::initializeSpeakerSetup() {
 }
 
 void RoomMonitoringScreen::initializeExportProfile() {
-  const bool isPremiereHost = juce::PluginHostType().isPremiere();
-  for (const ExportProfile profile : exportProfileOptions(isPremiereHost)) {
+  const bool simpleOnlyHost = RendererProcessor::isSimpleOnlyExportHost();
+  for (const ExportProfile profile : exportProfileOptions(simpleOnlyHost)) {
     exportProfile_.addOption(exportProfileToString(profile));
   }
   exportProfile_.setSelectedIndex(
       optionIndexForExportProfile(
-          repos_.roomSetupRepo_.get().getExportProfile(), isPremiereHost),
+          repos_.roomSetupRepo_.get().getExportProfile(), simpleOnlyHost),
       juce::dontSendNotification);
   exportProfile_.onChange([this] { updateExportProfile(); });
   updateExportProfileOptions();
@@ -116,7 +116,7 @@ void RoomMonitoringScreen::updateExportProfileOptions() {
   const FileProfile sessionProfile =
       FileProfileHelper::minimumProfile(audioElements);
   const std::vector<ExportProfile> options =
-      exportProfileOptions(juce::PluginHostType().isPremiere());
+      exportProfileOptions(RendererProcessor::isSimpleOnlyExportHost());
   for (int i = 0; i < static_cast<int>(options.size()); ++i) {
     exportProfile_.setOptionEnabled(
         i, exportProfileFits(options[i], sessionProfile));
@@ -218,8 +218,9 @@ void RoomMonitoringScreen::updateSpeakerSetup() {
 }
 
 void RoomMonitoringScreen::updateExportProfile() {
-  const ExportProfile profile = exportProfileFromOptionIndex(
-      exportProfile_.getSelectedIndex(), juce::PluginHostType().isPremiere());
+  const ExportProfile profile =
+      exportProfileFromOptionIndex(exportProfile_.getSelectedIndex(),
+                                   RendererProcessor::isSimpleOnlyExportHost());
   RoomSetup currentRoomSetup = repos_.roomSetupRepo_.get();
   currentRoomSetup.setExportProfile(profile);
   repos_.roomSetupRepo_.update(currentRoomSetup);
