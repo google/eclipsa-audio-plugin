@@ -527,9 +527,17 @@ void RendererProcessor::initializeMixPresentations() {
 }
 
 void RendererProcessor::configureOutputBus() {
-  // Reaper/VST3 does not support changing the output channel set from Stereo
-  // to other layouts dynamically, so we need to reconfigure the output bus
-  // when the room setup changes.
+  // REAPER hands a plugin only the output channels it declares and passes the
+  // remaining track channels through unchanged from the input, and it does not
+  // apply a change of the declared output width made while a project is open.
+  // An output bus as narrow as the Speaker Setup therefore leaks the unrendered
+  // input on the channels above it, and keeps the width the project loaded
+  // with when the setup changes. JUCE's VST3 wrapper also reorders the
+  // channels of a bus that is a known speaker layout (7.1.x puts the rear pair
+  // before the side pair), so the track no longer matched the order the
+  // Renderer shows. Declare the output bus as wide as the input bus instead:
+  // the speaker feeds occupy the first channels in the Renderer's own order
+  // and processBlock() leaves the rest silent.
   auto hostType = juce::PluginHostType();
   if (!hostType.isReaper()) {
     LOG_ANALYTICS(instanceId_,
@@ -537,25 +545,10 @@ void RendererProcessor::configureOutputBus() {
     return;
   }
 
-  // set the default output bus
-  RoomSetup roomSetup = roomSetupRepository_.get();
-  std::string newChannelSetMsg;
-  if (roomSetup.getSpeakerLayout().getRoomSpeakerLayout()) {
-    outputChannelSet_ =
-        roomSetup.getSpeakerLayout().getRoomSpeakerLayout().getChannelSet();
-    newChannelSetMsg =
-        "roomSetup.getSpeakerLayout() is valid. Setting outputChannelSet_ "
-        "to " +
-        outputChannelSet_.getDescription().toStdString() + "\n";
-  } else {
-    outputChannelSet_ = juce::AudioChannelSet::stereo();
-    newChannelSetMsg =
-        "roomSetup.getSpeakerLayout() is NOT valid. Setting "
-        "outputChannelSet_ "
-        "to stereo \n";
-  }
-
-  LOG_ANALYTICS(instanceId_, newChannelSetMsg);
+  outputChannelSet_ = getHostWideLayout();
+  LOG_ANALYTICS(instanceId_,
+                "Setting outputChannelSet_ to " +
+                    outputChannelSet_.getDescription().toStdString() + "\n");
 
   // Update the bus output layout
   juce::AudioProcessor::BusesLayout busesLayout = getBusesLayout();
