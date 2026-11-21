@@ -17,6 +17,10 @@ message(STATUS "Fetching Boost")
 
 set(BOOST_COMPONENTS log log_setup thread filesystem math)
 set(BOOST_ENABLE_CMAKE ON)
+# Configure only the libraries the plugins use, with their dependencies. Configuring all of
+# Boost fails under CMake 4 in the locale library ("source_group ... is not a prefix of file").
+# asio is listed because boost_log links Boost::asio_core in 1.89.0.
+set(BOOST_INCLUDE_LIBRARIES log thread filesystem math asio)
 set(BOOST_LOCALE_ENABLE_ICU OFF)
 
 include(FetchContent)
@@ -25,8 +29,8 @@ FetchContent_Declare(
         USES_TERMINAL_DOWNLOAD TRUE
         DOWNLOAD_NO_EXTRACT FALSE
         OVERRIDE_FIND_PACKAGE
-        URL "https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.tar.gz"
+        URL "https://github.com/boostorg/boost/releases/download/boost-1.89.0/boost-1.89.0-cmake.tar.gz"
         CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF
 )
 FetchContent_MakeAvailable(Boost)
-find_package(Boost 1.86.0 COMPONENTS ${BOOST_COMPONENTS})
+find_package(Boost 1.89.0 COMPONENTS ${BOOST_COMPONENTS})
