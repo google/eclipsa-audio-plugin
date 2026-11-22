@@ -71,6 +71,15 @@ std::unique_ptr<Renderer> BinauralRdr::createBinauralRdr(
   // If numSamples < 32 don't create a binaural renderer.
   // Seems like OBRs FFT requires at least 32 samples.
   if (numSamples < 32) {
+    // numSamples is 0 until the host has reported its block size, so only a
+    // real buffer size below the minimum is worth reporting.
+    if (numSamples > 0) {
+      LOG_ERROR(0, "BinauralRdr: host buffer size " +
+                       std::to_string(numSamples) +
+                       " is below the binaural renderer's minimum of 32"
+                       " samples; audio elements set to binaural rendering"
+                       " are not rendered and their output will be silent.");
+    }
     return nullptr;
   }
 
